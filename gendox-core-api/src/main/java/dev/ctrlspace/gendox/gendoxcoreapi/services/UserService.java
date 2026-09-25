@@ -21,6 +21,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.UserPredic
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.OrganizationRoleUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.OrganizationRolesConstants;
 import io.micrometer.observation.annotation.Observed;
 import jakarta.transaction.Transactional;
@@ -297,17 +298,13 @@ public class UserService implements UserDetailsService {
     }
 
 
-    private static final Map<String, Integer> ROLE_LEVEL_MAP = new HashMap<>();
-
-    static {
-        ROLE_LEVEL_MAP.put(OrganizationRolesConstants.READER, 1);
-        ROLE_LEVEL_MAP.put(OrganizationRolesConstants.EDITOR, 2);
-        ROLE_LEVEL_MAP.put(OrganizationRolesConstants.ADMIN, 3);
-    }
-
+    /**
+     * The level of an organization role, for "you cannot assign a role higher than your own"
+     * checks. Delegates to {@link OrganizationRoleUtils}, which knows every role.
+     */
     public int getUserOrganizationRoleLevel(String roleName) throws GendoxException {
-        Integer level = ROLE_LEVEL_MAP.get(roleName);
-        if (level == null) {
+        int level = OrganizationRoleUtils.getRoleLevel(roleName);
+        if (level == 0) {
             throw new GendoxException("UNKNOWN_ROLE", "Unknown role: " + roleName, HttpStatus.BAD_REQUEST);
         }
         return level;

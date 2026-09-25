@@ -31,7 +31,6 @@ import DocumentScannerIcon from '@mui/icons-material/DocumentScanner'
 import DescriptionIcon from '@mui/icons-material/Description'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import ExpandableMarkdownSection from '../../helping-components/ExpandableMarkodownSection'
-import TextareaAutosizeStyled from '../../helping-components/TextareaAutosizeStyled'
 import { localStorageConstants } from 'src/utils/generalConstants'
 import { fetchDocuments, resetSupportingDocuments } from 'src/store/activeDocument/activeDocument'
 import { updateTaskNode, createTaskNodesBatch, deleteTaskNode } from 'src/store/activeTaskNode/activeTaskNode'
@@ -42,56 +41,98 @@ import WarningIcon from '@mui/icons-material/Warning'
 import { DeleteConfirmDialog } from 'src/utils/dialogs/DeleteConfirmDialog'
 import { chunk } from 'src/utils/tasks/taskUtils'
 import TruncatedText from 'src/views/custom-components/truncated-text/TrancatedText'
+import DecisionQuestionConfigFields from './DecisionQuestionConfigFields'
 
 const MAX_COLLAPSED_HEIGHT = 80 // px, about 3-4 lines
+
+const DEFAULT_BOOLEAN_CRITERIA = {
+  true: 'The criteria are satisfied',
+  false: 'The criteria are not satisfied'
+}
+
+const defaultDecisionOptions = () => [
+  { key: 'option_1', label: 'Option 1' },
+  { key: 'option_2', label: 'Option 2' }
+]
+
+const defaultDecisionDetails = () => ({
+  instructions: '',
+  booleanCriteria: { ...DEFAULT_BOOLEAN_CRITERIA },
+  options: defaultDecisionOptions(),
+  advancedOpen: false
+})
 
 const newQuestion = () => ({
   title: '',
   text: '',
   answerMode: 'AUTO',
   decisionKind: 'BOOLEAN',
-  decisionOptions: 'Option 1\nOption 2'
+  decisionDetails: defaultDecisionDetails()
 })
 
-const parseOptions = value => value.split('\n').map(option => option.trim()).filter(Boolean)
+const decisionDetailsFromConfig = (config, questionText) => {
+  const decision = config?.decision
 
-const decisionOptionsFromConfig = config => config?.decision?.kind === 'CHOICE'
-  ? Object.values(config.decision.choices || {}).join('\n')
-  : (config?.decision?.scoreCriteria || ['Option 1', 'Option 2']).join('\n')
+  const options =
+    decision?.kind === 'CHOICE'
+      ? Object.entries(decision.choices || {}).map(([key, label]) => ({ key, label }))
+      : (decision?.scoreCriteria || []).map((label, index) => ({ key: `option_${index + 1}`, label }))
 
-const buildInsightConfig = ({
-  answerMode,
-  decisionKind,
-  questionText,
-  decisionOptions,
-  sourceQuestion,
-  existingDecision,
-  originalQuestionText
-}) => {
+  return {
+    instructions: decision?.instructions === questionText ? '' : decision?.instructions || '',
+    booleanCriteria: { ...DEFAULT_BOOLEAN_CRITERIA, ...(decision?.booleanCriteria || {}) },
+    options: options.length > 0 ? options : defaultDecisionOptions(),
+    advancedOpen: false
+  }
+}
+
+const decisionValidationError = ({ answerMode, decisionKind, decisionDetails }) => {
+  if (answerMode !== 'DECISION') return null
+
+  if (decisionKind === 'BOOLEAN') {
+    if (!decisionDetails.booleanCriteria.true.trim() || !decisionDetails.booleanCriteria.false.trim()) {
+      return 'Yes and No meanings are required'
+    }
+
+    return null
+  }
+
+  const options = decisionDetails.options || []
+  if (options.length < 2 || options.some(option => !option.label.trim())) {
+    return 'Choice and rating decisions need at least two named options'
+  }
+  if (decisionKind === 'SCORE' && options.length > 10) {
+    return 'Rating decisions support up to ten levels'
+  }
+  if (decisionKind === 'CHOICE') {
+    const keys = options.map(option => option.key.trim())
+    if (keys.some(key => !key) || new Set(keys).size !== keys.length) {
+      return 'Choice option keys must be present and unique'
+    }
+  }
+
+  return null
+}
+
+const buildInsightConfig = ({ answerMode, decisionKind, questionText, decisionDetails, sourceQuestion }) => {
   if (answerMode !== 'DECISION') return { version: 1, answerMode }
-  const options = parseOptions(decisionOptions)
+  const options = decisionDetails.options
+
   const decision = {
     kind: decisionKind,
-    instructions:
-      existingDecision?.kind === decisionKind && questionText === originalQuestionText
-        ? existingDecision.instructions || questionText
-        : questionText,
+    instructions: decisionDetails.instructions.trim() || questionText.trim(),
     booleanCriteria: {},
     choices: {},
     scoreCriteria: []
   }
   if (decisionKind === 'BOOLEAN') {
-    decision.booleanCriteria = existingDecision?.kind === 'BOOLEAN'
-      ? existingDecision.booleanCriteria || {}
-      : { true: 'The criteria are satisfied', false: 'The criteria are not satisfied' }
+    decision.booleanCriteria = decisionDetails.booleanCriteria
   } else if (decisionKind === 'CHOICE') {
-    const existingKeys = existingDecision?.kind === 'CHOICE' ? Object.keys(existingDecision.choices || {}) : []
-    decision.choices = Object.fromEntries(
-      options.map((option, index) => [existingKeys[index] || `option_${index + 1}`, option])
-    )
+    decision.choices = Object.fromEntries(options.map(option => [option.key.trim(), option.label.trim()]))
   } else {
-    decision.scoreCriteria = options
+    decision.scoreCriteria = options.map(option => option.label.trim())
   }
+
   return { version: 1, answerMode, decision, ...(sourceQuestion ? { sourceQuestion } : {}) }
 }
 
@@ -117,7 +158,7 @@ const QuestionsDialog = ({
   const [questionTitle, setQuestionTitle] = useState(activeQuestion?.title || '')
   const [answerMode, setAnswerMode] = useState(activeQuestion?.insightConfig?.answerMode || 'GENERATED_TEXT')
   const [decisionKind, setDecisionKind] = useState(activeQuestion?.insightConfig?.decision?.kind || 'BOOLEAN')
-  const [decisionOptions, setDecisionOptions] = useState('Option 1\nOption 2')
+  const [decisionDetails, setDecisionDetails] = useState(defaultDecisionDetails())
   const [addNewQuestions, setAddNewQuestions] = useState([newQuestion()])
   const [tempSupportingDocs, setTempSupportingDocs] = useState([])
   const [openAddDocDialog, setOpenAddDocDialog] = useState(false)
@@ -132,7 +173,6 @@ const QuestionsDialog = ({
   const isAddMode = addQuestionMode
   const questionsToRender = isAddMode ? addNewQuestions : [null]
   const sourceQuestion = activeQuestion?.insightConfig?.sourceQuestion || ''
-  const existingDecision = activeQuestion?.insightConfig?.decision || null
 
   const resetQuestionState = () => {
     if (!activeQuestion) return
@@ -142,7 +182,7 @@ const QuestionsDialog = ({
     setQuestionTitle(activeQuestion.title || '')
     setAnswerMode(config.answerMode || 'GENERATED_TEXT')
     setDecisionKind(config.decision?.kind || 'BOOLEAN')
-    setDecisionOptions(decisionOptionsFromConfig(config))
+    setDecisionDetails(decisionDetailsFromConfig(config, activeQuestion.text || ''))
     setTempSupportingDocs(activeQuestion.supportingDocumentIds || [])
   }
 
@@ -159,6 +199,7 @@ const QuestionsDialog = ({
     // If no temp docs → clean view
     if (!tempSupportingDocs?.length) {
       dispatch(resetSupportingDocuments())
+
       return
     }
 
@@ -181,29 +222,34 @@ const QuestionsDialog = ({
     if (!activeQuestion) return
 
     const textChanged = questionText !== (activeQuestion.text || '')
+
     const docsChanged =
       JSON.stringify(tempSupportingDocs) !== JSON.stringify(activeQuestion.supportingDocumentIds || [])
-    const configChanged = JSON.stringify(buildInsightConfig({
-      answerMode,
-      decisionKind,
-      questionText,
-      decisionOptions,
-      sourceQuestion,
-      existingDecision,
-      originalQuestionText: activeQuestion.text || ''
-    })) !==
-      JSON.stringify(activeQuestion.insightConfig || { version: 1, answerMode: 'GENERATED_TEXT' })
+
+    const configChanged =
+      JSON.stringify(
+        buildInsightConfig({
+          answerMode,
+          decisionKind,
+          questionText,
+          decisionDetails,
+          sourceQuestion
+        })
+      ) !== JSON.stringify(activeQuestion.insightConfig || { version: 1, answerMode: 'GENERATED_TEXT' })
 
     setHasBreakingChanges(textChanged || docsChanged || configChanged)
-  }, [questionText, tempSupportingDocs, answerMode, decisionKind, decisionOptions, activeQuestion])
+  }, [questionText, tempSupportingDocs, answerMode, decisionKind, decisionDetails, sourceQuestion, activeQuestion])
 
   const handleSave = async () => {
     if (!questionText.trim()) {
       toast.error('Question text is required')
+
       return
     }
-    if (answerMode === 'DECISION' && decisionKind !== 'BOOLEAN' && parseOptions(decisionOptions).length < 2) {
-      toast.error('Choice and rating decisions need at least two options')
+    const validationError = decisionValidationError({ answerMode, decisionKind, decisionDetails })
+    if (validationError) {
+      toast.error(validationError)
+
       return
     }
 
@@ -220,10 +266,8 @@ const QuestionsDialog = ({
           answerMode,
           decisionKind,
           questionText,
-          decisionOptions,
-          sourceQuestion,
-          existingDecision,
-          originalQuestionText: activeQuestion.text || ''
+          decisionDetails,
+          sourceQuestion
         }),
         documentMetadata: {
           supportingDocumentIds: tempSupportingDocs
@@ -256,6 +300,7 @@ const QuestionsDialog = ({
   const handleAddQuestions = async () => {
     if (addNewQuestions.some(q => q.title.trim().length > 0 && q.text.trim().length === 0)) {
       toast.error('Question text is required')
+
       return
     }
 
@@ -263,15 +308,14 @@ const QuestionsDialog = ({
 
     if (validQuestions.length === 0) {
       toast.error('No questions to save!')
+
       return
     }
 
-    if (validQuestions.some(q =>
-      q.answerMode === 'DECISION' &&
-      q.decisionKind !== 'BOOLEAN' &&
-      parseOptions(q.decisionOptions).length < 2
-    )) {
-      toast.error('Choice and rating decisions need at least two options')
+    const validationError = validQuestions.map(decisionValidationError).find(Boolean)
+    if (validationError) {
+      toast.error(validationError)
+
       return
     }
 
@@ -287,15 +331,13 @@ const QuestionsDialog = ({
             answerMode: q.answerMode,
             decisionKind: q.decisionKind,
             questionText: q.text,
-            decisionOptions: q.decisionOptions
+            decisionDetails: q.decisionDetails
           })
         }
       }))
 
       for (const batch of chunk(payloads, 10)) {
-        await dispatch(
-          createTaskNodesBatch({ organizationId, projectId, taskNodesPayload: batch, token })
-        ).unwrap()
+        await dispatch(createTaskNodesBatch({ organizationId, projectId, taskNodesPayload: batch, token })).unwrap()
       }
 
       toast.success('Questions added!')
@@ -322,9 +364,9 @@ const QuestionsDialog = ({
   }
 
   const handleQuestionChange = (idx, field, value) => {
-    setAddNewQuestions(questions => questions.map((question, index) =>
-      index === idx ? { ...question, [field]: value } : question
-    ))
+    setAddNewQuestions(questions =>
+      questions.map((question, index) => (index === idx ? { ...question, [field]: value } : question))
+    )
   }
 
   const handleDeleteQuestion = async () => {
@@ -456,24 +498,22 @@ const QuestionsDialog = ({
                 variant='subtitle2'
                 sx={{ fontWeight: 700, mb: 1, color: 'text.primary', letterSpacing: 0.2 }}
               >
-                Title
+                Column name
               </Typography>
               {isEditMode ? (
                 <TextField
                   fullWidth
-                  multiline
-                  maxRows={1}
                   value={questionTitle}
                   onChange={e => setQuestionTitle(e.target.value)}
                   autoFocus
                   variant='outlined'
-                  placeholder='Enter a title...'
+                  placeholder='Enter a column name...'
+                  helperText='Shown as the column header in the insights board.'
                   sx={{
                     backgroundColor: 'background.paper'
                   }}
                 />
               ) : (
-                /* VIEW MODE */
                 <Typography
                   variant='h6'
                   sx={{
@@ -507,7 +547,8 @@ const QuestionsDialog = ({
             >
               <WarningIcon />
               <Typography variant='body1' sx={{ fontWeight: 600 }}>
-                You changed the question, answer mode, decision setup, or supporting documents. All related answers will be deleted when you save.
+                You changed the question, answer mode, decision setup, or supporting documents. All related answers will
+                be deleted when you save.
               </Typography>
             </Box>
           )}
@@ -522,7 +563,7 @@ const QuestionsDialog = ({
             }}
           >
             <Typography variant='subtitle2' sx={{ fontWeight: 700, mb: 1, color: 'text.primary', letterSpacing: 0.2 }}>
-              Question Text
+              {isAddMode ? 'Questions' : 'Question'}
             </Typography>
 
             {!isAddMode && (
@@ -530,26 +571,39 @@ const QuestionsDialog = ({
                 {isEditMode ? (
                   <FormControl size='small' sx={{ minWidth: 180 }}>
                     <InputLabel>Answer mode</InputLabel>
-                    <Select value={answerMode} label='Answer mode' onChange={event => setAnswerMode(event.target.value)}>
+                    <Select
+                      value={answerMode}
+                      label='Answer mode'
+                      onChange={event => setAnswerMode(event.target.value)}
+                    >
                       <MenuItem value='GENERATED_TEXT'>Written answer</MenuItem>
                       <MenuItem value='DECISION'>Decision</MenuItem>
                     </Select>
                   </FormControl>
                 ) : (
-                  <Chip size='small' label={modeLabel(answerMode)} color={answerMode === 'DECISION' ? 'secondary' : 'default'} />
+                  <Chip
+                    size='small'
+                    label={modeLabel(answerMode)}
+                    color={answerMode === 'DECISION' ? 'secondary' : 'default'}
+                  />
                 )}
-                {answerMode === 'DECISION' && (isEditMode ? (
-                  <FormControl size='small' sx={{ minWidth: 160 }}>
-                    <InputLabel>Decision type</InputLabel>
-                    <Select value={decisionKind} label='Decision type' onChange={event => setDecisionKind(event.target.value)}>
-                      <MenuItem value='BOOLEAN'>Yes / No</MenuItem>
-                      <MenuItem value='CHOICE'>Choose one</MenuItem>
-                      <MenuItem value='SCORE'>Rating</MenuItem>
-                    </Select>
-                  </FormControl>
-                ) : (
-                  <Chip size='small' variant='outlined' label={decisionKindLabel(decisionKind)} />
-                ))}
+                {answerMode === 'DECISION' &&
+                  (isEditMode ? (
+                    <FormControl size='small' sx={{ minWidth: 160 }}>
+                      <InputLabel>Decision type</InputLabel>
+                      <Select
+                        value={decisionKind}
+                        label='Decision type'
+                        onChange={event => setDecisionKind(event.target.value)}
+                      >
+                        <MenuItem value='BOOLEAN'>Yes / No</MenuItem>
+                        <MenuItem value='CHOICE'>Choose one</MenuItem>
+                        <MenuItem value='SCORE'>Rating</MenuItem>
+                      </Select>
+                    </FormControl>
+                  ) : (
+                    <Chip size='small' variant='outlined' label={decisionKindLabel(decisionKind)} />
+                  ))}
               </Box>
             )}
 
@@ -585,12 +639,24 @@ const QuestionsDialog = ({
 
                 {/* EDIT / ADD / VIEW modes */}
                 {isEditMode ? (
-                  <TextareaAutosizeStyled
-                    value={questionText}
-                    onChange={e => setQuestionText(e.target.value)}
-                    minRows={3}
-                    autoFocus
-                  />
+                  <Box sx={{ flex: 1, width: '100%' }}>
+                    <TextField
+                      fullWidth
+                      multiline
+                      minRows={3}
+                      label='Question'
+                      value={questionText}
+                      onChange={e => setQuestionText(e.target.value)}
+                      helperText='Ask one clear question about each document.'
+                    />
+                    {answerMode === 'DECISION' && (
+                      <DecisionQuestionConfigFields
+                        kind={decisionKind}
+                        value={decisionDetails}
+                        onChange={setDecisionDetails}
+                      />
+                    )}
+                  </Box>
                 ) : isAddMode ? (
                   <Box
                     sx={{
@@ -604,7 +670,9 @@ const QuestionsDialog = ({
                       fullWidth
                       value={q.title}
                       onChange={e => handleQuestionChange(idx, 'title', e.target.value)}
-                      placeholder='Enter title...'
+                      label='Column name'
+                      placeholder='For example: Neighbourhood-level implementation'
+                      helperText='Shown as the column header in the insights board.'
                       sx={{
                         mb: 2,
                         '& input': { fontWeight: 600 }
@@ -640,30 +708,29 @@ const QuestionsDialog = ({
                       )}
                     </Box>
 
-                    <TextareaAutosizeStyled
-                      style={{
-                        width: '100%',
-                        boxSizing: 'border-box'
-                      }}
+                    <TextField
+                      fullWidth
+                      multiline
+                      minRows={3}
                       value={q.text}
                       onChange={e => handleQuestionChange(idx, 'text', e.target.value)}
-                      placeholder='Enter question text...'
-                      minRows={3}
+                      label={q.answerMode === 'AUTO' ? 'Request' : 'Question'}
+                      placeholder={
+                        q.answerMode === 'AUTO'
+                          ? 'Describe the information or decisions you need...'
+                          : 'Enter the question shown to users...'
+                      }
+                      helperText={
+                        q.answerMode === 'AUTO'
+                          ? 'Jev will decide whether this needs a written answer or one or more independent decision columns.'
+                          : 'Ask one clear question about each document.'
+                      }
                     />
-                    {q.answerMode === 'AUTO' && (
-                      <Typography variant='caption' color='text.secondary' sx={{ mt: 1 }}>
-                        Jev will decide whether this needs a written answer or one or more independent decision columns.
-                      </Typography>
-                    )}
-                    {q.answerMode === 'DECISION' && q.decisionKind !== 'BOOLEAN' && (
-                      <TextField
-                        fullWidth
-                        multiline
-                        minRows={2}
-                        value={q.decisionOptions}
-                        onChange={event => handleQuestionChange(idx, 'decisionOptions', event.target.value)}
-                        label={q.decisionKind === 'CHOICE' ? 'Choices (one per line)' : 'Rating labels, lowest to highest'}
-                        sx={{ mt: 2 }}
+                    {q.answerMode === 'DECISION' && (
+                      <DecisionQuestionConfigFields
+                        kind={q.decisionKind}
+                        value={q.decisionDetails}
+                        onChange={value => handleQuestionChange(idx, 'decisionDetails', value)}
                       />
                     )}
                   </Box>
@@ -682,6 +749,14 @@ const QuestionsDialog = ({
                       markdown={questionText || '*No question text*'}
                       maxHeight={MAX_COLLAPSED_HEIGHT}
                     />
+                    {answerMode === 'DECISION' && (
+                      <DecisionQuestionConfigFields
+                        kind={decisionKind}
+                        value={decisionDetails}
+                        onChange={setDecisionDetails}
+                        readOnly
+                      />
+                    )}
                   </Box>
                 )}
 
@@ -725,18 +800,6 @@ const QuestionsDialog = ({
               </Box>
             )}
           </Paper>
-
-          {!isAddMode && isEditMode && answerMode === 'DECISION' && decisionKind !== 'BOOLEAN' && (
-            <TextField
-              fullWidth
-              multiline
-              minRows={2}
-              value={decisionOptions}
-              onChange={event => setDecisionOptions(event.target.value)}
-              label={decisionKind === 'CHOICE' ? 'Choices (one per line)' : 'Rating labels, lowest to highest'}
-              sx={{ mb: 3, px: 2 }}
-            />
-          )}
 
           {/* SUPPORTING DOCUMENTS SECTION */}
           {!isAddMode && (
