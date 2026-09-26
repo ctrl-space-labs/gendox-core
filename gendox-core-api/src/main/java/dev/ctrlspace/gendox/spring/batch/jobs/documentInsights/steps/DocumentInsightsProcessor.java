@@ -248,47 +248,97 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                                                               Task task,
                                                               Type answerNodeType) {
         List<AnswerCreationDTO> answers = new ArrayList<>();
+        List<DecisionQuestionGroup> questionGroups = new ArrayList<>();
+        List<DecisionDocumentText> documentTexts = new ArrayList<>();
+
         for (TaskNode question : questions) {
             try {
-                answers.add(processDecisionQuestion(question, group, task, answerNodeType));
+                Map<String, Object> state = buildDecisionState(group, question, task, documentTexts);
+                addToDecisionQuestionGroup(questionGroups, state, question);
             } catch (Exception exception) {
-                logger.error("Failed to process decision question {} for document node {}",
+                logger.error("Failed to prepare decision question {} for document node {}",
                         question.getId(), group.getDocumentNode().getId(), exception);
             }
         }
+
+        questionGroups.forEach(questionGroup -> {
+            try {
+                answers.addAll(processDecisionQuestionGroup(
+                        questionGroup.state(), questionGroup.questions(), group, answerNodeType));
+            } catch (Exception exception) {
+                logger.error("Failed to process decision questions {} for document node {}",
+                        questionGroup.questions().stream().map(TaskNode::getId).toList(),
+                        group.getDocumentNode().getId(), exception);
+            }
+        });
+
         return answers;
     }
 
-    private AnswerCreationDTO processDecisionQuestion(TaskNode question,
-                                                       TaskDocumentQuestionsDTO group,
-                                                       Task task,
-                                                       Type answerNodeType) throws Exception {
-        DecisionQuestionConfigDTO config = question.getNodeValue().getInsightConfig().getDecision();
-        Map<String, Object> state = buildDecisionState(group, question, task);
-        String serializedInput = objectMapper.writeValueAsString(state) + objectMapper.writeValueAsString(config);
-        Encoding encoding = encodingRegistry.getEncodingForModel(ModelType.GPT_4O);
-        if (encoding.countTokens(serializedInput) > maxDecisionInputTokens) {
-            return decisionAnswerNode(question, group, answerNodeType,
-                    "The decision document and question are too large for the selected decision model context window.",
-                    "File too long", AnswerFlag.NA, null);
+    private static void addToDecisionQuestionGroup(List<DecisionQuestionGroup> groups,
+                                                   Map<String, Object> state,
+                                                   TaskNode question) {
+        for (DecisionQuestionGroup group : groups) {
+            if (group.state().equals(state)) {
+                group.questions().add(question);
+                return;
+            }
         }
-
-        DecisionResponse response = decisionService.evaluate(project.getProjectAgent(),
-                DecisionRequest.builder().state(state).questions(Map.of("answer", config)).build());
-        DecisionAnswer answer = response.getAnswers().get("answer");
-        if (answer == null) {
-            throw new GendoxException("MISSING_DECISION_ANSWER", "The decision model did not answer the question", org.springframework.http.HttpStatus.BAD_GATEWAY);
-        }
-
-        DecisionResultDTO result = toDecisionResult(config, answer, response.getModel());
-        String value = result.getSelectedValue();
-        String message = decisionDescription(result);
-        return decisionAnswerNode(question, group, answerNodeType, message, value, AnswerFlag.INFO, result);
+        groups.add(new DecisionQuestionGroup(state, new ArrayList<>(List.of(question))));
     }
 
-    private Map<String, Object> buildDecisionState(TaskDocumentQuestionsDTO group, TaskNode question, Task task) throws GendoxException {
+    private List<AnswerCreationDTO> processDecisionQuestionGroup(Map<String, Object> state,
+                                                                 List<TaskNode> questions,
+                                                                 TaskDocumentQuestionsDTO group,
+                                                                 Type answerNodeType) throws Exception {
+        Map<String, DecisionQuestionConfigDTO> configsByQuestionId = new LinkedHashMap<>();
+        questions.forEach(question -> configsByQuestionId.put(
+                question.getId().toString(),
+                question.getNodeValue().getInsightConfig().getDecision()));
+
+        DecisionRequest request = DecisionRequest.builder()
+                .state(state)
+                .questions(configsByQuestionId)
+                .build();
+        String serializedInput = objectMapper.writeValueAsString(request);
+        Encoding encoding = encodingRegistry.getEncodingForModel(ModelType.GPT_4O);
+        if (encoding.countTokens(serializedInput) > maxDecisionInputTokens) {
+            return questions.stream()
+                    .map(question -> decisionAnswerNode(question, group, answerNodeType,
+                            "The decision document and questions are too large for the selected decision model context window.",
+                            "File too long", AnswerFlag.NA, null))
+                    .toList();
+        }
+
+        DecisionResponse response = decisionService.evaluate(project.getProjectAgent(), request);
+        Map<String, DecisionAnswer> responseAnswers = Optional.ofNullable(response.getAnswers()).orElse(Map.of());
+        List<AnswerCreationDTO> answers = new ArrayList<>();
+
+        for (TaskNode question : questions) {
+            DecisionQuestionConfigDTO config = configsByQuestionId.get(question.getId().toString());
+            DecisionAnswer answer = responseAnswers.get(question.getId().toString());
+            if (answer == null) {
+                logger.error("Decision model did not answer question {} for document node {}",
+                        question.getId(), group.getDocumentNode().getId());
+                continue;
+            }
+
+            DecisionResultDTO result = toDecisionResult(config, answer, response.getModel());
+            String value = result.getSelectedValue();
+            String message = decisionDescription(result);
+            answers.add(decisionAnswerNode(question, group, answerNodeType,
+                    message, value, AnswerFlag.INFO, result));
+        }
+
+        return answers;
+    }
+
+    private Map<String, Object> buildDecisionState(TaskDocumentQuestionsDTO group,
+                                                   TaskNode question,
+                                                   Task task,
+                                                   List<DecisionDocumentText> documentTexts) throws GendoxException {
         Map<String, Object> state = new LinkedHashMap<>();
-        state.put("mainDocument", documentSectionService.getFullNumberedDocumentText(group.getDocumentNode().getDocumentId()));
+        state.put("mainDocument", getDecisionDocumentText(group.getDocumentNode().getDocumentId(), documentTexts));
         if (StringUtils.hasText(task.getTaskPrompt())) state.put("taskInstructions", task.getTaskPrompt());
         Optional.ofNullable(group.getDocumentNode().getNodeValue())
                 .map(TaskNodeValueDTO::getDocumentMetadata)
@@ -301,14 +351,32 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         addSupportingDocumentIds(supportingIds, question);
         if (!supportingIds.isEmpty()) {
             List<Map<String, Object>> supportingDocuments = new ArrayList<>();
-            for (UUID documentId : supportingIds) {
+            for (UUID documentId : supportingIds.stream().sorted().toList()) {
                 supportingDocuments.add(Map.of(
                         "documentId", documentId.toString(),
-                        "text", documentSectionService.getFullNumberedDocumentText(documentId)));
+                        "text", getDecisionDocumentText(documentId, documentTexts)));
             }
             state.put("supportingDocuments", supportingDocuments);
         }
         return state;
+    }
+
+    private String getDecisionDocumentText(UUID documentId,
+                                           List<DecisionDocumentText> documentTexts) throws GendoxException {
+        for (DecisionDocumentText documentText : documentTexts) {
+            if (documentText.documentId().equals(documentId)) {
+                return documentText.text();
+            }
+        }
+        String text = documentSectionService.getFullNumberedDocumentText(documentId);
+        documentTexts.add(new DecisionDocumentText(documentId, text));
+        return text;
+    }
+
+    private record DecisionQuestionGroup(Map<String, Object> state, List<TaskNode> questions) {
+    }
+
+    private record DecisionDocumentText(UUID documentId, String text) {
     }
 
     // TODO: Validate the bahavior
