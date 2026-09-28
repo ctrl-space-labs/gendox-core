@@ -159,6 +159,11 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
                 WebPageContentDTO content = provider.scrape(target, page.getUrl());
                 page.setLastScrapedAt(Instant.now());
 
+                // the page told us its name while we were reading it
+                if (content.getTitle() != null && !content.getTitle().isBlank()) {
+                    page.setTitle(content.getTitle());
+                }
+
                 if (!content.getContentHash().equals(page.getContentHash())) {
                     MultipartFile file = new ResourceMultipartFile(
                             new ByteArrayResource(content.getMarkdown().getBytes(StandardCharsets.UTF_8)),
@@ -350,7 +355,11 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
                         return newPage;
                     });
 
-            page.setTitle(discovered.getTitle());
+            // the map usually returns no title, and a page that has been read has a
+            // real one; letting a null overwrite it loses the name at every crawl
+            if (discovered.getTitle() != null && !discovered.getTitle().isBlank()) {
+                page.setTitle(discovered.getTitle());
+            }
             page.setLastCrawledAt(now);
             webScrapePageRepository.save(page);
         }
