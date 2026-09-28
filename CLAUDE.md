@@ -26,7 +26,7 @@ When implementation changes a plan substantially, leave the original file exactl
 
 ### Pending plans
 
-- [Web Scraping Integration (Firecrawl) — #526](.ai/issue-526-web-scraping-integration-2026-09-17.md) — in progress; 526.1, 526.2, 526.4, 526.5 and 526.6 implemented, 526.3 deferred into 526.7. Supersedes the [original 2026-09-10 plan](.ai/issue-526-web-scraping-integration-2026-09-10.md), kept unchanged as first written.
+- [Web Scraping Integration (Firecrawl) — #526](.ai/issue-526-web-scraping-integration-2026-09-28.md) — in progress; the backend (526.1–526.6) is implemented and verified, 526.3 landed as a crawl source in the websites table, and the screen is agreed in a prototype but not yet written into `gendox-frontend` (526.8). This file revises the frontend phase only; the rest of the plan stays in the [2026-09-17 revision](.ai/issue-526-web-scraping-integration-2026-09-17.md), which in turn supersedes the [original 2026-09-10 plan](.ai/issue-526-web-scraping-integration-2026-09-10.md). Both are kept unchanged as first written.
 
 ## Common Development Commands
 
