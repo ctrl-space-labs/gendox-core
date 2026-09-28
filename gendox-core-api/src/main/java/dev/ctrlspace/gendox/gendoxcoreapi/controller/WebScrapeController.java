@@ -20,6 +20,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.data.domain.Sort;
 
 import java.util.UUID;
 
@@ -58,6 +59,16 @@ public class WebScrapeController {
         if (pageable.getPageSize() > 100) {
             throw new GendoxException("MAX_PAGE_SIZE_EXCEED",
                     "Page size can't be more than 100", HttpStatus.BAD_REQUEST);
+        }
+
+        // Without an order Postgres may return the rows in any order it likes, and it
+        // changes one as soon as it is updated: picking a page moved it down the list.
+        // The same gap also lets paging show a row twice or miss it altogether.
+        if (pageable.getSort().isUnsorted()) {
+            pageable = PageRequest.of(
+                    pageable.getPageNumber(),
+                    pageable.getPageSize(),
+                    Sort.by(Sort.Direction.ASC, "url"));
         }
 
         criteria.setIntegrationId(integrationId.toString());

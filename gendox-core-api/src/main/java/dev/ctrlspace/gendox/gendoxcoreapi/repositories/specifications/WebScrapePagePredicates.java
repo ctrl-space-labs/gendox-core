@@ -15,7 +15,8 @@ public class WebScrapePagePredicates {
         return ExpressionUtils.allOf(
                 integrationId(criteria.getIntegrationId()),
                 status(criteria.getStatus()),
-                isSelected(criteria.getIsSelected())
+                isSelected(criteria.getIsSelected()),
+                search(criteria.getSearch())
         );
     }
 
@@ -38,5 +39,20 @@ public class WebScrapePagePredicates {
             return null;
         }
         return qWebScrapePage.isSelected.eq(isSelected);
+    }
+    /**
+     * Free text over the two things a page is recognised by: the name it gave us
+     * and its url. A page discovered by the map has no name yet, so searching the
+     * url as well is what keeps the box useful before anything has been read.
+     */
+    private static Predicate search(String search) {
+        if (StringUtils.isNullOrEmpty(search)) {
+            return null;
+        }
+        String term = search.trim();
+
+        return ExpressionUtils.anyOf(
+                qWebScrapePage.url.containsIgnoreCase(term),
+                qWebScrapePage.title.containsIgnoreCase(term));
     }
 }

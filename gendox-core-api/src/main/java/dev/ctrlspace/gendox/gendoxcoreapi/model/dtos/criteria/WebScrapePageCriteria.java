@@ -14,4 +14,5 @@ public class WebScrapePageCriteria {
     private String integrationId;
     private String status;
     private Boolean isSelected;
+    private String search;
 }
