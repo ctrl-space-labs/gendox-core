@@ -189,13 +189,28 @@ public class OrganizationWebSiteService {
 
 
 
-    public OrganizationWebSite updateOrganizationWebSite(UUID id, OrganizationWebSiteDTO organizationWebSiteDTO) {
-        OrganizationWebSite existingOrganizationWebSite = organizationWebSiteRepository.findById(id).orElse(null);
-        if (existingOrganizationWebSite == null) {
-            return null;
-        }
+    /**
+     * Only the name and the url are writable here. The integration and the api key
+     * a website was given belong to whatever set them up, and renaming must not be
+     * able to detach them.
+     *
+     * The website is looked up through the organization in the path, so an id that
+     * belongs to another organization answers 404 instead of confirming it exists —
+     * and an id that exists nowhere answers the same, instead of the silent null
+     * this returned before.
+     */
+    public OrganizationWebSite updateOrganizationWebSite(UUID organizationId, UUID id,
+                                                         OrganizationWebSiteDTO organizationWebSiteDTO)
+            throws GendoxException {
+
+        OrganizationWebSite existingOrganizationWebSite = organizationWebSiteRepository.findById(id)
+                .filter(website -> organizationId.equals(website.getOrganizationId()))
+                .orElseThrow(() -> new GendoxException("WEBSITE_NOT_FOUND",
+                        "Website not found with id: " + id, HttpStatus.NOT_FOUND));
+
         existingOrganizationWebSite.setUrl(organizationWebSiteDTO.getUrl());
         existingOrganizationWebSite.setName(organizationWebSiteDTO.getName());
+
         return organizationWebSiteRepository.save(existingOrganizationWebSite);
     }
 

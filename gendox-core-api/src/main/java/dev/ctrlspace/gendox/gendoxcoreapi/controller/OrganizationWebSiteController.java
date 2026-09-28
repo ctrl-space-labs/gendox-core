@@ -90,9 +90,10 @@ public class OrganizationWebSiteController {
     @PutMapping("/organizations/{organizationId}/websites/{websiteId}")
     public OrganizationWebSite updateOrganizationWebSite(@PathVariable UUID organizationId,
                                                          @PathVariable UUID websiteId,
-                                                         @RequestBody OrganizationWebSiteDTO organizationWebSiteDTO) {
+                                                         @RequestBody OrganizationWebSiteDTO organizationWebSiteDTO)
+            throws GendoxException {
 
-        return organizationWebSiteService.updateOrganizationWebSite(websiteId, organizationWebSiteDTO);
+        return organizationWebSiteService.updateOrganizationWebSite(organizationId, websiteId, organizationWebSiteDTO);
     }
 
 
