@@ -13,4 +13,5 @@ public class WebScrapeScheduleDTO {
     private Integer runIntervalMinutes;
     private String provider;
     private Integer crawlPageLimit;
+    private Boolean autoCheck;
 }

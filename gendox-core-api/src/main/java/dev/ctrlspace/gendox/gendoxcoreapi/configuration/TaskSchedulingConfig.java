@@ -38,7 +38,6 @@ public class TaskSchedulingConfig {
     private static final Duration LOG_HEARTBEAT_INTERVAL = Duration.ofHours(1);
     private Duration fixedDelay;
     private final String documentUploadTopicName;
-    private final String attachmentUploadTopicName;
 
 
 
@@ -47,15 +46,13 @@ public class TaskSchedulingConfig {
                                 @Value("${gendox.maintenance.daily-usage-aggregator.fixed-delay:10s}") Duration fixedDelay,
                                 QueueConsumerService queueConsumerService,
                                 SplitterAndTrainingBatchService splitterAndTrainingBatchService,
-                                @Value("${gendox.topics.document-upload}") String documentUploadTopicName,
-                                @Value("${gendox.topics.attachment-upload}") String attachmentUploadTopicName
+                                @Value("${gendox.topics.document-upload}") String documentUploadTopicName
     ) {
         this.backendMaintenanceTaskService = backendMaintenanceTaskService;
         this.fixedDelay = fixedDelay;
         this.queueConsumerService = queueConsumerService;
         this.splitterAndTrainingBatchService = splitterAndTrainingBatchService;
         this.documentUploadTopicName = documentUploadTopicName;
-        this.attachmentUploadTopicName = attachmentUploadTopicName;
     }
 
     @Bean
@@ -90,7 +87,6 @@ public class TaskSchedulingConfig {
         queueConsumerService.pollTopicOnce(documentUploadTopicName,
                 500,
                 splitterAndTrainingBatchService::runSplitterAndTrainingForBatchOfFiles);
-
     }
 
 

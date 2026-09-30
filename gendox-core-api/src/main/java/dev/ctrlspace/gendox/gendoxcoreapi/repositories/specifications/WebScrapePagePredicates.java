@@ -16,7 +16,8 @@ public class WebScrapePagePredicates {
                 integrationId(criteria.getIntegrationId()),
                 status(criteria.getStatus()),
                 isSelected(criteria.getIsSelected()),
-                search(criteria.getSearch())
+                search(criteria.getSearch()),
+                hasContent(criteria.getHasContent())
         );
     }
 
@@ -54,5 +55,20 @@ public class WebScrapePagePredicates {
         return ExpressionUtils.anyOf(
                 qWebScrapePage.url.containsIgnoreCase(term),
                 qWebScrapePage.title.containsIgnoreCase(term));
+    }
+
+    /**
+     * Whether the page is in the project. Now that a tick lasts one run, this is
+     * the durable question — and the document is the answer, so there is no second
+     * flag to keep in step with it.
+     */
+    private static Predicate hasContent(Boolean hasContent) {
+        if (hasContent == null) {
+            return null;
+        }
+
+        return hasContent
+                ? qWebScrapePage.documentInstanceId.isNotNull()
+                : qWebScrapePage.documentInstanceId.isNull();
     }
 }

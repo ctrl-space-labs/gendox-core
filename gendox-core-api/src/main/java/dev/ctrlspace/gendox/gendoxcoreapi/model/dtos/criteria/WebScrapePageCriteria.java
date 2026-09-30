@@ -15,4 +15,5 @@ public class WebScrapePageCriteria {
     private String status;
     private Boolean isSelected;
     private String search;
+    private Boolean hasContent;
 }

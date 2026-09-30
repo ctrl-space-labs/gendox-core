@@ -91,7 +91,7 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
         }
 
         discoverPages(integration);
-        scrapeSelectedPages(integration);
+        refreshStoredPages(integration);
 
         return Map.of();
     }
@@ -111,44 +111,52 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
     }
 
     /**
-     * Downloads the pages the user has selected and stores each one as a document.
+     * Downloads the pages the user has picked and stores each one as a document.
+     * <p>
+     * Picking is a choice about this run, not about what belongs in the project:
+     * reading three pages leaves every other page exactly as it was. A page is in
+     * the project while it has a document, and that is removed deliberately, never
+     * as a side effect of reading something else.
      */
     public void scrapeSelectedPages(Integration integration) throws GendoxException {
+
+        scrapePages(integration, webScrapePageRepository.findAllByIntegrationId(integration.getId())
+                .stream()
+                .filter(page -> Boolean.TRUE.equals(page.getSelected()))
+                .filter(page -> !WebScrapePageStatusConstants.REMOVED.equals(page.getStatus()))
+                .toList());
+    }
+
+    /**
+     * Reads again the pages that are already in the project, which is what the
+     * schedule is for: keeping what was chosen up to date, not choosing more.
+     * <p>
+     * Picking no longer survives a run, so the schedule cannot follow it; what it
+     * follows instead is the only durable record of what the user wanted kept —
+     * the pages that have a document.
+     */
+    public void refreshStoredPages(Integration integration) throws GendoxException {
+
+        scrapePages(integration, webScrapePageRepository.findAllByIntegrationId(integration.getId())
+                .stream()
+                .filter(page -> page.getDocumentInstanceId() != null)
+                .filter(page -> !WebScrapePageStatusConstants.REMOVED.equals(page.getStatus()))
+                .toList());
+    }
+
+    private void scrapePages(Integration integration, List<WebScrapePage> pages) throws GendoxException {
 
         Map<String, Object> config = readConfig(integration);
         WebScrapeProvider provider = resolveProvider(config);
         WebScrapeTargetDTO target = buildTarget(integration, config);
 
-        // pages the user unselected, whose document must go
-        List<WebScrapePage> deselectedPages = webScrapePageRepository.findAllByIntegrationId(integration.getId())
-                .stream()
-                .filter(page -> !Boolean.TRUE.equals(page.getSelected()))
-                .filter(page -> page.getDocumentInstanceId() != null)
-                .toList();
-
-        if (!deselectedPages.isEmpty()) {
-            documentService.deleteAllDocumentInstances(deselectedPages.stream()
-                    .map(WebScrapePage::getDocumentInstanceId)
-                    .toList());
-
-            for (WebScrapePage page : deselectedPages) {
-                page.setDocumentInstanceId(null);
-                page.setContentHash(null);
-                page.setStatus(WebScrapePageStatusConstants.DISCOVERED);
-                webScrapePageRepository.save(page);
-            }
-        }
-
-        // which pages will download
-        List<WebScrapePage> selectedPages = webScrapePageRepository.findAllByIntegrationId(integration.getId())
-                .stream()
-                .filter(page -> Boolean.TRUE.equals(page.getSelected()))
-                .filter(page -> !WebScrapePageStatusConstants.REMOVED.equals(page.getStatus()))
+        // oldest first, so a budget that runs out leaves the freshest pages behind
+        List<WebScrapePage> ordered = pages.stream()
                 .sorted(Comparator.comparing(WebScrapePage::getLastScrapedAt,
                         Comparator.nullsFirst(Comparator.naturalOrder())))
                 .toList();
 
-        for (WebScrapePage page : selectedPages) {
+        for (WebScrapePage page : ordered) {
             if (!subscriptionValidationService.canScrapeWebPages(integration.getOrganizationId(), 1)) {
                 logger.info("Monthly web scraping budget reached for organization {}, deferring the remaining pages",
                         integration.getOrganizationId());
@@ -164,7 +172,11 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
                     page.setTitle(content.getTitle());
                 }
 
-                if (!content.getContentHash().equals(page.getContentHash())) {
+                // the hash alone is not enough: a document can be deleted from
+                // elsewhere, and the FK then nulls the link while the hash stays —
+                // without this the page would read as unchanged and never come back
+                if (page.getDocumentInstanceId() == null
+                        || !content.getContentHash().equals(page.getContentHash())) {
                     MultipartFile file = new ResourceMultipartFile(
                             new ByteArrayResource(content.getMarkdown().getBytes(StandardCharsets.UTF_8)),
                             slug(page.getUrl()) + ".md",
@@ -194,6 +206,9 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
                 page.setStatus(WebScrapePageStatusConstants.FAILED);
                 page.setErrorMessage(e.getMessage());
             }
+
+            // the pick was about this run, so it does not outlive it
+            page.setSelected(false);
 
             webScrapePageRepository.save(page);
         }
@@ -289,6 +304,38 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
             logger.error("Error scraping the selected pages of web scrape integration {}", integrationId, e);
         }
     }
+
+    /**
+     * Takes one page's content out of the project.
+     * Since a pick no longer means "this belongs here", this is the only thing
+     * that deletes a document, and it is asked for on purpose. The page stays on
+     * the list: what is removed is its content, not its existence, so it can be
+     * read again later without crawling the site afresh.
+     */
+    @Transactional(rollbackOn = Exception.class)
+    public void removeContent(UUID integrationId, UUID pageId) throws GendoxException {
+
+        WebScrapePage page = webScrapePageRepository.findById(pageId)
+                .filter(stored -> integrationId.equals(stored.getIntegrationId()))
+                .orElseThrow(() -> new GendoxException("WEB_SCRAPE_PAGE_NOT_FOUND",
+                        "Web scrape page not found: " + pageId, HttpStatus.NOT_FOUND));
+
+        if (page.getDocumentInstanceId() != null) {
+            documentService.deleteAllDocumentInstances(List.of(page.getDocumentInstanceId()));
+        }
+
+        page.setDocumentInstanceId(null);
+        page.setContentHash(null);
+        page.setSelected(false);
+
+        // a page that is gone from the site keeps saying so
+        if (!WebScrapePageStatusConstants.REMOVED.equals(page.getStatus())) {
+            page.setStatus(WebScrapePageStatusConstants.DISCOVERED);
+        }
+
+        webScrapePageRepository.save(page);
+    }
+
 
     /**
      * Removes a crawl source completely: the documents it produced, its page rows
@@ -399,6 +446,13 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
      * Writes the schedule and the provider settings of the integration. Fields left null are kept.
      */
     public Integration updateSchedule(Integration integration, WebScrapeScheduleDTO scheduleDTO) throws GendoxException {
+
+        // Every field here reads a missing value as "keep what it has", so turning
+        // the schedule off cannot be said by leaving the interval out — it has to
+        // be said on purpose. A source with no interval runs only when asked.
+        if (Boolean.FALSE.equals(scheduleDTO.getAutoCheck())) {
+            integration.setRunIntervalMinutes(null);
+        }
 
         if (scheduleDTO.getRunIntervalMinutes() != null) {
             if (scheduleDTO.getRunIntervalMinutes() < 1) {

@@ -158,5 +158,19 @@ public class WebScrapeController {
         webScrapeIntegrationUpdateService.updateSchedule(integration, scheduleDTO);
     }
 
+    @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_ORGANIZATION_WEB_SITES', 'getRequestedOrgIdFromPathVariable')")
+    @DeleteMapping("/organizations/{organizationId}/integrations/{integrationId}/web-scrape/pages/{pageId}/content")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Take a page's content out of the project",
+            description = "Deletes the document this page produced and leaves the page listed, "
+                    + "so it can be read again later without crawling the site afresh.")
+    public void removePageContent(@PathVariable UUID organizationId,
+                                  @PathVariable UUID integrationId,
+                                  @PathVariable UUID pageId) throws GendoxException {
+
+        webScrapePageService.getIntegration(organizationId, integrationId);
+        webScrapeIntegrationUpdateService.removeContent(integrationId, pageId);
+    }
+
 
 }
