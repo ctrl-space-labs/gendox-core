@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import { DataGrid } from '@mui/x-data-grid'
-import { Box, Tooltip, IconButton, Menu, MenuItem } from '@mui/material'
+import { Box, Tooltip, IconButton, Menu, MenuItem, Chip } from '@mui/material'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 import DescriptionIcon from '@mui/icons-material/Description'
@@ -22,6 +22,23 @@ const ANSWER_STATUS_OPTIONS = [
     label: getAnswerFlagProps(flag).label
   }))
 ]
+
+const getFilterOptions = question => {
+  if (question.insightConfig?.answerMode !== 'DECISION') return ANSWER_STATUS_OPTIONS
+
+  const decision = question.insightConfig.decision
+  const values =
+    decision?.kind === 'BOOLEAN'
+      ? ['Yes', 'No']
+      : decision?.kind === 'CHOICE'
+      ? Object.values(decision.choices || {})
+      : decision?.scoreCriteria || []
+
+  return [
+    { value: 'UNANSWERED', label: 'Not answered' },
+    ...values.filter(Boolean).map(value => ({ value, label: value }))
+  ]
+}
 
 const DocumentInsightsGrid = ({
   openDialog,
@@ -227,7 +244,7 @@ const DocumentInsightsGrid = ({
         sortable: true,
         filterable: true,
         type: 'singleSelect',
-        valueOptions: ANSWER_STATUS_OPTIONS,
+        valueOptions: getFilterOptions(q),
         cellClassName: 'answer-cell',
 
         renderHeader: () => {
@@ -265,7 +282,26 @@ const DocumentInsightsGrid = ({
                   '&:hover': { textDecoration: 'underline' }
                 }}
               >
-                <TruncatedText text={q.title || q.text} disableTooltip />
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
+                  <Box component='span' sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <TruncatedText text={q.title || q.text} disableTooltip />
+                  </Box>
+                  {q.insightConfig?.answerMode === 'DECISION' && (
+                    <Chip
+                      size='small'
+                      variant='outlined'
+                      color='secondary'
+                      label={
+                        q.insightConfig?.decision?.kind === 'BOOLEAN'
+                          ? 'Yes / No'
+                          : q.insightConfig?.decision?.kind === 'CHOICE'
+                          ? 'Choice'
+                          : 'Rating'
+                      }
+                      sx={{ height: 20, '& .MuiChip-label': { px: 0.75, fontSize: '0.65rem' } }}
+                    />
+                  )}
+                </Box>
               </Box>
 
               {/* Actions fixed to the right edge */}
@@ -411,7 +447,14 @@ const DocumentInsightsGrid = ({
                   ) : answerObj.answerValue === '' ? (
                     <em>Click to see answer details</em>
                   ) : (
-                    answerObj.answerValue
+                    <Box component='span'>
+                      {answerObj.answerValue}
+                      {answerObj.decisionResult?.probability != null && (
+                        <Box component='span' sx={{ ml: 0.75, color: 'text.secondary', fontSize: '0.75rem' }}>
+                          {Math.round(answerObj.decisionResult.probability * 100)}%
+                        </Box>
+                      )}
+                    </Box>
                   )}
                 </span>
               </Tooltip>

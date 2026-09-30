@@ -9,6 +9,9 @@ import com.knuddels.jtokkit.api.Encoding;
 import com.knuddels.jtokkit.api.EncodingRegistry;
 import com.knuddels.jtokkit.api.ModelType;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.MessageLocalContextConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.decision.DecisionAnswer;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.decision.DecisionRequest;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.decision.DecisionResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionRuntimeOverridesDTO;
@@ -53,6 +56,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
     private Boolean reGenerateExistingAnswers;
 
     private final CompletionService completionService;
+    private final DecisionService decisionService;
     private final ProjectService projectService;
     private final MessageService messageService;
     private final DocumentSectionService documentSectionService;
@@ -67,6 +71,9 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
     private StepExecution stepExecution;
     private final TaskExecutor asyncInsightsLlmCompletionsExecutor;
 
+    @Value("${gendox.tasks.max-decision-input-tokens:30000}")
+    private Integer maxDecisionInputTokens;
+
     @BeforeStep
     public void setStepExecution(StepExecution stepExecution) {
         this.stepExecution = stepExecution;
@@ -78,6 +85,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                                      ObjectMapper objectMapper,
                                      EncodingRegistry encodingRegistry,
                                      CompletionService completionService,
+                                     DecisionService decisionService,
                                      ProjectService projectService,
                                      MessageService messageService,
                                      DocumentSectionService documentSectionService,
@@ -91,6 +99,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         this.objectMapper = objectMapper;
         this.encodingRegistry = encodingRegistry;
         this.completionService = completionService;
+        this.decisionService = decisionService;
         this.projectService = projectService;
         this.messageService = messageService;
         this.documentSectionService = documentSectionService;
@@ -136,6 +145,21 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         if (project == null) {
             project = projectService.getProjectById(task.getProjectId());
         }
+
+        List<TaskNode> decisionQuestions = documentGroupWithQuestions.getQuestionNodes().stream()
+                .filter(this::isDecisionQuestion)
+                .toList();
+        List<TaskNode> llmQuestions = documentGroupWithQuestions.getQuestionNodes().stream()
+                .filter(question -> !isDecisionQuestion(question))
+                .toList();
+        List<AnswerCreationDTO> decisionAnswers = processDecisionQuestions(
+                decisionQuestions, documentGroupWithQuestions, task, answerNodeType);
+
+        if (llmQuestions.isEmpty()) {
+            batch.setNewAnswers(decisionAnswers);
+            return batch;
+        }
+        documentGroupWithQuestions.setQuestionNodes(new ArrayList<>(llmQuestions));
         CompletionRuntimeOverridesDTO overrides = taskService.buildDefaultCompletionOverrides(task);
 
         // TODO - this makes it implicitly a "DeepThinking" completion. Update this to be declared explicitly
@@ -205,8 +229,236 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                 .flatMap(f -> f.join().stream())
                 .collect(Collectors.toList());
 
+        newAnswers.addAll(decisionAnswers);
+
         batch.setNewAnswers(newAnswers);
         return batch;
+    }
+
+    private boolean isDecisionQuestion(TaskNode question) {
+        return Optional.ofNullable(question.getNodeValue())
+                .map(TaskNodeValueDTO::getInsightConfig)
+                .map(InsightConfigDTO::getAnswerMode)
+                .filter(InsightAnswerMode.DECISION::equals)
+                .isPresent();
+    }
+
+    private List<AnswerCreationDTO> processDecisionQuestions(List<TaskNode> questions,
+                                                              TaskDocumentQuestionsDTO group,
+                                                              Task task,
+                                                              Type answerNodeType) {
+        List<AnswerCreationDTO> answers = new ArrayList<>();
+        List<DecisionQuestionGroup> questionGroups = new ArrayList<>();
+        List<DecisionDocumentText> documentTexts = new ArrayList<>();
+
+        for (TaskNode question : questions) {
+            try {
+                Map<String, Object> state = buildDecisionState(group, question, task, documentTexts);
+                addToDecisionQuestionGroup(questionGroups, state, question);
+            } catch (Exception exception) {
+                logger.error("Failed to prepare decision question {} for document node {}",
+                        question.getId(), group.getDocumentNode().getId(), exception);
+            }
+        }
+
+        questionGroups.forEach(questionGroup -> {
+            try {
+                answers.addAll(processDecisionQuestionGroup(
+                        questionGroup.state(), questionGroup.questions(), group, answerNodeType));
+            } catch (Exception exception) {
+                logger.error("Failed to process decision questions {} for document node {}",
+                        questionGroup.questions().stream().map(TaskNode::getId).toList(),
+                        group.getDocumentNode().getId(), exception);
+            }
+        });
+
+        return answers;
+    }
+
+    private static void addToDecisionQuestionGroup(List<DecisionQuestionGroup> groups,
+                                                   Map<String, Object> state,
+                                                   TaskNode question) {
+        for (DecisionQuestionGroup group : groups) {
+            if (group.state().equals(state)) {
+                group.questions().add(question);
+                return;
+            }
+        }
+        groups.add(new DecisionQuestionGroup(state, new ArrayList<>(List.of(question))));
+    }
+
+    private List<AnswerCreationDTO> processDecisionQuestionGroup(Map<String, Object> state,
+                                                                 List<TaskNode> questions,
+                                                                 TaskDocumentQuestionsDTO group,
+                                                                 Type answerNodeType) throws Exception {
+        Map<String, DecisionQuestionConfigDTO> configsByQuestionId = new LinkedHashMap<>();
+        questions.forEach(question -> configsByQuestionId.put(
+                question.getId().toString(),
+                question.getNodeValue().getInsightConfig().getDecision()));
+
+        DecisionRequest request = DecisionRequest.builder()
+                .state(state)
+                .questions(configsByQuestionId)
+                .build();
+        String serializedInput = objectMapper.writeValueAsString(request);
+        Encoding encoding = encodingRegistry.getEncodingForModel(ModelType.GPT_4O);
+        if (encoding.countTokens(serializedInput) > maxDecisionInputTokens) {
+            return questions.stream()
+                    .map(question -> decisionAnswerNode(question, group, answerNodeType,
+                            "The decision document and questions are too large for the selected decision model context window.",
+                            "File too long", AnswerFlag.NA, null))
+                    .toList();
+        }
+
+        DecisionResponse response = decisionService.evaluate(project.getProjectAgent(), request);
+        Map<String, DecisionAnswer> responseAnswers = Optional.ofNullable(response.getAnswers()).orElse(Map.of());
+        List<AnswerCreationDTO> answers = new ArrayList<>();
+
+        for (TaskNode question : questions) {
+            DecisionQuestionConfigDTO config = configsByQuestionId.get(question.getId().toString());
+            DecisionAnswer answer = responseAnswers.get(question.getId().toString());
+            if (answer == null) {
+                logger.error("Decision model did not answer question {} for document node {}",
+                        question.getId(), group.getDocumentNode().getId());
+                continue;
+            }
+
+            DecisionResultDTO result = toDecisionResult(config, answer, response.getModel());
+            String value = result.getSelectedValue();
+            String message = decisionDescription(result);
+            answers.add(decisionAnswerNode(question, group, answerNodeType,
+                    message, value, AnswerFlag.INFO, result));
+        }
+
+        return answers;
+    }
+
+    private Map<String, Object> buildDecisionState(TaskDocumentQuestionsDTO group,
+                                                   TaskNode question,
+                                                   Task task,
+                                                   List<DecisionDocumentText> documentTexts) throws GendoxException {
+        Map<String, Object> state = new LinkedHashMap<>();
+        state.put("mainDocument", getDecisionDocumentText(group.getDocumentNode().getDocumentId(), documentTexts));
+        if (StringUtils.hasText(task.getTaskPrompt())) state.put("taskInstructions", task.getTaskPrompt());
+        Optional.ofNullable(group.getDocumentNode().getNodeValue())
+                .map(TaskNodeValueDTO::getDocumentMetadata)
+                .map(TaskDocumentMetadataDTO::getPrompt)
+                .filter(StringUtils::hasText)
+                .ifPresent(prompt -> state.put("documentInstructions", prompt));
+
+        LinkedHashSet<UUID> supportingIds = new LinkedHashSet<>();
+        addSupportingDocumentIds(supportingIds, group.getDocumentNode());
+        addSupportingDocumentIds(supportingIds, question);
+        if (!supportingIds.isEmpty()) {
+            List<Map<String, Object>> supportingDocuments = new ArrayList<>();
+            for (UUID documentId : supportingIds.stream().sorted().toList()) {
+                supportingDocuments.add(Map.of(
+                        "documentId", documentId.toString(),
+                        "text", getDecisionDocumentText(documentId, documentTexts)));
+            }
+            state.put("supportingDocuments", supportingDocuments);
+        }
+        return state;
+    }
+
+    private String getDecisionDocumentText(UUID documentId,
+                                           List<DecisionDocumentText> documentTexts) throws GendoxException {
+        for (DecisionDocumentText documentText : documentTexts) {
+            if (documentText.documentId().equals(documentId)) {
+                return documentText.text();
+            }
+        }
+        String text = documentSectionService.getFullNumberedDocumentText(documentId);
+        documentTexts.add(new DecisionDocumentText(documentId, text));
+        return text;
+    }
+
+    private record DecisionQuestionGroup(Map<String, Object> state, List<TaskNode> questions) {
+    }
+
+    private record DecisionDocumentText(UUID documentId, String text) {
+    }
+
+    // TODO: Validate the bahavior
+    private static void addSupportingDocumentIds(Set<UUID> target, TaskNode node) {
+        Optional.ofNullable(node)
+                .map(TaskNode::getNodeValue)
+                .map(TaskNodeValueDTO::getDocumentMetadata)
+                .map(TaskDocumentMetadataDTO::getSupportingDocumentIds)
+                .ifPresent(target::addAll);
+    }
+
+    private DecisionResultDTO toDecisionResult(DecisionQuestionConfigDTO config,
+                                               DecisionAnswer answer,
+                                               String modelVersion) {
+        DecisionResultDTO.DecisionResultDTOBuilder builder = DecisionResultDTO.builder()
+                .kind(config.getKind())
+                .score(answer.getScore())
+                .confidence(answer.getConfidence())
+                .probabilities(answer.getProbabilities() == null ? new LinkedHashMap<>() : answer.getProbabilities())
+                .legend(answer.getLegend() == null ? new LinkedHashMap<>() : answer.getLegend())
+                .modelVersion(modelVersion);
+
+        if (config.getKind() == DecisionKind.BOOLEAN) {
+            double yesProbability = Optional.ofNullable(answer.getNoul()).orElse(0d);
+            boolean selected = yesProbability >= 0.5d;
+            builder.selectedValue(selected ? "Yes" : "No")
+                    .probability(selected ? yesProbability : 1d - yesProbability)
+                    .probabilities(new LinkedHashMap<>(Map.of("Yes", yesProbability, "No", 1d - yesProbability)));
+        } else if (config.getKind() == DecisionKind.CHOICE) {
+            String selected = answer.getChoice();
+            builder.selectedValue(config.getChoices().getOrDefault(selected, selected))
+                    .legend(answer.getLegend() == null || answer.getLegend().isEmpty()
+                            ? config.getChoices()
+                            : answer.getLegend())
+                    .probability(answer.getProbabilities() == null ? null : answer.getProbabilities().get(selected));
+        } else {
+            String selectedValue = "N/A";
+            if (answer.getScore() != null) {
+                int nearestLevel = (int) Math.round(answer.getScore());
+                String label = answer.getLegend() == null ? null : answer.getLegend().get(String.valueOf(nearestLevel));
+                selectedValue = label == null
+                        ? String.valueOf(answer.getScore())
+                        : "%s (%s)".formatted(label, answer.getScore());
+            }
+            builder.selectedValue(selectedValue);
+        }
+        return builder.build();
+    }
+
+    private static String decisionDescription(DecisionResultDTO result) {
+        List<String> details = new ArrayList<>();
+        if (result.getProbability() != null) details.add("Probability: %.1f%%".formatted(result.getProbability() * 100d));
+        if (result.getConfidence() != null) details.add("Confidence: %.1f%%".formatted(result.getConfidence() * 100d));
+        if (result.getScore() != null) details.add("Score: " + result.getScore());
+        return details.isEmpty() ? "Decision model result." : String.join(" · ", details);
+    }
+
+    private static AnswerCreationDTO decisionAnswerNode(TaskNode question,
+                                                        TaskDocumentQuestionsDTO group,
+                                                        Type answerNodeType,
+                                                        String message,
+                                                        String answerValue,
+                                                        AnswerFlag flag,
+                                                        DecisionResultDTO result) {
+        TaskNodeValueDTO value = TaskNodeValueDTO.builder()
+                .message(message)
+                .answerValue(answerValue)
+                .answerFlagEnum(flag)
+                .nodeQuestionId(question.getId())
+                .nodeDocumentId(group.getDocumentNode().getId())
+                .decisionResult(result)
+                .build();
+        TaskNodeDTO answerNode = TaskNodeDTO.builder()
+                .taskId(group.getTaskId())
+                .nodeType(answerNodeType.getName())
+                .nodeValue(value)
+                .build();
+        return AnswerCreationDTO.builder()
+                .documentNode(group.getDocumentNode())
+                .questionNode(question)
+                .newAnswer(answerNode)
+                .build();
     }
 
     private @NotNull List<AnswerCreationDTO> processQuestionChunk(List<CompletionQuestionRequest> questionChunk,
@@ -734,4 +986,3 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
     }
 
 }
-

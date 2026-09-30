@@ -183,6 +183,9 @@ public class ProjectAgentService {
         if (projectAgent.getCompletionModel() == null) {
             projectAgent.setCompletionModel(aiModelService.getByName(AiModelConstants.GPT_6_LUNA));
         }
+        if (projectAgent.getDecisionModel() == null) {
+            projectAgent.setDecisionModel(aiModelService.getByName(AiModelConstants.JEV_LATEST));
+        }
         if (projectAgent.getModerationModel() == null) {
             projectAgent.setModerationModel(aiModelService.getByName(AiModelConstants.OMNI_MODERATION));
         }
@@ -241,6 +244,7 @@ public class ProjectAgentService {
 
         // Update the properties
         AiModel completionModel = aiModelService.getByName(projectAgent.getCompletionModel().getName());
+        AiModel decisionModel = aiModelService.getByName(projectAgent.getDecisionModel().getName());
         AiModel semanticSearchModel = aiModelService.getByName(projectAgent.getSemanticSearchModel().getName());
         AiModel moderationModel = aiModelService.getByName(projectAgent.getModerationModel().getName());
         AiModel rerankModel = aiModelService.getByName(projectAgent.getRerankModel().getName());
@@ -259,6 +263,10 @@ public class ProjectAgentService {
             throw new GendoxException("INACTIVE_SEMANTIC_SEARCH_MODEL", "The selected semantic search model is inactive", HttpStatus.FORBIDDEN);
         }
 
+        if (!decisionModel.getIsActive()) {
+            throw new GendoxException("INACTIVE_DECISION_MODEL", "The selected decision model is inactive", HttpStatus.FORBIDDEN);
+        }
+
         if (!subscriptionAiModelTierService.hasAccessToModelTier(subscriptionPlanId, completionModel.getModelTierType().getId())) {
             throw new GendoxException("NO_ACCESS_TO_COMPLETION_MODEL",
                     "No access to the completion model. Basic or Pro subscription is required",
@@ -268,6 +276,12 @@ public class ProjectAgentService {
         if (!subscriptionAiModelTierService.hasAccessToModelTier(subscriptionPlanId, semanticSearchModel.getModelTierType().getId())) {
             throw new GendoxException("NO_ACCESS_TO_SEMANTIC_SEARCH_MODEL",
                     "No access to the semantic search model. Basic or Pro subscription is required",
+                    HttpStatus.FORBIDDEN);
+        }
+
+        if (!subscriptionAiModelTierService.hasAccessToModelTier(subscriptionPlanId, decisionModel.getModelTierType().getId())) {
+            throw new GendoxException("NO_ACCESS_TO_DECISION_MODEL",
+                    "No access to the decision model for this subscription",
                     HttpStatus.FORBIDDEN);
         }
 
@@ -300,6 +314,7 @@ public class ProjectAgentService {
 
         existingProjectAgent.setAgentName(projectAgent.getAgentName());
         existingProjectAgent.setCompletionModel(completionModel);
+        existingProjectAgent.setDecisionModel(decisionModel);
         existingProjectAgent.setSemanticSearchModel(semanticSearchModel);
         existingProjectAgent.setAgentName(projectAgent.getAgentName());
         existingProjectAgent.setAgentBehavior(projectAgent.getAgentBehavior());
@@ -412,10 +427,6 @@ public class ProjectAgentService {
 
 
 }
-
-
-
-
 
 
 

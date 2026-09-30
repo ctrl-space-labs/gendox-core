@@ -33,6 +33,7 @@ import org.springframework.data.querydsl.QSort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -68,6 +69,7 @@ public class TaskNodeService {
     public TaskNode createTaskNode(TaskNode taskNode) throws GendoxException {
         logger.info("Creating new task node: {}", taskNode);
         if (taskNode.getNodeType().equals(typeService.getTaskNodeTypeByName(TaskNodeTypeConstants.QUESTION))) {
+            prepareQuestionInsightConfigForSave(taskNode.getNodeValue());
             Integer maxOrder = findMaxOrderByTaskId(taskNode.getTaskId());
             int nextOrder = (maxOrder != null ? maxOrder : 0) + 1;
             taskNode.getNodeValue().setOrder(nextOrder);
@@ -87,6 +89,7 @@ public class TaskNodeService {
 
         for (TaskNode node : taskNodes) {
             if (node.getNodeType().equals(typeService.getTaskNodeTypeByName(TaskNodeTypeConstants.QUESTION))) {
+                prepareQuestionInsightConfigForSave(node.getNodeValue());
                 node.getNodeValue().setOrder(nextOrder++);
             }
         }
@@ -138,6 +141,13 @@ public class TaskNodeService {
             if (incomingValue.getQuestionTitle() != null)
                 currentValue.setQuestionTitle(incomingValue.getQuestionTitle());
             if (incomingValue.getOrder() != null) currentValue.setOrder(incomingValue.getOrder());
+            if (incomingValue.getInsightConfig() != null) {
+                prepareQuestionInsightConfigForSave(incomingValue);
+                currentValue.setInsightConfig(incomingValue.getInsightConfig());
+            }
+            if (incomingValue.getDecisionResult() != null) {
+                currentValue.setDecisionResult(incomingValue.getDecisionResult());
+            }
 
 
             // ---- LEVEL 3: Metadata -----
@@ -528,8 +538,12 @@ public class TaskNodeService {
 
             boolean supportingDocsChanged = isSupportingDocsChanged(incomingMetadata, existingMetadata);
 
-            if (messageChanged || supportingDocsChanged) {
-                logger.info("Detected change in Question Message or Supporting Docs. MessageChanged: {}, DocsChanged: {}", messageChanged, supportingDocsChanged);
+            boolean insightConfigChanged = incomingValue.getInsightConfig() != null
+                    && !Objects.equals(incomingValue.getInsightConfig(), existingValue.getInsightConfig());
+
+            if (messageChanged || supportingDocsChanged || insightConfigChanged) {
+                logger.info("Detected change in Question Message, Supporting Docs, or Insight Config. MessageChanged: {}, DocsChanged: {}, ConfigChanged: {}",
+                        messageChanged, supportingDocsChanged, insightConfigChanged);
                 criteriaBuilder.questionNodeIds(List.of(existing.getId()));
                 shouldSearch = true;
             }
@@ -540,7 +554,7 @@ public class TaskNodeService {
 
             boolean supportingDocsChanged = isSupportingDocsChanged(incomingMetadata, existingMetadata);
 
-            boolean promptChanged = incomingMetadata.getPrompt() != null
+            boolean promptChanged = incomingMetadata != null && incomingMetadata.getPrompt() != null
                     && !incomingMetadata.getPrompt().equals(existingMetadata.getPrompt());
 
             if (supportingDocsChanged || promptChanged) {
@@ -564,6 +578,9 @@ public class TaskNodeService {
     }
 
     private static boolean isSupportingDocsChanged(TaskDocumentMetadataDTO incomingMetadata, TaskDocumentMetadataDTO existingMetadata) {
+        if (incomingMetadata == null) {
+            return false;
+        }
         Set<UUID> incomingDocsSet = incomingMetadata.getSupportingDocumentIds() != null
                 ? new HashSet<>(incomingMetadata.getSupportingDocumentIds())
                 : new HashSet<>();
@@ -573,6 +590,44 @@ public class TaskNodeService {
 
         return incomingMetadata.getSupportingDocumentIds() != null
                 && !incomingDocsSet.equals(existingDocsSet);
+    }
+
+    /** Applies missing defaults and validates that a question's insight configuration is ready to be saved. */
+    private void prepareQuestionInsightConfigForSave(TaskNodeValueDTO value) throws GendoxException {
+        if (value == null) {
+            throw new GendoxException("QUESTION_VALUE_REQUIRED", "Question node value is required", HttpStatus.BAD_REQUEST);
+        }
+        if (value.getInsightConfig() == null) {
+            value.setInsightConfig(InsightConfigDTO.generatedText());
+        }
+        InsightConfigDTO config = value.getInsightConfig();
+        if (config.getVersion() == null) config.setVersion(1);
+        if (config.getAnswerMode() == null) config.setAnswerMode(InsightAnswerMode.GENERATED_TEXT);
+        if (config.getAnswerMode() == InsightAnswerMode.AUTO) {
+            throw new GendoxException("AUTO_MODE_MUST_BE_RESOLVED",
+                    "Auto answer mode must be resolved before the question is saved", HttpStatus.BAD_REQUEST);
+        }
+        if (config.getAnswerMode() != InsightAnswerMode.DECISION) return;
+
+        DecisionQuestionConfigDTO decision = config.getDecision();
+        if (decision == null || decision.getKind() == null || !StringUtils.hasText(decision.getInstructions())) {
+            throw new GendoxException("INVALID_DECISION_QUESTION",
+                    "Decision type and instructions are required", HttpStatus.BAD_REQUEST);
+        }
+        boolean valid = switch (decision.getKind()) {
+            case BOOLEAN -> true;
+            case CHOICE -> decision.getChoices() != null
+                    && decision.getChoices().size() >= 2
+                    && decision.getChoices().size() <= 255;
+            case SCORE -> decision.getScoreCriteria() != null
+                    && decision.getScoreCriteria().size() >= 2
+                    && decision.getScoreCriteria().size() <= 10;
+        };
+        if (!valid) {
+            throw new GendoxException("INVALID_DECISION_CRITERIA",
+                    "Choice decisions need at least two options; ratings need two to ten ordered labels",
+                    HttpStatus.BAD_REQUEST);
+        }
     }
 
 

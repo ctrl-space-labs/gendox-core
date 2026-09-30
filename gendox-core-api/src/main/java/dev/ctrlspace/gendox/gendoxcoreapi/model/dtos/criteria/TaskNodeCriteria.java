@@ -37,6 +37,8 @@ public class TaskNodeCriteria {
     private String documentNameContains;
     private UUID answerFilterQuestionNodeId;
     private List<String> answerFilterStatuses;
+    private List<String> answerFilterValues;
+    private Boolean answerFilterValuePrefix;
     private Boolean answerFilterNegate;
     // The question whose answers are sorted by, with sort=answer
     private UUID sortQuestionNodeId;

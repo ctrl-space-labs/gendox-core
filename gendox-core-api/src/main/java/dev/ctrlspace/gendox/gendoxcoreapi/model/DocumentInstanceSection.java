@@ -1,7 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
@@ -27,7 +26,6 @@ public class DocumentInstanceSection {
     @JoinColumn(name = "document_instance_id", referencedColumnName = "id", nullable = false)
     private DocumentInstance documentInstance;
 
-    @JsonManagedReference(value = "DocumentSectionMetadata")
     @ManyToOne
     @JoinColumn(name = "document_section_metadata_id", referencedColumnName = "id", nullable = false)
     private DocumentSectionMetadata documentSectionMetadata;

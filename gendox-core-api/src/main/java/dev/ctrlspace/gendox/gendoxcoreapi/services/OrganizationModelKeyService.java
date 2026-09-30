@@ -170,6 +170,8 @@ public class OrganizationModelKeyService {
             model = agent.getModerationModel();
         } else if ("RERANK_MODEL".equals(aiModelType)) {
             model = agent.getRerankModel();
+        } else if ("DECISION_MODEL".equals(aiModelType)) {
+            model = agent.getDecisionModel();
         }
         return model;
     }

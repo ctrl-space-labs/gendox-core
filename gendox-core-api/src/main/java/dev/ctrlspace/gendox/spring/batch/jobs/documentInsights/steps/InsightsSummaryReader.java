@@ -3,9 +3,11 @@ package dev.ctrlspace.gendox.spring.batch.jobs.documentInsights.steps;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Task;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDocumentQuestionsDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TaskNodeService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.TaskService;
 import dev.ctrlspace.gendox.spring.batch.jobs.common.GendoxJpaPageReader;
 import dev.ctrlspace.gendox.spring.batch.utils.JobExecutionParamConstants;
 import org.slf4j.Logger;
@@ -30,11 +32,16 @@ public class InsightsSummaryReader extends GendoxJpaPageReader<TaskDocumentQuest
     private static final Logger logger = LoggerFactory.getLogger(InsightsSummaryReader.class);
     private TaskNodeCriteria criteria;
     private final TaskNodeService taskNodeService;
+    private final TaskService taskService;
     private final InsightsUtils insightsUtils;
+    private boolean summarizationEnabled;
 
     @Autowired
-    public InsightsSummaryReader(TaskNodeService taskNodeService, InsightsUtils insightsUtils) {
+    public InsightsSummaryReader(TaskNodeService taskNodeService,
+                                 TaskService taskService,
+                                 InsightsUtils insightsUtils) {
         this.taskNodeService = taskNodeService;
+        this.taskService = taskService;
         this.insightsUtils = insightsUtils;
     }
 
@@ -43,6 +50,13 @@ public class InsightsSummaryReader extends GendoxJpaPageReader<TaskDocumentQuest
     protected ExitStatus initializeJpaPredicate(JobParameters jobParameters) {
         String taskId = jobParameters.getString(JobExecutionParamConstants.TASK_ID);
         assert taskId != null;
+        Task task = taskService.getTaskById(UUID.fromString(taskId));
+        summarizationEnabled = Boolean.TRUE.equals(task.getSummarizationEnabled());
+        if (!summarizationEnabled) {
+            logger.info("Skipping document insights summarization for taskId: {}", taskId);
+            return null;
+        }
+
         criteria = insightsUtils.fromJobParamsToTaskNodeCriteria(jobParameters, taskId);
         criteria.setQuestionNodeIds(List.of()); // Set empty list to fetch all questions
 
@@ -54,9 +68,10 @@ public class InsightsSummaryReader extends GendoxJpaPageReader<TaskDocumentQuest
 
     @Override
     protected Page<TaskDocumentQuestionsDTO> getPageFromRepository(Pageable pageable) throws GendoxException {
-
-        Page<TaskDocumentQuestionsDTO> documentsPage = taskNodeService.getDocumentsGroupedWithQuestions(criteria, pageable);
-        return documentsPage;
+        if (!summarizationEnabled) {
+            return Page.empty(pageable);
+        }
+        return taskNodeService.getDocumentsGroupedWithQuestions(criteria, pageable);
     }
 
     @Override
@@ -65,4 +80,3 @@ public class InsightsSummaryReader extends GendoxJpaPageReader<TaskDocumentQuest
         super.pageSize = pageSize;
     }
 }
-

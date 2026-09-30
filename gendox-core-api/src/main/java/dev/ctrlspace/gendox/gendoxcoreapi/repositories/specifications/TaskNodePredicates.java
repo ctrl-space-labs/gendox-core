@@ -48,7 +48,8 @@ public class TaskNodePredicates {
                 pageFrom(criteria.getPageFrom()),
                 pageTo(criteria.getPageTo()),
                 documentNameContains(criteria.getDocumentNameContains()),
-                answerStatus(criteria)
+                answerStatus(criteria),
+                answerValue(criteria)
         );
     }
 
@@ -231,6 +232,41 @@ public class TaskNodePredicates {
         return Boolean.TRUE.equals(criteria.getAnswerFilterNegate()) ? match.not() : match;
     }
 
+    /** DOCUMENT nodes whose answer value matches one of the selected decision results. */
+    private static Predicate answerValue(TaskNodeCriteria criteria) {
+        UUID questionNodeId = criteria.getAnswerFilterQuestionNodeId();
+        List<String> values = criteria.getAnswerFilterValues();
+        if (questionNodeId == null || values == null || values.isEmpty()) {
+            return null;
+        }
+
+        List<String> answeredValues = values.stream()
+                .filter(value -> value != null
+                        && !value.isBlank()
+                        && !TaskNodeCriteria.UNANSWERED.equals(value))
+                .toList();
+        boolean includeUnanswered = values.contains(TaskNodeCriteria.UNANSWERED);
+        if (answeredValues.isEmpty() && !includeUnanswered) {
+            return null;
+        }
+        QTaskNode matchingAnswer = new QTaskNode("matchingAnswer");
+        StringExpression storedValue = nodeValueText(matchingAnswer, "answerValue");
+        BooleanExpression valueMatch = answeredValues.stream()
+                .map(value -> Boolean.TRUE.equals(criteria.getAnswerFilterValuePrefix())
+                        ? storedValue.eq(value).or(storedValue.startsWith(value + " ("))
+                        : storedValue.eq(value))
+                .reduce(BooleanExpression::or)
+                .orElse(null);
+        BooleanExpression hasValue = valueMatch == null ? null
+                : answersOf(matchingAnswer, questionNodeId, Expressions.ONE).where(valueMatch).exists();
+        BooleanExpression unanswered = includeUnanswered
+                ? answersOf(new QTaskNode("anyDecisionAnswer"), questionNodeId, Expressions.ONE).notExists()
+                : null;
+
+        Predicate match = ExpressionUtils.anyOf(hasValue, unanswered);
+        return Boolean.TRUE.equals(criteria.getAnswerFilterNegate()) ? match.not() : match;
+    }
+
     /** The ANSWER nodes of the current DOCUMENT node for one question. */
     private static <T> JPQLQuery<T> answersOf(QTaskNode answer, UUID questionNodeId, Expression<T> select) {
         return JPAExpressions.select(select)
@@ -272,4 +308,3 @@ public class TaskNodePredicates {
         return nodeOrder().loe(pageTo);
     }
 }
-

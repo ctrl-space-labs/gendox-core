@@ -1,6 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
@@ -55,7 +55,7 @@ public class DocumentSectionMetadata {
     @LastModifiedDate
     private Instant updatedAt;
 
-    @JsonBackReference(value = "DocumentSectionMetadata")
+    @JsonIgnore
     @OneToMany(mappedBy = "documentSectionMetadata")
     private List<DocumentInstanceSection> documentInstanceSections;
 

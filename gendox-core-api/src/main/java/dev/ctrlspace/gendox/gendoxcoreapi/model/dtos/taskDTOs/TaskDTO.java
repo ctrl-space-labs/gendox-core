@@ -26,5 +26,6 @@ public class TaskDTO {
     private Double topP;
     private Boolean usePrintedPage;
     private Boolean usePageText;
+    private Boolean summarizationEnabled;
 
 }

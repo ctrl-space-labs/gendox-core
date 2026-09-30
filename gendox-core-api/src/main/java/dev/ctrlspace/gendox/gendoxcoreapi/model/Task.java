@@ -90,6 +90,10 @@ public class Task {
     @Column(name = "use_page_text", nullable = true)
     private Boolean usePageText;
 
+    @Basic
+    @Column(name = "summarization_enabled", nullable = false)
+    private Boolean summarizationEnabled;
+
 
     public UUID getId() {
         return id;
@@ -252,16 +256,24 @@ public class Task {
         this.usePageText = usePageText;
     }
 
+    public Boolean getSummarizationEnabled() {
+        return summarizationEnabled;
+    }
+
+    public void setSummarizationEnabled(Boolean summarizationEnabled) {
+        this.summarizationEnabled = summarizationEnabled;
+    }
+
 
     @Override
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
         Task task = (Task) o;
-        return Objects.equals(id, task.id) && Objects.equals(projectId, task.projectId) && Objects.equals(taskType, task.taskType) && Objects.equals(title, task.title) && Objects.equals(description, task.description) && Objects.equals(status, task.status) && Objects.equals(createdAt, task.createdAt) && Objects.equals(updatedAt, task.updatedAt) && Objects.equals(createdBy, task.createdBy) && Objects.equals(updatedBy, task.updatedBy) && Objects.equals(completionModel, task.completionModel) && Objects.equals(taskPrompt, task.taskPrompt) && Objects.equals(maxToken, task.maxToken) && Objects.equals(temperature, task.temperature) && Objects.equals(topP, task.topP) && Objects.equals(maxQuestionsPerBucket, task.maxQuestionsPerBucket) && Objects.equals(maxQuestionTokensPerBucket, task.maxQuestionTokensPerBucket) && Objects.equals(maxSectionsChunkTokens, task.maxSectionsChunkTokens);
+        return Objects.equals(id, task.id) && Objects.equals(projectId, task.projectId) && Objects.equals(taskType, task.taskType) && Objects.equals(title, task.title) && Objects.equals(description, task.description) && Objects.equals(status, task.status) && Objects.equals(createdAt, task.createdAt) && Objects.equals(updatedAt, task.updatedAt) && Objects.equals(createdBy, task.createdBy) && Objects.equals(updatedBy, task.updatedBy) && Objects.equals(completionModel, task.completionModel) && Objects.equals(taskPrompt, task.taskPrompt) && Objects.equals(maxToken, task.maxToken) && Objects.equals(temperature, task.temperature) && Objects.equals(topP, task.topP) && Objects.equals(maxQuestionsPerBucket, task.maxQuestionsPerBucket) && Objects.equals(maxQuestionTokensPerBucket, task.maxQuestionTokensPerBucket) && Objects.equals(maxSectionsChunkTokens, task.maxSectionsChunkTokens) && Objects.equals(summarizationEnabled, task.summarizationEnabled);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, projectId, taskType, title, description, status, createdAt, updatedAt, createdBy, updatedBy, completionModel, taskPrompt, maxToken, temperature, topP, maxQuestionsPerBucket, maxQuestionTokensPerBucket, maxSectionsChunkTokens);
+        return Objects.hash(id, projectId, taskType, title, description, status, createdAt, updatedAt, createdBy, updatedBy, completionModel, taskPrompt, maxToken, temperature, topP, maxQuestionsPerBucket, maxQuestionTokensPerBucket, maxSectionsChunkTokens, summarizationEnabled);
     }
 }
