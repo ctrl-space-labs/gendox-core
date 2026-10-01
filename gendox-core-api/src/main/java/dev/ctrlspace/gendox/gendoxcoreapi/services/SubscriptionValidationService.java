@@ -5,6 +5,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.OrganizationPlan;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WebScrapeBudgetDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TimePeriodDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.BillingWindowUtils;
@@ -228,6 +229,39 @@ public class SubscriptionValidationService {
         int scrapedPages = this.countScrapedPages(organizationId, billingPeriod.from(), billingPeriod.to());
 
         return scrapedPages + pageCount <= maxPages;
+    }
+
+    /**
+     * The same two figures canScrapeWebPages decides on, returned instead of
+     * discarded. A screen that can only learn the budget by exceeding it cannot
+     * warn anyone beforehand, and a run that stops halfway has already been paid
+     * for the pages it did fetch.
+     */
+    public WebScrapeBudgetDTO getWebScrapeBudget(UUID organizationId) {
+        OrganizationPlan activePlan = organizationPlanService.getActiveOrganizationPlan(organizationId);
+
+        TimePeriodDTO billingPeriod = BillingWindowUtils.currentBillingPeriod(
+                activePlan.getStartDate(), Clock.systemUTC());
+        int usedPages = this.countScrapedPages(organizationId, billingPeriod.from(), billingPeriod.to());
+
+        // with validation off there is no ceiling to report, and reporting zero
+        // would read as a budget that is spent rather than one that is not applied
+        if (!isSubscriptionValidationEnabled) {
+            return WebScrapeBudgetDTO.builder()
+                    .usedPages(usedPages)
+                    .period(billingPeriod)
+                    .build();
+        }
+
+        int maxPages = effectiveLimit(activePlan.getSubscriptionPlan().getWebScrapePagesMonthlyLimit(),
+                activePlan.getNumberOfSeats());
+
+        return WebScrapeBudgetDTO.builder()
+                .maxPages(maxPages)
+                .usedPages(usedPages)
+                .remainingPages(Math.max(0, maxPages - usedPages))
+                .period(billingPeriod)
+                .build();
     }
 
 

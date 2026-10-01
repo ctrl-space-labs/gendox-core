@@ -3,10 +3,12 @@ package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.WebScrapePageConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Integration;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WebScrapeBudgetDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WebScrapePageDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WebScrapePageSelectionDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WebScrapeScheduleDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.WebScrapePageCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.SubscriptionValidationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.WebScrapePageService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.WebScrapeIntegrationUpdateService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
@@ -31,16 +33,19 @@ public class WebScrapeController {
     private WebScrapePageConverter webScrapePageConverter;
     private WebScrapeIntegrationUpdateService webScrapeIntegrationUpdateService;
     private SecurityUtils securityUtils;
+    private SubscriptionValidationService subscriptionValidationService;
 
     @Autowired
     public WebScrapeController(WebScrapePageService webScrapePageService,
                                WebScrapePageConverter webScrapePageConverter,
                                WebScrapeIntegrationUpdateService webScrapeIntegrationUpdateService,
-                               SecurityUtils securityUtils) {
+                               SecurityUtils securityUtils,
+                               SubscriptionValidationService subscriptionValidationService) {
         this.webScrapePageService = webScrapePageService;
         this.webScrapePageConverter = webScrapePageConverter;
         this.webScrapeIntegrationUpdateService = webScrapeIntegrationUpdateService;
         this.securityUtils = securityUtils;
+        this.subscriptionValidationService = subscriptionValidationService;
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_READ_ORGANIZATION_WEB_SITES', 'getRequestedOrgIdFromPathVariable')")
@@ -170,6 +175,16 @@ public class WebScrapeController {
 
         webScrapePageService.getIntegration(organizationId, integrationId);
         webScrapeIntegrationUpdateService.removeContent(integrationId, pageId);
+    }
+
+    // the budget belongs to the organization, not to one site, so it is not
+    // scoped to an integration: every source spends from the same allowance
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_ORGANIZATION_WEB_SITES', 'getRequestedOrgIdFromPathVariable')")
+    @GetMapping("/organizations/{organizationId}/web-scrape/budget")
+    @Operation(summary = "How many pages may still be read this billing period",
+            description = "The monthly page allowance of the active plan, what has been read against it in the current billing period, and what remains.")
+    public WebScrapeBudgetDTO getBudget(@PathVariable UUID organizationId) {
+        return subscriptionValidationService.getWebScrapeBudget(organizationId);
     }
 
 
