@@ -145,7 +145,7 @@ public class OrganizationWebSiteService {
     }
 
     private ApiKey validateApiKey(UUID organizationId, String apiKeyValue) throws GendoxException {
-        ApiKey apiKey = apiKeyService.getByApiKey(apiKeyValue);
+        ApiKey apiKey = apiKeyService.validateApiKey(apiKeyValue);
         if (!organizationId.equals(apiKey.getOrganizationId())) {
             logger.error("Organization mismatch: API Key belongs to Organization ID: {}, but provided Organization ID is: {}", apiKey.getOrganizationId(), organizationId);
             throw new GendoxException(

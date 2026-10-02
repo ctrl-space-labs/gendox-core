@@ -3,16 +3,16 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.ApiKeyConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ApiKey;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.OrganizationWebSite;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ApiKeyDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ApiKeyRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.OrganizationWebSiteRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -21,20 +21,20 @@ public class ApiKeyService {
 
     private ApiKeyRepository apiKeyRepository;
     private ApiKeyConverter apiKeyConverter;
-
+    private OrganizationWebSiteRepository organizationWebSiteRepository;
     private TypeService typeService;
-
     private UserService userService;
-
 
 
     @Autowired
     public ApiKeyService(ApiKeyRepository apiKeyRepository,
                          ApiKeyConverter apiKeyConverter,
+                         OrganizationWebSiteRepository organizationWebSiteRepository,
                          TypeService typeService,
                          UserService userService) {
         this.apiKeyRepository = apiKeyRepository;
         this.apiKeyConverter = apiKeyConverter;
+        this.organizationWebSiteRepository = organizationWebSiteRepository;
         this.typeService = typeService;
         this.userService = userService;
     }
@@ -55,7 +55,7 @@ public class ApiKeyService {
         return apiKeyRepository.findAllByOrganizationId(organizationId);
     }
 
-    public ApiKey getByApiKey(String apiKey) throws GendoxException{
+    public ApiKey getByApiKey(String apiKey) throws GendoxException {
         return apiKeyRepository.findByApiKey(apiKey)
                 .orElse(null);
     }
@@ -65,16 +65,48 @@ public class ApiKeyService {
                 .orElseThrow(() -> new GendoxException("API_KEY_NOT_FOUND", "No ApiKey found for the given integration ID", HttpStatus.NOT_FOUND));
     }
 
+    /**
+     * The one place a key offered as a credential is judged: it has to exist, be
+     * active, and be inside its own validity window. The authentication provider
+     * makes the same judgement, but it keeps its own branches because Spring
+     * Security needs the two failures told apart.
+     */
     public ApiKey validateApiKey(String key) throws GendoxException {
         ApiKey apiKey = this.getByApiKey(key);
         if (apiKey == null) {
             throw new GendoxException("API_KEY_NOT_FOUND", "No matching ApiKey found with the specified criteria", HttpStatus.NOT_FOUND);
         }
+
+        if (!Boolean.TRUE.equals(apiKey.getActive())) {
+            throw new GendoxException("API_KEY_NOT_ACTIVE",
+                    "This API key is not active", HttpStatus.FORBIDDEN);
+        }
+
+        Instant now = Instant.now();
+        if (apiKey.getStartDate().isAfter(now) || apiKey.getEndDate().isBefore(now)) {
+            throw new GendoxException("API_KEY_EXPIRED",
+                    "This API key is outside its validity period", HttpStatus.FORBIDDEN);
+        }
+
         return apiKey;
     }
 
-    public ApiKey createApiKey(ApiKeyDTO apiKeyDTO) throws GendoxException {
+    /**
+     * Every key is reached through the organization in the path. An id that
+     * belongs to another organization answers the same as an id that does not
+     * exist anywhere, so nothing is learned by trying ids.
+     */
+    private ApiKey getOwnedBy(UUID organizationId, UUID id) throws GendoxException {
+        return apiKeyRepository.findById(id)
+                .filter(apiKey -> organizationId.equals(apiKey.getOrganizationId()))
+                .orElseThrow(() -> new GendoxException("APIKEY_NOT_FOUND",
+                        "ApiKey not found", HttpStatus.NOT_FOUND));
+    }
+
+    public ApiKey createApiKey(UUID organizationId, ApiKeyDTO apiKeyDTO) throws GendoxException {
         ApiKey apiKey = apiKeyConverter.toEntity(apiKeyDTO);
+        apiKey.setOrganizationId(organizationId);
+        apiKey.setActive(true);
         String generatedApiKey = "gxsk-" + UUID.randomUUID().toString().replace("-", "")
                 + UUID.randomUUID().toString().replace("-", "");
 
@@ -83,7 +115,7 @@ public class ApiKeyService {
         UUID apiKeyId = UUID.randomUUID();
         apiKey.setId(apiKeyId);
 
-        var user = createUserForApiKey(apiKeyId, apiKey);
+        createUserForApiKey(apiKeyId, apiKey);
 
         return apiKeyRepository.save(apiKey);
     }
@@ -116,22 +148,43 @@ public class ApiKeyService {
         return userService.createUser(user);
     }
 
-    public ApiKey updateApiKey(UUID id, ApiKeyDTO apiKeyDTO) throws GendoxException {
-        ApiKey existingApiKey = apiKeyRepository.findById(id)
-                .orElseThrow(() -> new GendoxException("APIKEY_NOT_FOUND", "ApiKey not found", HttpStatus.NOT_FOUND));
+    public ApiKey updateApiKey(UUID organizationId, UUID id, ApiKeyDTO apiKeyDTO) throws GendoxException {
+        ApiKey existingApiKey = getOwnedBy(organizationId, id);
 
         // Update the fields of the existing ApiKey
         existingApiKey.setName(apiKeyDTO.getName());
         return apiKeyRepository.save(existingApiKey);
     }
 
-    public void deleteApiKey(UUID id) throws GendoxException {
-        if (!apiKeyRepository.existsById(id)) {
-            throw (new GendoxException("APIKEY_NOT_FOUND", "ApiKey not found", HttpStatus.NOT_FOUND));
-        }
-        apiKeyRepository.deleteById(id);
 
-        // TODO: User entry related to this key, remain orphaned. We need a soft delete in the API Key table
+    /**
+     * Removing a key does not remove its row. The key shares its id with a user
+     * row that carries the authorship of everything the key ever created, and
+     * `users` is referenced throughout the schema, so deleting it would take that
+     * authorship with it. Marking the key inactive revokes it just as completely
+     * — authentication already refuses inactive keys — and nothing is orphaned.
+     */
+    public void revokeApiKey(UUID organizationId, UUID id) throws GendoxException {
+        ApiKey apiKey = getOwnedBy(organizationId, id);
+
+        // already revoked: saying so a second time changes nothing
+        if (!Boolean.TRUE.equals(apiKey.getActive())) {
+            return;
+        }
+
+        // A revoked key stops working the moment it is revoked, so a website that
+        // sends with it would start failing silently. Refuse while one does.
+        long websitesUsingIt = organizationWebSiteRepository.countByApiKeyId(id);
+        if (websitesUsingIt > 0) {
+            throw new GendoxException("API_KEY_IN_USE",
+                    "This API key is used by " + websitesUsingIt
+                            + (websitesUsingIt == 1 ? " website" : " websites")
+                            + ". Remove it from them first.",
+                    HttpStatus.CONFLICT);
+        }
+
+        apiKey.setActive(false);
+        apiKeyRepository.save(apiKey);
     }
 
     public UUID getOrganizationIdByApiKey(String apiKey) throws GendoxException {

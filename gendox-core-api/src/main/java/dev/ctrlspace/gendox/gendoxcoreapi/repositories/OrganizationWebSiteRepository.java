@@ -21,6 +21,7 @@ public interface OrganizationWebSiteRepository extends JpaRepository<Organizatio
 
     long countByOrganizationId(UUID organizationId);
 
+    long countByApiKeyId(UUID apiKeyId);
 
     @Query(nativeQuery = true, value = """
                 SELECT ows.*

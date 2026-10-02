@@ -33,7 +33,7 @@ public class ApiKeyController {
     @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_API_KEYS', 'getRequestedOrgIdFromPathVariable')")
     @PostMapping("/organizations/{organizationId}/api-keys")
     public ApiKey createApiKey(@PathVariable UUID organizationId, @RequestBody ApiKeyDTO apiKeyDTO) throws GendoxException {
-        return apiKeyService.createApiKey(apiKeyDTO);
+        return apiKeyService.createApiKey(organizationId, apiKeyDTO);
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_API_KEYS', 'getRequestedOrgIdFromPathVariable')")
@@ -42,14 +42,14 @@ public class ApiKeyController {
                                @PathVariable UUID apiKeyId,
                                @RequestBody ApiKeyDTO apiKeyDTO) throws GendoxException {
 
-        return apiKeyService.updateApiKey(apiKeyId, apiKeyDTO);
+        return apiKeyService.updateApiKey(organizationId, apiKeyId, apiKeyDTO);
     }
 
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_API_KEYS', 'getRequestedOrgIdFromPathVariable')")
     @DeleteMapping("/organizations/{organizationId}/api-keys/{apiKeyId}")
     public void deleteApiKey(@PathVariable UUID organizationId, @PathVariable UUID apiKeyId) throws GendoxException {
-        apiKeyService.deleteApiKey(apiKeyId);
+        apiKeyService.revokeApiKey(organizationId, apiKeyId);
     }
 
 }
