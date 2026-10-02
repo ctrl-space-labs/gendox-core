@@ -16,6 +16,8 @@ Implementation plans and audits live in `.ai/`, one file per topic, named `<topi
 
 When implementation changes a plan substantially, leave the original file exactly as written and continue in a new file dated the day of the revision. The design as first agreed stays readable next to what it became; **Pending plans** below always links the current file.
 
+Two files per topic, no more: **the original, which never changes, and the current one, which is self-contained.** A revision carries forward everything still true from the file it replaces, and that file is then deleted — so a reader never has to assemble the design from a chain, and no superseded file can be mistaken for the plan.
+
 **`.ai/` is committed to a PUBLIC repository.** Before writing or editing anything there:
 
 - No secrets, tokens, or API keys — env var *names* are fine, values never.
@@ -26,7 +28,7 @@ When implementation changes a plan substantially, leave the original file exactl
 
 ### Pending plans
 
-- [Web Scraping Integration (Firecrawl) — #526](.ai/issue-526-web-scraping-integration-2026-09-28.md) — in progress; the backend (526.1–526.6) is implemented and verified, 526.3 landed as a crawl source in the websites table, and the screen is agreed in a prototype but not yet written into `gendox-frontend` (526.8). This file revises the frontend phase only; the rest of the plan stays in the [2026-09-17 revision](.ai/issue-526-web-scraping-integration-2026-09-17.md), which in turn supersedes the [original 2026-09-10 plan](.ai/issue-526-web-scraping-integration-2026-09-10.md). Both are kept unchanged as first written.
+- [Web Scraping Integration (Firecrawl) — #526](.ai/issue-526-web-scraping-integration-2026-10-02.md) — in progress; the backend is implemented and verified end to end, and the screen is agreed in a prototype but not yet written into `gendox-frontend` (#544). Self-contained: it replaces the revisions of 2026-09-17 and 2026-09-28. The [original 2026-09-10 plan](.ai/issue-526-web-scraping-integration-2026-09-10.md) is kept unchanged as first written.
 
 ## Common Development Commands
 
