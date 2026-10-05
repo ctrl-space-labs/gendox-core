@@ -5,6 +5,7 @@ import subscriptionPlanService from 'src/gendox-sdk/subscriptionPlanService'
 import apiKeyService from 'src/gendox-sdk/apiKeyService'
 import organizationWebSiteService from 'src/gendox-sdk/organizationWebSiteService'
 import organizationConnectorService from 'src/gendox-sdk/organizationConnectorService'
+import webScrapeService from 'src/gendox-sdk/webScrapeService'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import toast from 'react-hot-toast'
 
@@ -87,6 +88,23 @@ export const fetchOrganizationWebSites = createAsyncThunk(
     } catch (error) {
       // toast.error(`Failed to fetch organization websites. Error: ${getErrorMessage(error)}`)
       console.error(`Failed to fetch organization websites. Error: ${getErrorMessage(error)}`)
+      return thunkAPI.rejectWithValue(error.response.data)
+    }
+  }
+)
+
+// A website row needs its integration to say when the site was last read and
+// how often it is checked, so the two are fetched together.
+export const fetchIntegrations = createAsyncThunk(
+  'activeOrganization/fetchIntegrations',
+  async ({ organizationId, token }, thunkAPI) => {
+    try {
+      const response = await webScrapeService.getIntegrationsByOrganizationId(organizationId, token)
+
+      // the endpoint answers a page, not a bare list
+      return response.data?.content ?? []
+    } catch (error) {
+      console.error(`Failed to fetch integrations. Error: ${getErrorMessage(error)}`)
       return thunkAPI.rejectWithValue(error.response.data)
     }
   }
@@ -185,6 +203,7 @@ const initialActiveOrganizationState = {
   organizationPlans: {},
   apiKeys: [],
   organizationWebSites: [],
+  integrations: [],
   organizationMembers: [],
   organizationConnectors: null,
   isFetchingMembers: false,
@@ -281,6 +300,20 @@ const activeOrganizationSlice = createSlice({
       })
 
       .addCase(fetchOrganizationWebSites.rejected, (state, action) => {
+        state.isBlurring = false
+        state.error = action.payload
+      })
+
+      // For fetching integrations
+      .addCase(fetchIntegrations.pending, state => {
+        state.isBlurring = true
+        state.error = null
+      })
+      .addCase(fetchIntegrations.fulfilled, (state, action) => {
+        state.isBlurring = false
+        state.integrations = action.payload
+      })
+      .addCase(fetchIntegrations.rejected, (state, action) => {
         state.isBlurring = false
         state.error = action.payload
       })

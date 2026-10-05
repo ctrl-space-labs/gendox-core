@@ -1,7 +1,4 @@
-import { create, update } from 'lodash'
-import { remove } from 'nprogress'
 import commonConfig from 'src/configs/common.config.js'
-import { duplicateTask } from 'src/store/activeTask/activeTask'
 
 const url = commonConfig.gendoxUrl
 
@@ -173,6 +170,55 @@ export default {
   deleteOrganizationWebSite: (organizationId, organizationWebSiteId) =>
     `${url}organizations/${organizationId}/websites/${organizationWebSiteId}`,
 
+  createWebScrapeWebSite: organizationId => `${url}organizations/${organizationId}/websites/web-scrape`,
+
+  integration: integrationId => `${url}integrations/${integrationId}`,
+
+  integrationsByOrganization: (organizationId, size = 100) =>
+    `${url}integrations?organizationId=${organizationId}&size=${size}`,
+
+  webScrapePages: (organizationId, integrationId, page = 0, size = 20, status, isSelected, hasContent, search) => {
+    let urlWithParams = `${url}organizations/${organizationId}/integrations/${integrationId}/web-scrape/pages?page=${page}&size=${size}`
+
+    if (status) {
+      urlWithParams += `&status=${status}`
+    }
+
+    if (isSelected === true || isSelected === false) {
+      urlWithParams += `&isSelected=${isSelected}`
+    }
+
+    if (hasContent === true || hasContent === false) {
+      urlWithParams += `&hasContent=${hasContent}`
+    }
+
+    if (search) {
+      urlWithParams += `&search=${encodeURIComponent(search)}`
+    }
+
+    return urlWithParams
+  },
+
+  webScrapePageSelection: (organizationId, integrationId) =>
+    `${url}organizations/${organizationId}/integrations/${integrationId}/web-scrape/pages/selection`,
+
+  webScrapePageContent: (organizationId, integrationId, pageId) =>
+    `${url}organizations/${organizationId}/integrations/${integrationId}/web-scrape/pages/${pageId}/content`,
+
+  webScrapeCrawl: (organizationId, integrationId) =>
+    `${url}organizations/${organizationId}/integrations/${integrationId}/web-scrape/crawl`,
+
+  webScrapeDeepCrawl: (organizationId, integrationId) =>
+    `${url}organizations/${organizationId}/integrations/${integrationId}/web-scrape/deep-crawl`,
+
+  webScrapeScrape: (organizationId, integrationId) =>
+    `${url}organizations/${organizationId}/integrations/${integrationId}/web-scrape/scrape`,
+
+  webScrapeSchedule: (organizationId, integrationId) =>
+    `${url}organizations/${organizationId}/integrations/${integrationId}/web-scrape/schedule`,
+
+  webScrapeBudget: organizationId => `${url}organizations/${organizationId}/web-scrape/budget`,
+
   chatThread: (organizationId, threadId) => `${url}organizations/${organizationId}/threads/${threadId}`,
 
   userLogout: () => `${url}users/logout`,
@@ -184,8 +230,7 @@ export default {
   duplicateTask: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/duplicate`,
 
-  getTasks: (organizationId, projectId) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/tasks`,
+  getTasks: (organizationId, projectId) => `${url}organizations/${organizationId}/projects/${projectId}/tasks`,
 
   taskRequest: (organizationId, projectId, taskId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}`,
@@ -209,7 +254,9 @@ export default {
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/document-pages?page=${page}&size=${size}`,
 
   getTaskNodesByCriteria: (organizationId, projectId, taskId, page, size, sort) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/task-nodes/search?page=${page}&size=${size}${sort ? `&sort=${sort}` : ''}`,
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/task-nodes/search?page=${page}&size=${size}${
+      sort ? `&sort=${sort}` : ''
+    }`,
 
   getAnswerTaskNodes: (organizationId, projectId, taskId, page, size) =>
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/answers/batch?page=${page}&size=${size}`,

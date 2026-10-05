@@ -13,7 +13,8 @@ import {
   fetchOrganizationAiModelKeys,
   fetchOrganizationPlans,
   fetchApiKeys,
-  fetchOrganizationWebSites
+  fetchOrganizationWebSites,
+  fetchIntegrations
 } from 'src/store/activeOrganization/activeOrganization'
 import OrganizationSettingsCard from 'src/views/pages/organization-settings/OrganizationSettingsCard'
 import { isValidOrganization } from 'src/utils/validators'
@@ -32,11 +33,12 @@ const OrganizationSettings = () => {
   useEffect(() => {
     if (isValidOrganization(organizationId, user)) {
       dispatch(fetchOrganization({ organizationId, token }))
-      dispatch(fetchAiModelProviders({ organizationId, token }))      
+      dispatch(fetchAiModelProviders({ organizationId, token }))
       dispatch(fetchOrganizationAiModelKeys({ organizationId, token }))
       dispatch(fetchOrganizationPlans({ organizationId, token }))
       dispatch(fetchApiKeys({ organizationId, token }))
       dispatch(fetchOrganizationWebSites({ organizationId, token }))
+      dispatch(fetchIntegrations({ organizationId, token }))
     }
     // }
   }, [organizationId, router, dispatch])

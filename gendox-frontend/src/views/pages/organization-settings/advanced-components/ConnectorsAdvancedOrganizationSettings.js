@@ -1,63 +1,57 @@
-import React, { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/router'
-import { useDispatch, useSelector } from 'react-redux'
-import Box from '@mui/material/Box'
-import CardContent from '@mui/material/CardContent'
-import CardHeader from '@mui/material/CardHeader'
-import Grid from '@mui/material/Grid'
-import IconButton from '@mui/material/IconButton'
-import TextField from '@mui/material/TextField'
-import Tooltip from '@mui/material/Tooltip'
+import { useSelector, useDispatch } from 'react-redux'
+import { CardContent, Box, Stack, Typography, Chip, Tooltip, Button, Collapse } from '@mui/material'
+import toast from 'react-hot-toast'
 import Icon from 'src/views/custom-components/mui/icon/icon'
-import commonConfig from 'src/configs/common.config.js'
-import DeleteConfirmDialog from 'src/utils/dialogs/DeleteConfirmDialog'
-import ConnectorEditDialog from './connectors/ConnectorEditDialog'
 import { localStorageConstants } from 'src/utils/generalConstants'
 import {
   fetchOrganizationConnectors,
   upsertOrganizationConnector,
   deleteOrganizationConnector
 } from 'src/store/activeOrganization/activeOrganization'
-import {
-  setGeeReady,
-  setGeeUserEmail,
-  setGeeProjectFallbackActive
-} from 'src/store/earthObservation'
-import { CONNECTOR_TYPES } from 'src/gendox-sdk/organizationConnectorService'
-import { clearStoredToken as clearStoredGeeToken } from 'src/views/pages/earth-observation/gee/GeeAuthGuard/geeStorage'
+import SectionHeader from './shared/SectionHeader'
+import ServiceAvatar from './shared/ServiceAvatar'
+import ActionDialog from './shared/ActionDialog'
+import RowActions from './shared/RowActions'
+import { connectorMeta, KNOWN_CONNECTORS } from './connectors/connectorMeta'
 
-const GEE_SETUP_DOC_PATH = '/earth-observation/gee-project-setup'
+// every known connector's credential fields in one list, each one hidden unless
+// its own service is the one chosen — so picking a service reveals exactly the
+// credentials that service needs, in the same dialog
+const CREDENTIAL_FIELDS = KNOWN_CONNECTORS.flatMap(type =>
+  (connectorMeta(type).fields ?? []).map(f => ({
+    ...f,
+    name: `${type}.${f.name}`,
+    hidden: v => v.connectorType !== type
+  }))
+)
 
-const CONNECTOR_DEFINITIONS = [
-  {
-    type: CONNECTOR_TYPES.GOOGLE_EARTH_ENGINE,
-    label: 'Google Earth Engine',
-    description: 'GEE project ID used when initializing Earth Engine for this organization.',
-    helpText:
-      'Open Google Cloud Console (Dashboard) and copy the "Project ID" from the "Project Info" card at the top left. Make sure this project has Earth Engine enabled.',
-    docHref: `${commonConfig.gendoxDocsUrl}${GEE_SETUP_DOC_PATH}`,
-    docLabel: 'Full setup guide: how to create & enable a GEE project',
-    fields: [
-      {
-        key: 'projectId',
-        label: 'Project ID',
-        placeholder: 'e.g. my-gee-project-123'
-      }
-    ]
+// config arrives as an object from the converter, but a raw jsonb string is
+// possible too. Only the field names are shown — a connector's config holds
+// secrets.
+const configFields = connector => {
+  const raw = connector?.config
+  if (!raw) return []
+
+  try {
+    return Object.keys(typeof raw === 'string' ? JSON.parse(raw) : raw)
+  } catch {
+    return []
   }
-]
+}
 
 const ConnectorsAdvancedOrganizationSettings = () => {
   const router = useRouter()
   const dispatch = useDispatch()
-  const token = typeof window !== 'undefined' ? window.localStorage.getItem(localStorageConstants.accessTokenKey) : null
+  const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
 
   const organizationId = router.query.organizationId
-  const connectors = useSelector(state => state.activeOrganization.organizationConnectors)
-  const sectionRef = useRef(null)
+  const { organizationConnectors, isBlurring } = useSelector(state => state.activeOrganization)
 
-  const [editTarget, setEditTarget] = useState(null) // { definition, existing }
-  const [deleteTarget, setDeleteTarget] = useState(null) // { definition, existing }
+  const [showAll, setShowAll] = useState(false)
+  const [connecting, setConnecting] = useState(null)
+  const [disconnecting, setDisconnecting] = useState(null)
 
   useEffect(() => {
     if (organizationId && token) {
@@ -65,183 +59,183 @@ const ConnectorsAdvancedOrganizationSettings = () => {
     }
   }, [organizationId, token, dispatch])
 
-  // Scroll into view when opened with #connectors hash (e.g. from EO workspace warning).
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    if (window.location.hash !== '#connectors') return
-    const id = window.setTimeout(() => {
-      sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }, 200)
-    return () => window.clearTimeout(id)
-  }, [])
+  const { connected, available } = useMemo(() => {
+    const stored = organizationConnectors ?? []
 
-  // Wipe any cached GEE session (stored access token + Redux readiness flags)
-  // so the next visit to the EO workspace re-authenticates from scratch and
-  // initializes Earth Engine with the freshly-saved project ID. Without this,
-  // window.ee keeps its old project context and the workspace silently keeps
-  // using the previous project until a hard refresh.
-  //
-  // We deliberately set geeProjectFallbackActive=true here (not false): the
-  // header project chip should show the warning state until the next EE init
-  // actually verifies the saved project works. Setting it false would briefly
-  // paint the chip green based on stale verification from the previous project.
-  const resetGeeSession = () => {
-    clearStoredGeeToken()
-    dispatch(setGeeReady(false))
-    dispatch(setGeeUserEmail(null))
-    dispatch(setGeeProjectFallbackActive(true))
-  }
+    // anything stored that we have no name for still deserves a row
+    const types = [...KNOWN_CONNECTORS, ...stored.map(c => c.connectorType).filter(t => !KNOWN_CONNECTORS.includes(t))]
 
-  const handleEditClickOpen = definition => {
-    const existing = (connectors || []).find(c => c.connectorType === definition.type)
-    setEditTarget({ definition, existing })
-  }
+    const rows = types.map(type => ({
+      type,
+      meta: connectorMeta(type),
+      connector: stored.find(c => c.connectorType === type) ?? null
+    }))
 
-  const handleEditClose = () => setEditTarget(null)
-
-  const handleSaveConnector = async values => {
-    if (!editTarget || !organizationId || !token) return
-    const payload = {
-      connectorType: editTarget.definition.type,
-      isActive: true,
-      config: values
-    }
-    try {
-      await dispatch(
-        upsertOrganizationConnector({
-          organizationId,
-          connectorType: editTarget.definition.type,
-          payload,
-          token
-        })
-      ).unwrap()
-      if (editTarget.definition.type === CONNECTOR_TYPES.GOOGLE_EARTH_ENGINE) {
-        resetGeeSession()
-      }
-      setEditTarget(null)
-    } catch {
-      // toast handled in the thunk
-    }
-  }
-
-  const handleDeleteClickOpen = definition => {
-    const existing = (connectors || []).find(c => c.connectorType === definition.type)
-    if (!existing) return
-    setDeleteTarget({ definition, existing })
-  }
-
-  const handleDeleteClose = () => setDeleteTarget(null)
-
-  const handleDeleteConfirm = async () => {
-    if (!deleteTarget || !organizationId || !token) return
-    try {
-      await dispatch(
-        deleteOrganizationConnector({
-          organizationId,
-          connectorType: deleteTarget.definition.type,
-          token
-        })
-      ).unwrap()
-      if (deleteTarget.definition.type === CONNECTOR_TYPES.GOOGLE_EARTH_ENGINE) {
-        resetGeeSession()
-      }
-      setDeleteTarget(null)
-    } catch {
-      setDeleteTarget(null)
-    }
-  }
+    return { connected: rows.filter(r => r.connector), available: rows.filter(r => !r.connector) }
+  }, [organizationConnectors])
 
   return (
-    <Box id='connectors' ref={sectionRef} sx={{ scrollMarginTop: 80 }}>
-      <CardHeader
-        title={
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <span>Connectors</span>
-            <Tooltip title='Configure external services available to this organization. These settings apply to all members and projects.'>
-              <IconButton color='primary' sx={{ ml: 1 }}>
-                <Icon icon='mdi:information-outline' />
-              </IconButton>
-            </Tooltip>
-          </Box>
-        }
+    <>
+      <SectionHeader
+        title='Connectors'
+        tooltip='Your own credentials for services Gendox calls on your behalf.'
+        addLabel='Connect a service'
+        onAdd={() => setConnecting('')}
       />
 
-      <CardContent>
-        {CONNECTOR_DEFINITIONS.map(definition => {
-          const existing = (connectors || []).find(c => c.connectorType === definition.type)
-          const primaryField = definition.fields[0]
-          const primaryValue = existing?.config?.[primaryField.key] || ''
-          return (
-            <Grid item xs={12} sm={12} md={6} sx={{ mt: 3, mb: 4 }} key={definition.type}>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <TextField
-                  label='Connector'
-                  value={definition.label}
-                  disabled
-                  sx={{ mr: 2, minWidth: 220 }}
-                />
-                <TextField
-                  fullWidth
-                  label={primaryField.label}
-                  value={primaryValue}
-                  placeholder={primaryField.placeholder}
-                  disabled
-                />
-                <Box sx={{ display: 'flex', ml: 1 }}>
-                  {definition.docHref && (
-                    <Tooltip title={`Open setup guide for ${definition.label}`}>
-                      <IconButton
-                        component='a'
-                        href={definition.docHref}
-                        target='_blank'
-                        rel='noopener noreferrer'
-                        color='primary'
-                      >
-                        <Icon icon='mdi:book-open-variant' />
-                      </IconButton>
-                    </Tooltip>
-                  )}
-                  <Tooltip title={primaryValue ? `Edit ${definition.label}` : `Configure ${definition.label}`}>
-                    <IconButton onClick={() => handleEditClickOpen(definition)} color='primary'>
-                      <Icon icon='mdi:pencil-outline' />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title={`Delete ${definition.label}`}>
-                    <span>
-                      <IconButton
-                        onClick={() => handleDeleteClickOpen(definition)}
-                        color='error'
-                        disabled={!existing}
-                      >
-                        <Icon icon='mdi:delete' />
-                      </IconButton>
-                    </span>
-                  </Tooltip>
+      <CardContent sx={{ pt: 0 }}>
+        <Box sx={{ filter: isBlurring ? 'blur(6px)' : 'none', transition: 'filter 0.3s ease' }} aria-busy={isBlurring}>
+          {/* what actually changes for the user when nothing is connected */}
+          <Typography variant='body2' color='text.secondary' sx={{ mb: 2.5 }}>
+            {connected.length === 0
+              ? 'No service connected. Anything that needs one runs on the credentials Gendox provides.'
+              : `${connected.length} of ${
+                  connected.length + available.length
+                } services connected with your own credentials.`}
+          </Typography>
+
+          {connected.map(({ type, meta, connector }) => {
+            const fields = configFields(connector)
+
+            // the connectors endpoint answers a DTO, which exposes isActive;
+            // the api keys endpoint answers the entity, where it is `active`
+            const off = !connector.isActive
+
+            return (
+              <Stack
+                key={type}
+                direction='row'
+                alignItems='center'
+                spacing={2}
+                sx={{
+                  p: 1.5,
+                  mb: 1.5,
+                  border: '1px solid',
+                  borderColor: off ? 'divider' : 'primary.main',
+                  borderRadius: 1,
+                  bgcolor: off ? 'transparent' : 'action.hover'
+                }}
+              >
+                <ServiceAvatar meta={meta} dim={off} />
+
+                <Box sx={{ minWidth: 0, flex: 1 }}>
+                  <Stack direction='row' spacing={1} alignItems='center'>
+                    <Typography variant='subtitle2' sx={{ lineHeight: 1.3 }}>
+                      {meta.label}
+                    </Typography>
+                    {off && <Chip size='small' label='switched off' variant='outlined' />}
+                  </Stack>
+                  <Typography variant='caption' color='text.secondary'>
+                    {off
+                      ? 'Stored but not in use — Gendox credentials are used instead'
+                      : meta.purpose || fields.join(' · ')}
+                  </Typography>
                 </Box>
-              </Box>
-            </Grid>
-          )
-        })}
+
+                <RowActions
+                  onEdit={() => setConnecting(type)}
+                  editDisabled={!meta.fields}
+                  editLabel={meta.fields ? 'Replace credentials' : 'Gendox does not know this connector'}
+                  onDelete={() => setDisconnecting({ type, meta })}
+                  deleteLabel='Disconnect and fall back to the Gendox credentials'
+                />
+              </Stack>
+            )
+          })}
+
+          {available.length > 0 && (
+            <>
+              <Button
+                size='small'
+                color='inherit'
+                onClick={() => setShowAll(v => !v)}
+                sx={{ px: 0.5, color: 'text.secondary' }}
+                startIcon={<Icon icon={showAll ? 'mdi:chevron-down' : 'mdi:chevron-right'} />}
+              >
+                {available.length} more available to connect
+              </Button>
+
+              <Collapse in={showAll}>
+                <Stack direction='row' flexWrap='wrap' useFlexGap spacing={1} sx={{ mt: 1.5 }}>
+                  {available.map(({ type, meta }) => (
+                    <Tooltip key={type} title={meta.purpose}>
+                      <Chip
+                        variant='outlined'
+                        avatar={<ServiceAvatar meta={meta} dim size={32} />}
+                        label={meta.label}
+                        onClick={() => setConnecting(type)}
+                        sx={{ height: 44, pl: 0.5, borderRadius: 1, '& .MuiChip-avatar': { width: 32, height: 32 } }}
+                      />
+                    </Tooltip>
+                  ))}
+                </Stack>
+              </Collapse>
+            </>
+          )}
+        </Box>
       </CardContent>
 
-      <ConnectorEditDialog
-        open={Boolean(editTarget)}
-        onClose={handleEditClose}
-        onSave={handleSaveConnector}
-        definition={editTarget?.definition}
-        currentConfig={editTarget?.existing?.config}
+      <ActionDialog
+        open={!!disconnecting}
+        title='Disconnect service'
+        saveLabel='Disconnect'
+        destructive
+        fields={[]}
+        description={
+          disconnecting &&
+          `The credentials stored for ${disconnecting.meta.label} are deleted and cannot be recovered from here. Anything that used them falls back to the credentials Gendox provides, so nothing stops working — you just stop running on your own account.`
+        }
+        onClose={() => setDisconnecting(null)}
+        onSave={async () => {
+          // unwrap, so a rejected thunk reaches the dialog instead of closing it
+          await dispatch(
+            deleteOrganizationConnector({ organizationId, connectorType: disconnecting.type, token })
+          ).unwrap()
+          toast.success('Service disconnected')
+        }}
       />
 
-      <DeleteConfirmDialog
-        open={Boolean(deleteTarget)}
-        onClose={handleDeleteClose}
-        onConfirm={handleDeleteConfirm}
-        title={`Delete ${deleteTarget?.definition?.label || ''}`}
-        contentText={`Are you sure you want to remove the ${deleteTarget?.definition?.label || ''} configuration from this organization?`}
-        confirmButtonText='Delete'
-        cancelButtonText='Cancel'
+      <ActionDialog
+        open={connecting !== null}
+        title='Connect a service'
+        saveLabel='Connect'
+        description='Gendox will call this service with your credentials instead of its own. Connecting a service that is already connected replaces what is stored.'
+        fields={[
+          {
+            name: 'connectorType',
+            label: 'Service',
+            type: 'select',
+            value: connecting || '',
+            required: true,
+            options: [...connected, ...available]
+              .filter(r => r.meta.fields)
+              .map(r => ({
+                value: r.type,
+                label: r.connector ? `${r.meta.label} — already connected` : r.meta.label
+              }))
+          },
+          ...CREDENTIAL_FIELDS
+        ]}
+        onClose={() => setConnecting(null)}
+        onSave={async v => {
+          const type = v.connectorType
+
+          const config = Object.fromEntries(
+            (connectorMeta(type).fields ?? []).map(f => [f.name, String(v[`${type}.${f.name}`] ?? '').trim()])
+          )
+
+          await dispatch(
+            upsertOrganizationConnector({
+              organizationId,
+              connectorType: type,
+              payload: { organizationId, connectorType: type, isActive: true, config },
+              token
+            })
+          ).unwrap()
+          toast.success('Service connected')
+        }}
       />
-    </Box>
+    </>
   )
 }
 

@@ -33,6 +33,22 @@ const createOrganizationWebSite = async (organizationId, payload, token) => {
 }
 
 /**
+ * Create a website that Gendox reads: one call makes the website row and the
+ * crawl integration behind it. Needs a project, which is where the documents go.
+ * @param organizationId
+ * @param payload { name, url, projectId, provider, crawlPageLimit, runIntervalMinutes }
+ * @param token
+ */
+const createWebScrapeWebSite = async (organizationId, payload, token) => {
+  return axios.post(apiRequest.createWebScrapeWebSite(organizationId), payload, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
+    }
+  })
+}
+
+/**
  * Update organization web site by organization web site id
  * @param organizationId
  * @param organizationWebSiteId
@@ -68,6 +84,7 @@ const deleteOrganizationWebSite = async (organizationId, organizationWebSiteId, 
 export default {
   getOrganizationWebSitesByOrganizationId,
   createOrganizationWebSite,
+  createWebScrapeWebSite,
   updateOrganizationWebSite,
   deleteOrganizationWebSite
 }
