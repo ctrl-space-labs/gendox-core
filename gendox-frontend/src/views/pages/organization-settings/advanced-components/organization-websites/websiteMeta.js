@@ -1,6 +1,10 @@
-const WEB_SCRAPE = 'WEB_SCRAPE_INTEGRATION'
+import { WEB_SCRAPE_INTEGRATION } from '../integrations/integrationMeta'
 
 export const maskKey = key => (key ? `••••${key.slice(-4)}` : '')
+
+// these lists are full of rows whose name was never set to anything but the url
+export const shortName = website =>
+  website.name === website.url ? website.url.replace(/^https?:\/\//, '') : website.name
 
 /**
  * How content reaches Gendox from a website — the only thing that differs
@@ -14,7 +18,7 @@ export const maskKey = key => (key ? `••••${key.slice(-4)}` : '')
 export const deliveryOf = (website, integrations, apiKeys) => {
   const integration = website.integrationId ? integrations.find(i => i.id === website.integrationId) ?? null : null
 
-  if (integration?.integrationType?.name === WEB_SCRAPE) {
+  if (integration?.integrationType?.name === WEB_SCRAPE_INTEGRATION) {
     return {
       kind: 'crawled',
       integration,

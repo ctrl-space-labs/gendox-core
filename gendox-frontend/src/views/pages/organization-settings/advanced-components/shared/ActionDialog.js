@@ -102,6 +102,19 @@ const ActionDialog = ({
     .filter(f => !['section', 'readonly', 'toggle'].includes(f.type))
     .some(f => f.required && !String(values[f.name] ?? '').trim())
 
+  // a field can also refuse what was typed in it. The message appears under the field and
+  // the save stays shut until it clears — an empty field is `missing`, not wrong
+  const errors = useMemo(
+    () =>
+      Object.fromEntries(
+        visible
+          .filter(f => f.validate && String(values[f.name] ?? '').trim())
+          .map(f => [f.name, f.validate(String(values[f.name]).trim())])
+          .filter(([, message]) => message)
+      ),
+    [visible, values]
+  )
+
   const save = async () => {
     setSaving(true)
     setError(null)
@@ -166,10 +179,7 @@ const ActionDialog = ({
           key={f.name}
           sx={{ m: 0, alignItems: 'flex-start' }}
           control={
-            <Switch
-              checked={!!values[f.name]}
-              onChange={e => setValues(v => ({ ...v, [f.name]: e.target.checked }))}
-            />
+            <Switch checked={!!values[f.name]} onChange={e => setValues(v => ({ ...v, [f.name]: e.target.checked }))} />
           }
           label={
             <Box sx={{ pt: 0.75 }}>
@@ -255,6 +265,9 @@ const ActionDialog = ({
       )
     }
 
+    const selectArrowSx =
+      f.type === 'select' && f.tooltip ? { '& .MuiSelect-icon': { right: theme => theme.spacing(8) } } : undefined
+
     return (
       <TextField
         key={f.name}
@@ -266,6 +279,9 @@ const ActionDialog = ({
         fullWidth
         autoFocus={f === inputs[0]}
         onChange={e => setValues(v => ({ ...v, [f.name]: e.target.value }))}
+        sx={selectArrowSx}
+        error={!!errors[f.name]}
+        helperText={errors[f.name]}
         InputProps={
           f.tooltip
             ? {
@@ -375,9 +391,10 @@ const ActionDialog = ({
         </Button>
         <Button
           onClick={save}
-          disabled={saving || missing}
+          disabled={saving || missing || Object.keys(errors).length > 0}
           variant='contained'
           color={destructive ? 'error' : 'primary'}
+          startIcon={saving ? <CircularProgress size={16} color='inherit' /> : null}
         >
           {saving ? 'Working…' : saveLabel}
         </Button>

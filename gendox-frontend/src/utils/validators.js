@@ -1,4 +1,3 @@
-
 /**
  * Checks if the given ID is a valid UUID.
  * @param {string} id - The ID to validate.
@@ -35,30 +34,50 @@ export const isValidOrganization = (orgId, user) => {
  * @returns {boolean} - Returns true if both are valid and found, otherwise false.
  */
 export const isValidOrganizationAndProject = (orgId, projectId, user) => {
-
   // Check if both IDs are present and not the string "null"
   if (!orgId || orgId === 'null' || !projectId || projectId === 'null') {
-    return false;
+    return false
   }
 
   // Check if both IDs are valid UUIDs
   if (!isValidUUID(orgId) || !isValidUUID(projectId)) {
-    return false;
+    return false
   }
 
   // Validate that the user exists and has organizations
   if (!user || !user.organizations || user.organizations.length === 0) {
-    return false;
+    return false
   }
 
   // Find the organization from the user's organizations
-  const organization = user.organizations.find(o => o.id === orgId);
-  if (!organization) return false;
+  const organization = user.organizations.find(o => o.id === orgId)
+  if (!organization) return false
 
   // Validate that the organization has projects and that the project exists within it
   if (!organization.projects || organization.projects.length === 0) {
-    return false;
+    return false
   }
 
-  return Boolean(organization.projects.find(p => p.id === projectId));
-};
+  return Boolean(organization.projects.find(p => p.id === projectId))
+}
+
+/**
+ * Checks that a website url is one the backend can accept. The backend keeps the protocol
+ * and the host and drops the rest, parsing with the same rules the browser does — so a
+ * value the browser cannot parse, or one that arrives without a protocol, is refused here
+ * instead of reaching the server and coming back as a 500.
+ *
+ * @param {string} url - The url to validate.
+ * @returns {boolean}
+ */
+export const isValidWebsiteUrl = url => {
+  if (!url) return false
+
+  try {
+    const { protocol, hostname } = new URL(url.trim())
+
+    return (protocol === 'http:' || protocol === 'https:') && hostname.includes('.')
+  } catch {
+    return false
+  }
+}

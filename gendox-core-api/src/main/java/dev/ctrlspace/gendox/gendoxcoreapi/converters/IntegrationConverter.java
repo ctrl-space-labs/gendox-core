@@ -44,6 +44,15 @@ public class IntegrationConverter implements GendoxConverter<Integration, Integr
         if (integration.getPassword() != null) {
             integrationDTO.setPassword(integration.getPassword());
         }
+        if (integration.getRunIntervalMinutes() != null) {
+            integrationDTO.setRunIntervalMinutes(integration.getRunIntervalMinutes());
+        }
+        if (integration.getLastRunAt() != null) {
+            integrationDTO.setLastRunAt(integration.getLastRunAt());
+        }
+        if (integration.getConfig() != null) {
+            integrationDTO.setConfig(integration.getConfig());
+        }
         if (integration.getUpdatedAt() != null) {
             integrationDTO.setUpdatedAt(integration.getUpdatedAt());
         }
@@ -97,6 +106,16 @@ public class IntegrationConverter implements GendoxConverter<Integration, Integr
         if (integrationDTO.getPassword() != null) {
             integration.setPassword(integrationDTO.getPassword());
         }
+        if (integrationDTO.getRunIntervalMinutes() != null) {
+            integration.setRunIntervalMinutes(integrationDTO.getRunIntervalMinutes());
+        }
+        if (integrationDTO.getLastRunAt() != null) {
+            integration.setLastRunAt(integrationDTO.getLastRunAt());
+        }
+
+        // the column is NOT NULL with a default of '{}', but Hibernate names every column in
+        // the insert, so a null arrives explicitly and the database default never gets a turn
+        integration.setConfig(integrationDTO.getConfig() == null ? "{}" : integrationDTO.getConfig());
         if (integrationDTO.getUpdatedAt() != null) {
             integration.setUpdatedAt(integrationDTO.getUpdatedAt());
         }

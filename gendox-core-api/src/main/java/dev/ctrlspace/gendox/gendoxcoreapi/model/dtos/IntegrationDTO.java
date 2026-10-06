@@ -23,6 +23,9 @@ public class IntegrationDTO {
     private String repoHead;
     private String userName;
     private String password;
+    private Integer runIntervalMinutes;
+    private Instant lastRunAt;
+    private String config;
     private Instant createdAt;
     private Instant updatedAt;
     private UUID createdBy;

@@ -5,10 +5,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ApiKey;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Integration;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.OrganizationWebSite;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.OrganizationWebSiteDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WebScrapeScheduleDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WebScrapeSourceDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WebsiteIntegrationDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.OrganizationWebSiteRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.WebScrapeIntegrationUpdateService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.DocumentUtils;
@@ -34,6 +31,7 @@ public class OrganizationWebSiteService {
     private DocumentUtils documentUtils;
     private SubscriptionValidationService subscriptionValidationService;
     private WebScrapeIntegrationUpdateService webScrapeIntegrationUpdateService;
+    private ProjectService projectService;
 
     @Autowired
     public OrganizationWebSiteService(OrganizationWebSiteRepository organizationWebSiteRepository,
@@ -42,7 +40,8 @@ public class OrganizationWebSiteService {
                                       IntegrationService integrationService,
                                       DocumentUtils documentUtils,
                                       SubscriptionValidationService subscriptionValidationService,
-                                      WebScrapeIntegrationUpdateService webScrapeIntegrationUpdateService) {
+                                      WebScrapeIntegrationUpdateService webScrapeIntegrationUpdateService,
+                                      ProjectService projectService) {
         this.organizationWebSiteRepository = organizationWebSiteRepository;
         this.organizationWebSiteConverter = organizationWebSiteConverter;
         this.apiKeyService = apiKeyService;
@@ -50,6 +49,7 @@ public class OrganizationWebSiteService {
         this.documentUtils = documentUtils;
         this.subscriptionValidationService = subscriptionValidationService;
         this.webScrapeIntegrationUpdateService = webScrapeIntegrationUpdateService;
+        this.projectService = projectService;
     }
 
     public OrganizationWebSite getById(UUID id) {
@@ -96,6 +96,8 @@ public class OrganizationWebSiteService {
                     HttpStatus.BAD_REQUEST);
         }
 
+        projectService.validateProjectsBelongToOrganization(List.of(sourceDTO.getProjectId()), organizationId);
+
         if (!subscriptionValidationService.canUseWebScrape(organizationId)) {
             throw new GendoxException("WEB_SCRAPE_NOT_IN_PLAN",
                     "Web scraping is not included in the plan of organization " + organizationId,
@@ -111,8 +113,9 @@ public class OrganizationWebSiteService {
                     HttpStatus.CONFLICT);
         }
 
-        Integration integration = integrationService.createWebScrapeIntegration(
+        IntegrationDTO integrationDTO = integrationService.toWebScrapeIntegrationDTO(
                 organizationId, sourceDTO.getProjectId(), sourceDTO.getUrl());
+        Integration integration = integrationService.createIntegration(integrationDTO);
 
         OrganizationWebSite webSite;
         if (existing != null) {
@@ -160,7 +163,8 @@ public class OrganizationWebSiteService {
     private OrganizationWebSite getOrCreateOrganizationWebSite(UUID organizationId, WebsiteIntegrationDTO websiteIntegrationDTO, ApiKey apiKey) throws GendoxException {
         OrganizationWebSite organizationWebSite = getOrganizationWebSite(organizationId, websiteIntegrationDTO.getDomain());
         if (organizationWebSite == null) {
-            Integration integration = integrationService.createNewIntegration(organizationId, websiteIntegrationDTO);
+            IntegrationDTO integrationDTO = integrationService.toApiIntegrationDTO(organizationId, websiteIntegrationDTO);
+            Integration integration = integrationService.createIntegration(integrationDTO);
 
             OrganizationWebSiteDTO organizationWebSiteDTO = OrganizationWebSiteDTO.builder()
                     .organizationId(organizationId)
@@ -188,12 +192,11 @@ public class OrganizationWebSiteService {
     }
 
 
-
     /**
      * Only the name and the url are writable here. The integration and the api key
      * a website was given belong to whatever set them up, and renaming must not be
      * able to detach them.
-     *
+     * <p>
      * The website is looked up through the organization in the path, so an id that
      * belongs to another organization answers 404 instead of confirming it exists —
      * and an id that exists nowhere answers the same, instead of the silent null
@@ -232,7 +235,7 @@ public class OrganizationWebSiteService {
      * kept its schedule and kept fetching pages, with nothing on any screen showing
      * that it still existed. A source that was created together with its row is now
      * removed together with it.
-     *
+     * <p>
      * The website is looked up through the organization in the path, so an id that
      * belongs to another organization answers 404 instead of confirming it exists.
      */

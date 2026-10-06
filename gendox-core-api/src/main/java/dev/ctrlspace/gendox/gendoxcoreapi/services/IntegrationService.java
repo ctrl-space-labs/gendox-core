@@ -80,9 +80,22 @@ public class IntegrationService {
     public Integration createIntegration(IntegrationDTO integrationDTO) throws GendoxException {
 
         Integration integration = integrationConverter.toEntity(integrationDTO);
-        integration = integrationRepository.save(integration);
+        // an integration without an organization still runs on the scheduled poller, but
+        // no screen lists it and no manual trigger reaches it — it exists and is invisible
+        if (integration.getOrganizationId() == null) {
+            throw new GendoxException("INTEGRATION_ORGANIZATION_REQUIRED",
+                    "An integration must belong to an organization", HttpStatus.BAD_REQUEST);
+        }
 
-        return integration;
+        // one rule for every type: an integration that is born running counts against the plan.
+        // An inactive one does not, so a site can register itself while switched off.
+        if (Boolean.TRUE.equals(integration.getActive())
+                && !subscriptionValidationService.canCreateIntegrations(integration.getOrganizationId())) {
+            throw new GendoxException("MAX_INTEGRATIONS_REACHED",
+                    "Max integrations reached for organization", HttpStatus.BAD_REQUEST);
+        }
+
+        return integrationRepository.save(integration);
 
     }
 
@@ -108,7 +121,7 @@ public class IntegrationService {
 
         if (integrationId == null) {
             logger.debug("No existing integration found, creating a new one.");
-            return createNewIntegration(organizationId, websiteIntegrationDTO);
+            return createIntegration(toApiIntegrationDTO(organizationId, websiteIntegrationDTO));
         }
 
         Integration integration = getIntegrationById(integrationId);
@@ -120,52 +133,41 @@ public class IntegrationService {
 
     }
 
-    public Integration createNewIntegration(UUID organizationId, WebsiteIntegrationDTO websiteIntegrationDTO) throws GendoxException {
-        boolean isActiveStatus = "ACTIVE".equals(websiteIntegrationDTO.getIntegrationStatus().getName());
 
-        // check if organization has reached max integrations and if the integration is active
-        if (isActiveStatus && !subscriptionValidationService.canCreateIntegrations(organizationId)) {
-            throw new GendoxException("MAX_INTEGRATIONS_REACHED", "Max integrations reached for organization", HttpStatus.BAD_REQUEST);
-        }
+    /**
+     * The details of an integration for a website that pushes its own content in, which today
+     * means the WordPress plugin. It carries no project: the site assigns each piece of content
+     * to a project of its own, so there is no single one to record here.
+     */
+    public IntegrationDTO toApiIntegrationDTO(UUID organizationId, WebsiteIntegrationDTO websiteIntegrationDTO) throws GendoxException {
 
-        logger.info("Creating new integration for Organization ID: {}, Domain: {}", organizationId, websiteIntegrationDTO.getDomain());
-        boolean activeState = isActiveStatus(websiteIntegrationDTO.getIntegrationStatus().getName());
-        IntegrationDTO newIntegrationDTO = IntegrationDTO
+        return IntegrationDTO
                 .builder()
                 .organizationId(organizationId)
-                .active(activeState)
+                .active(isActiveStatus(websiteIntegrationDTO.getIntegrationStatus().getName()))
                 .url(websiteIntegrationDTO.getContextPath())
                 .integrationType(typeService.getIntegrationTypeByName(IntegrationTypesConstants.API_INTEGRATION))
                 .createdAt(Instant.now())
                 .updatedAt(Instant.now())
                 .build();
-
-        return createIntegration(newIntegrationDTO);
     }
 
+
     /**
-     * A web scrape source. The config starts empty and is filled by the schedule update,
-     * so provider validation and the limit checks live in one place only.
+     * The details of a web scrape source. The config starts empty and is filled by the schedule
+     * update, so provider validation lives in one place only.
      */
-    public Integration createWebScrapeIntegration(UUID organizationId, UUID projectId, String url) throws GendoxException {
+    public IntegrationDTO toWebScrapeIntegrationDTO(UUID organizationId, UUID projectId, String url) throws GendoxException {
 
-        if (!subscriptionValidationService.canCreateIntegrations(organizationId)) {
-            throw new GendoxException("MAX_INTEGRATIONS_REACHED",
-                    "Max integrations reached for organization", HttpStatus.BAD_REQUEST);
-        }
-
-        logger.info("Creating web scrape integration for Organization ID: {}, url: {}", organizationId, url);
-
-        Integration integration = new Integration();
-        integration.setOrganizationId(organizationId);
-        integration.setProjectId(projectId);
-        integration.setUrl(url);
-        integration.setActive(true);
-        integration.setIntegrationType(
-                typeService.getIntegrationTypeByName(IntegrationTypesConstants.WEB_SCRAPE_INTEGRATION));
-        integration.setConfig("{}");
-
-        return integrationRepository.save(integration);
+        return IntegrationDTO
+                .builder()
+                .organizationId(organizationId)
+                .projectId(projectId)
+                .url(url)
+                .active(true)
+                .integrationType(typeService.getIntegrationTypeByName(IntegrationTypesConstants.WEB_SCRAPE_INTEGRATION))
+                .config("{}")
+                .build();
     }
 
     public Integration updateExistingIntegration(Integration integration, WebsiteIntegrationDTO websiteIntegrationDTO) throws GendoxException {

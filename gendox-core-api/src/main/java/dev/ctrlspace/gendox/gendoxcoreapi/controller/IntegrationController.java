@@ -98,6 +98,12 @@ public class IntegrationController {
             Project project = projectService.getProjectById(integrationDTO.getProjectId());
             project.setAutoTraining(true);
             projectService.updateProject(project);
+
+            // a project belongs to exactly one organization, so the organization is
+            // derived here instead of being trusted from the request body
+            if (integrationDTO.getOrganizationId() == null) {
+                integrationDTO.setOrganizationId(project.getOrganizationId());
+            }
         }
 
         return integrationService.createIntegration(integrationDTO);

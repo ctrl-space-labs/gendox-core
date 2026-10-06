@@ -16,10 +16,7 @@ import RowActions from './shared/RowActions'
 import useCopy from './shared/useCopy'
 import WebScrapeSourcePanel from './organization-websites/WebScrapeSourcePanel'
 import { arrangementOf } from './organization-websites/sourceText'
-import { deliveryOf, isCrawled, maskKey } from './organization-websites/websiteMeta'
-
-// these lists are full of rows whose name was never set to anything but the url
-const shortName = r => (r.name === r.url ? r.url.replace(/^https?:\/\//, '') : r.name)
+import { deliveryOf, isCrawled, maskKey, shortName } from './organization-websites/websiteMeta'
 
 // the row says when the site was last read, because that is the thing that goes
 // wrong silently; the panel below keeps the exact timestamp
@@ -240,7 +237,11 @@ const WebsitesAdvancedOrganizationSettings = () => {
           {expandable && (
             <Icon icon={open ? 'mdi:chevron-up' : 'mdi:chevron-down'} style={{ fontSize: '1.25rem', opacity: 0.6 }} />
           )}
-          <RowActions onEdit={() => setEditing(r)} onDelete={() => setDeleting(r)} deleteLabel='Remove from this list' />
+          <RowActions
+            onEdit={() => setEditing(r)}
+            onDelete={() => setDeleting(r)}
+            deleteLabel='Remove from this list'
+          />
         </Stack>
 
         {expandable && (

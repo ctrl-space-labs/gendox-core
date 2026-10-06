@@ -16,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.Collection;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -62,7 +63,7 @@ public class ProjectService {
     }
 
     public void validateProjectsBelongToOrganization(Collection<UUID> projectIds, UUID organizationId) throws GendoxException {
-        if (projectIds.contains(null)
+        if (projectIds.stream().anyMatch(Objects::isNull)
                 || projectRepository.countByIdInAndOrganizationId(projectIds, organizationId) != projectIds.size()) {
             throw new GendoxException("PROJECT_ORGANIZATION_MISMATCH",
                     "All projects must belong to the requested organization", HttpStatus.FORBIDDEN);
