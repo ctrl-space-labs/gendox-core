@@ -2,17 +2,13 @@ package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.WebScrapePageConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Integration;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WebScrapeBudgetDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WebScrapePageDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WebScrapePageSelectionDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WebScrapeScheduleDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.WebScrapePageCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.SubscriptionValidationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.WebScrapePageService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.WebScrapeIntegrationUpdateService;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.WebScrapeConfigConstants;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -32,19 +28,16 @@ public class WebScrapeController {
     private WebScrapePageService webScrapePageService;
     private WebScrapePageConverter webScrapePageConverter;
     private WebScrapeIntegrationUpdateService webScrapeIntegrationUpdateService;
-    private SecurityUtils securityUtils;
     private SubscriptionValidationService subscriptionValidationService;
 
     @Autowired
     public WebScrapeController(WebScrapePageService webScrapePageService,
                                WebScrapePageConverter webScrapePageConverter,
                                WebScrapeIntegrationUpdateService webScrapeIntegrationUpdateService,
-                               SecurityUtils securityUtils,
                                SubscriptionValidationService subscriptionValidationService) {
         this.webScrapePageService = webScrapePageService;
         this.webScrapePageConverter = webScrapePageConverter;
         this.webScrapeIntegrationUpdateService = webScrapeIntegrationUpdateService;
-        this.securityUtils = securityUtils;
         this.subscriptionValidationService = subscriptionValidationService;
     }
 
@@ -142,26 +135,6 @@ public class WebScrapeController {
         return ResponseEntity.accepted().build();
     }
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_ORGANIZATION_WEB_SITES', 'getRequestedOrgIdFromPathVariable')")
-    @PutMapping("/organizations/{organizationId}/integrations/{integrationId}/web-scrape/schedule")
-    @Operation(summary = "Set how often the site is scraped",
-            description = "Also sets the provider and the crawl page limit. Fields left out keep their current value.")
-    public void updateSchedule(@PathVariable UUID organizationId,
-                               @PathVariable UUID integrationId,
-                               @RequestBody WebScrapeScheduleDTO scheduleDTO) throws GendoxException {
-
-        Integration integration = webScrapePageService.getIntegration(organizationId, integrationId);
-
-        if (scheduleDTO.getRunIntervalMinutes() != null
-                && scheduleDTO.getRunIntervalMinutes() < WebScrapeConfigConstants.MIN_RUN_INTERVAL_MINUTES
-                && !securityUtils.isSuperAdmin()) {
-            throw new GendoxException("WEB_SCRAPE_INTERVAL_TOO_SHORT",
-                    "Only a system admin can set an interval shorter than one day",
-                    HttpStatus.FORBIDDEN);
-        }
-
-        webScrapeIntegrationUpdateService.updateSchedule(integration, scheduleDTO);
-    }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_ORGANIZATION_WEB_SITES', 'getRequestedOrgIdFromPathVariable')")
     @DeleteMapping("/organizations/{organizationId}/integrations/{integrationId}/web-scrape/pages/{pageId}/content")

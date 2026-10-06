@@ -12,7 +12,9 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.IntegrationCriteri
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.IntegrationRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.IntegrationPredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.IntegrationManager;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.IntegrationTypesConstants;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.WebScrapeConfigConstants;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,6 +44,16 @@ public class IntegrationService {
     private SubscriptionValidationService subscriptionValidationService;
     private IntegrationManager integrationManager;
     private MessageChannel integrationChannel;
+    private SecurityUtils securityUtils;
+
+    /**
+     * The shortest interval a type may be scheduled at. A floor belongs to the type, not to
+     * the column: polling a repository costs nothing, crawling a site is billed per run. A
+     * type that is free to poll has no floor, and one added later inherits the question
+     * rather than the number.
+     */
+    private static final Map<String, Integer> RUN_INTERVAL_FLOOR_BY_TYPE = Map.of(
+            IntegrationTypesConstants.WEB_SCRAPE_INTEGRATION, WebScrapeConfigConstants.MIN_RUN_INTERVAL_MINUTES);
 
 
     @Autowired
@@ -50,13 +62,15 @@ public class IntegrationService {
                               TypeService typeService,
                               SubscriptionValidationService subscriptionValidationService,
                               @Lazy IntegrationManager integrationManager,
-                              @Lazy @Qualifier("integrationChannel") MessageChannel integrationChannel) {
+                              @Lazy @Qualifier("integrationChannel") MessageChannel integrationChannel,
+                              SecurityUtils securityUtils) {
         this.integrationRepository = integrationRepository;
         this.integrationConverter = integrationConverter;
         this.typeService = typeService;
         this.subscriptionValidationService = subscriptionValidationService;
         this.integrationManager = integrationManager;
         this.integrationChannel = integrationChannel;
+        this.securityUtils = securityUtils;
     }
 
 
@@ -76,6 +90,35 @@ public class IntegrationService {
         return integrationRepository.findAll(IntegrationPredicates.build(criteria), pageable);
     }
 
+    /**
+     * The one place the interval is judged, so every path that writes it obeys the same rule.
+     */
+    public void validateRunInterval(Integration integration) throws GendoxException {
+        Integer minutes = integration.getRunIntervalMinutes();
+
+        // no interval is a legitimate setting on every type: it runs on every pass of the
+        // poller. An integration that should not run at all is switched off instead.
+        if (minutes == null) {
+            return;
+        }
+
+        if (minutes < 1) {
+            throw new GendoxException("INTEGRATION_INTERVAL_INVALID",
+                    "The run interval must be at least one minute", HttpStatus.BAD_REQUEST);
+        }
+
+        String typeName = integration.getIntegrationType() == null
+                ? null
+                : integration.getIntegrationType().getName();
+        Integer floor = RUN_INTERVAL_FLOOR_BY_TYPE.get(typeName);
+
+        if (floor != null && minutes < floor && !securityUtils.isSuperAdmin()) {
+            throw new GendoxException("INTEGRATION_INTERVAL_TOO_SHORT",
+                    "Only a system admin can set an interval shorter than " + floor + " minutes for this integration type",
+                    HttpStatus.FORBIDDEN);
+        }
+    }
+
 
     public Integration createIntegration(IntegrationDTO integrationDTO) throws GendoxException {
 
@@ -86,6 +129,8 @@ public class IntegrationService {
             throw new GendoxException("INTEGRATION_ORGANIZATION_REQUIRED",
                     "An integration must belong to an organization", HttpStatus.BAD_REQUEST);
         }
+
+        validateRunInterval(integration);
 
         // one rule for every type: an integration that is born running counts against the plan.
         // An inactive one does not, so a site can register itself while switched off.
@@ -100,6 +145,34 @@ public class IntegrationService {
     }
 
     public Integration updateIntegration(Integration integration) throws GendoxException {
+
+        return integrationRepository.save(integration);
+    }
+
+    /**
+     * Turns an integration on or off and touches nothing else. The integration is looked up
+     * through the organization in the path, so an id belonging to another organization
+     * answers 404 instead of confirming that it exists.
+     */
+    public Integration setActive(UUID organizationId, UUID id, boolean active) throws GendoxException {
+
+        Integration integration = integrationRepository.findById(id)
+                .filter(found -> organizationId.equals(found.getOrganizationId()))
+                .orElseThrow(() -> new GendoxException("INTEGRATION_NOT_FOUND",
+                        "Integration not found with id: " + id, HttpStatus.NOT_FOUND));
+
+        if (Boolean.TRUE.equals(integration.getActive()) == active) {
+            return integration;
+        }
+
+        // switching one on is the same event as creating one that is born running, so it
+        // meets the same limit — otherwise the plan is enforced only at creation
+        if (active && !subscriptionValidationService.canCreateIntegrations(organizationId)) {
+            throw new GendoxException("MAX_INTEGRATIONS_REACHED",
+                    "Max integrations reached for organization", HttpStatus.BAD_REQUEST);
+        }
+
+        integration.setActive(active);
 
         return integrationRepository.save(integration);
     }
@@ -157,7 +230,7 @@ public class IntegrationService {
      * The details of a web scrape source. The config starts empty and is filled by the schedule
      * update, so provider validation lives in one place only.
      */
-    public IntegrationDTO toWebScrapeIntegrationDTO(UUID organizationId, UUID projectId, String url) throws GendoxException {
+    public IntegrationDTO toWebScrapeIntegrationDTO(UUID organizationId, UUID projectId, String url, Integer runIntervalMinutes) throws GendoxException {
 
         return IntegrationDTO
                 .builder()
@@ -165,6 +238,7 @@ public class IntegrationService {
                 .projectId(projectId)
                 .url(url)
                 .active(true)
+                .runIntervalMinutes(runIntervalMinutes)
                 .integrationType(typeService.getIntegrationTypeByName(IntegrationTypesConstants.WEB_SCRAPE_INTEGRATION))
                 .config("{}")
                 .build();

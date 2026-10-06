@@ -114,7 +114,7 @@ public class OrganizationWebSiteService {
         }
 
         IntegrationDTO integrationDTO = integrationService.toWebScrapeIntegrationDTO(
-                organizationId, sourceDTO.getProjectId(), sourceDTO.getUrl());
+                organizationId, sourceDTO.getProjectId(), sourceDTO.getUrl(), sourceDTO.getRunIntervalMinutes());
         Integration integration = integrationService.createIntegration(integrationDTO);
 
         OrganizationWebSite webSite;
@@ -137,7 +137,6 @@ public class OrganizationWebSiteService {
         }
 
         webScrapeIntegrationUpdateService.updateSchedule(integration, WebScrapeScheduleDTO.builder()
-                .runIntervalMinutes(sourceDTO.getRunIntervalMinutes())
                 .crawlPageLimit(sourceDTO.getCrawlPageLimit())
                 .provider(sourceDTO.getProvider() == null
                         ? FirecrawlConfig.PROVIDER_NAME

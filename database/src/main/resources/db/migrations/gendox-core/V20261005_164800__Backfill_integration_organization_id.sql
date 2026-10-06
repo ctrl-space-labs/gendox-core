@@ -10,3 +10,7 @@ SET organization_id = p.organization_id
     FROM gendox_core.projects p
 WHERE p.id = i.project_id
   AND i.organization_id IS NULL;
+
+
+COMMENT ON COLUMN gendox_core.integrations.run_interval_minutes
+    IS 'Shortest gap between two runs, in minutes. NULL means every pass of the poller. Use is_active to stop it running at all.';

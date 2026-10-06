@@ -5,6 +5,7 @@ import webScrapeService from 'src/gendox-sdk/webScrapeService'
 import { localStorageConstants } from 'src/utils/generalConstants'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import WebScrapePagesTable from './WebScrapePagesTable'
+import integrationService from 'src/gendox-sdk/integrationService'
 import { configOf } from './sourceText'
 
 // the product spells an elapsed wait this way in GlobalGenerationStatus
@@ -88,8 +89,7 @@ const WebScrapeSourcePanel = ({ organizationId, integration, onRefresh }) => {
 
     const crawlFinished = async () => {
       try {
-        const fresh = await webScrapeService.getIntegration(integration.id, token)
-
+        const fresh = await integrationService.getIntegration(integration.id, token)
         return String(fresh.data?.lastRunAt ?? '') !== String(startedAt ?? '')
       } catch {
         return false

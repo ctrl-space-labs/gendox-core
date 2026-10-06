@@ -177,6 +177,9 @@ export default {
   integrationsByOrganization: (organizationId, size = 100) =>
     `${url}integrations?organizationId=${organizationId}&size=${size}`,
 
+  integrationActive: (organizationId, integrationId) =>
+    `${url}organizations/${organizationId}/integrations/${integrationId}/active`,
+
   webScrapePages: (organizationId, integrationId, page = 0, size = 20, status, isSelected, hasContent, search) => {
     let urlWithParams = `${url}organizations/${organizationId}/integrations/${integrationId}/web-scrape/pages?page=${page}&size=${size}`
 

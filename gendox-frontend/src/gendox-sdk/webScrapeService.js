@@ -128,8 +128,9 @@ const scrape = async (organizationId, integrationId, token) => {
 
 /**
  * Update the schedule of a web scrape integration
- * Payload is { autoCheck, runIntervalMinutes, provider, crawlPageLimit }.
- * autoCheck false clears the interval, which is what stops the poller
+ * Payload is { runIntervalMinutes, provider, crawlPageLimit }.
+ * A missing field keeps what the integration has. Use the integration's
+ * active switch to stop it running on its own.
  * @param organizationId
  * @param integrationId
  * @param payload
@@ -162,38 +163,6 @@ const getBudget = async (organizationId, token) => {
   })
 }
 
-/**
- * Get one integration
- * lastRunAt changes once a crawl has stored what it found, which is how the
- * panel knows a crawl has finished
- * @param integrationId
- * @param token
- * @returns {Promise<axios.AxiosResponse<Integration>}
- */
-const getIntegration = async (integrationId, token) => {
-  return axios.get(apiRequest.integration(integrationId), {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: 'Bearer ' + token
-    }
-  })
-}
-
-/**
- * Get every integration of an organization, so a website row can find its source
- * @param organizationId
- * @param token
- * @returns {Promise<axios.AxiosResponse<Integration[]>}
- */
-const getIntegrationsByOrganizationId = async (organizationId, token) => {
-  return axios.get(apiRequest.integrationsByOrganization(organizationId), {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: 'Bearer ' + token
-    }
-  })
-}
-
 export default {
   getPages,
   updateSelection,
@@ -202,7 +171,5 @@ export default {
   deepCrawl,
   scrape,
   updateSchedule,
-  getBudget,
-  getIntegration,
-  getIntegrationsByOrganizationId
+  getBudget
 }

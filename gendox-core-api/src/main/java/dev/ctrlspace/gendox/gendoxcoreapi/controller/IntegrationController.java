@@ -4,6 +4,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.converters.IntegrationConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Integration;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.IntegrationActiveDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.IntegrationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.IntegrationCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.IntegrationService;
@@ -79,6 +80,21 @@ public class IntegrationController {
     public ResponseEntity<Void> triggerIntegration(@PathVariable UUID organizationId) {
         integrationService.triggerForOrganization(organizationId);
         return ResponseEntity.accepted().build();
+    }
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_ORGANIZATION_WEB_SITES', 'getRequestedOrgIdFromPathVariable')")
+    @PutMapping("/organizations/{organizationId}/integrations/{id}/active")
+    @Operation(summary = "Turn an integration on or off",
+            description = "Changes only whether the scheduler picks this integration up. Everything else about it is left alone.")
+    public Integration setIntegrationActive(@PathVariable UUID organizationId,
+                                            @PathVariable UUID id,
+                                            @RequestBody IntegrationActiveDTO activeDTO) throws GendoxException {
+
+        if (activeDTO.getActive() == null) {
+            throw new GendoxException("ACTIVE_REQUIRED", "active is required", HttpStatus.BAD_REQUEST);
+        }
+
+        return integrationService.setActive(organizationId, id, activeDTO.getActive());
     }
 
     // TODO: preauthorize has OP_CREATE_INTEGRATION

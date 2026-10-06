@@ -39,7 +39,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 @Component
@@ -73,16 +72,6 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
     @Override
     @Transactional(value = Transactional.TxType.REQUIRES_NEW)
     public Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> checkForUpdates(Integration integration) throws GendoxException {
-
-        Integer intervalMinutes = integration.getRunIntervalMinutes();
-        if (intervalMinutes == null) {
-            return Map.of();
-        }
-
-        Instant lastRunAt = integration.getLastRunAt();
-        if (lastRunAt != null && Instant.now().isBefore(lastRunAt.plus(intervalMinutes, ChronoUnit.MINUTES))) {
-            return Map.of();
-        }
 
         if (!subscriptionValidationService.canUseWebScrape(integration.getOrganizationId())) {
             logger.info("Web scraping is not included in the plan of organization {}, skipping integration {}",
@@ -410,9 +399,6 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
             page.setLastCrawledAt(now);
             webScrapePageRepository.save(page);
         }
-
-        integration.setLastRunAt(now);
-        integrationRepository.save(integration);
     }
 
     /**
@@ -446,21 +432,6 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
      * Writes the schedule and the provider settings of the integration. Fields left null are kept.
      */
     public Integration updateSchedule(Integration integration, WebScrapeScheduleDTO scheduleDTO) throws GendoxException {
-
-        // Every field here reads a missing value as "keep what it has", so turning
-        // the schedule off cannot be said by leaving the interval out — it has to
-        // be said on purpose. A source with no interval runs only when asked.
-        if (Boolean.FALSE.equals(scheduleDTO.getAutoCheck())) {
-            integration.setRunIntervalMinutes(null);
-        }
-
-        if (scheduleDTO.getRunIntervalMinutes() != null) {
-            if (scheduleDTO.getRunIntervalMinutes() < 1) {
-                throw new GendoxException("WEB_SCRAPE_INTERVAL_INVALID",
-                        "The run interval must be at least one minute", HttpStatus.BAD_REQUEST);
-            }
-            integration.setRunIntervalMinutes(scheduleDTO.getRunIntervalMinutes());
-        }
 
         Map<String, Object> config = new HashMap<>(readConfig(integration));
 

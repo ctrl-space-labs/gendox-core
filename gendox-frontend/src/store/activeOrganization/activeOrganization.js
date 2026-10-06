@@ -5,7 +5,7 @@ import subscriptionPlanService from 'src/gendox-sdk/subscriptionPlanService'
 import apiKeyService from 'src/gendox-sdk/apiKeyService'
 import organizationWebSiteService from 'src/gendox-sdk/organizationWebSiteService'
 import organizationConnectorService from 'src/gendox-sdk/organizationConnectorService'
-import webScrapeService from 'src/gendox-sdk/webScrapeService'
+import integrationService from 'src/gendox-sdk/integrationService'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import toast from 'react-hot-toast'
 
@@ -99,8 +99,7 @@ export const fetchIntegrations = createAsyncThunk(
   'activeOrganization/fetchIntegrations',
   async ({ organizationId, token }, thunkAPI) => {
     try {
-      const response = await webScrapeService.getIntegrationsByOrganizationId(organizationId, token)
-
+      const response = await integrationService.getIntegrationsByOrganizationId(organizationId, token)
       // the endpoint answers a page, not a bare list
       return response.data?.content ?? []
     } catch (error) {

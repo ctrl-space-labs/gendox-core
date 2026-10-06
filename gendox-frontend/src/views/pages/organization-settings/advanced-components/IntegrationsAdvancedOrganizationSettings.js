@@ -8,6 +8,7 @@ import {
   Button,
   Chip,
   Stack,
+  Switch,
   Table,
   TableBody,
   TableCell,
@@ -15,6 +16,7 @@ import {
   TableRow,
   ToggleButton,
   ToggleButtonGroup,
+  Tooltip,
   Typography
 } from '@mui/material'
 import { isValid, parseISO, format } from 'date-fns'
@@ -35,6 +37,8 @@ import toast from 'react-hot-toast'
 import organizationWebSiteService from 'src/gendox-sdk/organizationWebSiteService'
 import ActionDialog from './shared/ActionDialog'
 import { isValidWebsiteUrl } from 'src/utils/validators'
+import { getErrorMessage } from 'src/utils/errorHandler'
+import integrationService from 'src/gendox-sdk/integrationService'
 
 const when = at => (at && isValid(parseISO(at)) ? format(parseISO(at), 'dd/MM/yyyy - HH:mm') : 'Never')
 
@@ -50,6 +54,7 @@ const IntegrationsAdvancedOrganizationSettings = () => {
   const [showing, setShowing] = useState('active')
   const [openId, setOpenId] = useState(null)
   const [adding, setAdding] = useState(false)
+  const [togglingId, setTogglingId] = useState(null)
 
   // the organization the api returns carries no projects; the ones the user can
   // see come with the user, which is where the navigation reads them from too
@@ -64,6 +69,21 @@ const IntegrationsAdvancedOrganizationSettings = () => {
       dispatch(fetchIntegrations({ organizationId, token })),
       dispatch(fetchOrganizationWebSites({ organizationId, token }))
     ])
+  }
+
+  // only the integrations change, so the websites are left alone — the table blurs
+  // for as long as the refetch takes, the way every other list in the product does
+  const toggleActive = async (row, active) => {
+    setTogglingId(row.integration.id)
+    try {
+      await integrationService.setIntegrationActive(organizationId, row.integration.id, { active }, token)
+      await dispatch(fetchIntegrations({ organizationId, token }))
+      toast.success(active ? 'Integration switched on' : 'Integration switched off')
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+    } finally {
+      setTogglingId(null)
+    }
   }
 
   const rows = useMemo(() => {
@@ -224,18 +244,40 @@ const IntegrationsAdvancedOrganizationSettings = () => {
                           </TableCell>
 
                           <TableCell>
-                            <Chip
-                              size='small'
-                              variant={row.integration.active ? 'filled' : 'outlined'}
-                              color={row.integration.active ? 'primary' : 'default'}
-                              label={
-                                row.integration.active
-                                  ? 'Active'
-                                  : row.type === API_INTEGRATION
-                                  ? 'Not connected'
-                                  : 'Inactive'
-                              }
-                            />
+                            <Stack direction='row' alignItems='center' spacing={1}>
+                              {/* an empty title renders no tooltip, so only the rows that
+                                  cannot be switched here explain why */}
+                              <Tooltip
+                                title={
+                                  row.type === API_INTEGRATION
+                                    ? 'The plugin on the site decides this, and sets it again every time it connects.'
+                                    : ''
+                                }
+                              >
+                                <span>
+                                  <Switch
+                                    size='small'
+                                    checked={!!row.integration.active}
+                                    disabled={row.type === API_INTEGRATION || togglingId === row.integration.id}
+                                    onClick={event => event.stopPropagation()}
+                                    onChange={(event, checked) => toggleActive(row, checked)}
+                                  />
+                                </span>
+                              </Tooltip>
+
+                              <Chip
+                                size='small'
+                                variant={row.integration.active ? 'filled' : 'outlined'}
+                                color={row.integration.active ? 'primary' : 'default'}
+                                label={
+                                  row.integration.active
+                                    ? 'Active'
+                                    : row.type === API_INTEGRATION
+                                    ? 'Not connected'
+                                    : 'Inactive'
+                                }
+                              />
+                            </Stack>
                           </TableCell>
 
                           <TableCell align='right' sx={{ whiteSpace: 'nowrap' }}>

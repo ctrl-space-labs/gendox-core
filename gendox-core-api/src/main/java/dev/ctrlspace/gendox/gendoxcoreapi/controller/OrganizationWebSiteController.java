@@ -50,7 +50,7 @@ public class OrganizationWebSiteController {
     public OrganizationWebSite integrateOrganizationWebSite(@PathVariable UUID organizationId, @RequestBody WebsiteIntegrationDTO websiteIntegrationDTO, Authentication authentication) throws GendoxException {
 
         if (authentication instanceof ApiKeyAuthenticationToken token &&
-            !token.getApiKey().equals(websiteIntegrationDTO.getApiKey().getApiKey())) {
+                !token.getApiKey().equals(websiteIntegrationDTO.getApiKey().getApiKey())) {
             throw new GendoxException("API_KEY_MISMATCH", "The API key in the request body does not match the API key in the request header", HttpStatus.BAD_REQUEST);
         }
 
@@ -65,14 +65,6 @@ public class OrganizationWebSiteController {
                     + "Discovery and scraping are then driven through the web-scrape endpoints.")
     public OrganizationWebSite createWebScrapeSource(@PathVariable UUID organizationId,
                                                      @RequestBody WebScrapeSourceDTO sourceDTO) throws GendoxException {
-
-        if (sourceDTO.getRunIntervalMinutes() != null
-                && sourceDTO.getRunIntervalMinutes() < WebScrapeConfigConstants.MIN_RUN_INTERVAL_MINUTES
-                && !securityUtils.isSuperAdmin()) {
-            throw new GendoxException("WEB_SCRAPE_INTERVAL_TOO_SHORT",
-                    "Only a system admin can set an interval shorter than one day",
-                    HttpStatus.FORBIDDEN);
-        }
 
         return organizationWebSiteService.createWebScrapeSource(organizationId, sourceDTO);
     }

@@ -10,8 +10,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Builder(toBuilder = true)
 public class WebScrapeScheduleDTO {
-    private Integer runIntervalMinutes;
     private String provider;
     private Integer crawlPageLimit;
-    private Boolean autoCheck;
 }

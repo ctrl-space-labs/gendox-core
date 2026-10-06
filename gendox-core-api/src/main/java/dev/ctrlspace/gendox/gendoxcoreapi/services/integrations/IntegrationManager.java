@@ -20,6 +20,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 @Service
 
@@ -64,30 +66,65 @@ public class IntegrationManager {
                     ObservabilityTags.LOG_ARGS, "false"
             })
     public Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> dispatchToIntegrationServices() throws GendoxException {
-        return processIntegrations(findActiveIntegrations());
+        return processIntegrations(findActiveIntegrations(), true);
     }
 
     /**
      * Called by the manual Reload Content trigger for a single organization.
-      */
+     * <p>
+     * The schedule is deliberately ignored here. A person asking for the content now is
+     * not the poller coming round, and a button that answers "not yet" does nothing a
+     * user can understand.
+     */
     public Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> dispatchToIntegrationServices(UUID organizationId) throws GendoxException {
         IntegrationCriteria criteria = IntegrationCriteria.builder()
                 .organizationId(organizationId.toString())
                 .isActive(true)
                 .build();
-        return processIntegrations(integrationService.getAllIntegrations(criteria));
+        return processIntegrations(integrationService.getAllIntegrations(criteria), false);
     }
 
-    private Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> processIntegrations(Iterable<Integration> integrations) {
+    private Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> processIntegrations(Iterable<Integration> integrations,
+                                                                                    boolean respectSchedule) {
         Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> map = new HashMap<>();
         for (Integration integration : integrations) {
             try {
+                if (respectSchedule && !isDue(integration)) {
+                    logger.debug("Integration {} ran less than {} minutes ago, skipping",
+                            integration.getId(), integration.getRunIntervalMinutes());
+                    continue;
+                }
                 processIntegration(integration, map);
+                stampRun(integration);
             } catch (Exception e) {
                 logger.error("Error processing integration with id: {}. Continuing with the next integration...", integration.getId(), e);
             }
         }
         return map;
+    }
+
+    /**
+     * The schedule, and it means the same for every integration type: an interval is the
+     * shortest gap between two runs, no interval means every pass of the poller, and an
+     * integration that should never run on its own is switched off instead.
+     */
+    private boolean isDue(Integration integration) {
+        Integer intervalMinutes = integration.getRunIntervalMinutes();
+
+        if (intervalMinutes == null || integration.getLastRunAt() == null) {
+            return true;
+        }
+
+        return !Instant.now().isBefore(integration.getLastRunAt().plus(intervalMinutes, ChronoUnit.MINUTES));
+    }
+
+    /**
+     * Stamped after the run on both paths, because "when did this last run" is the same
+     * question whether the poller asked for it or a person did.
+     */
+    private void stampRun(Integration integration) {
+        integration.setLastRunAt(Instant.now());
+        integrationRepository.save(integration);
     }
 
 
