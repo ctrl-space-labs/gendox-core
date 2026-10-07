@@ -230,6 +230,18 @@ public class OrganizationWebSiteService {
     }
 
     /**
+     * Takes the content source off a website without removing the website. The row says the
+     * domain is known to this organization — its widget's origin, the key it pushes with —
+     * and that stays true once the content stops arriving.
+     */
+    public void unlinkIntegration(UUID integrationId) {
+        organizationWebSiteRepository.findByIntegrationId(integrationId).ifPresent(website -> {
+            website.setIntegrationId(null);
+            organizationWebSiteRepository.save(website);
+        });
+    }
+
+    /**
      * Deleting the website row used to leave a crawl source behind: the integration
      * kept its schedule and kept fetching pages, with nothing on any screen showing
      * that it still existed. A source that was created together with its row is now

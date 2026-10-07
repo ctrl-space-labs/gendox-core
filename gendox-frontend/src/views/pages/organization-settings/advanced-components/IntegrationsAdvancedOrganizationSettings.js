@@ -59,6 +59,7 @@ const IntegrationsAdvancedOrganizationSettings = () => {
   const [adding, setAdding] = useState(false)
   const [togglingId, setTogglingId] = useState(null)
   const [editing, setEditing] = useState(null)
+  const [deleting, setDeleting] = useState(null)
 
   // the organization the api returns carries no projects; the ones the user can
   // see come with the user, which is where the navigation reads them from too
@@ -89,6 +90,18 @@ const IntegrationsAdvancedOrganizationSettings = () => {
       setTogglingId(null)
     }
   }
+
+  // the rule is the same for every type; what it costs this row is not, so the
+  // dialog says it outright instead of leaving the reader to guess
+  const removalEffect = row =>
+    [
+      'Content stops arriving and the source is forgotten.',
+      'The documents it has already produced stay in their project.',
+      row?.website && `${shortName(row.website)} stays registered, with its widget and its API key.`,
+      row?.type === API_INTEGRATION && 'The plugin will create it again the next time it connects.'
+    ]
+      .filter(Boolean)
+      .join(' ')
 
   const rows = useMemo(() => {
     // the website holds the foreign key, so the lookup goes that way round
@@ -197,7 +210,7 @@ const IntegrationsAdvancedOrganizationSettings = () => {
                       <TableCell>Project</TableCell>
                       <TableCell>Status</TableCell>
                       <TableCell align='right'>Last run</TableCell>
-                      <TableCell align='right' sx={{ width: 48 }} />
+                      <TableCell align='right' sx={{ width: 96 }} />
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -294,7 +307,7 @@ const IntegrationsAdvancedOrganizationSettings = () => {
                               {when(row.integration.lastRunAt)}
                             </Typography>
                           </TableCell>
-                          <TableCell align='right' sx={{ py: 0 }}>
+                          <TableCell align='right' sx={{ py: 0, whiteSpace: 'nowrap' }}>
                             <Tooltip title='Edit'>
                               <IconButton
                                 size='small'
@@ -305,6 +318,18 @@ const IntegrationsAdvancedOrganizationSettings = () => {
                                 sx={{ color: 'text.secondary', '&:hover': { color: 'primary.main' } }}
                               >
                                 <Icon icon='mdi:pencil-outline' />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title='Remove'>
+                              <IconButton
+                                size='small'
+                                onClick={event => {
+                                  event.stopPropagation()
+                                  setDeleting(row)
+                                }}
+                                sx={{ color: 'text.secondary', '&:hover': { color: 'error.main' } }}
+                              >
+                                <Icon icon='mdi:delete-outline' />
                               </IconButton>
                             </Tooltip>
                           </TableCell>
@@ -390,6 +415,20 @@ const IntegrationsAdvancedOrganizationSettings = () => {
         description={editing?.title}
         fields={[
           {
+            name: 'name',
+            label: 'Name',
+            value: editing?.website?.name ?? '',
+            required: true,
+            hidden: () => !editing?.website
+          },
+          {
+            name: 'url',
+            type: 'readonly',
+            label: 'URL',
+            value: editing?.website?.url ?? editing?.integration.url ?? '',
+            hidden: () => !(editing?.website?.url ?? editing?.integration.url)
+          },
+          {
             name: 'runIntervalMinutes',
             label: 'Check every (minutes)',
             type: 'number',
@@ -408,6 +447,17 @@ const IntegrationsAdvancedOrganizationSettings = () => {
         ]}
         onClose={() => setEditing(null)}
         onSave={async v => {
+          if (editing.website && v.name.trim() !== editing.website.name) {
+            // the endpoint writes both columns unconditionally, so the url it already
+            // has travels with the name instead of being emptied
+            await organizationWebSiteService.updateOrganizationWebSite(
+              organizationId,
+              editing.website.id,
+              { organizationId, name: v.name.trim(), url: editing.website.url },
+              token
+            )
+          }
+
           // the interval is replaced, so an emptied field clears it on purpose
           await integrationService.setIntegrationSchedule(
             organizationId,
@@ -425,8 +475,22 @@ const IntegrationsAdvancedOrganizationSettings = () => {
             )
           }
 
-          await dispatch(fetchIntegrations({ organizationId, token }))
+          await refresh()
           toast.success('Integration updated')
+        }}
+      />
+
+      <ActionDialog
+        open={!!deleting}
+        title={`Remove ${deleting?.title ?? 'integration'}?`}
+        description={removalEffect(deleting)}
+        saveLabel='Remove'
+        destructive
+        onClose={() => setDeleting(null)}
+        onSave={async () => {
+          await integrationService.deleteIntegration(organizationId, deleting.integration.id, token)
+          await refresh()
+          toast.success('Integration removed')
         }}
       />
     </>

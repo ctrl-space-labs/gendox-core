@@ -183,6 +183,9 @@ export default {
   integrationSchedule: (organizationId, integrationId) =>
     `${url}organizations/${organizationId}/integrations/${integrationId}/schedule`,
 
+  organizationIntegration: (organizationId, integrationId) =>
+    `${url}organizations/${organizationId}/integrations/${integrationId}`,
+
   webScrapePages: (organizationId, integrationId, page = 0, size = 20, status, isSelected, hasContent, search) => {
     let urlWithParams = `${url}organizations/${organizationId}/integrations/${integrationId}/web-scrape/pages?page=${page}&size=${size}`
 

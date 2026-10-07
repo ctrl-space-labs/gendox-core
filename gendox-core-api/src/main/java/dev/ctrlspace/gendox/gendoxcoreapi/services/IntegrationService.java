@@ -12,6 +12,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.IntegrationManag
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.IntegrationTypesConstants;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.WebScrapeConfigConstants;
+import jakarta.transaction.Transactional;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,6 +43,8 @@ public class IntegrationService {
     private IntegrationManager integrationManager;
     private MessageChannel integrationChannel;
     private SecurityUtils securityUtils;
+    private OrganizationWebSiteService organizationWebSiteService;
+    private TempIntegrationFileCheckService tempIntegrationFileCheckService;
 
     /**
      * The shortest interval a type may be scheduled at. A floor belongs to the type, not to
@@ -60,7 +63,9 @@ public class IntegrationService {
                               SubscriptionValidationService subscriptionValidationService,
                               @Lazy IntegrationManager integrationManager,
                               @Lazy @Qualifier("integrationChannel") MessageChannel integrationChannel,
-                              SecurityUtils securityUtils) {
+                              SecurityUtils securityUtils,
+                              @Lazy OrganizationWebSiteService organizationWebSiteService,
+                              @Lazy TempIntegrationFileCheckService tempIntegrationFileCheckService) {
         this.integrationRepository = integrationRepository;
         this.integrationConverter = integrationConverter;
         this.typeService = typeService;
@@ -68,6 +73,8 @@ public class IntegrationService {
         this.integrationManager = integrationManager;
         this.integrationChannel = integrationChannel;
         this.securityUtils = securityUtils;
+        this.organizationWebSiteService = organizationWebSiteService;
+        this.tempIntegrationFileCheckService = tempIntegrationFileCheckService;
     }
 
 
@@ -196,15 +203,24 @@ public class IntegrationService {
         return integrationRepository.save(integration);
     }
 
-    public void deleteIntegration(UUID id) throws Exception {
-        Integration integration = integrationRepository.findById(id).orElse(null);
-        if (integration != null) {
-            integrationRepository.deleteById(id);
-        } else {
-            throw new GendoxException("INTEGRATION_NOT_FOUND", "Organization not found with id: " + id, HttpStatus.NOT_FOUND);
-        }
+    /**
+     * Removes a source without removing what it taught the project.
+     * <p>
+     * Deleting an integration and deleting its documents are two different intentions, and
+     * tying them together makes the cheap one as final as the expensive one: a source is
+     * re-added and read again in a minute, while documents take their sections, their
+     * embeddings and every answer that cited them along with them. So the documents stay,
+     * for every type, whether or not this one could name them.
+     */
+    @Transactional(rollbackOn = Exception.class)
+    public void deleteIntegration(UUID organizationId, UUID id) throws GendoxException {
+        Integration integration = findForOrganization(organizationId, id);
 
+        tempIntegrationFileCheckService.deleteTempIntegrationFileChecksByIntegrationId(id);
+        organizationWebSiteService.unlinkIntegration(id);
 
+        // web_scrape_pages goes with it on cascade; the documents those pages became do not
+        integrationRepository.delete(integration);
     }
 
     public Integration handleIntegrationLogic(UUID organizationId, OrganizationWebSite organizationWebSite, WebsiteIntegrationDTO websiteIntegrationDTO) throws GendoxException {

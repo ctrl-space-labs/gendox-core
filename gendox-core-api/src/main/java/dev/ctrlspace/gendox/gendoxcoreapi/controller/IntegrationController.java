@@ -127,7 +127,6 @@ public class IntegrationController {
     }
 
 
-
     // TODO: preauthorize has OP_UPDATE_INTEGRATION
 
     @PutMapping("/integrations/{id}")
@@ -166,13 +165,17 @@ public class IntegrationController {
         return integrationService.updateSchedule(organizationId, id, scheduleDTO);
     }
 
-    // TODO: preauthorize has OP_DELETE_INTEGRATION
-    @DeleteMapping("/integrations/{id}")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_ORGANIZATION_WEB_SITES', 'getRequestedOrgIdFromPathVariable')")
+    @DeleteMapping("/organizations/{organizationId}/integrations/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Delete integration by ID",
-            description = "Delete an existing integration by specifying its unique ID.")
-    public void deleteIntegration(@PathVariable UUID id) throws Exception {
-        integrationService.deleteIntegration(id);
+    @Operation(summary = "Remove an integration",
+            description = "Content stops arriving and the source is forgotten. The documents it has "
+                    + "already produced stay in their project, and the website row keeps its domain, "
+                    + "its widget and its API key — it only stops pointing at this integration.")
+    public void removeIntegration(@PathVariable UUID organizationId,
+                                  @PathVariable UUID id) throws GendoxException {
+
+        integrationService.deleteIntegration(organizationId, id);
     }
 
 }

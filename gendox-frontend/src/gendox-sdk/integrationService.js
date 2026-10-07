@@ -67,9 +67,28 @@ const setIntegrationSchedule = async (organizationId, integrationId, payload, to
   })
 }
 
+/**
+ * Remove an integration, leaving its documents in their project
+ * The website row keeps its domain, its widget and its API key; it only stops
+ * pointing at this integration.
+ * @param organizationId
+ * @param integrationId
+ * @param token
+ * @returns {Promise<axios.AxiosResponse<void>}
+ */
+const deleteIntegration = async (organizationId, integrationId, token) => {
+  return axios.delete(apiRequest.organizationIntegration(organizationId, integrationId), {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
+    }
+  })
+}
+
 export default {
   getIntegration,
   getIntegrationsByOrganizationId,
   setIntegrationActive,
-  setIntegrationSchedule
+  setIntegrationSchedule,
+  deleteIntegration
 }
