@@ -4,10 +4,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.converters.IntegrationConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Integration;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.OrganizationWebSite;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.IntegratedFileDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.IntegrationDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectIntegrationDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WebsiteIntegrationDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.IntegrationCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.IntegrationRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.IntegrationPredicates;
@@ -150,16 +147,24 @@ public class IntegrationService {
     }
 
     /**
+     * Looks an integration up inside the organization in the path, so an id belonging to
+     * another organization answers 404 instead of confirming that it exists.
+     */
+    private Integration findForOrganization(UUID organizationId, UUID id) throws GendoxException {
+        return integrationRepository.findById(id)
+                .filter(found -> organizationId.equals(found.getOrganizationId()))
+                .orElseThrow(() -> new GendoxException("INTEGRATION_NOT_FOUND",
+                        "Integration not found with id: " + id, HttpStatus.NOT_FOUND));
+    }
+
+    /**
      * Turns an integration on or off and touches nothing else. The integration is looked up
      * through the organization in the path, so an id belonging to another organization
      * answers 404 instead of confirming that it exists.
      */
     public Integration setActive(UUID organizationId, UUID id, boolean active) throws GendoxException {
 
-        Integration integration = integrationRepository.findById(id)
-                .filter(found -> organizationId.equals(found.getOrganizationId()))
-                .orElseThrow(() -> new GendoxException("INTEGRATION_NOT_FOUND",
-                        "Integration not found with id: " + id, HttpStatus.NOT_FOUND));
+        Integration integration = findForOrganization(organizationId, id);
 
         if (Boolean.TRUE.equals(integration.getActive()) == active) {
             return integration;
@@ -173,6 +178,20 @@ public class IntegrationService {
         }
 
         integration.setActive(active);
+
+        return integrationRepository.save(integration);
+    }
+
+    /**
+     * Sets how often an integration runs. The interval is replaced, not merged: a body with
+     * no interval leaves the integration with none, which means every pass of the poller. An
+     * integration that should not run on its own is switched off instead.
+     */
+    public Integration updateSchedule(UUID organizationId, UUID id, IntegrationScheduleDTO scheduleDTO) throws GendoxException {
+        Integration integration = findForOrganization(organizationId, id);
+
+        integration.setRunIntervalMinutes(scheduleDTO.getRunIntervalMinutes());
+        validateRunInterval(integration);
 
         return integrationRepository.save(integration);
     }

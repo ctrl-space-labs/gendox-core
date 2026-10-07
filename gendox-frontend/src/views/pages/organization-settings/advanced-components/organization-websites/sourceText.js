@@ -4,7 +4,7 @@
 
 // `every 1440 min` is the number the database holds, not the thing a person means
 export const everyText = minutes => {
-  if (!minutes) return 'only when you ask'
+  if (!minutes) return 'every time Gendox looks'
 
   if (minutes % 10080 === 0) {
     const weeks = minutes / 10080

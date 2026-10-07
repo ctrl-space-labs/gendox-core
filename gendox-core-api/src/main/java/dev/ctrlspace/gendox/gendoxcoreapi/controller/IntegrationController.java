@@ -6,6 +6,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.Integration;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.IntegrationActiveDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.IntegrationDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.IntegrationScheduleDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.IntegrationCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.IntegrationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
@@ -150,6 +151,19 @@ public class IntegrationController {
         return integration;
 
 
+    }
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_ORGANIZATION_WEB_SITES', 'getRequestedOrgIdFromPathVariable')")
+    @PutMapping("/organizations/{organizationId}/integrations/{id}/schedule")
+    @Operation(summary = "Set how often an integration runs",
+            description = "The interval is replaced, not merged: a body with no interval means the "
+                    + "integration runs on every pass of the poller. Switch it off to stop it "
+                    + "running on its own. A floor applies to types that are billed per run.")
+    public Integration updateIntegrationSchedule(@PathVariable UUID organizationId,
+                                                 @PathVariable UUID id,
+                                                 @RequestBody IntegrationScheduleDTO scheduleDTO) throws GendoxException {
+
+        return integrationService.updateSchedule(organizationId, id, scheduleDTO);
     }
 
     // TODO: preauthorize has OP_DELETE_INTEGRATION

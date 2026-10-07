@@ -7,6 +7,7 @@ import {
   Box,
   Button,
   Chip,
+  IconButton,
   Stack,
   Switch,
   Table,
@@ -31,6 +32,7 @@ import {
   AWS_S3_INTEGRATION
 } from './integrations/integrationMeta'
 import { shortName } from './organization-websites/websiteMeta'
+import { configOf } from './organization-websites/sourceText'
 import SectionHeader from './shared/SectionHeader'
 import WebScrapeSourcePanel from './organization-websites/WebScrapeSourcePanel'
 import toast from 'react-hot-toast'
@@ -39,6 +41,7 @@ import ActionDialog from './shared/ActionDialog'
 import { isValidWebsiteUrl } from 'src/utils/validators'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import integrationService from 'src/gendox-sdk/integrationService'
+import webScrapeService from 'src/gendox-sdk/webScrapeService'
 
 const when = at => (at && isValid(parseISO(at)) ? format(parseISO(at), 'dd/MM/yyyy - HH:mm') : 'Never')
 
@@ -55,6 +58,7 @@ const IntegrationsAdvancedOrganizationSettings = () => {
   const [openId, setOpenId] = useState(null)
   const [adding, setAdding] = useState(false)
   const [togglingId, setTogglingId] = useState(null)
+  const [editing, setEditing] = useState(null)
 
   // the organization the api returns carries no projects; the ones the user can
   // see come with the user, which is where the navigation reads them from too
@@ -193,6 +197,7 @@ const IntegrationsAdvancedOrganizationSettings = () => {
                       <TableCell>Project</TableCell>
                       <TableCell>Status</TableCell>
                       <TableCell align='right'>Last run</TableCell>
+                      <TableCell align='right' sx={{ width: 48 }} />
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -289,6 +294,20 @@ const IntegrationsAdvancedOrganizationSettings = () => {
                               {when(row.integration.lastRunAt)}
                             </Typography>
                           </TableCell>
+                          <TableCell align='right' sx={{ py: 0 }}>
+                            <Tooltip title='Edit'>
+                              <IconButton
+                                size='small'
+                                onClick={event => {
+                                  event.stopPropagation()
+                                  setEditing(row)
+                                }}
+                                sx={{ color: 'text.secondary', '&:hover': { color: 'primary.main' } }}
+                              >
+                                <Icon icon='mdi:pencil-outline' />
+                              </IconButton>
+                            </Tooltip>
+                          </TableCell>
                         </TableRow>
                       )
                     })}
@@ -363,6 +382,51 @@ const IntegrationsAdvancedOrganizationSettings = () => {
 
           await refresh()
           toast.success('Integration added')
+        }}
+      />
+      <ActionDialog
+        open={!!editing}
+        title='Edit integration'
+        description={editing?.title}
+        fields={[
+          {
+            name: 'runIntervalMinutes',
+            label: 'Check every (minutes)',
+            type: 'number',
+            value: editing?.integration.runIntervalMinutes ?? '',
+            tooltip:
+              'Leave it empty and Gendox looks every time its scheduler comes round. ' +
+              'A crawled site cannot be set below one day. To stop it running on its own, switch it off.'
+          },
+          {
+            name: 'crawlPageLimit',
+            label: 'Pages to look for',
+            type: 'number',
+            value: configOf(editing?.integration).crawlPageLimit ?? '',
+            hidden: () => editing?.type !== WEB_SCRAPE_INTEGRATION
+          }
+        ]}
+        onClose={() => setEditing(null)}
+        onSave={async v => {
+          // the interval is replaced, so an emptied field clears it on purpose
+          await integrationService.setIntegrationSchedule(
+            organizationId,
+            editing.integration.id,
+            { runIntervalMinutes: v.runIntervalMinutes === '' ? null : Number(v.runIntervalMinutes) },
+            token
+          )
+
+          if (editing.type === WEB_SCRAPE_INTEGRATION && v.crawlPageLimit !== '') {
+            await webScrapeService.updateSchedule(
+              organizationId,
+              editing.integration.id,
+              { crawlPageLimit: Number(v.crawlPageLimit) },
+              token
+            )
+          }
+
+          await dispatch(fetchIntegrations({ organizationId, token }))
+          toast.success('Integration updated')
         }}
       />
     </>

@@ -48,8 +48,28 @@ const setIntegrationActive = async (organizationId, integrationId, payload, toke
   })
 }
 
+/**
+ * Set how often an integration runs
+ * The interval is replaced, not merged: an empty payload clears it, which means
+ * the integration runs on every pass of the poller.
+ * @param organizationId
+ * @param integrationId
+ * @param payload { runIntervalMinutes }
+ * @param token
+ * @returns {Promise<axios.AxiosResponse<Integration>}
+ */
+const setIntegrationSchedule = async (organizationId, integrationId, payload, token) => {
+  return axios.put(apiRequest.integrationSchedule(organizationId, integrationId), payload, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
+    }
+  })
+}
+
 export default {
   getIntegration,
   getIntegrationsByOrganizationId,
-  setIntegrationActive
+  setIntegrationActive,
+  setIntegrationSchedule
 }
