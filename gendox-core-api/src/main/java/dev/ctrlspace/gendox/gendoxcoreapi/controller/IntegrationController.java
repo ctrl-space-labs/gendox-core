@@ -4,7 +4,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Integration;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.IntegrationActiveDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.IntegrationDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.IntegrationCreateDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.IntegrationScheduleDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.IntegrationCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.IntegrationService;
@@ -82,29 +82,30 @@ public class IntegrationController {
     @PostMapping(value = "/organizations/{organizationId}/integrations", consumes = {"application/json"})
     @ResponseStatus(value = HttpStatus.CREATED)
     @Operation(summary = "Create an integration",
-            description = "The organization comes from the path, because that is what the caller "
-                    + "was authorised against. A project in the body must belong to it, and gains "
-                    + "auto-training, because content is about to start arriving in it.")
+            description = "The type is its name — GIT_INTEGRATION, AWS_S3_INTEGRATION — because "
+                    + "the rows in `types` carry a different id in every database. The "
+                    + "organization comes from the path, since that is what the caller was "
+                    + "authorised against, and a project in the body must belong to it.")
     public Integration createIntegration(@PathVariable UUID organizationId,
-                                         @RequestBody IntegrationDTO integrationDTO) throws GendoxException {
+                                         @RequestBody IntegrationCreateDTO createDTO) throws GendoxException {
 
-        if (integrationDTO.getId() != null) {
-            throw new GendoxException("INTEGRATION_ID_MUST_BE_NULL", "Integration id is not null", HttpStatus.BAD_REQUEST);
+        // every type that reaches this door turns remote content into documents, and a
+        // document has to land in a project. A null here is a failure that only shows up
+        // on the first run, hours later, in a log
+        if (createDTO.getProjectId() == null) {
+            throw new GendoxException("INTEGRATION_PROJECT_REQUIRED",
+                    "A project is required: it is where the content becomes documents",
+                    HttpStatus.BAD_REQUEST);
         }
 
-        // the path is the organization the permission was checked against, so it is the
-        // answer. An id in the body would be a second, unchecked answer to the same question
-        integrationDTO.setOrganizationId(organizationId);
+        projectService.validateProjectsBelongToOrganization(List.of(createDTO.getProjectId()), organizationId);
 
-        if (integrationDTO.getProjectId() != null) {
-            projectService.validateProjectsBelongToOrganization(List.of(integrationDTO.getProjectId()), organizationId);
+        Project project = projectService.getProjectById(createDTO.getProjectId());
+        project.setAutoTraining(true);
+        projectService.updateProject(project);
 
-            Project project = projectService.getProjectById(integrationDTO.getProjectId());
-            project.setAutoTraining(true);
-            projectService.updateProject(project);
-        }
-
-        return integrationService.createIntegration(integrationDTO);
+        return integrationService.createIntegration(
+                integrationService.toIntegrationDTO(organizationId, createDTO));
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_INTEGRATIONS', 'getRequestedOrgIdFromPathVariable')")

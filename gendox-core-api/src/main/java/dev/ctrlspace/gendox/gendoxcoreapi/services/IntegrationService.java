@@ -249,6 +249,42 @@ public class IntegrationService {
 
     }
 
+    /**
+     * The third filler, next to the other two: it takes what a caller can know — the name
+     * of the type — and produces the IntegrationDTO that createIntegration takes. Nothing
+     * here saves anything, and the return type says so.
+     */
+    public IntegrationDTO toIntegrationDTO(UUID organizationId, IntegrationCreateDTO createDTO) throws GendoxException {
+
+        if (createDTO.getType() == null || createDTO.getType().isBlank()) {
+            throw new GendoxException("INTEGRATION_TYPE_REQUIRED",
+                    "An integration type is required", HttpStatus.BAD_REQUEST);
+        }
+
+        String typeName = createDTO.getType().trim().toUpperCase();
+
+        if (!IntegrationTypesConstants.RUNNABLE_TYPES.contains(typeName)) {
+            throw new GendoxException("INTEGRATION_TYPE_NOT_SUPPORTED",
+                    "Gendox does not run integrations of type " + typeName, HttpStatus.BAD_REQUEST);
+        }
+
+        return IntegrationDTO
+                .builder()
+                .organizationId(organizationId)
+                .projectId(createDTO.getProjectId())
+                // a source someone bothered to add is meant to run; switching it off on
+                // arrival is a deliberate ask, so it has to be said
+                .active(createDTO.getActive() == null || createDTO.getActive())
+                .url(createDTO.getUrl())
+                .repoHead(createDTO.getRepoHead())
+                .directoryPath(createDTO.getDirectoryPath())
+                .queueName(createDTO.getQueueName())
+                .runIntervalMinutes(createDTO.getRunIntervalMinutes())
+                .integrationType(typeService.getIntegrationTypeByName(typeName))
+                .config("{}")
+                .build();
+    }
+
 
     /**
      * The details of an integration for a website that pushes its own content in, which today

@@ -9,7 +9,7 @@ export const API_INTEGRATION = 'API_INTEGRATION'
 export const AWS_S3_INTEGRATION = 'AWS_S3_INTEGRATION'
 export const GIT_INTEGRATION = 'GIT_INTEGRATION'
 export const GOOGLE_DRIVE_INTEGRATION = 'GOOGLE_DRIVE_INTEGRATION'
-export const DROPBOX_INTEGRATIONS = 'DROPBOX_INTEGRATIONS'
+export const DROPBOX_INTEGRATION = 'DROPBOX_INTEGRATION'
 
 export const INTEGRATION_TYPES = [
   { name: WEB_SCRAPE_INTEGRATION, label: 'Read by Gendox' },
@@ -17,7 +17,7 @@ export const INTEGRATION_TYPES = [
   { name: AWS_S3_INTEGRATION, label: 'S3 queue' },
   { name: GIT_INTEGRATION, label: 'Git repository' },
   { name: GOOGLE_DRIVE_INTEGRATION, label: 'Google Drive' },
-  { name: DROPBOX_INTEGRATIONS, label: 'Dropbox' }
+  { name: DROPBOX_INTEGRATION, label: 'Dropbox' }
 ]
 
 export const labelOf = name => INTEGRATION_TYPES.find(type => type.name === name)?.label ?? name
