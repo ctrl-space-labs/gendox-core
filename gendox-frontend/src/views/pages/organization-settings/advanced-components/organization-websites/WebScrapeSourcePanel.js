@@ -65,16 +65,14 @@ const WebScrapeSourcePanel = ({ organizationId, integration, onRefresh }) => {
   const config = configOf(integration)
   const limit = config.crawlPageLimit
 
-  // The endpoints answer 202 and work in another thread, so finishing is
-  // something we observe rather than something we are told. Each action leaves a
-  // different mark: reading clears the tick of every page it finishes, so the
-  // count falling to zero is the run ending; crawling writes lastRunAt once it
-  // has stored what it found. Both are exact — no timer decides we are done.
+  // The endpoints answer 202 and work in another thread, so finishing is something we
+  // observe rather than something we are told. Every action leaves the same mark: it
+  // stamps lastRunAt once it is done. One signal, exact, and no timer decides for us.
   const run = async (label, fn, waitFor) => {
     setError(null)
     setNotice(null)
     setSlow(false)
-    setBusy({ label, kind: waitFor, startedWith: countsRef.current.selected, at: Date.now() })
+    setBusy({ label, kind: waitFor, at: Date.now() })
 
     const startedAt = integration.lastRunAt ?? null
 
@@ -87,9 +85,10 @@ const WebScrapeSourcePanel = ({ organizationId, integration, onRefresh }) => {
       return
     }
 
-    const crawlFinished = async () => {
+    const runFinished = async () => {
       try {
         const fresh = await integrationService.getIntegration(integration.id, token)
+
         return String(fresh.data?.lastRunAt ?? '') !== String(startedAt ?? '')
       } catch {
         return false
@@ -102,25 +101,18 @@ const WebScrapeSourcePanel = ({ organizationId, integration, onRefresh }) => {
       setReloadKey(k => k + 1)
       ticks += 1
 
-      // A run that exhausts the allowance stops before it clears the tick of the
-      // pages it never reached, so the count alone would never reach zero.
-      // Running out is itself the end of the run, and an exact one.
+      // the tick also keeps the allowance above the button current
       const fresh = await loadBudget()
       const exhausted = fresh?.remainingPages === 0
-      const left = countsRef.current.selected
 
-      const finished = waitFor === 'pages' ? left === 0 || exhausted : await crawlFinished()
-
-      if (finished) {
+      if (await runFinished()) {
         clearInterval(timerRef.current)
         setBusy(null)
         setSlow(false)
 
-        if (waitFor === 'pages' && exhausted && left > 0) {
+        if (waitFor === 'pages' && exhausted) {
           setNotice(
-            `This month's allowance ran out with ${left} picked ${
-              left === 1 ? 'page' : 'pages'
-            } still waiting. They keep their tick, so Read carries on where it stopped once the allowance renews.`
+            "This month's allowance ran out before every ticked page was read. The ticks stay, so Read carries on where it stopped once the allowance renews."
           )
         }
 
@@ -159,23 +151,18 @@ const WebScrapeSourcePanel = ({ organizationId, integration, onRefresh }) => {
 
   const overBudget = left != null && picked > left
 
-  // Reading clears each page's tick as it finishes, so the count falling is
-  // literal progress and the bar can be honest about how far along it is. A
-  // crawl has no denominator — it is looking for pages nobody has counted yet —
-  // so it counts upwards instead and the bar stays indeterminate.
-  const readSoFar = busy?.kind === 'pages' ? Math.max(0, busy.startedWith - picked) : 0
-
-  const progress = busy?.kind === 'pages' && busy.startedWith ? (readSoFar / busy.startedWith) * 100 : null
-
-  const elapsed = busy ? Math.floor((Date.now() - busy.at) / 1000) : 0
-
+  // Reading no longer clears a tick as it finishes a page, so there is no count left to
+  // divide by. The bar is indeterminate for both actions, and the text says what is
+  // happening instead of inventing a denominator it cannot stand behind.
   const statusText = !busy
     ? null
     : busy.kind === 'pages'
-    ? `Read ${readSoFar} of ${busy.startedWith} ${busy.startedWith === 1 ? 'page' : 'pages'}`
+    ? `${busy.label} — ${picked} ${picked === 1 ? 'page' : 'pages'} ticked`
     : counts.filtering
     ? busy.label
     : `${busy.label} — ${counts.listed} found`
+
+  const elapsed = busy ? Math.floor((Date.now() - busy.at) / 1000) : 0
 
   const allowanceChip = allowance && (
     <Tooltip title={allowanceDetail}>
@@ -198,17 +185,19 @@ const WebScrapeSourcePanel = ({ organizationId, integration, onRefresh }) => {
         left === 0
           ? 'The allowance for this billing period is spent.'
           : overBudget
-          ? `Only ${left} of the ${picked} pages you picked fit in the allowance. The rest keep their tick for later.`
+          ? `Only ${left} of the ${picked} ticked pages fit in the allowance. The rest keep their tick for later.`
           : picked
-          ? `Read ${picked} ${picked === 1 ? 'page' : 'pages'} and keep each one as a document`
-          : 'Tick the pages you want read'
+          ? `Make the project match: read the ${picked} ticked ${
+              picked === 1 ? 'page' : 'pages'
+            }, and take out anything no longer ticked`
+          : 'Nothing is ticked, so this takes every page Gendox has read back out of the project'
       }
     >
       <span>
         <Button
           variant='contained'
           disableElevation
-          disabled={!!busy || picked === 0 || left === 0}
+          disabled={!!busy || left === 0}
           startIcon={busy?.label === READING ? <CircularProgress size={16} color='inherit' /> : null}
           onClick={() => run(READING, webScrapeService.scrape, 'pages')}
           sx={{ minWidth: 112 }}
@@ -281,7 +270,7 @@ const WebScrapeSourcePanel = ({ organizationId, integration, onRefresh }) => {
             </Typography>
           </Stack>
 
-          <LinearProgress variant={progress === null ? 'indeterminate' : 'determinate'} value={progress ?? undefined} />
+          <LinearProgress />
 
           {slow && (
             <Typography variant='caption' color='warning.main' sx={{ display: 'block', mt: 0.5 }}>

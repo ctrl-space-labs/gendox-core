@@ -66,6 +66,24 @@ const removePageContent = async (organizationId, integrationId, pageId, token) =
 }
 
 /**
+ * Read one page now, without waiting for a pass over the whole site
+ * Ticks the page as well, so the next pass keeps it rather than taking it back out
+ * @param organizationId
+ * @param integrationId
+ * @param pageId
+ * @param token
+ * @returns {Promise<axios.AxiosResponse<void>}
+ */
+const fetchPageContent = async (organizationId, integrationId, pageId, token) => {
+  return axios.post(apiRequest.webScrapePageContent(organizationId, integrationId, pageId), null, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
+    }
+  })
+}
+
+/**
  * List the pages the site exposes. Free, and answers 202
  * @param organizationId
  * @param integrationId
@@ -167,6 +185,7 @@ export default {
   getPages,
   updateSelection,
   removePageContent,
+  fetchPageContent,
   crawl,
   deepCrawl,
   scrape,

@@ -1,12 +1,12 @@
-import { useMemo, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import { useRouter } from 'next/router'
 import { useAuth } from 'src/authentication/useAuth'
 import {
   CardContent,
   Box,
-  Button,
   Chip,
+  Collapse,
   IconButton,
   Stack,
   Switch,
@@ -138,8 +138,6 @@ const IntegrationsAdvancedOrganizationSettings = () => {
 
   const visible = rows.filter(row => showing === 'all' || (showing === 'active') === !!row.integration.active)
 
-  const openRow = rows.find(row => row.integration.id === openId) ?? null
-
   // an api integration feeds whichever projects the website assigns its content to,
   // so there is no single project to name here
   const projectCell = row =>
@@ -152,137 +150,116 @@ const IntegrationsAdvancedOrganizationSettings = () => {
       <SectionHeader
         title='Integrations'
         tooltip='Everything that brings content into Gendox: websites it reads, websites that send their own content in, repositories and buckets.'
-        addLabel={openRow ? undefined : 'Add integration'}
+        addLabel='Add integration'
         onAdd={() => setAdding(true)}
       />
 
       <CardContent sx={{ pt: 0 }}>
         <Box sx={{ filter: isBlurring ? 'blur(6px)' : 'none', transition: 'filter 0.3s ease' }} aria-busy={isBlurring}>
-          {openRow ? (
-            <>
-              <Button
+          <Stack direction='row' alignItems='center' spacing={1.5} sx={{ mb: 2 }}>
+            <Typography variant='body2' color='text.secondary' sx={{ flexGrow: 1 }}>
+              {rows.length
+                ? `${rows.length} integrations, ${activeCount} of them running.`
+                : 'Nothing brings content into Gendox yet.'}
+            </Typography>
+
+            {rows.length > 0 && (
+              <ToggleButtonGroup
                 size='small'
-                color='inherit'
-                onClick={() => setOpenId(null)}
-                startIcon={<Icon icon='mdi:chevron-left' />}
-                sx={{ px: 0.5, mb: 1, color: 'text.secondary' }}
+                exclusive
+                value={showing}
+                onChange={(event, next) => next && setShowing(next)}
               >
-                All integrations
-              </Button>
+                <ToggleButton value='active'>Active</ToggleButton>
+                <ToggleButton value='inactive'>Inactive</ToggleButton>
+                <ToggleButton value='all'>All</ToggleButton>
+              </ToggleButtonGroup>
+            )}
+          </Stack>
 
-              <Typography variant='subtitle2'>{openRow.title}</Typography>
+          {visible.length > 0 ? (
+            <Table size='small'>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Integration</TableCell>
+                  <TableCell>Type</TableCell>
+                  <TableCell>Project</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell align='right'>Last run</TableCell>
+                  <TableCell align='right' sx={{ width: 96 }} />
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {visible.map(row => {
+                  // only a crawl source has anything behind it to open
+                  const opens = row.type === WEB_SCRAPE_INTEGRATION
+                  const open = openId === row.integration.id
 
-              <WebScrapeSourcePanel
-                organizationId={organizationId}
-                integration={openRow.integration}
-                onRefresh={refresh}
-              />
-            </>
-          ) : (
-            <>
-              <Stack direction='row' alignItems='center' spacing={1.5} sx={{ mb: 2 }}>
-                <Typography variant='body2' color='text.secondary' sx={{ flexGrow: 1 }}>
-                  {rows.length
-                    ? `${rows.length} integrations, ${activeCount} of them running.`
-                    : 'Nothing brings content into Gendox yet.'}
-                </Typography>
-
-                {rows.length > 0 && (
-                  <ToggleButtonGroup
-                    size='small'
-                    exclusive
-                    value={showing}
-                    onChange={(event, next) => next && setShowing(next)}
-                  >
-                    <ToggleButton value='active'>Active</ToggleButton>
-                    <ToggleButton value='inactive'>Inactive</ToggleButton>
-                    <ToggleButton value='all'>All</ToggleButton>
-                  </ToggleButtonGroup>
-                )}
-              </Stack>
-
-              {visible.length > 0 ? (
-                <Table size='small'>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Integration</TableCell>
-                      <TableCell>Type</TableCell>
-                      <TableCell>Project</TableCell>
-                      <TableCell>Status</TableCell>
-                      <TableCell align='right'>Last run</TableCell>
-                      <TableCell align='right' sx={{ width: 96 }} />
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {visible.map(row => {
-                      // only a crawl source has anything behind it to open
-                      const opens = row.type === WEB_SCRAPE_INTEGRATION
-
-                      return (
-                        <TableRow
-                          key={row.integration.id}
-                          hover
-                          onClick={opens ? () => setOpenId(row.integration.id) : undefined}
-                          sx={{ cursor: opens ? 'pointer' : 'default' }}
-                        >
-                          <TableCell sx={{ maxWidth: 0 }}>
-                            <Stack direction='row' alignItems='center' spacing={0.5} sx={{ minWidth: 0 }}>
-                              <Typography variant='body2' sx={{ wordBreak: 'break-word' }}>
-                                {row.title}
-                              </Typography>
-                              {opens && (
-                                <Icon
-                                  icon='mdi:chevron-right'
-                                  style={{ fontSize: '1rem', opacity: 0.6, flexShrink: 0 }}
-                                />
-                              )}
-                            </Stack>
-                            {row.caption && (
-                              <Typography
-                                variant='caption'
-                                color='text.secondary'
-                                display='block'
-                                sx={{ wordBreak: 'break-all' }}
-                              >
-                                {row.caption}
-                              </Typography>
+                  return (
+                    <Fragment key={row.integration.id}>
+                      <TableRow
+                        hover
+                        onClick={opens ? () => setOpenId(open ? null : row.integration.id) : undefined}
+                        sx={{ cursor: opens ? 'pointer' : 'default' }}
+                      >
+                        <TableCell sx={{ maxWidth: 0 }}>
+                          <Stack direction='row' alignItems='center' spacing={0.5} sx={{ minWidth: 0 }}>
+                            <Typography variant='body2' sx={{ wordBreak: 'break-word' }}>
+                              {row.title}
+                            </Typography>
+                            {opens && (
+                              <Icon
+                                icon={open ? 'mdi:chevron-up' : 'mdi:chevron-down'}
+                                style={{ fontSize: '1rem', opacity: 0.6, flexShrink: 0 }}
+                              />
                             )}
-                          </TableCell>
-
-                          <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                            <Typography variant='body2' color='text.secondary'>
-                              {labelOf(row.type)}
+                          </Stack>
+                          {row.caption && (
+                            <Typography
+                              variant='caption'
+                              color='text.secondary'
+                              display='block'
+                              sx={{ wordBreak: 'break-all' }}
+                            >
+                              {row.caption}
                             </Typography>
-                          </TableCell>
+                          )}
+                        </TableCell>
 
-                          <TableCell>
-                            <Typography variant='body2' color='text.secondary'>
-                              {projectCell(row)}
-                            </Typography>
-                          </TableCell>
+                        <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                          <Typography variant='body2' color='text.secondary'>
+                            {labelOf(row.type)}
+                          </Typography>
+                        </TableCell>
 
-                          <TableCell>
-                            <Stack direction='row' alignItems='center' spacing={1}>
-                              {/* an empty title renders no tooltip, so only the rows that
-                                  cannot be switched here explain why */}
-                              <Tooltip
-                                title={
-                                  row.type === API_INTEGRATION
-                                    ? 'The plugin on the site decides this, and sets it again every time it connects.'
-                                    : ''
-                                }
-                              >
-                                <span>
-                                  <Switch
-                                    size='small'
-                                    checked={!!row.integration.active}
-                                    disabled={row.type === API_INTEGRATION || togglingId === row.integration.id}
-                                    onClick={event => event.stopPropagation()}
-                                    onChange={(event, checked) => toggleActive(row, checked)}
-                                  />
-                                </span>
-                              </Tooltip>
+                        <TableCell>
+                          <Typography variant='body2' color='text.secondary'>
+                            {projectCell(row)}
+                          </Typography>
+                        </TableCell>
 
+                        <TableCell>
+                          <Stack direction='row' alignItems='center' spacing={1}>
+                            {/* a switch an api row can never move is a promise the screen
+                                cannot keep, so the row carries only the state and the chip
+                                explains who decides it */}
+                            {row.type !== API_INTEGRATION && (
+                              <Switch
+                                size='small'
+                                checked={!!row.integration.active}
+                                disabled={togglingId === row.integration.id}
+                                onClick={event => event.stopPropagation()}
+                                onChange={(event, checked) => toggleActive(row, checked)}
+                              />
+                            )}
+
+                            <Tooltip
+                              title={
+                                row.type === API_INTEGRATION
+                                  ? 'The plugin on the site decides this, and sets it again every time it connects.'
+                                  : ''
+                              }
+                            >
                               <Chip
                                 size='small'
                                 variant={row.integration.active ? 'filled' : 'outlined'}
@@ -295,55 +272,75 @@ const IntegrationsAdvancedOrganizationSettings = () => {
                                     : 'Inactive'
                                 }
                               />
-                            </Stack>
-                          </TableCell>
+                            </Tooltip>
+                          </Stack>
+                        </TableCell>
 
-                          <TableCell align='right' sx={{ whiteSpace: 'nowrap' }}>
-                            <Typography
-                              variant='caption'
-                              color='text.secondary'
-                              sx={{ fontVariantNumeric: 'tabular-nums' }}
+                        <TableCell align='right' sx={{ whiteSpace: 'nowrap' }}>
+                          <Typography
+                            variant='caption'
+                            color='text.secondary'
+                            sx={{ fontVariantNumeric: 'tabular-nums' }}
+                          >
+                            {when(row.integration.lastRunAt)}
+                          </Typography>
+                        </TableCell>
+
+                        <TableCell align='right' sx={{ py: 0, whiteSpace: 'nowrap' }}>
+                          <Tooltip title='Edit'>
+                            <IconButton
+                              size='small'
+                              onClick={event => {
+                                event.stopPropagation()
+                                setEditing(row)
+                              }}
+                              sx={{ color: 'text.secondary', '&:hover': { color: 'primary.main' } }}
                             >
-                              {when(row.integration.lastRunAt)}
-                            </Typography>
-                          </TableCell>
-                          <TableCell align='right' sx={{ py: 0, whiteSpace: 'nowrap' }}>
-                            <Tooltip title='Edit'>
-                              <IconButton
-                                size='small'
-                                onClick={event => {
-                                  event.stopPropagation()
-                                  setEditing(row)
-                                }}
-                                sx={{ color: 'text.secondary', '&:hover': { color: 'primary.main' } }}
-                              >
-                                <Icon icon='mdi:pencil-outline' />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title='Remove'>
-                              <IconButton
-                                size='small'
-                                onClick={event => {
-                                  event.stopPropagation()
-                                  setDeleting(row)
-                                }}
-                                sx={{ color: 'text.secondary', '&:hover': { color: 'error.main' } }}
-                              >
-                                <Icon icon='mdi:delete-outline' />
-                              </IconButton>
-                            </Tooltip>
+                              <Icon icon='mdi:pencil-outline' />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title='Remove'>
+                            <IconButton
+                              size='small'
+                              onClick={event => {
+                                event.stopPropagation()
+                                setDeleting(row)
+                              }}
+                              sx={{ color: 'text.secondary', '&:hover': { color: 'error.main' } }}
+                            >
+                              <Icon icon='mdi:delete-outline' />
+                            </IconButton>
+                          </Tooltip>
+                        </TableCell>
+                      </TableRow>
+
+                      {/* The pages open under the row they belong to. The cell is always
+                          rendered and carries no border, so a closed row leaves no seam —
+                          mounting it only when open would cost the animation */}
+                      {opens && (
+                        <TableRow>
+                          <TableCell colSpan={6} sx={{ py: 0, border: 0 }}>
+                            <Collapse in={open} unmountOnExit>
+                              <Box sx={{ pb: 2 }}>
+                                <WebScrapeSourcePanel
+                                  organizationId={organizationId}
+                                  integration={row.integration}
+                                  onRefresh={refresh}
+                                />
+                              </Box>
+                            </Collapse>
                           </TableCell>
                         </TableRow>
-                      )
-                    })}
-                  </TableBody>
-                </Table>
-              ) : (
-                <Typography variant='body2' color='text.secondary'>
-                  {showing === 'active' ? 'Nothing is running right now.' : 'Nothing here.'}
-                </Typography>
-              )}
-            </>
+                      )}
+                    </Fragment>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          ) : (
+            <Typography variant='body2' color='text.secondary'>
+              {showing === 'active' ? 'Nothing is running right now.' : 'Nothing here.'}
+            </Typography>
           )}
         </Box>
       </CardContent>

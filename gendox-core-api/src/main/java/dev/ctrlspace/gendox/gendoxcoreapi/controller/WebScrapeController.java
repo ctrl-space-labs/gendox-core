@@ -122,8 +122,9 @@ public class WebScrapeController {
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_ORGANIZATION_WEB_SITES', 'getRequestedOrgIdFromPathVariable')")
     @PostMapping("/organizations/{organizationId}/integrations/{integrationId}/web-scrape/scrape")
-    @Operation(summary = "Download the selected pages",
-            description = "Asynchronous: returns 202 Accepted. Each page becomes a document of the project.")
+    @Operation(summary = "Make the project match the selected pages",
+            description = "Asynchronous: returns 202 Accepted. Ticked pages are fetched or fetched "
+                    + "again, and a page that is no longer ticked loses the document it produced.")
     public ResponseEntity<Void> scrape(@PathVariable UUID organizationId,
                                        @PathVariable UUID integrationId) throws GendoxException {
 
@@ -133,6 +134,22 @@ public class WebScrapeController {
         webScrapeIntegrationUpdateService.triggerScrape(integrationId);
 
         return ResponseEntity.accepted().build();
+    }
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_ORGANIZATION_WEB_SITES', 'getRequestedOrgIdFromPathVariable')")
+    @PostMapping("/organizations/{organizationId}/integrations/{integrationId}/web-scrape/pages/{pageId}/content")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Read one page now",
+            description = "Fetches this page and stores it as a document, and ticks it so the next "
+                    + "pass keeps it rather than taking it back out.")
+    public void fetchPageContent(@PathVariable UUID organizationId,
+                                 @PathVariable UUID integrationId,
+                                 @PathVariable UUID pageId) throws GendoxException {
+
+        webScrapePageService.getIntegration(organizationId, integrationId);
+        webScrapeIntegrationUpdateService.validatePageFetch(integrationId);
+
+        webScrapeIntegrationUpdateService.fetchPage(integrationId, pageId);
     }
 
 

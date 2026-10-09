@@ -19,7 +19,8 @@ import {
   Tooltip,
   TextField,
   InputAdornment,
-  IconButton
+  IconButton,
+  CircularProgress
 } from '@mui/material'
 import { isValid, parseISO, format } from 'date-fns'
 import Icon from 'src/views/custom-components/mui/icon/icon'
@@ -78,6 +79,7 @@ const WebScrapePagesTable = ({ organizationId, integrationId, baseUrl, reloadKey
   const [typed, setTyped] = useState('')
   const [search, setSearch] = useState('')
   const [error, setError] = useState(null)
+  const [fetchingId, setFetchingId] = useState(null)
 
   const status = STATUS_VIEWS.includes(view) ? view : ''
   const hasContent = view === READ ? true : view === UNREAD ? false : undefined
@@ -154,6 +156,21 @@ const WebScrapePagesTable = ({ organizationId, integrationId, baseUrl, reloadKey
       await load()
     } catch (e) {
       setError(getErrorMessage(e))
+    }
+  }
+
+  // reading one page on purpose, instead of waiting for the next pass over the site.
+  // The request ticks it too, so the reload shows both halves of what changed
+  const fetchOne = async id => {
+    setFetchingId(id)
+    setError(null)
+    try {
+      await webScrapeService.fetchPageContent(organizationId, integrationId, id, token)
+      await load()
+    } catch (e) {
+      setError(getErrorMessage(e))
+    } finally {
+      setFetchingId(null)
     }
   }
 
@@ -284,7 +301,7 @@ const WebScrapePagesTable = ({ organizationId, integrationId, baseUrl, reloadKey
                   />
                 </TableCell>
 
-                <TableCell sx={{ maxWidth: 0 }}>
+                <TableCell sx={{ maxWidth: 0, width: '100%' }}>
                   <Stack direction='row' alignItems='flex-start' spacing={0.75} sx={{ minWidth: 0 }}>
                     {/* wraps rather than truncates: a page you cannot read the end of
                         is a page you cannot tell apart from its neighbour */}
@@ -315,56 +332,104 @@ const WebScrapePagesTable = ({ organizationId, integrationId, baseUrl, reloadKey
                   </Stack>
 
                   {p.title && (
-                    <Typography variant='caption' color='text.secondary' display='block' sx={{ wordBreak: 'break-word' }}>
+                    <Typography
+                      variant='caption'
+                      color='text.secondary'
+                      display='block'
+                      sx={{ wordBreak: 'break-word' }}
+                    >
                       {pathOf(p.url, baseUrl)}
                     </Typography>
                   )}
-
-                  {p.errorMessage && (
-                    <Chip
-                      size='small'
-                      color='error'
-                      variant='outlined'
-                      label={p.errorMessage}
-                      sx={{ mt: 0.5, maxWidth: '100%' }}
-                    />
-                  )}
                 </TableCell>
 
-                {/* whether Gendox has read the page, and the only way to undo that */}
-                <TableCell align='right' sx={{ whiteSpace: 'nowrap' }}>
-                  <Stack direction='row' spacing={0.5} alignItems='center' justifyContent='flex-end'>
-                    {gone && <Chip size='small' variant='outlined' label='Gone from the site' />}
-                    {p.status === 'FAILED' && <Chip size='small' color='error' label='Failed' />}
+                {/* The tick is the setting and the document is the fact. While they disagree,
+                    the row says which way the next pass will settle it */}
+                <TableCell align='right'>
+                  <Stack spacing={0.5} alignItems='flex-end'>
+                    <Stack
+                      direction='row'
+                      spacing={0.5}
+                      alignItems='center'
+                      justifyContent='flex-end'
+                      sx={{ whiteSpace: 'nowrap' }}
+                    >
+                      {gone && <Chip size='small' variant='outlined' label='Gone from the site' />}
 
-                    {stored ? (
-                      <Typography variant='caption' color='text.secondary' sx={{ fontVariantNumeric: 'tabular-nums' }}>
-                        {read ?? 'Read'}
-                      </Typography>
-                    ) : (
-                      <Typography variant='caption' color='text.disabled'>
-                        Not read yet
-                      </Typography>
-                    )}
-
-                    {stored && (
-                      <Tooltip title='Forget what Gendox read here'>
-                        <IconButton
-                          size='small'
-                          onClick={e => {
-                            e.stopPropagation()
-                            setRemoving(p)
-                          }}
-                          sx={{
-                            p: 0.25,
-                            color: 'text.secondary',
-                            '&:hover': { color: 'error.main', bgcolor: 'action.hover' }
-                          }}
+                      {p.status === 'FAILED' && (
+                        <Tooltip
+                          title={
+                            read
+                              ? 'The last attempt failed. The time shown is the last read that worked — when it failed is not recorded.'
+                              : 'Every attempt so far has failed, so nothing is stored for this page.'
+                          }
                         >
-                          <Icon icon='mdi:close-circle-outline' style={{ fontSize: '1rem' }} />
-                        </IconButton>
-                      </Tooltip>
-                    )}
+                          <Chip size='small' color='error' variant='outlined' label='Failed' />
+                        </Tooltip>
+                      )}
+
+                      {!gone && p.isSelected && !stored && (
+                        <Chip size='small' color='primary' variant='outlined' label='Will be read' />
+                      )}
+                      {!gone && !p.isSelected && stored && (
+                        <Chip size='small' color='warning' variant='outlined' label='Will be removed' />
+                      )}
+
+                      {stored && (
+                        <Typography
+                          variant='caption'
+                          color='text.secondary'
+                          sx={{ fontVariantNumeric: 'tabular-nums' }}
+                        >
+                          {p.status === 'FAILED' ? `Last read ${read}` : read ?? 'Read'}
+                        </Typography>
+                      )}
+
+                      {!gone && !stored && (
+                        <Tooltip title='Read this page now'>
+                          <span>
+                            <IconButton
+                              size='small'
+                              disabled={fetchingId === p.id}
+                              onClick={e => {
+                                e.stopPropagation()
+                                fetchOne(p.id)
+                              }}
+                              sx={{
+                                p: 0.25,
+                                color: 'text.secondary',
+                                '&:hover': { color: 'primary.main', bgcolor: 'action.hover' }
+                              }}
+                            >
+                              {fetchingId === p.id ? (
+                                <CircularProgress size={14} color='inherit' />
+                              ) : (
+                                <Icon icon='mdi:download-outline' style={{ fontSize: '1rem' }} />
+                              )}
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                      )}
+
+                      {stored && (
+                        <Tooltip title='Forget what Gendox read here'>
+                          <IconButton
+                            size='small'
+                            onClick={e => {
+                              e.stopPropagation()
+                              setRemoving(p)
+                            }}
+                            sx={{
+                              p: 0.25,
+                              color: 'text.secondary',
+                              '&:hover': { color: 'error.main', bgcolor: 'action.hover' }
+                            }}
+                          >
+                            <Icon icon='mdi:close-circle-outline' style={{ fontSize: '1rem' }} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </Stack>
                   </Stack>
                 </TableCell>
               </TableRow>

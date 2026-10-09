@@ -80,7 +80,7 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
         }
 
         discoverPages(integration);
-        refreshStoredPages(integration);
+        syncSelectedPages(integration);
 
         return Map.of();
     }
@@ -100,36 +100,29 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
     }
 
     /**
-     * Downloads the pages the user has picked and stores each one as a document.
+     * Brings the project in line with what is ticked, which is the only statement of what
+     * belongs in it: a ticked page is fetched, or fetched again so its document stays
+     * current, and an unticked page that still has a document loses it.
      * <p>
-     * Picking is a choice about this run, not about what belongs in the project:
-     * reading three pages leaves every other page exactly as it was. A page is in
-     * the project while it has a document, and that is removed deliberately, never
-     * as a side effect of reading something else.
+     * The scheduled pass and the Read button run this same method, because they answer the
+     * same question — does the project match the settings? Before this, the button read what
+     * was ticked while the scheduler refreshed whatever happened to have a document, and the
+     * two sets had nothing to do with each other.
      */
-    public void scrapeSelectedPages(Integration integration) throws GendoxException {
+    public void syncSelectedPages(Integration integration) throws GendoxException {
 
-        scrapePages(integration, webScrapePageRepository.findAllByIntegrationId(integration.getId())
+        List<WebScrapePage> pages = webScrapePageRepository.findAllByIntegrationId(integration.getId())
                 .stream()
-                .filter(page -> Boolean.TRUE.equals(page.getSelected()))
                 .filter(page -> !WebScrapePageStatusConstants.REMOVED.equals(page.getStatus()))
-                .toList());
-    }
+                .toList();
 
-    /**
-     * Reads again the pages that are already in the project, which is what the
-     * schedule is for: keeping what was chosen up to date, not choosing more.
-     * <p>
-     * Picking no longer survives a run, so the schedule cannot follow it; what it
-     * follows instead is the only durable record of what the user wanted kept —
-     * the pages that have a document.
-     */
-    public void refreshStoredPages(Integration integration) throws GendoxException {
-
-        scrapePages(integration, webScrapePageRepository.findAllByIntegrationId(integration.getId())
-                .stream()
+        dropContent(pages.stream()
+                .filter(page -> !Boolean.TRUE.equals(page.getSelected()))
                 .filter(page -> page.getDocumentInstanceId() != null)
-                .filter(page -> !WebScrapePageStatusConstants.REMOVED.equals(page.getStatus()))
+                .toList());
+
+        scrapePages(integration, pages.stream()
+                .filter(page -> Boolean.TRUE.equals(page.getSelected()))
                 .toList());
     }
 
@@ -196,9 +189,6 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
                 page.setErrorMessage(e.getMessage());
             }
 
-            // the pick was about this run, so it does not outlive it
-            page.setSelected(false);
-
             webScrapePageRepository.save(page);
         }
     }
@@ -250,6 +240,26 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
 
         Integration integration = loadAndCheckPlan(integrationId);
 
+        // a pass with nothing ticked only removes content, and removing costs nothing:
+        // refusing it would leave an organization at its limit unable to take pages out
+        boolean fetchesSomething = webScrapePageRepository.findAllByIntegrationId(integrationId)
+                .stream()
+                .anyMatch(page -> Boolean.TRUE.equals(page.getSelected())
+                        && !WebScrapePageStatusConstants.REMOVED.equals(page.getStatus()));
+
+        if (fetchesSomething) {
+            requireBudget(integration);
+        }
+    }
+
+    /**
+     * One page is about to be fetched, so the plan and the monthly budget both apply.
+     */
+    public void validatePageFetch(UUID integrationId) throws GendoxException {
+        requireBudget(loadAndCheckPlan(integrationId));
+    }
+
+    private void requireBudget(Integration integration) throws GendoxException {
         if (!subscriptionValidationService.canScrapeWebPages(integration.getOrganizationId(), 1)) {
             throw new GendoxException("MAX_WEB_SCRAPE_PAGES_REACHED",
                     "The monthly web scraping budget of organization " + integration.getOrganizationId()
@@ -264,7 +274,9 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
     public void triggerCrawl(UUID integrationId) {
         try {
             logger.info("Manually listing the pages of web scrape integration {}", integrationId);
-            discoverPages(loadIntegration(integrationId));
+            Integration integration = loadIntegration(integrationId);
+            discoverPages(integration);
+            stampRun(integration);
         } catch (Exception e) {
             logger.error("Error listing the pages of web scrape integration {}", integrationId, e);
         }
@@ -276,7 +288,9 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
     public void triggerDeepCrawl(UUID integrationId) {
         try {
             logger.info("Manually deep crawling the site of web scrape integration {}", integrationId);
-            deepDiscoverPages(loadIntegration(integrationId));
+            Integration integration = loadIntegration(integrationId);
+            deepDiscoverPages(integration);
+            stampRun(integration);
         } catch (Exception e) {
             logger.error("Error deep crawling the site of web scrape integration {}", integrationId, e);
         }
@@ -287,19 +301,18 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
             lockAtMostFor = "PT30M", lockAtLeastFor = "PT5S")
     public void triggerScrape(UUID integrationId) {
         try {
-            logger.info("Manually scraping the selected pages of web scrape integration {}", integrationId);
-            scrapeSelectedPages(loadIntegration(integrationId));
+            logger.info("Bringing the project in line with the selected pages of web scrape integration {}", integrationId);
+            Integration integration = loadIntegration(integrationId);
+            syncSelectedPages(integration);
+            stampRun(integration);
         } catch (Exception e) {
             logger.error("Error scraping the selected pages of web scrape integration {}", integrationId, e);
         }
     }
 
     /**
-     * Takes one page's content out of the project.
-     * Since a pick no longer means "this belongs here", this is the only thing
-     * that deletes a document, and it is asked for on purpose. The page stays on
-     * the list: what is removed is its content, not its existence, so it can be
-     * read again later without crawling the site afresh.
+     * Takes one page's content out of the project now, instead of waiting for the next pass.
+     * Unticking the page says the same thing; this is the impatient version of it.
      */
     @Transactional(rollbackOn = Exception.class)
     public void removeContent(UUID integrationId, UUID pageId) throws GendoxException {
@@ -309,20 +322,72 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
                 .orElseThrow(() -> new GendoxException("WEB_SCRAPE_PAGE_NOT_FOUND",
                         "Web scrape page not found: " + pageId, HttpStatus.NOT_FOUND));
 
-        if (page.getDocumentInstanceId() != null) {
-            documentService.deleteAllDocumentInstances(List.of(page.getDocumentInstanceId()));
-        }
-
-        page.setDocumentInstanceId(null);
-        page.setContentHash(null);
+        // asking for the content to go is asking for it not to come back on the next pass
         page.setSelected(false);
 
-        // a page that is gone from the site keeps saying so
-        if (!WebScrapePageStatusConstants.REMOVED.equals(page.getStatus())) {
-            page.setStatus(WebScrapePageStatusConstants.DISCOVERED);
+        dropContent(List.of(page));
+    }
+
+    /**
+     * Reads one page now, instead of waiting for a pass over the whole site.
+     * <p>
+     * Ticking it is part of the request, not a side effect: a page fetched and left unticked
+     * would lose its document on the next pass, which is not what the button offers.
+     * <p>
+     * Synchronous on purpose. One page is a single fetch, and an answer the caller can wait
+     * for beats a 202 and a table that has to guess when to reload.
+     */
+    @Transactional(rollbackOn = Exception.class)
+    public void fetchPage(UUID integrationId, UUID pageId) throws GendoxException {
+
+        WebScrapePage page = webScrapePageRepository.findById(pageId)
+                .filter(stored -> integrationId.equals(stored.getIntegrationId()))
+                .orElseThrow(() -> new GendoxException("WEB_SCRAPE_PAGE_NOT_FOUND",
+                        "Web scrape page not found: " + pageId, HttpStatus.NOT_FOUND));
+
+        if (WebScrapePageStatusConstants.REMOVED.equals(page.getStatus())) {
+            throw new GendoxException("WEB_SCRAPE_PAGE_GONE",
+                    "This page is no longer on the site", HttpStatus.CONFLICT);
         }
 
-        webScrapePageRepository.save(page);
+        page.setSelected(true);
+
+        scrapePages(loadIntegration(integrationId), List.of(page));
+    }
+
+    /**
+     * Takes the content of several pages out of the project in one statement, so a sync that
+     * drops twenty documents is one deletion rather than twenty.
+     * <p>
+     * The page rows stay. What is removed is their content, not their existence, so a page
+     * can be read again later without crawling the site afresh.
+     */
+    private void dropContent(List<WebScrapePage> pages) throws GendoxException {
+
+        if (pages.isEmpty()) {
+            return;
+        }
+
+        List<UUID> documentInstanceIds = pages.stream()
+                .map(WebScrapePage::getDocumentInstanceId)
+                .filter(Objects::nonNull)
+                .toList();
+
+        if (!documentInstanceIds.isEmpty()) {
+            documentService.deleteAllDocumentInstances(documentInstanceIds);
+        }
+
+        for (WebScrapePage page : pages) {
+            page.setDocumentInstanceId(null);
+            page.setContentHash(null);
+
+            // a page that is gone from the site keeps saying so
+            if (!WebScrapePageStatusConstants.REMOVED.equals(page.getStatus())) {
+                page.setStatus(WebScrapePageStatusConstants.DISCOVERED);
+            }
+
+            webScrapePageRepository.save(page);
+        }
     }
 
 
@@ -370,6 +435,17 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
         return integrationRepository.findById(integrationId)
                 .orElseThrow(() -> new GendoxException("INTEGRATION_NOT_FOUND",
                         "Integration not found: " + integrationId, HttpStatus.NOT_FOUND));
+    }
+
+    /**
+     * Every path that does work says when it did it, not only the scheduled pass. The manual
+     * actions here never reach IntegrationManager, which is where the scheduled pass is
+     * stamped, and the panel reads this field to know a run has ended — so a path that does
+     * not stamp leaves the screen waiting for something that never arrives.
+     */
+    private void stampRun(Integration integration) {
+        integration.setLastRunAt(Instant.now());
+        integrationRepository.save(integration);
     }
 
     private void savePages(Integration integration, WebCrawlResultDTO result) {
