@@ -7,8 +7,8 @@ import apiRequest from 'src/configs/apiRequest'
  * @param token
  * @returns {Promise<axios.AxiosResponse<Integration>}
  */
-const getIntegration = async (integrationId, token) => {
-  return axios.get(apiRequest.integration(integrationId), {
+const getIntegration = async (organizationId, integrationId, token) => {
+  return axios.get(apiRequest.integration(organizationId, integrationId), {
     headers: {
       'Content-Type': 'application/json',
       Authorization: 'Bearer ' + token

@@ -87,7 +87,7 @@ const WebScrapeSourcePanel = ({ organizationId, integration, onRefresh }) => {
 
     const runFinished = async () => {
       try {
-        const fresh = await integrationService.getIntegration(integration.id, token)
+        const fresh = await integrationService.getIntegration(organizationId, integration.id, token)
 
         return String(fresh.data?.lastRunAt ?? '') !== String(startedAt ?? '')
       } catch {

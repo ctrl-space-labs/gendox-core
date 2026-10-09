@@ -83,6 +83,14 @@ public class IntegrationService {
                 .orElseThrow(() -> new GendoxException("INTEGRATION_NOT_FOUND", "Integration not found with id: " + id, HttpStatus.NOT_FOUND));
     }
 
+    /**
+     * The organization-scoped read. The unscoped one answered for any id to anyone who
+     * had it, which is a different endpoint pretending to be this one.
+     */
+    public Integration getIntegration(UUID organizationId, UUID id) throws GendoxException {
+        return findForOrganization(organizationId, id);
+    }
+
     public Page<Integration> getAllIntegrations(IntegrationCriteria criteria) throws GendoxException {
         return this.getAllIntegrations(criteria, PageRequest.of(0, 100));
     }

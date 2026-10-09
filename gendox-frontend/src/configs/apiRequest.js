@@ -172,7 +172,7 @@ export default {
 
   createWebScrapeWebSite: organizationId => `${url}organizations/${organizationId}/websites/web-scrape`,
 
-  integration: integrationId => `${url}integrations/${integrationId}`,
+  integration: (organizationId, integrationId) => `${url}organizations/${organizationId}/integrations/${integrationId}`,
 
   integrationsByOrganization: (organizationId, size = 100) =>
     `${url}integrations?organizationId=${organizationId}&size=${size}`,

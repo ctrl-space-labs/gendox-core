@@ -1,6 +1,5 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.converters.IntegrationConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Integration;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
@@ -22,38 +21,43 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
+/**
+ * Every integration endpoint lives under the organization that owns it, because the
+ * organization is what the permission is checked against. The two older types, git and
+ * s3, used to be created and changed through paths with no organization in them, which
+ * left the guard with nothing to compare — so they moved here with the rest.
+ */
 @RestController
 public class IntegrationController {
 
     private IntegrationService integrationService;
-    private IntegrationConverter integrationConverter;
     private ProjectService projectService;
 
     @Autowired
     public IntegrationController(IntegrationService integrationService,
-                                 IntegrationConverter integrationConverter,
                                  ProjectService projectService) {
         this.integrationService = integrationService;
-        this.integrationConverter = integrationConverter;
         this.projectService = projectService;
-
-
     }
 
 
-    @GetMapping("/integrations/{id}")
-    @Operation(summary = "Get integration by ID",
-            description = "Retrieve integration details by its unique ID.")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_INTEGRATIONS', 'getRequestedOrgIdFromPathVariable')")
+    @GetMapping("/organizations/{organizationId}/integrations/{id}")
+    @Operation(summary = "Get one integration",
+            description = "Looked up inside the organization in the path, so an id belonging to "
+                    + "another organization answers 404 instead of confirming that it exists.")
+    public Integration getIntegrationById(@PathVariable UUID organizationId,
+                                          @PathVariable UUID id) throws GendoxException {
 
-    public Integration getIntegrationById(@PathVariable UUID id) throws GendoxException {
-        return integrationService.getIntegrationById(id);
+        return integrationService.getIntegration(organizationId, id);
     }
 
     @GetMapping("/integrations")
     @PreAuthorize("(#criteria.organizationId == null || " +
-            "@securityUtils.hasAuthority('OP_READ_ORGANIZATION_WEB_SITES', 'getRequestedOrgsFromRequestParams')) && " +
+            "@securityUtils.hasAuthority('OP_READ_INTEGRATIONS', 'getRequestedOrgsFromRequestParams')) && " +
             "(#criteria.projectId == null || " +
             "@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectsFromRequestParams'))")
     @Operation(summary = "Get all integrations.",
@@ -74,16 +78,36 @@ public class IntegrationController {
         return integrationService.getAllIntegrations(criteria, pageable);
     }
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_ORGANIZATION_WEB_SITES', 'getRequestedOrgIdFromPathVariable')")
-    @PostMapping("/organizations/{organizationId}/integrations/trigger")
-    @Operation(summary = "Trigger integrations for an organization",
-            description = "Asynchronously trigger active integrations for the given organization. Returns 202 Accepted immediately.")
-    public ResponseEntity<Void> triggerIntegration(@PathVariable UUID organizationId) {
-        integrationService.triggerForOrganization(organizationId);
-        return ResponseEntity.accepted().build();
+    @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_INTEGRATIONS', 'getRequestedOrgIdFromPathVariable')")
+    @PostMapping(value = "/organizations/{organizationId}/integrations", consumes = {"application/json"})
+    @ResponseStatus(value = HttpStatus.CREATED)
+    @Operation(summary = "Create an integration",
+            description = "The organization comes from the path, because that is what the caller "
+                    + "was authorised against. A project in the body must belong to it, and gains "
+                    + "auto-training, because content is about to start arriving in it.")
+    public Integration createIntegration(@PathVariable UUID organizationId,
+                                         @RequestBody IntegrationDTO integrationDTO) throws GendoxException {
+
+        if (integrationDTO.getId() != null) {
+            throw new GendoxException("INTEGRATION_ID_MUST_BE_NULL", "Integration id is not null", HttpStatus.BAD_REQUEST);
+        }
+
+        // the path is the organization the permission was checked against, so it is the
+        // answer. An id in the body would be a second, unchecked answer to the same question
+        integrationDTO.setOrganizationId(organizationId);
+
+        if (integrationDTO.getProjectId() != null) {
+            projectService.validateProjectsBelongToOrganization(List.of(integrationDTO.getProjectId()), organizationId);
+
+            Project project = projectService.getProjectById(integrationDTO.getProjectId());
+            project.setAutoTraining(true);
+            projectService.updateProject(project);
+        }
+
+        return integrationService.createIntegration(integrationDTO);
     }
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_ORGANIZATION_WEB_SITES', 'getRequestedOrgIdFromPathVariable')")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_INTEGRATIONS', 'getRequestedOrgIdFromPathVariable')")
     @PutMapping("/organizations/{organizationId}/integrations/{id}/active")
     @Operation(summary = "Turn an integration on or off",
             description = "Changes only whether the scheduler picks this integration up. Everything else about it is left alone.")
@@ -98,61 +122,7 @@ public class IntegrationController {
         return integrationService.setActive(organizationId, id, activeDTO.getActive());
     }
 
-    // TODO: preauthorize has OP_CREATE_INTEGRATION
-    @PostMapping(value = "/integrations", consumes = {"application/json"})
-    @ResponseStatus(value = HttpStatus.CREATED)
-    @Operation(summary = "Create integrations",
-            description = "Create a new integration based on the provided integration details.")
-    public Integration createIntegration(@RequestBody IntegrationDTO integrationDTO) throws GendoxException {
-
-        if (integrationDTO.getId() != null) {
-            throw new GendoxException("INTEGRATION_ID_MUST_BE_NULL", "Integration id is not null", HttpStatus.BAD_REQUEST);
-
-        }
-
-        // make projects auto-training true
-        if (integrationDTO.getProjectId() != null) {
-            Project project = projectService.getProjectById(integrationDTO.getProjectId());
-            project.setAutoTraining(true);
-            projectService.updateProject(project);
-
-            // a project belongs to exactly one organization, so the organization is
-            // derived here instead of being trusted from the request body
-            if (integrationDTO.getOrganizationId() == null) {
-                integrationDTO.setOrganizationId(project.getOrganizationId());
-            }
-        }
-
-        return integrationService.createIntegration(integrationDTO);
-    }
-
-
-    // TODO: preauthorize has OP_UPDATE_INTEGRATION
-
-    @PutMapping("/integrations/{id}")
-    @Operation(summary = "Update integration by ID",
-            description = "Update an existing integration by specifying its unique ID and providing updated integration details.")
-    public Integration updateIntegration(@PathVariable UUID id, @RequestBody IntegrationDTO integrationDTO) throws Exception {
-        UUID integrationId = integrationDTO.getId();
-
-        Integration integration = new Integration();
-        integration = integrationConverter.toEntity(integrationDTO);
-        integration.setId(integrationId);
-
-        if (!id.equals((integrationDTO.getId()))) {
-
-            throw new GendoxException("INTEGRATION_ID_MISMATCH", "ID in path and ID in body are not the same", HttpStatus.BAD_REQUEST);
-
-        }
-
-        integration = integrationService.updateIntegration(integration);
-
-        return integration;
-
-
-    }
-
-    @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_ORGANIZATION_WEB_SITES', 'getRequestedOrgIdFromPathVariable')")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_INTEGRATIONS', 'getRequestedOrgIdFromPathVariable')")
     @PutMapping("/organizations/{organizationId}/integrations/{id}/schedule")
     @Operation(summary = "Set how often an integration runs",
             description = "The interval is replaced, not merged: a body with no interval means the "
@@ -165,7 +135,16 @@ public class IntegrationController {
         return integrationService.updateSchedule(organizationId, id, scheduleDTO);
     }
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_ORGANIZATION_WEB_SITES', 'getRequestedOrgIdFromPathVariable')")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_INTEGRATIONS', 'getRequestedOrgIdFromPathVariable')")
+    @PostMapping("/organizations/{organizationId}/integrations/trigger")
+    @Operation(summary = "Trigger integrations for an organization",
+            description = "Asynchronously trigger active integrations for the given organization. Returns 202 Accepted immediately.")
+    public ResponseEntity<Void> triggerIntegration(@PathVariable UUID organizationId) {
+        integrationService.triggerForOrganization(organizationId);
+        return ResponseEntity.accepted().build();
+    }
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_INTEGRATIONS', 'getRequestedOrgIdFromPathVariable')")
     @DeleteMapping("/organizations/{organizationId}/integrations/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Remove an integration",
@@ -179,10 +158,3 @@ public class IntegrationController {
     }
 
 }
-
-
-
-
-
-
-

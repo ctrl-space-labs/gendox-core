@@ -41,7 +41,7 @@ public class WebScrapeController {
         this.subscriptionValidationService = subscriptionValidationService;
     }
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_ORGANIZATION_WEB_SITES', 'getRequestedOrgIdFromPathVariable')")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_INTEGRATIONS', 'getRequestedOrgIdFromPathVariable')")
     @GetMapping("/organizations/{organizationId}/integrations/{integrationId}/web-scrape/pages")
     @Operation(summary = "Get the pages discovered for a web scrape integration",
             description = "Returns the pages of the site, filtered by status and by whether the user has selected them.")
@@ -76,7 +76,7 @@ public class WebScrapeController {
                 .map(webScrapePageConverter::toDTO);
     }
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_ORGANIZATION_WEB_SITES', 'getRequestedOrgIdFromPathVariable')")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_INTEGRATIONS', 'getRequestedOrgIdFromPathVariable')")
     @PutMapping("/organizations/{organizationId}/integrations/{integrationId}/web-scrape/pages/selection")
     @Operation(summary = "Select or unselect pages of a web scrape integration",
             description = "Either a list of page ids, or every page of the integration when selectAll is true.")
@@ -89,7 +89,7 @@ public class WebScrapeController {
         webScrapePageService.applySelection(integrationId, selectionDTO);
     }
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_ORGANIZATION_WEB_SITES', 'getRequestedOrgIdFromPathVariable')")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_INTEGRATIONS', 'getRequestedOrgIdFromPathVariable')")
     @PostMapping("/organizations/{organizationId}/integrations/{integrationId}/web-scrape/crawl")
     @Operation(summary = "List the pages of the site",
             description = "Asynchronous: returns 202 Accepted and the pages appear in GET .../pages as they are found.")
@@ -104,7 +104,7 @@ public class WebScrapeController {
         return ResponseEntity.accepted().build();
     }
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_ORGANIZATION_WEB_SITES', 'getRequestedOrgIdFromPathVariable')")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_INTEGRATIONS', 'getRequestedOrgIdFromPathVariable')")
     @PostMapping("/organizations/{organizationId}/integrations/{integrationId}/web-scrape/deep-crawl")
     @Operation(summary = "Search the site in depth",
             description = "Asynchronous: returns 202 Accepted. Visits every page of the site and is charged for each one, "
@@ -120,7 +120,7 @@ public class WebScrapeController {
         return ResponseEntity.accepted().build();
     }
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_ORGANIZATION_WEB_SITES', 'getRequestedOrgIdFromPathVariable')")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_INTEGRATIONS', 'getRequestedOrgIdFromPathVariable')")
     @PostMapping("/organizations/{organizationId}/integrations/{integrationId}/web-scrape/scrape")
     @Operation(summary = "Make the project match the selected pages",
             description = "Asynchronous: returns 202 Accepted. Ticked pages are fetched or fetched "
@@ -136,7 +136,7 @@ public class WebScrapeController {
         return ResponseEntity.accepted().build();
     }
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_ORGANIZATION_WEB_SITES', 'getRequestedOrgIdFromPathVariable')")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_INTEGRATIONS', 'getRequestedOrgIdFromPathVariable')")
     @PostMapping("/organizations/{organizationId}/integrations/{integrationId}/web-scrape/pages/{pageId}/content")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Read one page now",
@@ -153,7 +153,7 @@ public class WebScrapeController {
     }
 
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_ORGANIZATION_WEB_SITES', 'getRequestedOrgIdFromPathVariable')")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_INTEGRATIONS', 'getRequestedOrgIdFromPathVariable')")
     @DeleteMapping("/organizations/{organizationId}/integrations/{integrationId}/web-scrape/pages/{pageId}/content")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Take a page's content out of the project",
@@ -169,7 +169,7 @@ public class WebScrapeController {
 
     // the budget belongs to the organization, not to one site, so it is not
     // scoped to an integration: every source spends from the same allowance
-    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_ORGANIZATION_WEB_SITES', 'getRequestedOrgIdFromPathVariable')")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_INTEGRATIONS', 'getRequestedOrgIdFromPathVariable')")
     @GetMapping("/organizations/{organizationId}/web-scrape/budget")
     @Operation(summary = "How many pages may still be read this billing period",
             description = "The monthly page allowance of the active plan, what has been read against it in the current billing period, and what remains.")
