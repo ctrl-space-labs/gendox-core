@@ -35,9 +35,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.*;
 
@@ -181,15 +179,22 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
                 page.setStatus(pageIsGone
                         ? WebScrapePageStatusConstants.REMOVED
                         : WebScrapePageStatusConstants.FAILED);
-                page.setErrorMessage(e.getMessage());
+                page.setErrorMessage(describe(e));
 
-            } catch (IOException | NoSuchAlgorithmException e) {
+            } catch (Exception e) {
+                // one page must not take the pass down with it. The catches named three
+                // types, so anything else — a RuntimeException from the provider, the
+                // upload or the queue — escaped, abandoned every remaining page, and left
+                // the run unstamped while the pages already read looked perfectly current
                 logger.warn("Could not store page {} of integration {}", page.getUrl(), integration.getId(), e);
                 page.setStatus(WebScrapePageStatusConstants.FAILED);
-                page.setErrorMessage(e.getMessage());
-            }
+                page.setErrorMessage(describe(e));
 
-            webScrapePageRepository.save(page);
+            } finally {
+                // in the finally, so a page that failed still records that it failed. While
+                // this sat after the try, an uncaught failure took the status with it
+                webScrapePageRepository.save(page);
+            }
         }
     }
 
@@ -435,6 +440,16 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
         return integrationRepository.findById(integrationId)
                 .orElseThrow(() -> new GendoxException("INTEGRATION_NOT_FOUND",
                         "Integration not found: " + integrationId, HttpStatus.NOT_FOUND));
+    }
+
+    /**
+     * Some runtime failures carry no message at all — a NullPointerException says nothing.
+     * The column is read by whoever investigates, so it gets the type name instead of a blank.
+     */
+    private String describe(Exception e) {
+        return e.getMessage() == null || e.getMessage().isBlank()
+                ? e.getClass().getSimpleName()
+                : e.getMessage();
     }
 
     /**
