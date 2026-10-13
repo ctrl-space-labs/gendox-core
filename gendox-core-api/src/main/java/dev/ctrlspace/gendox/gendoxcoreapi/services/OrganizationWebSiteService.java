@@ -187,6 +187,8 @@ public class OrganizationWebSiteService {
         }
 
         OrganizationWebSite organizationWebSite = organizationWebSiteConverter.toEntity(organizationWebSiteDTO);
+        // the organization is the one the caller was authorised against, never the one the body carries
+        organizationWebSite.setOrganizationId(organizationId);
         return organizationWebSiteRepository.save(organizationWebSite);
     }
 

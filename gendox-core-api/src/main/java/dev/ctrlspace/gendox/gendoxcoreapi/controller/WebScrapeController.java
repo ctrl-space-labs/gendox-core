@@ -2,9 +2,11 @@ package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.WebScrapePageConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Integration;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WebScrapeBudgetDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WebScrapePageDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WebScrapePageSelectionDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WebScrapeScheduleDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.WebScrapePageCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.SubscriptionValidationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.WebScrapePageService;
@@ -150,6 +152,21 @@ public class WebScrapeController {
         webScrapeIntegrationUpdateService.validatePageFetch(integrationId);
 
         webScrapeIntegrationUpdateService.fetchPage(integrationId, pageId);
+    }
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_INTEGRATIONS', 'getRequestedOrgIdFromPathVariable')")
+    @PutMapping("/organizations/{organizationId}/integrations/{integrationId}/web-scrape/settings")
+    @Operation(summary = "Change the settings that belong to this type",
+            description = "The provider and the page limit of a deep crawl. The interval is not here: "
+                    + "every type has one, so it lives on the integration itself. The body is merged, "
+                    + "so a field left out keeps the value it already has.")
+    public Integration updateWebScrapeSettings(@PathVariable UUID organizationId,
+                                               @PathVariable UUID integrationId,
+                                               @RequestBody WebScrapeScheduleDTO settingsDTO) throws GendoxException {
+
+        Integration integration = webScrapePageService.getIntegration(organizationId, integrationId);
+
+        return webScrapeIntegrationUpdateService.updateSchedule(integration, settingsDTO);
     }
 
 

@@ -144,19 +144,8 @@ const scrape = async (organizationId, integrationId, token) => {
   )
 }
 
-/**
- * Update the schedule of a web scrape integration
- * Payload is { runIntervalMinutes, provider, crawlPageLimit }.
- * A missing field keeps what the integration has. Use the integration's
- * active switch to stop it running on its own.
- * @param organizationId
- * @param integrationId
- * @param payload
- * @param token
- * @returns {Promise<axios.AxiosResponse<void>}
- */
-const updateSchedule = async (organizationId, integrationId, payload, token) => {
-  return axios.put(apiRequest.webScrapeSchedule(organizationId, integrationId), payload, {
+const updateSettings = async (organizationId, integrationId, payload, token) => {
+  return axios.put(apiRequest.webScrapeSettings(organizationId, integrationId), payload, {
     headers: {
       'Content-Type': 'application/json',
       Authorization: 'Bearer ' + token
@@ -189,6 +178,6 @@ export default {
   crawl,
   deepCrawl,
   scrape,
-  updateSchedule,
+  updateSettings,
   getBudget
 }

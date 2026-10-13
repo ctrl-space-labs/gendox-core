@@ -45,6 +45,10 @@ import webScrapeService from 'src/gendox-sdk/webScrapeService'
 
 const when = at => (at && isValid(parseISO(at)) ? format(parseISO(at), 'dd/MM/yyyy - HH:mm') : 'Never')
 
+// a row with nothing to name it is still a row someone has to act on, and the id is
+// what a support query is run with anyway
+const shortId = id => `${String(id).slice(0, 8)}…`
+
 const IntegrationsAdvancedOrganizationSettings = () => {
   const router = useRouter()
   const dispatch = useDispatch()
@@ -107,31 +111,26 @@ const IntegrationsAdvancedOrganizationSettings = () => {
     // the website holds the foreign key, so the lookup goes that way round
     const websiteOf = new Map((organizationWebSites ?? []).filter(w => w.integrationId).map(w => [w.integrationId, w]))
 
-    return (
-      (integrations ?? [])
-        .map(integration => {
-          const type = integration.integrationType?.name
-          const website = websiteOf.get(integration.id) ?? null
+    return (integrations ?? [])
+      .map(integration => {
+        const type = integration.integrationType?.name
+        const website = websiteOf.get(integration.id) ?? null
 
-          const title = website
-            ? shortName(website)
-            : type === AWS_S3_INTEGRATION
-            ? integration.queueName || 'Unnamed queue'
-            : integration.url || 'Unnamed'
+        const title =
+          (website && shortName(website)) ||
+          (type === AWS_S3_INTEGRATION ? integration.queueName : integration.url) ||
+          shortId(integration.id)
 
-          return {
-            integration,
-            type,
-            website,
-            title,
-            // the url is worth repeating only when it is not already the title
-            caption: website?.url && website.url !== title ? website.url : null
-          }
-        })
-        // an api integration with no website has no name to show and nothing to act on
-        .filter(row => !(row.type === API_INTEGRATION && !row.website))
-        .sort((a, b) => rankOf(a.type) - rankOf(b.type) || a.title.localeCompare(b.title))
-    )
+        return {
+          integration,
+          type,
+          website,
+          title,
+          // the url is worth repeating only when it is not already the title
+          caption: website?.url && website.url !== title ? website.url : null
+        }
+      })
+      .sort((a, b) => rankOf(a.type) - rankOf(b.type) || a.title.localeCompare(b.title))
   }, [integrations, organizationWebSites])
 
   const activeCount = rows.filter(r => r.integration.active).length
@@ -464,7 +463,7 @@ const IntegrationsAdvancedOrganizationSettings = () => {
           )
 
           if (editing.type === WEB_SCRAPE_INTEGRATION && v.crawlPageLimit !== '') {
-            await webScrapeService.updateSchedule(
+            await webScrapeService.updateSettings(
               organizationId,
               editing.integration.id,
               { crawlPageLimit: Number(v.crawlPageLimit) },

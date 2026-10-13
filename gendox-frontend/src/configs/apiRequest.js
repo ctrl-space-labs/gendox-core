@@ -172,6 +172,9 @@ export default {
 
   createWebScrapeWebSite: organizationId => `${url}organizations/${organizationId}/websites/web-scrape`,
 
+  webScrapeSettings: (organizationId, integrationId) =>
+    `${url}organizations/${organizationId}/integrations/${integrationId}/web-scrape/settings`,
+
   integration: (organizationId, integrationId) => `${url}organizations/${organizationId}/integrations/${integrationId}`,
 
   integrationsByOrganization: (organizationId, size = 100) =>
@@ -222,9 +225,6 @@ export default {
 
   webScrapeScrape: (organizationId, integrationId) =>
     `${url}organizations/${organizationId}/integrations/${integrationId}/web-scrape/scrape`,
-
-  webScrapeSchedule: (organizationId, integrationId) =>
-    `${url}organizations/${organizationId}/integrations/${integrationId}/web-scrape/schedule`,
 
   webScrapeBudget: organizationId => `${url}organizations/${organizationId}/web-scrape/budget`,
 
