@@ -71,25 +71,44 @@ This guide outlines the steps to set up an AWS S3 bucket, create an SQS queue wi
 8. Put you SQS queue ARN in the **SQS queue** field.
 8. Click **Save changes** to finalize the event notification setup.
 
-## 4. Database Configuration
+## 4. Tell Gendox about the queue
 
-To finalize the integration, set up a record in your database to connect the project with the S3 bucket and SQS queue.
+The last step connects the queue to a project, so that the files arriving in the
+bucket become documents there.
 
-### Step-by-Step Database Setup
-1. Insert a new record in the `integrations` table in your database.
-2. Set the following fields:
-    - **project_id**: The ID of the project that will use this integration.
-    - **type_id**: ID that corresponds to the integration type (e.g., S3).
-    - **is_active**: Set to `true` to activate the integration.
-    - **queue_name**: Name of the SQS queue (`test-event`).
-
-Example SQL statement:
-
-```sql
-INSERT INTO gendox_core.integrations (project_id, type_id, is_active, queue_name)
-VALUES ('<your-project-id>', '<s3-type-id>', true, 'test-event');
+```http
+POST /gendox/api/v1/organizations/{organizationId}/integrations
+Content-Type: application/json
 ```
 
-Replace `<your-project-id>` and `<s3-type-id>` with the correct values.
+```json
+{
+  "type": "AWS_S3_INTEGRATION",
+  "projectId": "<your-project-id>",
+  "queueName": "test-event",
+  "runIntervalMinutes": 120
+}
+```
+
+The fields:
+
+- **type** — the name of the integration type, not its row id. The `types` table
+  is filled by migrations, so the same type carries a different id in every
+  database; the name is the only value a caller can know.
+- **projectId** — the project the files become documents in. It is required, and
+  it must belong to the organization in the path. Creating the integration also
+  turns on auto training for that project, so the documents are split and
+  embedded as they arrive.
+- **queueName** — the SQS queue from the previous step.
+- **runIntervalMinutes** — how long to wait between passes. Leave it out and the
+  integration runs on every pass of the poller; switch the integration off to
+  stop it running on its own.
+
+The call answers `201` with the integration, which starts with no last run. The
+credentials for the bucket and the queue are read from the server's own AWS
+configuration and are never part of this request.
+
+Changing the interval afterwards, or switching the integration off, is done
+through `PUT .../integrations/{id}/schedule` and `PUT .../integrations/{id}/active`.
 
 ---

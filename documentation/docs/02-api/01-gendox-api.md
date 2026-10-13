@@ -9,7 +9,7 @@ Gendox is a collaborative platform that enables users to work across multiple **
 - **AI Agent**: An intelligent agent trained on project-specific documents.
 - **Documents**: A collection of files and data sources that the AI Agent uses for training.
 
-Projects can integrate with various external sources—such as S3 buckets, web pages, Git repositories, and FTP servers—to import documents. These integrations facilitate the seamless inclusion of data into projects, allowing AI Agents to be trained effectively.
+Projects can integrate with external sources to import documents: a website Gendox reads by crawling it, a website that pushes its own content in through the plugin, an AWS S3 bucket watched through an SQS queue, and a Git repository. These integrations keep a project's documents in step with the source, so the AI Agent is trained on what the source holds today.
 
 ## Main Objects
 
@@ -61,9 +61,15 @@ Projects can integrate with various external sources—such as S3 buckets, web p
 
 - **Description**: Connectors to external data sources for importing documents.
 - **Key APIs**:
-  - Create and update integrations.
-  - Delete integrations.
-  - Retrieve integration details.
+  - Create an integration under an organization, naming its type.
+  - Turn one on or off, and set how often it runs.
+  - Trigger every active integration of an organization.
+  - Retrieve one, or list them by organization or project.
+  - Remove one. The documents it has already produced stay in their project.
+
+Every integration endpoint lives under the organization that owns it, because
+the organization is what the caller's permission is checked against. Reading
+needs `OP_READ_INTEGRATIONS` and everything else `OP_EDIT_INTEGRATIONS`.
 
 ## API Associations
 

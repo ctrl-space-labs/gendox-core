@@ -28,7 +28,7 @@ Two files per topic, no more: **the original, which never changes, and the curre
 
 ### Pending plans
 
-- [Web Scraping Integration (Firecrawl) — #526](.ai/issue-526-web-scraping-integration-2026-10-02.md) — in progress; the backend is implemented and verified end to end, and the screen is agreed in a prototype but not yet written into `gendox-frontend` (#544). Self-contained: it replaces the revisions of 2026-09-17 and 2026-09-28. The [original 2026-09-10 plan](.ai/issue-526-web-scraping-integration-2026-09-10.md) is kept unchanged as first written.
+- [Web Scraping Integration (Firecrawl) — #526](.ai/issue-526-web-scraping-integration-2026-10-13.md) — in progress; the backend is implemented and verified end to end, and the screen is written into `gendox-frontend`. Self-contained: it replaces the revision of 2026-10-02. The [original 2026-09-10 plan](.ai/issue-526-web-scraping-integration-2026-09-10.md) is kept unchanged as first written.
 
 ## Common Development Commands
 
