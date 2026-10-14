@@ -32,6 +32,8 @@
         .gendox-chat-open {
             width: 25rem;
             height: 35rem;
+            max-width: calc(100vw - 2rem);
+            max-height: calc(100dvh - 2rem);
         }
         .gendox-chat-closed {
             width: 3.5rem;
