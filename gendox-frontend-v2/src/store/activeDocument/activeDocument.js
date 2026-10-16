@@ -1,0 +1,224 @@
+import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
+import documentService from 'src/gendox-sdk/documentService'
+import { getErrorMessage } from 'src/utils/errorHandler'
+import toast from 'react-hot-toast'
+
+// Define an async thunk for fetching an organization by ID
+export const fetchDocument = createAsyncThunk(
+  'activeDocument/fetchDocument',
+  async ({ documentId, token }, thunkAPI) => {
+    try {
+      const documentPromise = await documentService.getDocumentById(documentId, token)
+
+      const documentData = await documentPromise
+      const orderedSections = documentData.data.documentInstanceSections.sort((a, b) => {
+        return a.documentSectionMetadata.sectionOrder - b.documentSectionMetadata.sectionOrder
+      })
+      return { document: documentData.data, sections: orderedSections }
+    } catch (error) {
+      // toast.error(`Failed to fetch Documents. Error: ${getErrorMessage(error)}`)
+      return thunkAPI.rejectWithValue(error.response.data)
+    }
+  }
+)
+
+export const fetchDocuments = createAsyncThunk(
+  'activeDocument/fetchDocuments',
+  async (
+    {
+      organizationId,
+      projectId,
+      token,
+      page = 0,
+      size = 20,
+      documentIds, // optional - array of document IDs to filter
+      documentNameContains, // optional - string to search in document names
+      createdBetween, // optional - { from: '2023-01-01', to: '2023-12-31' }
+      updatedBetween, // optional - { from: '2023-01-01', to: '2023-12-31' }
+      target // 'projectDocuments' | 'taskDocuments' | 'supportingDocuments'
+    },
+    thunkAPI
+  ) => {
+    try {
+      const criteria = {
+        organizationId,
+        projectId,
+        ...(documentIds && documentIds.length > 0 ? { documentInstanceIds: documentIds.map(id => id.toString()) } : {}),
+        ...(documentNameContains ? { documentNameContains } : {}),
+        ...(createdBetween ? { createdBetween } : {}),
+        ...(updatedBetween ? { updatedBetween } : {})
+      }
+
+      const response = await documentService.findDocumentsByCriteria(
+        organizationId,
+        projectId,
+        criteria,
+        token,
+        page,
+        size
+      )
+
+      return response.data
+    } catch (error) {
+      toast.error('Failed to fetch documents')
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
+    }
+  }
+)
+
+/** Home page project documents — GET with query params (pagination + name filter). */
+export const fetchProjectDocuments = createAsyncThunk(
+  'activeDocument/fetchProjectDocuments',
+  async (
+    {
+      organizationId,
+      projectId,
+      token,
+      page = 0,
+      size = 20,
+      documentNameContains,
+      sort = 'createdAt,desc'
+    },
+    thunkAPI
+  ) => {
+    try {
+      const criteria = {
+        organizationId,
+        projectId,
+        ...(documentNameContains ? { documentNameContains } : {})
+      }
+
+      const response = await documentService.getDocuments(
+        organizationId,
+        projectId,
+        criteria,
+        token,
+        page,
+        size,
+        sort
+      )
+
+      return response.data
+    } catch (error) {
+      toast.error('Failed to fetch documents')
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
+    }
+  }
+)
+
+// Thunk action for updating section order
+export const updateSectionsOrder = createAsyncThunk(
+  'activeDocument/updateSectionsOrder',
+  async ({ documentId, updatedSectionPayload, token }, thunkAPI) => {
+    try {
+      await documentService.updateSectionsOrder(documentId, updatedSectionPayload, token)
+      return updatedSectionPayload // Return the updated sections order
+    } catch (error) {
+      toast.error(`Sections order update failed. Error: ${getErrorMessage(error)}`)
+      return thunkAPI.rejectWithValue(error.response.data)
+    }
+  }
+)
+
+// Define the initial state
+const initialActiveDocumentState = {
+  document: {},
+  sections: [],
+  projectDocuments: { content: [], totalPages: 0, totalElements: 0 },
+  supportingDocuments: [],
+  taskDocuments: [],
+  isBlurring: false,
+  error: null
+}
+
+// Create the slice
+const activeDocumentSlice = createSlice({
+  name: 'activeDocument',
+  initialState: initialActiveDocumentState,
+  reducers: {
+    updateSectionOrder: (state, action) => {
+      state.sections = action.payload
+    },
+    setBlurring: (state, action) => {
+      state.isBlurring = action.payload // Add a reducer for setting isBlurring
+    },
+    resetSupportingDocuments(state) {
+      state.supportingDocuments = []
+    }
+  },
+  extraReducers: builder => {
+    builder
+      .addCase(fetchDocument.pending, state => {
+        state.isBlurring = true
+        state.error = null
+      })
+      .addCase(fetchDocument.fulfilled, (state, action) => {
+        state.isBlurring = false
+        state.document = action.payload.document
+        state.sections = action.payload.sections
+      })
+      .addCase(fetchDocument.rejected, (state, action) => {
+        state.isBlurring = false
+        state.error = action.payload
+      })
+      .addCase(updateSectionsOrder.fulfilled, (state, action) => {
+        // Update the state with the new sections order
+        state.isBlurring = false
+        state.sections = state.sections.map(section => {
+          const updatedSection = action.payload.find(s => s.sectionId === section.id)
+          return updatedSection ? { ...section, sectionOrder: updatedSection.sectionOrder } : section
+        })
+      })
+      .addCase(updateSectionsOrder.rejected, (state, action) => {
+        state.isBlurring = true
+        state.error = action.payload
+      })
+      .addCase('activeDocument/updateSection', (state, action) => {
+        state.isBlurring = false
+        state.sections = state.sections.map(section =>
+          section.id === action.payload.sectionId ? { ...section, ...action.payload.updatedSection } : section
+        )
+      })
+      .addCase(fetchDocuments.pending, state => {
+        state.isBlurring = true
+        state.error = null
+      })
+      .addCase(fetchDocuments.fulfilled, (state, action) => {
+        state.isBlurring = false
+
+        const target = action.meta.arg.target // 'projectDocuments' | 'taskDocuments' | 'supportingDocuments'
+        const data = action.payload
+        const content = data?.content || []
+
+        if (target === 'projectDocuments') {
+          // For project documents, we replace the existing list
+          state.projectDocuments = data
+        } else if (target === 'taskDocuments') {
+          // Only for task documents, we append to existing list
+          state.taskDocuments = content
+        } else if (target === 'supportingDocuments') {
+          state.supportingDocuments = content
+        }
+      })
+      .addCase(fetchDocuments.rejected, (state, action) => {
+        state.isBlurring = false
+        state.error = action.payload
+      })
+      .addCase(fetchProjectDocuments.pending, state => {
+        state.isBlurring = true
+        state.error = null
+      })
+      .addCase(fetchProjectDocuments.fulfilled, (state, action) => {
+        state.isBlurring = false
+        state.projectDocuments = action.payload
+      })
+      .addCase(fetchProjectDocuments.rejected, (state, action) => {
+        state.isBlurring = false
+        state.error = action.payload
+      })
+  }
+})
+
+// Export actions and reducer
+export const { updateSectionOrder, setBlurring, resetSupportingDocuments } = activeDocumentSlice.actions
+export default activeDocumentSlice.reducer

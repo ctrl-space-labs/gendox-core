@@ -1,0 +1,531 @@
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
+import taskService from 'src/gendox-sdk/taskService'
+import { getErrorMessage } from 'src/utils/errorHandler'
+import toast from 'react-hot-toast'
+import { fetchDocuments } from '../activeDocument/activeDocument'
+import { is } from 'date-fns/locale'
+
+// -------- Thunks for TaskNodes --------
+
+export const createTaskNode = createAsyncThunk(
+  'taskNode/createTaskNode',
+  async ({ organizationId, projectId, taskNodePayload, token }, thunkAPI) => {
+    try {
+      const response = await taskService.createTaskNode(organizationId, projectId, taskNodePayload, token)
+      return response.data
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
+    }
+  }
+)
+
+export const createTaskNodesBatch = createAsyncThunk(
+  'taskNode/createBatch',
+  async ({ organizationId, projectId, taskNodesPayload, token }, thunkAPI) => {
+    try {
+      const response = await taskService.createTaskNodesBatch(organizationId, projectId, taskNodesPayload, token)
+      return response.data
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
+    }
+  }
+)
+
+export const updateTaskNode = createAsyncThunk(
+  'taskNode/update',
+  async ({ organizationId, projectId, taskId, taskNodePayload, token }, thunkAPI) => {
+    try {
+      const response = await taskService.updateTaskNode(organizationId, projectId, taskId, taskNodePayload, token)
+      return response.data
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
+    }
+  }
+)
+
+export const fetchTaskNodeById = createAsyncThunk(
+  'taskNode/fetchById',
+  async ({ organizationId, projectId, taskId, token }, thunkAPI) => {
+    try {
+      const response = await taskService.getTaskNodeById(organizationId, projectId, taskId, token)
+      return response.data
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
+    }
+  }
+)
+
+export const fetchTaskNodesByTaskId = createAsyncThunk(
+  'taskNode/fetchByTask',
+  async ({ organizationId, projectId, taskId, token, page = 0, size = 20 }, thunkAPI) => {
+    try {
+      const response = await taskService.getTaskNodesByTaskId(organizationId, projectId, taskId, token, page, size)
+      return response.data
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
+    }
+  }
+)
+
+export const fetchTaskNodesByCriteria = createAsyncThunk(
+  'taskNode/fetchByCriteria',
+  async ({ organizationId, projectId, taskId, criteria, token, page = 0, size = 20, sort }, thunkAPI) => {
+    try {
+      const response = await taskService.getTaskNodesByCriteria(
+        organizationId,
+        projectId,
+        taskId,
+        criteria,
+        token,
+        page,
+        size,
+        sort
+      )
+      return {
+        content: response.data.content,
+        totalElements: response.data.totalElements,
+        page: response.data.pageable.pageNumber,
+        size: response.data.pageable.pageSize
+      }
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
+    }
+  }
+)
+
+export const fetchAnswerTaskNodes = createAsyncThunk(
+  'taskNode/fetchAnswerTaskNodes',
+  async ({ organizationId, projectId, taskId, answerTaskNodePayload, token, page = 0, size = 20 }, thunkAPI) => {
+    try {
+      const response = await taskService.getAnswerTaskNodes(
+        organizationId,
+        projectId,
+        taskId,
+        answerTaskNodePayload,
+        token,
+        page,
+        size
+      )
+      return {
+        content: response.data.content,
+        totalElements: response.data.totalElements,
+        page: response.data.pageable.pageNumber,
+        size: response.data.pageable.pageSize
+      }
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
+    }
+  }
+)
+
+export const fetchDocumentPages = createAsyncThunk(
+  'taskNode/fetchDocumentPages',
+  async ({ organizationId, projectId, taskId, token, page = 0, size = 20 }, thunkAPI) => {
+    try {
+      const response = await taskService.getDocumentPages(organizationId, projectId, taskId, token, page, size)
+      return response.data
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
+    }
+  }
+)
+
+export const deleteTaskNode = createAsyncThunk(
+  'taskNode/delete',
+  async ({ organizationId, projectId, taskNodeId, token }, thunkAPI) => {
+    try {
+      await taskService.deleteTaskNode(organizationId, projectId, taskNodeId, token)
+      return taskNodeId
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
+    }
+  }
+)
+
+export const loadTaskDigitizationData = createAsyncThunk(
+  'taskNode/loadTaskDigitizationData',
+  async ({ organizationId, projectId, taskId, token, docsPage, docsPageSize }, thunkAPI) => {
+    try {
+      //
+      // 1️⃣ Fetch DOCUMENT task nodes
+      //
+      const docsResult = await thunkAPI
+        .dispatch(
+          fetchTaskNodesByCriteria({
+            organizationId,
+            projectId,
+            taskId,
+            token,
+            criteria: { taskId, nodeTypeNames: ['DOCUMENT'] },
+            page: docsPage,
+            size: docsPageSize
+          })
+        )
+        .unwrap()
+
+      const documentNodes = docsResult.content || []
+      const documentIds = documentNodes.map(n => n.documentId).filter(Boolean)
+
+      //
+      // 2️⃣ Fetch full documents
+      //
+      if (documentIds.length > 0) {
+        await thunkAPI
+          .dispatch(
+            fetchDocuments({
+              organizationId,
+              projectId,
+              documentIds,
+              token,
+              target: 'taskDocuments'
+            })
+          )
+          .unwrap()
+      }
+      const fullDocs = thunkAPI.getState().activeDocument.taskDocuments
+
+      const mergedDocumentNodes = documentNodes.map(node => {
+        const full = fullDocs.find(d => d.id === node.documentId)
+        return {
+          ...node,
+          nodeValue: {
+            ...node.nodeValue,
+            documentMetadata: {
+              ...(node.nodeValue?.documentMetadata || {}),
+              title: full?.title,
+              remoteUrl: full?.remoteUrl,
+              prompt: node.nodeValue?.documentMetadata?.prompt || '',
+              structure: node.nodeValue?.documentMetadata?.structure || '',
+              pageFrom: node.nodeValue?.documentMetadata?.pageFrom || null,
+              pageTo: node.nodeValue?.documentMetadata?.pageTo || null,
+              allPages: node.nodeValue?.documentMetadata?.allPages || false,
+              supportingDocumentIds: node.nodeValue?.documentMetadata?.supportingDocumentIds || []
+            }
+          }
+        }
+      })
+      thunkAPI.dispatch({
+        type: 'taskNode/updateMergedDocuments',
+        payload: mergedDocumentNodes
+      })
+
+      // 3️⃣ Fetch document pages
+      await thunkAPI
+        .dispatch(
+          fetchDocumentPages({
+            organizationId,
+            projectId,
+            taskId,
+            token,
+            page: 0,
+            size: 2147483647 // max int to fetch all questions
+          })
+        )
+        .unwrap()
+
+      return true
+    } catch (error) {
+      toast.error('Failed to load task data.')
+      return thunkAPI.rejectWithValue(error)
+    }
+  }
+)
+
+export const loadTaskInsightsData = createAsyncThunk(
+  'taskNode/loadTaskInsightsData',
+  async ({ organizationId, projectId, taskId, token, docsPage, docsPageSize, documentCriteria = {}, documentSort }, thunkAPI) => {
+    try {
+      //
+      // 1️⃣ Fetch DOCUMENT and QUESTION task nodes, in parallel
+      //
+      const [docsResult, questionsResult] = await Promise.all([
+        thunkAPI
+          .dispatch(
+            fetchTaskNodesByCriteria({
+              organizationId,
+              projectId,
+              taskId,
+              token,
+              criteria: { taskId, nodeTypeNames: ['DOCUMENT'], ...documentCriteria },
+              page: docsPage,
+              size: docsPageSize,
+              sort: documentSort
+            })
+          )
+          .unwrap(),
+        thunkAPI
+          .dispatch(
+            fetchTaskNodesByCriteria({
+              organizationId,
+              projectId,
+              taskId,
+              token,
+              criteria: { taskId, nodeTypeNames: ['QUESTION'] },
+              page: 0,
+              size: 2147483647 // max int to fetch all questions
+            })
+          )
+          .unwrap()
+      ])
+
+      const documentNodes = docsResult.content || []
+      const questionNodes = questionsResult.content || []
+      const documentIds = documentNodes.map(n => n.documentId).filter(Boolean)
+
+      //
+      // 2️⃣ Fetch full documents (for their titles) and ANSWER task nodes, in parallel
+      //
+      const answerPayload = {
+        documentNodeIds: documentNodes.map(d => d.id),
+        questionNodeIds: questionNodes.map(q => q.id)
+      }
+
+      await Promise.all([
+        documentIds.length > 0 &&
+          thunkAPI
+            .dispatch(
+              fetchDocuments({
+                organizationId,
+                projectId,
+                documentIds,
+                token,
+                size: documentIds.length,
+                target: 'taskDocuments'
+              })
+            )
+            .unwrap(),
+        thunkAPI
+          .dispatch(
+            fetchAnswerTaskNodes({
+              organizationId,
+              projectId,
+              taskId,
+              answerTaskNodePayload: answerPayload,
+              token,
+              page: 0,
+              size: 2147483647 // max int to fetch all answers
+            })
+          )
+          .unwrap()
+      ])
+
+      const fullDocs = thunkAPI.getState().activeDocument.taskDocuments
+
+      const mergedDocumentNodes = documentNodes.map(node => {
+        const full = fullDocs.find(d => d.id === node.documentId)
+        return {
+          ...node,
+          nodeValue: {
+            ...node.nodeValue,
+            documentMetadata: {
+              ...(node.nodeValue?.documentMetadata || {}),
+              title: full?.title,
+              remoteUrl: full?.remoteUrl,
+              prompt: node.nodeValue?.documentMetadata?.prompt || '',
+              structure: node.nodeValue?.documentMetadata?.structure || '',
+              pageFrom: node.nodeValue?.documentMetadata?.pageFrom || null,
+              pageTo: node.nodeValue?.documentMetadata?.pageTo || null,
+              allPages: node.nodeValue?.documentMetadata?.allPages || false,
+              supportingDocumentIds: node.nodeValue?.documentMetadata?.supportingDocumentIds || []
+            }
+          }
+        }
+      })
+      thunkAPI.dispatch({
+        type: 'taskNode/updateMergedDocuments',
+        payload: mergedDocumentNodes
+      })
+
+      return true
+    } catch (error) {
+      toast.error('Failed to load task data.')
+      return thunkAPI.rejectWithValue(error)
+    }
+  }
+)
+
+export const reorderQuestionNodes = createAsyncThunk(
+  'taskNode/reorderQuestionNodes',
+  async ({ organizationId, projectId, taskId, orderedQuestionNodeIds, token }, thunkAPI) => {
+    try {
+      await taskService.reorderTaskQuestionNodes(organizationId, projectId, taskId, orderedQuestionNodeIds, token)
+      return { orderedQuestionNodeIds }
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+      return thunkAPI.rejectWithValue({
+        message: error.response?.data || error.message,
+        orderedQuestionNodeIds
+      })
+    }
+  }
+)
+
+// -------- State --------
+
+const initialState = {
+  taskNodes: {},
+  taskNodesList: [],
+  taskNodesDocumentList: [],
+  taskNodesQuestionList: [],
+  taskNodesAnswerList: [],
+  taskNodesRestList: [],
+  taskDocumentPages: [],
+  isLoading: false,
+  isLoadingDocumentPages: false,
+  error: null,
+  _prevQuestionsSnapshot: null // for optimistic reorder rollback
+}
+
+const taskNodeSlice = createSlice({
+  name: 'taskNode',
+  initialState,
+  reducers: {
+    updateMergedDocuments(state, action) {
+      state.taskNodesDocumentList = {
+        ...state.taskNodesDocumentList,
+        content: action.payload
+      }
+    },
+    // optimistically reorder questions in state
+    applyQuestionOrder(state, action) {
+      const orderedIds = action.payload
+      if (!state.taskNodesQuestionList?.content) return
+      const questions = state.taskNodesQuestionList.content
+      const byId = new Map(questions.map(q => [q.id, q]))
+      // update order numbers (1-based like backend)
+      state.taskNodesQuestionList.content = orderedIds
+        .map((id, index) => {
+          const q = byId.get(id)
+          if (!q) return null
+          return { ...q, nodeValue: { ...q.nodeValue, order: index + 1 }, order: index + 1 }
+        })
+        .filter(Boolean)
+    },
+
+    // rollback: restore previous content snapshot
+    rollbackQuestionOrder(state, action) {
+      state.taskNodesQuestionList.content = action.payload
+    }
+  },
+  extraReducers: builder => {
+    builder
+      // create / update / fetch single node
+      .addCase(createTaskNode.fulfilled, (state, action) => {
+        state.taskNodes[action.payload.id] = action.payload
+      })
+      .addCase(createTaskNodesBatch.fulfilled, (state, action) => {
+        action.payload.forEach(node => {
+          state.taskNodes[node.id] = node
+        })
+      })
+      .addCase(updateTaskNode.fulfilled, (state, action) => {
+        state.taskNodes[action.payload.id] = action.payload
+      })
+      .addCase(fetchTaskNodeById.fulfilled, (state, action) => {
+        state.taskNodes[action.payload.id] = action.payload
+      })
+
+      // list by taskId
+      .addCase(fetchTaskNodesByTaskId.fulfilled, (state, action) => {
+        state.taskNodesList = action.payload
+      })
+
+      // by criteria: DOCUMENT / QUESTION / ANSWER / OTHER
+      .addCase(fetchTaskNodesByCriteria.pending, (state, action) => {
+        state.isLoading = true
+        state.error = null
+      })
+      .addCase(fetchTaskNodesByCriteria.fulfilled, (state, action) => {
+        const { criteria } = action.meta.arg
+
+        if (criteria.nodeTypeNames?.includes('ANSWER')) {
+          state.isLoading = false
+          state.taskNodesAnswerList = action.payload
+        }
+        if (criteria.nodeTypeNames?.includes('DOCUMENT')) {
+          state.isLoading = false
+          state.taskNodesDocumentList = action.payload
+        }
+        if (criteria.nodeTypeNames?.includes('QUESTION')) {
+          state.isLoading = false
+          state.taskNodesQuestionList = action.payload
+        }
+        if (
+          !criteria.nodeTypeNames ||
+          (!criteria.nodeTypeNames.includes('ANSWER') &&
+            !criteria.nodeTypeNames.includes('DOCUMENT') &&
+            !criteria.nodeTypeNames.includes('QUESTION'))
+        ) {
+          state.isLoading = false
+          state.taskNodesRestList = action.payload
+        }
+      })
+      .addCase(fetchTaskNodesByCriteria.rejected, (state, action) => {
+        state.isLoading = false
+        state.error = action.payload
+      })
+
+
+      // explicit fetch answers
+      .addCase(fetchAnswerTaskNodes.pending, state => {
+        state.error = null
+      })
+      .addCase(fetchAnswerTaskNodes.fulfilled, (state, action) => {
+        state.taskNodesAnswerList = action.payload
+      })
+      .addCase(fetchAnswerTaskNodes.rejected, (state, action) => {
+        state.error = action.payload
+      })
+
+      // document pages
+      .addCase(fetchDocumentPages.pending, state => {
+        state.isLoadingDocumentPages = true
+        state.error = null
+      })
+      .addCase(fetchDocumentPages.fulfilled, (state, action) => {
+        state.isLoadingDocumentPages = false
+        state.taskDocumentPages = action.payload
+      })
+      .addCase(fetchDocumentPages.rejected, (state, action) => {
+        state.isLoadingDocumentPages = false
+        state.error = action.payload
+      })
+
+      // delete node
+      .addCase(deleteTaskNode.fulfilled, (state, action) => {
+        delete state.taskNodes[action.payload]
+        if (state.taskNodesList?.content) {
+          state.taskNodesList.content = state.taskNodesList.content.filter(n => n.id !== action.payload)
+        }
+      })
+      // reorder question nodes with rollback support
+      .addCase(reorderQuestionNodes.pending, (state, action) => {
+        // we keep a snapshot of current questions to allow rollback on failure
+        state._prevQuestionsSnapshot = state.taskNodesQuestionList?.content
+          ? [...state.taskNodesQuestionList.content]
+          : null
+      })
+      .addCase(reorderQuestionNodes.fulfilled, (state, action) => {
+        // success: clear snapshot
+        state._prevQuestionsSnapshot = null
+      })
+      .addCase(reorderQuestionNodes.rejected, (state, action) => {
+        // rollback if snapshot exists
+        if (state._prevQuestionsSnapshot) {
+          state.taskNodesQuestionList.content = state._prevQuestionsSnapshot
+          state._prevQuestionsSnapshot = null
+        }
+      })
+  }
+})
+export const { applyQuestionOrder, rollbackQuestionOrder } = taskNodeSlice.actions
+export default taskNodeSlice.reducer

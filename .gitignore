@@ -122,3 +122,6 @@ file:/
 
 # Local-only end-user workspace (kept locally, not tracked)
 gendox-workspace/
+
+# Local Claude Code settings and worktrees
+.claude/

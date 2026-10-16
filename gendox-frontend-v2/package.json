@@ -1,0 +1,48 @@
+{
+  "name": "gendox-frontend-v2",
+  "description": "Gendox Core - Next.js Frontend",
+  "license": "AGPL-3.0",
+  "version": "0.11.2",
+  "author": {
+    "name": "Ctrl+Space Labs",
+    "url": "https://gendox.dev/"
+  },
+  "bugs": {
+    "url": "https://github.com/ctrl-space-labs/gendox-core/issues"
+  },
+  "private": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ctrl-space-labs/gendox-core.git"
+  },
+  "homepage": "https://gendox.dev/",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "format": "prettier --write \"src/**/*.{js,jsx}\""
+  },
+  "dependencies": {
+    "@reduxjs/toolkit": "^2.5.0",
+    "axios": "^1.7.9",
+    "date-fns": "^4.1.0",
+    "katex": "0.18.7",
+    "lucide-react": "^0.469.0",
+    "next": "15.5.18",
+    "oidc-client-ts": "^3.0.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-hot-toast": "^2.5.1",
+    "react-markdown": "^9.0.3",
+    "react-redux": "^9.2.0",
+    "redux-logger": "^3.0.6",
+    "rehype-highlight": "^7.0.2",
+    "rehype-katex": "^7.0.0",
+    "rehype-raw": "^7.0.0",
+    "remark-gfm": "^4.0.1",
+    "remark-math": "^6.0.0"
+  },
+  "devDependencies": {
+    "prettier": "2.5.1"
+  }
+}

@@ -1,0 +1,387 @@
+import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
+import organizationService from 'src/gendox-sdk/organizationService'
+import aiModelService from 'src/gendox-sdk/aiModelService'
+import subscriptionPlanService from 'src/gendox-sdk/subscriptionPlanService'
+import apiKeyService from 'src/gendox-sdk/apiKeyService'
+import organizationWebSiteService from 'src/gendox-sdk/organizationWebSiteService'
+import organizationConnectorService from 'src/gendox-sdk/organizationConnectorService'
+import integrationService from 'src/gendox-sdk/integrationService'
+import { getErrorMessage } from 'src/utils/errorHandler'
+import toast from 'react-hot-toast'
+
+// Define an async thunk for fetching an organization by ID
+export const fetchOrganization = createAsyncThunk(
+  'activeOrganization/fetchByIdStatus',
+  async ({ organizationId, token }, thunkAPI) => {
+    try {
+      const response = await organizationService.getOrganizationById(organizationId, token)
+
+      return response.data
+    } catch (error) {
+      toast.error(`Failed to fetch organization by ID status. Error: ${getErrorMessage(error)}`)
+      return thunkAPI.rejectWithValue(error.response.data)
+    }
+  }
+)
+
+export const fetchAiModelProviders = createAsyncThunk(
+  'activeOrganization/fetchAiModelProviders',
+  async ({ organizationId, token }, thunkAPI) => {
+    try {
+      const response = await aiModelService.getAllAiModelProviders(organizationId, token)
+      return response.data
+    } catch (error) {
+      toast.error(`Failed to fetch Ai model Providers. Error: ${getErrorMessage(error)}`)
+      return thunkAPI.rejectWithValue(error.response.data)
+    }
+  }
+)
+
+export const fetchOrganizationAiModelKeys = createAsyncThunk(
+  'activeOrganization/fetchOrganizationAiModelKeys',
+  async ({ organizationId, token }, thunkAPI) => {
+    try {
+      const response = await aiModelService.getModelKeysByOrganizationId(organizationId, token)
+      return response.data.content
+    } catch (error) {
+      // toast.error(`Failed to fetch organization Ai model keys. Error: ${getErrorMessage(error)}`)
+      console.error(`Failed to fetch organization Ai model keys. Error: ${getErrorMessage(error)}`)
+      return thunkAPI.rejectWithValue(error.response.data)
+    }
+  }
+)
+
+export const fetchOrganizationPlans = createAsyncThunk(
+  'activeOrganization/fetchOrganizationPlans',
+  async ({ organizationId, token }, thunkAPI) => {
+    try {
+      const response = await subscriptionPlanService.getOrganizationPlans(organizationId, token)
+      return response.data
+    } catch (error) {
+      // toast.error(`Failed to fetch organization plans. Error: ${getErrorMessage(error)}`)
+      console.error(`Failed to fetch organization plans. Error: ${getErrorMessage(error)}`)
+      return thunkAPI.rejectWithValue(error.response.data)
+    }
+  }
+)
+
+export const fetchApiKeys = createAsyncThunk(
+  'activeOrganization/fetchApiKeys',
+  async ({ organizationId, token }, thunkAPI) => {
+    try {
+      const response = await apiKeyService.getApiKeysByOrganizationId(organizationId, token)
+      return response.data
+    } catch (error) {
+      // toast.error(`Failed to fetch API Keys. Error: ${getErrorMessage(error)}`)
+      console.error(`Failed to fetch API Keys. Error: ${getErrorMessage(error)}`)
+      return thunkAPI.rejectWithValue(error.response.data)
+    }
+  }
+)
+
+export const fetchOrganizationWebSites = createAsyncThunk(
+  'activeOrganization/fetchOrganizationWebSites',
+  async ({ organizationId, token }, thunkAPI) => {
+    try {
+      const response = await organizationWebSiteService.getOrganizationWebSitesByOrganizationId(organizationId, token)
+      return response.data
+    } catch (error) {
+      // toast.error(`Failed to fetch organization websites. Error: ${getErrorMessage(error)}`)
+      console.error(`Failed to fetch organization websites. Error: ${getErrorMessage(error)}`)
+      return thunkAPI.rejectWithValue(error.response.data)
+    }
+  }
+)
+
+// A website row needs its integration to say when the site was last read and
+// how often it is checked, so the two are fetched together.
+export const fetchIntegrations = createAsyncThunk(
+  'activeOrganization/fetchIntegrations',
+  async ({ organizationId, token }, thunkAPI) => {
+    try {
+      const response = await integrationService.getIntegrationsByOrganizationId(organizationId, token)
+      // the endpoint answers a page, not a bare list
+      return response.data?.content ?? []
+    } catch (error) {
+      console.error(`Failed to fetch integrations. Error: ${getErrorMessage(error)}`)
+      return thunkAPI.rejectWithValue(error.response.data)
+    }
+  }
+)
+
+export const fetchOrganizationMembers = createAsyncThunk(
+  'activeOrganization/fetchOrganizationMembers',
+  async ({ organizationId, token }, thunkAPI) => {
+    try {
+      const response = await organizationService.getUsersInOrganizationByOrgId(organizationId, token)
+      return response.data
+    } catch (error) {
+      toast.error(`Failed to fetch organization members. Error: ${getErrorMessage(error)}`)
+      return thunkAPI.rejectWithValue(error.response.data)
+    }
+  }
+)
+
+export const removeOrganizationMember = createAsyncThunk(
+  'activeOrganization/removeOrganizationMember',
+  async ({ organizationId, userId, token }, thunkAPI) => {
+    try {
+      await organizationService.removeOrganizationMember(organizationId, userId, token)
+      // Return the member ID to remove from state
+      return { memberId: userId }
+    } catch (error) {
+      toast.error(`${getErrorMessage(error)}`)
+      return thunkAPI.rejectWithValue(error.response.data)
+    }
+  }
+)
+
+export const updateMemberRole = createAsyncThunk(
+  'activeOrganization/updateMemberRole',
+  async ({ organizationId, userId, data, token }, thunkAPI) => {
+    try {
+      await organizationService.updateMembersRole(organizationId, userId, data, token)
+      // Return the member ID and new role for updating the state
+      return { memberId: data.userOrganizationId, newRole: data.roleName }
+    } catch (error) {
+      toast.error(`Failed to update user role. Error: ${getErrorMessage(error)}`)
+      return thunkAPI.rejectWithValue(error.response.data)
+    }
+  }
+)
+
+export const fetchOrganizationConnectors = createAsyncThunk(
+  'activeOrganization/fetchOrganizationConnectors',
+  async ({ organizationId, token }, thunkAPI) => {
+    try {
+      const response = await organizationConnectorService.getOrganizationConnectors(organizationId, token)
+      return response.data
+    } catch (error) {
+      console.error(`Failed to fetch organization connectors. Error: ${getErrorMessage(error)}`)
+      return thunkAPI.rejectWithValue(error.response?.data)
+    }
+  }
+)
+
+export const upsertOrganizationConnector = createAsyncThunk(
+  'activeOrganization/upsertOrganizationConnector',
+  async ({ organizationId, connectorType, payload, token }, thunkAPI) => {
+    try {
+      const response = await organizationConnectorService.upsertOrganizationConnector(
+        organizationId,
+        connectorType,
+        payload,
+        token
+      )
+      return response.data
+    } catch (error) {
+      toast.error(`Failed to save connector. Error: ${getErrorMessage(error)}`)
+      return thunkAPI.rejectWithValue(error.response?.data)
+    }
+  }
+)
+
+export const deleteOrganizationConnector = createAsyncThunk(
+  'activeOrganization/deleteOrganizationConnector',
+  async ({ organizationId, connectorType, token }, thunkAPI) => {
+    try {
+      await organizationConnectorService.deleteOrganizationConnector(organizationId, connectorType, token)
+      return { connectorType }
+    } catch (error) {
+      toast.error(`Failed to delete connector. Error: ${getErrorMessage(error)}`)
+      return thunkAPI.rejectWithValue(error.response?.data)
+    }
+  }
+)
+
+// Define the initial state
+const initialActiveOrganizationState = {
+  activeOrganization: {},
+  aiModelProviders: [],
+  aiModelKeys: [],
+  organizationPlans: {},
+  apiKeys: [],
+  organizationWebSites: [],
+  integrations: [],
+  organizationMembers: [],
+  organizationConnectors: null,
+  isFetchingMembers: false,
+  isBlurring: false,
+  error: null
+}
+
+// Create the slice
+const activeOrganizationSlice = createSlice({
+  name: 'activeOrganization',
+  initialState: initialActiveOrganizationState,
+  reducers: {
+    // standard reducer logic, with auto-generated action types per reducer
+  },
+  extraReducers: builder => {
+    builder
+      .addCase(fetchOrganization.pending, state => {
+        state.isBlurring = true
+        state.error = null
+      })
+      .addCase(fetchOrganization.fulfilled, (state, action) => {
+        state.isBlurring = false
+        state.activeOrganization = action.payload
+      })
+      .addCase(fetchOrganization.rejected, (state, action) => {
+        state.isBlurring = false
+        state.error = action.payload
+      })
+
+      // For fetching AI model providers
+      .addCase(fetchAiModelProviders.pending, state => {
+        state.isBlurring = true
+        state.error = null
+      })
+      .addCase(fetchAiModelProviders.fulfilled, (state, action) => {
+        state.isBlurring = false
+        state.aiModelProviders = action.payload
+      })
+      .addCase(fetchAiModelProviders.rejected, (state, action) => {
+        state.isBlurring = false
+        state.error = action.payload
+      })
+
+      // For fetching AI model keys
+      .addCase(fetchOrganizationAiModelKeys.pending, state => {
+        state.isBlurring = true
+        state.error = null
+      })
+      .addCase(fetchOrganizationAiModelKeys.fulfilled, (state, action) => {
+        state.isBlurring = false
+        state.aiModelKeys = action.payload
+      })
+      .addCase(fetchOrganizationAiModelKeys.rejected, (state, action) => {
+        state.isBlurring = false
+        state.error = action.payload
+      })
+
+      // For fetching organization plans
+      .addCase(fetchOrganizationPlans.pending, state => {
+        state.isBlurring = true
+        state.error = null
+      })
+      .addCase(fetchOrganizationPlans.fulfilled, (state, action) => {
+        state.isBlurring = false
+        state.organizationPlans = action.payload
+      })
+      .addCase(fetchOrganizationPlans.rejected, (state, action) => {
+        state.isBlurring = false
+        state.error = action.payload
+      })
+
+      // For fetching API keys
+      .addCase(fetchApiKeys.pending, state => {
+        state.isBlurring = true
+        state.error = null
+      })
+      .addCase(fetchApiKeys.fulfilled, (state, action) => {
+        state.isBlurring = false
+        state.apiKeys = action.payload
+      })
+      .addCase(fetchApiKeys.rejected, (state, action) => {
+        state.isBlurring = false
+        state.error = action.payload
+      })
+
+      // For fetching organization websites
+      .addCase(fetchOrganizationWebSites.pending, state => {
+        state.isBlurring = true
+        state.error = null
+      })
+      .addCase(fetchOrganizationWebSites.fulfilled, (state, action) => {
+        state.isBlurring = false
+        state.organizationWebSites = action.payload
+      })
+
+      .addCase(fetchOrganizationWebSites.rejected, (state, action) => {
+        state.isBlurring = false
+        state.error = action.payload
+      })
+
+      // For fetching integrations
+      .addCase(fetchIntegrations.pending, state => {
+        state.isBlurring = true
+        state.error = null
+      })
+      .addCase(fetchIntegrations.fulfilled, (state, action) => {
+        state.isBlurring = false
+        state.integrations = action.payload
+      })
+      .addCase(fetchIntegrations.rejected, (state, action) => {
+        state.isBlurring = false
+        state.error = action.payload
+      })
+
+      // For fetching organization members
+      .addCase(fetchOrganizationMembers.pending, state => {
+        state.isFetchingMembers = true // You can add a dedicated flag if needed
+        state.error = null
+      })
+      .addCase(fetchOrganizationMembers.fulfilled, (state, action) => {
+        state.isFetchingMembers = false
+        state.organizationMembers = action.payload
+      })
+      .addCase(fetchOrganizationMembers.rejected, (state, action) => {
+        state.isFetchingMembers = false
+        state.error = action.payload
+      })
+
+      // For updating member role:
+      .addCase(updateMemberRole.fulfilled, (state, action) => {
+        const { memberId, newRole } = action.payload
+        state.organizationMembers = state.organizationMembers.map(member =>
+          member.id === memberId ? { ...member, role: { name: newRole } } : member
+        )
+      })
+      // For removing a member:
+      .addCase(removeOrganizationMember.fulfilled, (state, action) => {
+        const { memberId } = action.payload
+        state.organizationMembers = state.organizationMembers.filter(member => member.id !== memberId)
+      })
+
+      // For fetching organization connectors
+      .addCase(fetchOrganizationConnectors.pending, state => {
+        state.isBlurring = true
+        state.error = null
+      })
+      .addCase(fetchOrganizationConnectors.fulfilled, (state, action) => {
+        state.isBlurring = false
+        state.organizationConnectors = action.payload || []
+      })
+      .addCase(fetchOrganizationConnectors.rejected, (state, action) => {
+        state.isBlurring = false
+        state.error = action.payload
+      })
+
+      // For upserting a connector — merge the returned row into the list
+      .addCase(upsertOrganizationConnector.fulfilled, (state, action) => {
+        const updated = action.payload
+        if (!updated) return
+        const list = state.organizationConnectors || []
+        const idx = list.findIndex(c => c.connectorType === updated.connectorType)
+        if (idx >= 0) {
+          list[idx] = updated
+        } else {
+          list.push(updated)
+        }
+        state.organizationConnectors = list
+      })
+
+      // For deleting a connector — drop the matching row
+      .addCase(deleteOrganizationConnector.fulfilled, (state, action) => {
+        const { connectorType } = action.payload || {}
+        if (!connectorType) return
+        state.organizationConnectors = (state.organizationConnectors || []).filter(
+          c => c.connectorType !== connectorType
+        )
+      })
+  }
+})
+
+export const activeOrganizationActions = activeOrganizationSlice.actions
+export default activeOrganizationSlice.reducer

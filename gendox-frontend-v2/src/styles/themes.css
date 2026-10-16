@@ -1,0 +1,51 @@
+/* Design tokens: one theme (Gendox brand) in two modes, html[data-theme="dark|light"]. base.css uses only these.
+
+   Palette from gendox.dev + ctrlspace.dev: navy #282A42/#24263D, mint #08B68D, lilac #EDEDFF, off-white #F7F7F9,
+   signature navy gradient with a mint glow in the corner. Gradients on surfaces only; buttons are flat. */
+
+/* Dark is also applied to dark "islands" (.hero, .on-dark) inside light mode */
+:root, [data-theme="dark"], [data-theme="light"] .hero, [data-theme="light"] .on-dark {
+  --scheme: dark;
+  --font: 'Inter', system-ui, sans-serif;
+  --font-display: var(--font);
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --bg: #1f2136; --side-bg: #24263d;
+  --surface: #282a42; --surface-2: #30324d; --surface-3: #393b58;
+  --border: rgba(234,234,255,.09); --border-2: rgba(234,234,255,.16);
+  --text: #f8f8ff; --text-2: rgba(244,244,255,.82); --text-3: rgba(244,244,255,.64);
+  --accent: #08b68d; --accent-fg: #1b1d31; --accent-soft: rgba(8,182,141,.15); --accent-text: #3dd6ae;
+  --btn-bg: #08b68d; --btn-shadow: none;
+  --ok: #2fcf9f; --warn: #f3b546; --err: #f2687a; --info: #6cb8ff; --prop: #b9a4ff; --tk: #ff8fc8;
+  --tint-l: 74%;
+  --radius: 10px; --radius-sm: 7px;
+  --card: linear-gradient(180deg, rgba(234,234,255,.04), rgba(234,234,255,.01)), var(--surface);
+  --card-shadow: inset 0 1px 0 rgba(234,234,255,.06), 0 10px 30px -14px rgba(10,12,30,.7);
+  --hero: radial-gradient(circle at 92% 0, rgba(1,182,141,.42), transparent 28rem),
+          linear-gradient(145deg, #172d4a, #282a42 62%);
+  --pop-shadow: 0 12px 32px -10px rgba(5,6,18,.8);
+  --h-weight: 650; --h-track: -.03em;
+}
+[data-theme="light"] .hero, [data-theme="light"] .on-dark { color: var(--text); border-color: transparent; }
+
+/* Light */
+[data-theme="light"] {
+  --scheme: light;
+  --font: 'Inter', system-ui, sans-serif;
+  --font-display: var(--font);
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --bg: #f7f7f9; --side-bg: #ffffff;
+  --surface: #ffffff; --surface-2: #f3f3f8; --surface-3: #eaeaff;
+  --border: #e5e6ef; --border-2: #d5d7e3;
+  --text: #282a42; --text-2: #4d4e64; --text-3: #7d8094;
+  --accent: #08b68d; --accent-fg: #1b1d31; --accent-soft: rgba(8,182,141,.11); --accent-text: #008b6d;
+  --btn-bg: #08b68d; --btn-shadow: none;
+  --ok: #05936f; --warn: #b26b00; --err: #d23f52; --info: #0172cb; --prop: #7048e8; --tk: #c2257a;
+  --tint-l: 38%;
+  --radius: 10px; --radius-sm: 7px;
+  --card: var(--surface);
+  --card-shadow: 0 1px 2px rgba(40,42,66,.05), 0 8px 24px -18px rgba(40,42,66,.25);
+  --hero: radial-gradient(circle at 8% 5%, rgba(1,182,141,.12), transparent 24rem),
+          radial-gradient(circle at 90% 18%, rgba(234,232,244,.9), transparent 31rem), #eef2f3;
+  --pop-shadow: 0 12px 32px -12px rgba(40,42,66,.35);
+  --h-weight: 650; --h-track: -.03em;
+}

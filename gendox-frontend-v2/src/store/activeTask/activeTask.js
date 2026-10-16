@@ -1,0 +1,213 @@
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
+import taskService from 'src/gendox-sdk/taskService'
+import { getErrorMessage } from 'src/utils/errorHandler'
+import toast from 'react-hot-toast'
+
+export const createTask = createAsyncThunk(
+  'task/createTask',
+  async ({ organizationId, projectId, taskPayload, token }, thunkAPI) => {
+    try {
+      const response = await taskService.createTask(organizationId, projectId, taskPayload, token)
+      return response.data
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
+    }
+  }
+)
+
+export const duplicateTask = createAsyncThunk(
+  'task/duplicateTask',
+  async ({ organizationId, projectId, payload, token }, thunkAPI) => {
+    try {
+      const response = await taskService.duplicateTask(organizationId, projectId, payload, token)
+      return response.data
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
+    }
+  }
+)
+
+export const fetchTasks = createAsyncThunk(
+  'task/fetchTasks',
+  async ({ organizationId, projectId, token, taskNameContains, sort = 'createdAt,desc', page = 0, size = 100 }, thunkAPI) => {
+    try {
+      const response = await taskService.getTasks(organizationId, projectId, token, {
+        page,
+        size,
+        sort,
+        taskNameContains
+      })
+      // API returns Spring Page; keep store as task array for existing consumers
+      return response.data?.content ?? response.data ?? []
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
+    }
+  }
+)
+
+export const updateTask = createAsyncThunk(
+  'task/updateTask',
+  async ({ organizationId, projectId, taskId, token, updatePayload }, thunkAPI) => {
+    try {
+      const response = await taskService.updateTask(organizationId, projectId, taskId, token, updatePayload)
+      return response.data
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
+    }
+  }
+)
+
+export const fetchTaskById = createAsyncThunk(
+  'task/fetchTaskById',
+  async ({ organizationId, projectId, taskId, token }, thunkAPI) => {
+    try {
+      const response = await taskService.getTaskById(organizationId, projectId, taskId, token)
+      return response.data
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
+    }
+  }
+)
+
+export const deleteTask = createAsyncThunk(
+  'task/deleteTask',
+  async ({ organizationId, projectId, taskId, token }, thunkAPI) => {
+    try {
+      await taskService.deleteTask(organizationId, projectId, taskId, token)
+      return taskId
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
+    }
+  }
+)
+
+export const executeTaskByType = createAsyncThunk(
+  'task/executeTaskByType',
+  async ({ organizationId, projectId, taskId, criteria, token }, thunkAPI) => {
+    try {
+      const response = await taskService.executeTaskByType(organizationId, projectId, taskId, criteria, token)
+      return response.data
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
+    }
+  }
+)
+
+const initialState = {
+  projectTasks: [],
+  selectedTask: null,
+  isLoading: false,
+  generationState: {
+    isInsightsGeneratingCells: {}, // Object: { "docId_questionId": true }
+    isDigitizationGenerating: false,
+    /** Set by useJobMonitor.pollJobByCriteria while a batch job is tracked; cleared with generation loading state */
+    generationTaskId: null,
+    generationJobExecutionId: null
+  },
+  error: null
+}
+
+const taskSlice = createSlice({
+  name: 'task',
+  initialState,
+  reducers: {
+    setInsightsGeneratingCells: (state, action) => {
+      state.generationState.isInsightsGeneratingCells = {
+        ...action.payload
+      }
+    },
+    removeInsightsGeneratingCells: (state, action) => {
+      // action.payload is an array of keys to remove
+      if (Array.isArray(action.payload)) {
+        action.payload.forEach(key => {
+          delete state.generationState.isInsightsGeneratingCells[key]
+        })
+      }
+    },
+    clearInsightsGenerationState: state => {
+      state.generationState.isInsightsGeneratingCells = {}
+      state.generationState.generationTaskId = null
+      state.generationState.generationJobExecutionId = null
+    },
+    setDigitizationGenerating: (state, action) => {
+      state.generationState.isDigitizationGenerating = action.payload
+    },
+    clearDigitizationGenerationState: state => {
+      state.generationState.isDigitizationGenerating = false
+      state.generationState.generationTaskId = null
+      state.generationState.generationJobExecutionId = null
+    },
+    setGenerationJobTracking: (state, action) => {
+      const { taskId, jobExecutionId } = action.payload || {}
+      state.generationState.generationTaskId = taskId ?? null
+      state.generationState.generationJobExecutionId =
+        jobExecutionId != null ? Number(jobExecutionId) : null
+    },
+  },
+  extraReducers: builder => {
+    builder
+      .addCase(createTask.pending, state => {
+        state.isLoading = true
+      })
+      .addCase(createTask.fulfilled, (state, action) => {
+        state.isLoading = false
+        state.projectTasks.push(action.payload)
+      })
+      .addCase(createTask.rejected, (state, action) => {
+        state.isLoading = false
+        state.error = action.payload
+      })
+      .addCase(duplicateTask.pending, state => {
+        state.isLoading = true
+      })
+      .addCase(duplicateTask.fulfilled, (state, action) => {
+        state.isLoading = false
+        state.projectTasks.push(action.payload)
+      })
+      .addCase(duplicateTask.rejected, (state, action) => {
+        state.isLoading = false
+        state.error = action.payload
+      })
+      .addCase(fetchTasks.pending, state => {
+        state.isLoading = true
+        state.error = null
+      })
+      .addCase(fetchTasks.fulfilled, (state, action) => {
+        state.isLoading = false
+        state.projectTasks = action.payload
+      })
+      .addCase(fetchTasks.rejected, (state, action) => {
+        state.isLoading = false
+        state.error = action.payload
+      })
+      .addCase(fetchTaskById.fulfilled, (state, action) => {
+        state.selectedTask = action.payload
+      })
+      .addCase(updateTask.fulfilled, (state, action) => {
+        const idx = state.projectTasks.findIndex(t => t.id === action.payload.id)
+        if (idx !== -1) state.projectTasks[idx] = action.payload
+      })
+      .addCase(deleteTask.fulfilled, (state, action) => {
+        state.projectTasks = state.projectTasks.filter(t => t.id !== action.payload)
+        if (state.selectedTask?.id === action.payload) state.selectedTask = null
+      })
+  }
+})
+
+export const {
+  setInsightsGeneratingCells,
+  removeInsightsGeneratingCells,
+  clearInsightsGenerationState,
+  setDigitizationGenerating,
+  clearDigitizationGenerationState,
+  setGenerationJobTracking
+} = taskSlice.actions
+
+export default taskSlice.reducer
