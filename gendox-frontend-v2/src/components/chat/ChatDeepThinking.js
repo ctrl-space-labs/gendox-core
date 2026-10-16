@@ -1,7 +1,13 @@
 import { useEffect, useRef } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
+import { shallowEqual, useDispatch, useSelector } from 'react-redux'
 import { Brain, Square } from 'lucide-react'
-import { pollDeepThinkingStatus, cancelDeepThinking, finalizeDeepThinkingThread } from 'src/store/chat/gendoxChat'
+import {
+  cancelDeepThinking,
+  finalizeDeepThinkingThread,
+  pollDeepThinkingStatus,
+  selectChatSession
+} from 'src/store/chat/gendoxChat'
+import { useChatKey } from 'src/components/chat/chatKey'
 import { localStorageConstants } from 'src/utils/generalConstants'
 import { useIFrameMessageManager } from 'src/authentication/context/IFrameMessageManagerContext'
 
@@ -22,8 +28,11 @@ const ChatDeepThinking = () => {
   const iFrameMessageManager = useIFrameMessageManager()
   const pollingRef = useRef(null)
 
-  const { isDeepThinking, deepThinkingJobId, deepThinkingSteps } = useSelector(state => state.gendoxChat)
-  const currentThread = useSelector(state => state.gendoxChat.currentThread)
+  const chatKey = useChatKey()
+  const { isDeepThinking, deepThinkingJobId, deepThinkingSteps, currentThread } = useSelector(
+    state => selectChatSession(state, chatKey),
+    shallowEqual
+  )
 
   useEffect(() => {
     if (!isDeepThinking || !deepThinkingJobId || !currentThread) {
@@ -45,7 +54,8 @@ const ChatDeepThinking = () => {
           organizationId,
           projectId,
           jobExecutionId: deepThinkingJobId,
-          token
+          token,
+          chatKey
         })
       ).then(action => {
         if (!action.payload) return
@@ -66,7 +76,8 @@ const ChatDeepThinking = () => {
               finalizeDeepThinkingThread({
                 threadId: currentThread.threadId,
                 token,
-                iFrameMessageManager
+                iFrameMessageManager,
+                chatKey
               })
             )
           }
@@ -83,7 +94,7 @@ const ChatDeepThinking = () => {
         pollingRef.current = null
       }
     }
-  }, [isDeepThinking, deepThinkingJobId, currentThread, dispatch, iFrameMessageManager])
+  }, [isDeepThinking, deepThinkingJobId, currentThread, dispatch, iFrameMessageManager, chatKey])
 
   const handleStop = () => {
     if (!currentThread || !deepThinkingJobId) return
@@ -92,7 +103,8 @@ const ChatDeepThinking = () => {
         organizationId: currentThread.organizationId,
         projectId: currentThread.projectId,
         jobExecutionId: deepThinkingJobId,
-        token: window.localStorage.getItem(localStorageConstants.accessTokenKey)
+        token: window.localStorage.getItem(localStorageConstants.accessTokenKey),
+        chatKey
       })
     )
   }

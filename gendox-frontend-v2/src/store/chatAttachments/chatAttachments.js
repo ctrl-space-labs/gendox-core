@@ -65,55 +65,72 @@ export const deleteUploadedAttachment = createAsyncThunk(
   }
 )
 
+// The files waiting to be sent with the next message, per chat on screen (see MAIN_CHAT in gendoxChat)
+const MAIN_CHAT = 'main'
+const EMPTY = Object.freeze({ items: [], isUploading: false, isDeleting: false })
+
+export const selectChatAttachments = (state, chatKey = MAIN_CHAT) => state.chatAttachments.byKey[chatKey] ?? EMPTY
+
+const keyOf = action => action.meta?.arg?.chatKey ?? action.payload?.chatKey ?? MAIN_CHAT
+
+const listOf = (state, chatKey) => {
+  if (!state.byKey[chatKey]) state.byKey[chatKey] = { items: [], isUploading: false, isDeleting: false }
+
+  return state.byKey[chatKey]
+}
+
 const chatAttachmentsSlice = createSlice({
   name: 'chatAttachments',
   initialState: {
-    items: [],
-    isUploading: false,
-    isDeleting: false
+    byKey: {}
   },
   reducers: {
+    // payload: { chatKey, items: Array<AttachmentItem> }
     enqueueFiles: (state, action) => {
-      const newItems = action.payload // Array<AttachmentItem>
-      state.items.push(...newItems)
+      listOf(state, keyOf(action)).items.push(...action.payload.items)
     },
+    // payload: { chatKey, id }
     removeLocalOnly: (state, action) => {
-      const id = action.payload
-      const item = state.items.find(x => x.id === id)
+      const list = listOf(state, keyOf(action))
+      const item = list.items.find(x => x.id === action.payload.id)
       if (item?.previewUrl) URL.revokeObjectURL(item.previewUrl)
-      state.items = state.items.filter(x => x.id !== id)
+      list.items = list.items.filter(x => x.id !== action.payload.id)
     },
-    clearAll: state => {
-      state.items.forEach(a => {
+    // payload: chatKey
+    clearAll: (state, action) => {
+      const chatKey = action.payload ?? MAIN_CHAT
+      const list = state.byKey[chatKey]
+      if (!list) return
+      list.items.forEach(a => {
         if (a.previewUrl) URL.revokeObjectURL(a.previewUrl)
       })
-      state.items = []
-      state.isUploading = false
-      state.isDeleting = false
+      delete state.byKey[chatKey]
     }
   },
   extraReducers: builder => {
     builder
-      .addCase(uploadQueuedAttachments.pending, state => {
-        state.isUploading = true
-        state.items.forEach(i => {
+      .addCase(uploadQueuedAttachments.pending, (state, action) => {
+        const list = listOf(state, keyOf(action))
+        list.isUploading = true
+        list.items.forEach(i => {
           if (i.status === 'queued') i.status = 'uploading'
         })
       })
       .addCase(uploadQueuedAttachments.fulfilled, (state, action) => {
-        const results = action.payload // [{id, uploadedDoc}]
-        results.forEach(r => {
-          const item = state.items.find(x => x.id === r.id)
+        const list = listOf(state, keyOf(action))
+        action.payload.forEach(r => {
+          const item = list.items.find(x => x.id === r.id)
           if (item) {
             item.status = 'uploaded'
             item.uploadedDoc = r.uploadedDoc
           }
         })
-        state.isUploading = state.items.some(i => i.status === 'uploading')
+        list.isUploading = list.items.some(i => i.status === 'uploading')
       })
       .addCase(uploadQueuedAttachments.rejected, (state, action) => {
-        state.isUploading = false
-        state.items.forEach(i => {
+        const list = listOf(state, keyOf(action))
+        list.isUploading = false
+        list.items.forEach(i => {
           if (i.status === 'uploading' || i.status === 'queued') {
             i.status = 'failed'
             i.error = action.payload || 'Upload failed'
@@ -121,26 +138,28 @@ const chatAttachmentsSlice = createSlice({
         })
       })
       .addCase(deleteUploadedAttachment.pending, (state, action) => {
-        state.isDeleting = true
-        const { attachmentId } = action.meta.arg
-        const item = state.items.find(x => x.id === attachmentId)
+        const list = listOf(state, keyOf(action))
+        list.isDeleting = true
+        const item = list.items.find(x => x.id === action.meta.arg.attachmentId)
         if (item) item.status = 'deleting'
       })
       .addCase(deleteUploadedAttachment.fulfilled, (state, action) => {
+        const list = listOf(state, keyOf(action))
         const { attachmentId } = action.payload
-        const item = state.items.find(x => x.id === attachmentId)
+        const item = list.items.find(x => x.id === attachmentId)
         if (item?.previewUrl) URL.revokeObjectURL(item.previewUrl)
-        state.items = state.items.filter(x => x.id !== attachmentId)
-        state.isDeleting = state.items.some(i => i.status === 'deleting')
+        list.items = list.items.filter(x => x.id !== attachmentId)
+        list.isDeleting = list.items.some(i => i.status === 'deleting')
       })
       .addCase(deleteUploadedAttachment.rejected, (state, action) => {
+        const list = listOf(state, keyOf(action))
         const { attachmentId, error } = action.payload || {}
-        const item = state.items.find(x => x.id === attachmentId)
+        const item = list.items.find(x => x.id === attachmentId)
         if (item) {
           item.status = 'uploaded'
           item.error = error || 'Delete failed'
         }
-        state.isDeleting = state.items.some(i => i.status === 'deleting')
+        list.isDeleting = list.items.some(i => i.status === 'deleting')
       })
   }
 })

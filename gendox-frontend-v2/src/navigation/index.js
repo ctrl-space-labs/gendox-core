@@ -28,7 +28,7 @@ const navigation = [
       { id: 'agents', title: 'Agents', icon: Bot, path: '/gendox/agents' },
       { id: 'knowledge', title: 'Knowledge', icon: Library, path: '/gendox/knowledge' },
       { id: 'integrations', title: 'Integrations', icon: Cable, path: '/gendox/integrations' },
-      { id: 'tasks', title: 'Tasks', icon: ListChecks }
+      { id: 'tasks', title: 'Tasks', icon: ListChecks, path: '/gendox/tasks' }
     ]
   },
   {

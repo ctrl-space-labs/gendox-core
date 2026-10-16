@@ -21,6 +21,8 @@ const Topbar = ({ title, crumb, onMenuClick, onSearchClick }) => {
         <b>{title}</b>
       </div>
       <span className='sp' />
+      {/* a page's own controls before Search, see TopbarSlot at='end' */}
+      <span id='topbar-end' style={{ display: 'contents' }} />
       <button className='search-btn' onClick={onSearchClick}>
         <Search className='lucide' />
         <span className='hide-sm'>Search</span>

@@ -40,11 +40,8 @@ export const store = configureStore({
           'chatAttachments/uploadQueuedAttachments/fulfilled',
           'chatAttachments/uploadQueuedAttachments/rejected'
         ],
-        ignoredPaths: [
-          'chatAttachments.items',
-          'chatAttachments.items.*.file',
-          'chatAttachments.items.*.previewUrl'
-        ]
+        // the files waiting to be sent hold File objects
+        ignoredPaths: ['chatAttachments.byKey']
       }
     }),
   devTools: process.env.NODE_ENV !== 'production'

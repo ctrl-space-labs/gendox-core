@@ -1,17 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
-import { useDispatch, useSelector } from 'react-redux'
+import { shallowEqual, useDispatch, useSelector } from 'react-redux'
 import { ArrowLeft, ChevronDown, FileUp, History, Plus, SquarePen, X } from 'lucide-react'
 import { useAuth } from 'src/authentication/useAuth'
 import { useIFrameMessageManager } from 'src/authentication/context/IFrameMessageManagerContext'
-import { chatActions, fetchMessageMetadata, sendMessage } from 'src/store/chat/gendoxChat'
+import { MAIN_CHAT, chatActions, fetchMessageMetadata, selectChatSession, sendMessage } from 'src/store/chat/gendoxChat'
 import {
   enqueueFiles,
   uploadQueuedAttachments,
   removeLocalOnly,
   deleteUploadedAttachment,
-  clearAll
+  clearAll,
+  selectChatAttachments
 } from 'src/store/chatAttachments/chatAttachments'
+import { ChatKeyContext } from 'src/components/chat/chatKey'
 import {
   buildTurns,
   groupThreadsByDate,
@@ -50,6 +52,7 @@ const greetingTime = () => {
  * @param poweredBy - true | 'small'
  * @param prefill - text put in the message box, e.g. "In “Returns policy”, "; set again to put it back
  * @param onNewThread, onOpenThread(thread), onClose - what the header buttons and the drawer do
+ * @param chatKey - which chat in the store this one shows (several can be on screen at once); see useChatSession
  */
 const Chat = ({
   token,
@@ -67,7 +70,8 @@ const Chat = ({
   prefill,
   onNewThread,
   onOpenThread,
-  onClose
+  onClose,
+  chatKey = MAIN_CHAT
 }) => {
   const dispatch = useDispatch()
   const router = useRouter()
@@ -75,16 +79,13 @@ const Chat = ({
   const iFrameMessageManager = useIFrameMessageManager()
   const { organizationId, projectId } = router.query
 
-  const {
-    currentThread,
-    threads,
-    isSendingMessage,
-    isLoadingMessages,
-    isDeepThinking,
-    currentMessageMetadata,
-    isLoadingMetadata
-  } = useSelector(state => state.gendoxChat)
-  const { items: attachments, isUploading, isDeleting } = useSelector(state => state.chatAttachments)
+  const threads = useSelector(state => state.gendoxChat.threads)
+  const { currentThread, isSendingMessage, isLoadingMessages, isDeepThinking, currentMessageMetadata, isLoadingMetadata } =
+    useSelector(state => selectChatSession(state, chatKey), shallowEqual)
+  const { items: attachments, isUploading, isDeleting } = useSelector(
+    state => selectChatAttachments(state, chatKey),
+    shallowEqual
+  )
 
   const [message, setMessage] = useState('')
   const [deepThinking, setDeepThinking] = useState(false)
@@ -115,11 +116,11 @@ const Chat = ({
 
   // a different thread starts clean
   useEffect(() => {
-    dispatch(clearAll())
+    dispatch(clearAll(chatKey))
     setDeepThinking(false)
     setSourcesMessageId(null)
     setDrawerOpen(false)
-  }, [threadId, projectId, dispatch])
+  }, [threadId, projectId, chatKey, dispatch])
 
   useEffect(() => {
     attachmentsRef.current = attachments
@@ -170,7 +171,8 @@ const Chat = ({
         uploadedDocs: docs,
         organizationId,
         iFrameMessageManager,
-        token
+        token,
+        chatKey
       })
     )
   }
@@ -179,7 +181,7 @@ const Chat = ({
     if (!canSend) return
     send(message, uploadedDocs)
     setMessage('')
-    dispatch(clearAll())
+    dispatch(clearAll(chatKey))
   }
 
   const addFiles = fileList => {
@@ -199,8 +201,8 @@ const Chat = ({
         uploadedDoc: null
       }
     })
-    dispatch(enqueueFiles(newItems))
-    dispatch(uploadQueuedAttachments({ items: newItems, threadId, organizationId, projectId, token }))
+    dispatch(enqueueFiles({ chatKey, items: newItems }))
+    dispatch(uploadQueuedAttachments({ items: newItems, threadId, organizationId, projectId, token, chatKey }))
   }
 
   const removeAttachment = attachmentId => {
@@ -214,11 +216,12 @@ const Chat = ({
           documentId: item.uploadedDoc.documentId,
           organizationId,
           projectId,
-          token
+          token,
+          chatKey
         })
       )
     } else {
-      dispatch(removeLocalOnly(attachmentId))
+      dispatch(removeLocalOnly({ chatKey, id: attachmentId }))
     }
   }
 
@@ -255,13 +258,13 @@ const Chat = ({
     : {}
 
   const openSources = answer => {
-    dispatch(fetchMessageMetadata({ thread: currentThread, message: answer, token }))
+    dispatch(fetchMessageMetadata({ thread: currentThread, message: answer, token, chatKey }))
     setSourcesMessageId(answer.messageId)
   }
 
   const closeSources = () => {
     setSourcesMessageId(null)
-    dispatch(chatActions.clearCurrentMessageMetadata())
+    dispatch(chatActions.clearCurrentMessageMetadata(chatKey))
   }
 
   const startNewThread = () => {
@@ -289,6 +292,7 @@ const Chat = ({
   ) : null
 
   return (
+    <ChatKeyContext.Provider value={chatKey}>
     <div
       className={`gc gc-${variant} ${isChatting ? 'chatting' : ''} ${isDragging ? 'dragover' : ''}`}
       {...dragHandlers}
@@ -467,6 +471,7 @@ const Chat = ({
         Drop files to attach
       </div>
     </div>
+    </ChatKeyContext.Provider>
   )
 }
 

@@ -1,15 +1,16 @@
-# gendox-frontend-v2
+# gendox-frontend
 
-The redesigned Gendox frontend. It replaces `gendox-frontend` when every page has moved over.
+The Gendox web app.
 
 - **Stack**: Next.js (Pages Router, static export), React, Redux Toolkit, JavaScript.
-- **Design system**: `src/styles/themes.css` (tokens, dark and light) and `src/styles/base.css` (layout and components). Components use these classes; there is no UI library.
-- **Logic**: `src/gendox-sdk`, `src/store`, `src/authentication`, `src/configs`, `src/hooks` and `src/services` are carried over from `gendox-frontend`.
+- **Design system**: `src/styles/themes.css` (tokens, dark and light) and `src/styles/base.css` (layout and components), with app-only additions in `src/styles/app.css`. Components use these classes; there is no UI library. Icons are `lucide-react`.
+- **Layout**: `src/components` holds the screens' parts by area (`agent`, `chat`, `knowledge`, `tasks`, `earth-observation`, …) and the small UI kit in `src/components/ui`. `src/views` holds the screens that open both as a page and as a window in the dock (`src/components/dock`).
+- **Logic**: `src/gendox-sdk` (one service per API area), `src/store` (Redux Toolkit slices), `src/authentication` (OIDC with Keycloak, the organization and project guard).
 
 ```bash
 yarn install
 yarn dev          # http://localhost:3000
-yarn build
+yarn build        # static export into out/
 ```
 
-It reads the same `NEXT_PUBLIC_*` variables as `gendox-frontend` and uses the same port, so run one of the two at a time.
+Configuration is the `NEXT_PUBLIC_*` variables in `.env.*`; the Docker image takes them as build args.

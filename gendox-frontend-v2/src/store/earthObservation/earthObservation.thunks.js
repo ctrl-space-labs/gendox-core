@@ -1,7 +1,7 @@
 import { createAsyncThunk } from '@reduxjs/toolkit'
 import toast from 'react-hot-toast'
 import earthObservationService from 'src/gendox-sdk/earthObservationService'
-import { geeIframeRef } from 'src/views/pages/earth-observation/panels/shared/panelState'
+import { geeIframeRef } from 'src/components/earth-observation/panels/shared/panelState'
 import { getErrorMessage } from 'src/utils/errorHandler'
 
 export const fetchEOScriptsThunk = createAsyncThunk(

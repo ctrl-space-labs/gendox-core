@@ -21,21 +21,41 @@ const resolveLocalContextFetchConfig = iFrameMessageManager => {
   }
 }
 
-const initialChatState = {
-  threads: null,
-  agents: null,
-  agentProfile: null,
+// What one chat on screen shows. Several chats can be open at once (the agent home's windows), each under its own key;
+// the chat page, the widget and side panels use MAIN_CHAT.
+export const MAIN_CHAT = 'main'
+
+const emptySession = () => ({
   currentThread: null,
   isSendingMessage: false,
-  threadId: null,
   currentMessageMetadata: null,
   isLoadingMessages: null,
-  isLoadingAgentsAndThreads: null,
   isLoadingMetadata: null,
   isDeepThinking: false,
   deepThinkingJobId: null,
   deepThinkingSteps: [],
   newlyCreatedThreadId: null
+})
+
+const EMPTY_SESSION = Object.freeze(emptySession())
+
+// the threads and agents are shared by every chat
+const initialChatState = {
+  threads: null,
+  agents: null,
+  isLoadingAgentsAndThreads: null,
+  sessions: {}
+}
+
+/** One chat's state, e.g. useSelector(state => selectChatSession(state, chatKey)) */
+export const selectChatSession = (state, chatKey = MAIN_CHAT) => state.gendoxChat.sessions[chatKey] ?? EMPTY_SESSION
+
+const keyOf = action => action.meta?.arg?.chatKey ?? action.payload?.chatKey ?? MAIN_CHAT
+
+const sessionOf = (state, chatKey) => {
+  if (!state.sessions[chatKey]) state.sessions[chatKey] = emptySession()
+
+  return state.sessions[chatKey]
 }
 
 /**
@@ -129,7 +149,7 @@ export const fetchThreads = createAsyncThunk(
 
 export const loadThread = createAsyncThunk(
   'gendoxChat/loadThread',
-  async ({ threadId, projectId, organizationId, token }, { dispatch, getState, rejectWithValue }) => {
+  async ({ threadId, projectId, organizationId, token, chatKey = MAIN_CHAT }, { dispatch, getState, rejectWithValue }) => {
     try {
       const state = getState()
       let newThread = !threadId
@@ -171,7 +191,7 @@ export const fetchMessageMetadata = createAsyncThunk(
 export const sendMessage = createAsyncThunk(
   'gendoxChat/sendMessage',
   async (
-    { user, currentThread, message, uploadedDocs = [], organizationId, iFrameMessageManager, token },
+    { user, currentThread, message, uploadedDocs = [], organizationId, iFrameMessageManager, token, chatKey = MAIN_CHAT },
     { getState, dispatch, rejectWithValue }
   ) => {
     if (!user?.id) {
@@ -183,10 +203,13 @@ export const sendMessage = createAsyncThunk(
     const projectId = currentThread.agent.projectId
     dispatch(
       addMessage({
-        createdBy: user.id,
-        value: message,
-        createdAt: new Date().toISOString(),
-        attachments: uploadedDocs
+        chatKey,
+        message: {
+          createdBy: user.id,
+          value: message,
+          createdAt: new Date().toISOString(),
+          attachments: uploadedDocs
+        }
       })
     )
 
@@ -236,7 +259,8 @@ export const sendMessage = createAsyncThunk(
         projectId,
         organizationId,
         token,
-        dispatch
+        dispatch,
+        chatKey
       })
 
       return { deepThinking: true, jobExecutionId, threadId: finalThreadId, isNewThread: !threadId }
@@ -247,6 +271,7 @@ export const sendMessage = createAsyncThunk(
       apiMessages,
       responseThreadId,
       dispatch,
+      chatKey,
       iFrameMessageManager,
       sessionContext: {
         isEmbedded: iFrameMessageManager?.isEmbedded,
@@ -262,7 +287,8 @@ export const sendMessage = createAsyncThunk(
       projectId,
       organizationId,
       token,
-      dispatch
+      dispatch,
+      chatKey
     })
 
     return { deepThinking: false, threadId: finalThreadId, isNewThread: !threadId }
@@ -301,13 +327,13 @@ export const pollDeepThinkingStatus = createAsyncThunk(
 
 export const finalizeDeepThinkingThread = createAsyncThunk(
   'gendoxChat/finalizeDeepThinkingThread',
-  async ({ threadId, token, iFrameMessageManager }, { getState, dispatch, rejectWithValue }) => {
+  async ({ threadId, token, iFrameMessageManager, chatKey = MAIN_CHAT }, { getState, dispatch, rejectWithValue }) => {
     try {
       if (!threadId) return { addedCount: 0 }
 
       const response = await chatThreadService.getThreadMessagesByCriteria(threadId, token)
       const apiMessages = response?.data?.content || []
-      const existingMessages = getState()?.gendoxChat?.currentThread?.messages || []
+      const existingMessages = selectChatSession(getState(), chatKey).currentThread?.messages || []
       const existingMessageIds = new Set(existingMessages.map(m => m?.messageId).filter(Boolean))
 
       const newApiMessages = apiMessages
@@ -322,11 +348,12 @@ export const finalizeDeepThinkingThread = createAsyncThunk(
         })
         .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
 
-      const currentThread = getState()?.gendoxChat?.currentThread
+      const currentThread = selectChatSession(getState(), chatKey).currentThread
       _dispatchIncomingMessagesAndToolCalls({
         apiMessages: newApiMessages,
         responseThreadId: threadId,
         dispatch,
+        chatKey,
         iFrameMessageManager,
         sessionContext: {
           isEmbedded: iFrameMessageManager?.isEmbedded,
@@ -361,47 +388,13 @@ export const cancelDeepThinking = createAsyncThunk(
   }
 )
 
-export const resumeDeepThinkingIfActive = createAsyncThunk(
-  'gendoxChat/resumeDeepThinkingIfActive',
-  async ({ organizationId, projectId, token }, { dispatch, rejectWithValue }) => {
-    try {
-      const jobId = localStorage.getItem('activeDeepThinkingJobId')
-      if (!jobId) return null
-
-      const jobResponse = await taskService.getJobsByCriteria(
-        organizationId,
-        projectId,
-        { jobExecutionIdsIn: [jobId] },
-        token
-      )
-
-      const job = jobResponse.data?.content?.[0]
-      const status = job?.status?.trim().toUpperCase()
-
-      if (status === 'STARTED' || status === 'STARTING') {
-        return { jobExecutionId: Number(jobId), status }
-      }
-
-      localStorage.removeItem('activeDeepThinkingJobId')
-      localStorage.removeItem('activeDeepThinkingThreadId')
-      return null
-    } catch (error) {
-      return rejectWithValue(error.message)
-    }
-  }
-)
-
-export const addMessage = createAsyncThunk('gendoxChat/pushMessage', async (message, { dispatch, getState }) => {
+export const addMessage = createAsyncThunk('gendoxChat/pushMessage', async ({ message }) => {
   return chatConverter.gendoxMessageToThreadMessage(message)
-})
-
-export const fetchThreadId = createAsyncThunk('gendoxChat/fetchThreadId', async (arg, thunkAPI) => {
-  console.log('fetchThreadId called')
 })
 
 export const hydrateAttachmentPreviews = createAsyncThunk(
   'gendoxChat/hydrateAttachmentPreviews',
-  async ({ threadId, token, messages }, { dispatch }) => {
+  async ({ threadId, token, messages, chatKey = MAIN_CHAT }, { dispatch }) => {
     if (!Array.isArray(messages) || messages.length === 0) return
 
     const isImageAttachment = a => {
@@ -439,6 +432,7 @@ export const hydrateAttachmentPreviews = createAsyncThunk(
 
         dispatch(
           chatActions.setAttachmentPreviewStatus({
+            chatKey,
             messageId: item.messageId,
             documentId: item.documentId,
             previewStatus: 'loading'
@@ -451,6 +445,7 @@ export const hydrateAttachmentPreviews = createAsyncThunk(
 
           dispatch(
             chatActions.setAttachmentPreview({
+              chatKey,
               messageId: item.messageId,
               documentId: item.documentId,
               previewUrl: blobUrl
@@ -459,6 +454,7 @@ export const hydrateAttachmentPreviews = createAsyncThunk(
         } catch (e) {
           dispatch(
             chatActions.setAttachmentPreviewStatus({
+              chatKey,
               messageId: item.messageId,
               documentId: item.documentId,
               previewStatus: 'error'
@@ -473,97 +469,78 @@ export const hydrateAttachmentPreviews = createAsyncThunk(
 )
 
 
+const revokeThreadPreviewUrls = thread => {
+  ;(thread?.messages || []).forEach(m => {
+    ;(m?.attachments || []).forEach(a => {
+      if (a?.previewUrl) URL.revokeObjectURL(a.previewUrl)
+    })
+  })
+}
+
+const forgetDeepThinkingJob = () => {
+  try {
+    localStorage.removeItem('activeDeepThinkingJobId')
+    localStorage.removeItem('activeDeepThinkingThreadId')
+  } catch (_) {}
+}
+
 const gendoxChatSlice = createSlice({
   name: 'gendoxChat',
   initialState: initialChatState,
   reducers: {
     resetChatState: state => {
-      state.threads = null
-      state.agents = null
-      state.currentThread = null
-      state.agentProfile = null
-      state.isSendingMessage = false
-      state.threadId = null
-      state.currentMessageMetadata = null
-      state.isLoadingMessages = null
-      state.isLoadingAgentsAndThreads = null
-      state.isLoadingMetadata = null
-      state.isDeepThinking = false
-      state.deepThinkingJobId = null
-      state.deepThinkingSteps = []
-      state.newlyCreatedThreadId = null
+      Object.values(state.sessions).forEach(session => revokeThreadPreviewUrls(session.currentThread))
+      Object.assign(state, { ...initialChatState, sessions: {} })
     },
-    clearDeepThinkingState: state => {
-      state.isDeepThinking = false
-      state.deepThinkingJobId = null
-      state.deepThinkingSteps = []
-      try {
-        localStorage.removeItem('activeDeepThinkingJobId')
-        localStorage.removeItem('activeDeepThinkingThreadId')
-      } catch (_) {}
+    // a chat that left the screen (a closed window) drops its state; payload: chatKey
+    removeChatSession: (state, action) => {
+      const session = state.sessions[action.payload]
+      if (!session) return
+      revokeThreadPreviewUrls(session.currentThread)
+      delete state.sessions[action.payload]
     },
-    removeCurrentThread: state => {
-      const revokeThreadPreviewUrls = thread => {
-        const msgs = thread?.messages || []
-        msgs.forEach(m => {
-          const atts = m?.attachments || []
-          atts.forEach(a => {
-            if (a?.previewUrl) URL.revokeObjectURL(a.previewUrl)
-          })
-        })
-      }
-      revokeThreadPreviewUrls(state.currentThread)
-      state.currentThread = null
+    clearDeepThinkingState: (state, action) => {
+      const session = sessionOf(state, action.payload ?? MAIN_CHAT)
+      session.isDeepThinking = false
+      session.deepThinkingJobId = null
+      session.deepThinkingSteps = []
+      forgetDeepThinkingJob()
     },
-    updateCurrentThreadWithAgent: state => {
-      if (!state.currentThread) {
-        return
-      }
-      const { projectId } = state.currentThread
-      const foundAgent = state.agents?.find(agent => agent.projectId === projectId)
-      if (foundAgent) {
-        state.currentThread.agent = foundAgent
-      }
+    // payload: chatKey
+    updateCurrentThreadWithAgent: (state, action) => {
+      const session = state.sessions[action.payload ?? MAIN_CHAT]
+      if (!session?.currentThread) return
+      const foundAgent = state.agents?.find(agent => agent.projectId === session.currentThread.projectId)
+      if (foundAgent) session.currentThread.agent = foundAgent
     },
-
-    updateCurrentThreadWithThreadObj: state => {
-      if (!state.currentThread) return
-      const { threadId } = state.currentThread
-      const foundThread = state.threads?.find(thread => thread.id === threadId)
-      if (foundThread) {
-        state.currentThread.thread = foundThread
-      }
+    // payload: chatKey
+    updateCurrentThreadWithThreadObj: (state, action) => {
+      const session = state.sessions[action.payload ?? MAIN_CHAT]
+      if (!session?.currentThread) return
+      const foundThread = state.threads?.find(thread => thread.id === session.currentThread.threadId)
+      if (foundThread) session.currentThread.thread = foundThread
     },
-    setUserProfile: (state, action) => {
-      state.agentProfile = chatConverters.toChatAgentProfile(action.payload)
+    // payload: chatKey
+    clearCurrentMessageMetadata: (state, action) => {
+      sessionOf(state, action.payload ?? MAIN_CHAT).currentMessageMetadata = ''
     },
-    clearCurrentMessageMetadata: state => {
-      state.currentMessageMetadata = ''
-    },
-    clearNewlyCreatedThreadId: state => {
-      state.newlyCreatedThreadId = null
+    // payload: chatKey
+    clearNewlyCreatedThreadId: (state, action) => {
+      sessionOf(state, action.payload ?? MAIN_CHAT).newlyCreatedThreadId = null
     },
     setAttachmentPreviewStatus: (state, action) => {
-      const { messageId, documentId, previewStatus } = action.payload
-      const msgs = state.currentThread?.messages || []
-      const msg = msgs.find(m => m.messageId === messageId)
-      if (!msg) return
-      const att = (msg.attachments || []).find(a => a.documentId === documentId)
-      if (!att) return
-      att.previewStatus = previewStatus
+      const { chatKey = MAIN_CHAT, messageId, documentId, previewStatus } = action.payload
+      const msg = (state.sessions[chatKey]?.currentThread?.messages || []).find(m => m.messageId === messageId)
+      const att = (msg?.attachments || []).find(a => a.documentId === documentId)
+      if (att) att.previewStatus = previewStatus
     },
-
     setAttachmentPreview: (state, action) => {
-      const { messageId, documentId, previewUrl } = action.payload
-      const msgs = state.currentThread?.messages || []
-      const msg = msgs.find(m => m.messageId === messageId)
-      if (!msg) return
-      const att = (msg.attachments || []).find(a => a.documentId === documentId)
+      const { chatKey = MAIN_CHAT, messageId, documentId, previewUrl } = action.payload
+      const msg = (state.sessions[chatKey]?.currentThread?.messages || []).find(m => m.messageId === messageId)
+      const att = (msg?.attachments || []).find(a => a.documentId === documentId)
       if (!att) return
-
       // revoke old preview URL if exists to avoid memory leaks
       if (att.previewUrl) URL.revokeObjectURL(att.previewUrl)
-
       att.previewUrl = previewUrl
       att.previewStatus = 'ready'
     }
@@ -572,118 +549,90 @@ const gendoxChatSlice = createSlice({
     builder.addCase(fetchAgents.fulfilled, (state, action) => {
       state.agents = action.payload
     })
-    builder.addCase(fetchAgents.pending, (state, action) => {})
-    builder.addCase(fetchAgents.rejected, (state, action) => {})
     builder.addCase(fetchThreads.fulfilled, (state, action) => {
       state.threads = action.payload
       state.isLoadingAgentsAndThreads = false
     })
-    builder.addCase(fetchThreads.pending, (state, action) => {
+    builder.addCase(fetchThreads.pending, state => {
       state.isLoadingAgentsAndThreads = true
     })
-    builder.addCase(fetchThreads.rejected, (state, action) => {
+    builder.addCase(fetchThreads.rejected, state => {
       state.isLoadingAgentsAndThreads = false
     })
     builder.addCase(loadThread.pending, (state, action) => {
-      // if (!action.meta.arg.keepChatContent) {
-      //   state.isSending = false;
-      //   state.currentThread = null;
-      // }
-      state.currentThread = null
-      state.isLoadingMessages = true
+      const session = sessionOf(state, keyOf(action))
+      session.currentThread = null
+      session.isLoadingMessages = true
     })
     builder.addCase(loadThread.fulfilled, (state, action) => {
-      state.currentThread = action.payload
-      state.isLoadingMessages = false
+      const session = sessionOf(state, keyOf(action))
+      session.currentThread = action.payload
+      session.isLoadingMessages = false
     })
     builder.addCase(loadThread.rejected, (state, action) => {
-      state.currentThread = null
-      state.isLoadingMessages = false
+      const session = sessionOf(state, keyOf(action))
+      session.currentThread = null
+      session.isLoadingMessages = false
     })
     builder.addCase(fetchMessageMetadata.pending, (state, action) => {
-      // Access the arguments passed to the thunk
       const { thread, message } = action.meta.arg
-
-      state.currentMessageMetadata = {
-        isFetching: true,
-        metadata: null,
-        thread,
-        message
-      }
-      state.isLoadingMetadata = true
+      const session = sessionOf(state, keyOf(action))
+      session.currentMessageMetadata = { isFetching: true, metadata: null, thread, message }
+      session.isLoadingMetadata = true
     })
     builder.addCase(fetchMessageMetadata.fulfilled, (state, action) => {
-      // Access the arguments passed to the thunk
       const { thread, message } = action.meta.arg
-
-      state.currentMessageMetadata = {
-        isFetching: false,
-        metadata: action.payload,
-        thread,
-        message
-      }
-      state.isLoadingMetadata = false
+      const session = sessionOf(state, keyOf(action))
+      session.currentMessageMetadata = { isFetching: false, metadata: action.payload, thread, message }
+      session.isLoadingMetadata = false
     })
     builder.addCase(fetchMessageMetadata.rejected, (state, action) => {
-      state.currentMessageMetadata = null
-      state.isLoadingMetadata = false
+      const session = sessionOf(state, keyOf(action))
+      session.currentMessageMetadata = null
+      session.isLoadingMetadata = false
     })
-    builder.addCase(sendMessage.pending, state => {
-      state.isSendingMessage = true // Set isSending to true when sendMessage starts
+    builder.addCase(sendMessage.pending, (state, action) => {
+      sessionOf(state, keyOf(action)).isSendingMessage = true
     })
     builder.addCase(sendMessage.fulfilled, (state, action) => {
-      state.newlyCreatedThreadId = action.payload?.isNewThread ? action.payload.threadId : null
+      const session = sessionOf(state, keyOf(action))
+      session.newlyCreatedThreadId = action.payload?.isNewThread ? action.payload.threadId : null
+      session.isSendingMessage = false
       if (action.payload?.deepThinking) {
-        state.isDeepThinking = true
-        state.deepThinkingJobId = action.payload.jobExecutionId
-        state.deepThinkingSteps = []
-        state.isSendingMessage = false
+        session.isDeepThinking = true
+        session.deepThinkingJobId = action.payload.jobExecutionId
+        session.deepThinkingSteps = []
         try {
           localStorage.setItem('activeDeepThinkingJobId', String(action.payload.jobExecutionId))
           localStorage.setItem('activeDeepThinkingThreadId', action.payload.threadId)
         } catch (_) {}
-      } else {
-        state.isSendingMessage = false
       }
     })
-    builder.addCase(sendMessage.rejected, state => {
-      state.isSendingMessage = false
+    builder.addCase(sendMessage.rejected, (state, action) => {
+      sessionOf(state, keyOf(action)).isSendingMessage = false
     })
     builder.addCase(pollDeepThinkingStatus.fulfilled, (state, action) => {
       const { status, steps } = action.payload
-      state.deepThinkingSteps = steps
+      const session = sessionOf(state, keyOf(action))
+      session.deepThinkingSteps = steps
       if (['COMPLETED', 'FAILED', 'STOPPED', 'ABANDONED'].includes(status)) {
-        state.isDeepThinking = false
-        state.deepThinkingJobId = null
-        try {
-          localStorage.removeItem('activeDeepThinkingJobId')
-          localStorage.removeItem('activeDeepThinkingThreadId')
-        } catch (_) {}
+        session.isDeepThinking = false
+        session.deepThinkingJobId = null
+        forgetDeepThinkingJob()
       }
     })
-    builder.addCase(cancelDeepThinking.fulfilled, state => {
-      state.isDeepThinking = false
-      state.deepThinkingJobId = null
-      state.deepThinkingSteps = []
-      try {
-        localStorage.removeItem('activeDeepThinkingJobId')
-        localStorage.removeItem('activeDeepThinkingThreadId')
-      } catch (_) {}
-    })
-    builder.addCase(resumeDeepThinkingIfActive.fulfilled, (state, action) => {
-      if (action.payload) {
-        state.isDeepThinking = true
-        state.deepThinkingJobId = action.payload.jobExecutionId
-        state.deepThinkingSteps = []
-      }
+    builder.addCase(cancelDeepThinking.fulfilled, (state, action) => {
+      const session = sessionOf(state, keyOf(action))
+      session.isDeepThinking = false
+      session.deepThinkingJobId = null
+      session.deepThinkingSteps = []
+      forgetDeepThinkingJob()
     })
     builder.addCase(addMessage.fulfilled, (state, action) => {
-      if (state.currentThread && state.currentThread.messages) {
-        state.currentThread.messages = [...state.currentThread.messages, action.payload]
+      const session = state.sessions[keyOf(action)]
+      if (session?.currentThread?.messages) {
+        session.currentThread.messages = [...session.currentThread.messages, action.payload]
       }
-    })
-    builder.addCase(fetchThreadId.fulfilled, (state, action) => {
-      state.threadId = action.payload // Store the fetched threadId in the Redux state
     })
   }
 })
@@ -776,7 +725,7 @@ function _updateThreadsToLocalStorage(newThreadId) {
   localStorage.setItem(generalConstants.LOCAL_STORAGE_THREAD_IDS_NAME, JSON.stringify(threads))
 }
 
-async function _handleThreadPostSend({ threadId, responseThreadId, projectId, organizationId, token, dispatch }) {
+async function _handleThreadPostSend({ threadId, responseThreadId, projectId, organizationId, token, dispatch, chatKey }) {
   const isNewThread = !threadId
   const finalThreadId = isNewThread ? responseThreadId : threadId
 
@@ -789,13 +738,13 @@ async function _handleThreadPostSend({ threadId, responseThreadId, projectId, or
   dispatch(fetchThreads({ organizationId, token }))
 
   if (isNewThread && finalThreadId) {
-    await dispatch(loadThread({ threadId: finalThreadId, projectId, organizationId, token }))
+    await dispatch(loadThread({ threadId: finalThreadId, projectId, organizationId, token, chatKey }))
   }
 
   return { isNewThread, finalThreadId }
 }
 
-function _dispatchIncomingMessagesAndToolCalls({ apiMessages = [], responseThreadId, dispatch, iFrameMessageManager, sessionContext }) {
+function _dispatchIncomingMessagesAndToolCalls({ apiMessages = [], responseThreadId, dispatch, chatKey, iFrameMessageManager, sessionContext }) {
   if (!Array.isArray(apiMessages) || apiMessages.length === 0) return
 
   // sending PostMessage notification
@@ -807,7 +756,7 @@ function _dispatchIncomingMessagesAndToolCalls({ apiMessages = [], responseThrea
   const toolCallsToProcess = []
 
   apiMessages.forEach(message => {
-    dispatch(addMessage(message))
+    dispatch(addMessage({ chatKey, message }))
 
     // If this message invoked any tool calls, stash them for later
     if (Array.isArray(message?.toolCalls) && message?.toolCalls.length) {

@@ -1,7 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit'
 
 import { buildExportTaskPayload } from './geeExportPayload'
-import { layoutInitialState, layoutReducers } from './earthObservation.layout.slice'
 import { mapInitialState, mapReducers } from './earthObservation.map.slice'
 import { scriptsInitialState, scriptsReducers, addScriptsExtraReducers } from './earthObservation.scripts.slice'
 import { geometriesInitialState, geometriesReducers, addGeometriesExtraReducers } from './earthObservation.geometries.slice'
@@ -9,13 +8,11 @@ import { geometriesInitialState, geometriesReducers, addGeometriesExtraReducers 
 const slice = createSlice({
   name: 'earthObservation',
   initialState: {
-    layout: { ...layoutInitialState },
     map: { ...mapInitialState },
     scripts: { ...scriptsInitialState },
     geometries: { ...geometriesInitialState }
   },
   reducers: {
-    ...layoutReducers,
     ...mapReducers,
     ...scriptsReducers,
     ...geometriesReducers
@@ -26,27 +23,11 @@ const slice = createSlice({
   }
 })
 
-export * from './earthObservation.constants'
 export * from './earthObservation.thunks'
 export * from './earthObservation.selectors'
 
 export const {
   setSessionExpired,
-  setLayoutMode,
-  maximizeMap,
-  maximizeChat,
-  maximizeEditor,
-  minimizeMap,
-  restoreMap,
-  restoreDefault,
-  setSplitX,
-  setSplitY,
-  minimizeChat,
-  restoreChat,
-  minimizeEditor,
-  restoreEditor,
-  restoreChatFromMax,
-  restoreEditorFromMax,
   setGeeReady,
   setGeeUserEmail,
   setGeeProjectFallbackActive,

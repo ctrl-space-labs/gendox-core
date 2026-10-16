@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useDispatch, useSelector } from 'react-redux'
 import toast from 'react-hot-toast'
-import { AppWindow, Pencil, Plus, Send, Server, Trash2, Wrench, X } from 'lucide-react'
+import { AppWindow, FlaskConical, Pencil, Plus, Send, Server, Trash2, Wrench, X } from 'lucide-react'
 import useHasOrgRole from 'src/authentication/hooks/useHasOrgRole'
 import { fetchExampleTools } from 'src/store/activeProjectAgent/activeProjectAgent'
 import { getErrorMessage } from 'src/utils/errorHandler'
@@ -411,6 +411,10 @@ const AgentToolsPage = () => {
           </p>
         </div>
         <span className='sp' />
+        <Link className='btn' href={href('/gendox/project-settings/validate-tools')}>
+          <FlaskConical className='lucide' />
+          Validate tools
+        </Link>
         {canEdit && (
           <button className='btn primary' onClick={() => setEditing({ index: null })}>
             <Plus className='lucide' />

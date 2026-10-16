@@ -1,11 +1,3 @@
-// Layout
-export const selectLayoutMode = state => state.earthObservation.layout.layoutMode
-export const selectSplitX = state => state.earthObservation.layout.splitX
-export const selectSplitY = state => state.earthObservation.layout.splitY
-export const selectChatMin = state => state.earthObservation.layout.chatMin
-export const selectEditorMin = state => state.earthObservation.layout.editorMin
-export const selectMapMin = state => state.earthObservation.layout.mapMin
-
 // Map / GEE
 export const selectIsGeeReady = state => state.earthObservation.map.isGeeReady
 export const selectMapLayers = state => state.earthObservation.map.mapLayers

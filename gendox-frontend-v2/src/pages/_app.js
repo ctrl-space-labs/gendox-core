@@ -13,6 +13,7 @@ import { AuthProvider } from 'src/authentication/context/AuthContext'
 import { IFrameMessageManagerProvider } from 'src/authentication/context/IFrameMessageManagerContext'
 import { registerAxiosInterceptors } from 'src/configs/axiosInterceptors'
 import Toasts from 'src/components/ui/Toasts'
+import OptionalAnalyticsTracking from 'src/components/analytics/OptionalAnalyticsTracking'
 
 // Register the global 401 -> '/' redirect interceptor once for the whole app
 registerAxiosInterceptors()
@@ -35,6 +36,7 @@ const App = props => {
 
       <IFrameMessageManagerProvider>
         <AuthProvider option={authProviderOption}>
+          {(process.env.NEXT_PUBLIC_GTAG_ID || process.env.NEXT_PUBLIC_META_PIXEL_ID) && <OptionalAnalyticsTracking />}
           <OrganizationProjectGuard authProviderOption={authProviderOption} pageConfig={pageConfig}>
             <RouteHandler routeType={routeType}>{getLayout(<Component {...pageProps} />)}</RouteHandler>
           </OrganizationProjectGuard>

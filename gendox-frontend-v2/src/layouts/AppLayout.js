@@ -1,8 +1,21 @@
-import { useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
 import Head from 'next/head'
 import Sidebar from 'src/layouts/components/Sidebar'
 import Topbar from 'src/layouts/components/Topbar'
 import CommandPalette from 'src/layouts/components/CommandPalette'
+
+// lets a page change the top bar's title while it is open, e.g. the agent home shows its focused tab
+const TitleContext = createContext(() => {})
+
+export const useTopbarTitle = title => {
+  const setTitle = useContext(TitleContext)
+
+  useEffect(() => {
+    setTitle(title)
+  }, [title, setTitle])
+
+  useEffect(() => () => setTitle(null), [setTitle])
+}
 
 /**
  * The app shell: sidebar, top bar and ⌘K search around a page.
@@ -16,6 +29,8 @@ import CommandPalette from 'src/layouts/components/CommandPalette'
 const AppLayout = ({ page, title, crumb, children }) => {
   const [navOpen, setNavOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
+  const [liveTitle, setLiveTitle] = useState(null)
+  const shownTitle = liveTitle ?? title
 
   useEffect(() => {
     const onKey = e => {
@@ -32,12 +47,12 @@ const AppLayout = ({ page, title, crumb, children }) => {
   return (
     <div className={`app ${navOpen ? 'nav-open' : ''}`}>
       <Head>
-        <title>{title ? `${title} · Gendox` : 'Gendox'}</title>
+        <title>{shownTitle ? `${shownTitle} · Gendox` : 'Gendox'}</title>
       </Head>
       <Sidebar page={page} />
       <div className='main' onClick={() => navOpen && setNavOpen(false)}>
         <Topbar
-          title={title}
+          title={shownTitle}
           crumb={crumb}
           onMenuClick={e => {
             e.stopPropagation()
@@ -45,7 +60,7 @@ const AppLayout = ({ page, title, crumb, children }) => {
           }}
           onSearchClick={() => setSearchOpen(true)}
         />
-        {children}
+        <TitleContext.Provider value={setLiveTitle}>{children}</TitleContext.Provider>
       </div>
       <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
     </div>
