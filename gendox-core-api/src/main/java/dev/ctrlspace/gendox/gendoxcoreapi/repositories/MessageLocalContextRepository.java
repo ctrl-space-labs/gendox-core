@@ -23,6 +23,8 @@ public interface MessageLocalContextRepository extends JpaRepository<MessageLoca
             """)
     List<MessageLocalContext> findAllByMessageIdsWithDocument(List<UUID> messageIds);
 
+    boolean existsByMessage_IdAndContextTypeName(UUID messageId, String contextTypeName);
+
     boolean existsByMessage_ThreadIdAndDocument_Id(UUID threadId, UUID documentId);
 
     @Query("""

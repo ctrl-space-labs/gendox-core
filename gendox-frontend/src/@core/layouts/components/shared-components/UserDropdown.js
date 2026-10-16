@@ -17,6 +17,7 @@ import Typography from '@mui/material/Typography'
 import { generateIdenticon } from 'src/utils/identiconUtil'
 import { useAuth } from 'src/authentication/useAuth'
 import RequireOrgRoles from 'src/authentication/components/RequireOrgRoles'
+import RequireSuperAdmin from 'src/authentication/components/RequireSuperAdmin'
 import { memberRoleStatus, roleRankMap } from 'src/utils/membersUtils'
 
 import { localStorageConstants } from 'src/utils/generalConstants'
@@ -187,6 +188,17 @@ const UserDropdown = props => {
             </Box>
           </MenuItem>
         </RequireOrgRoles>
+        <RequireSuperAdmin>
+          <MenuItem
+            sx={{ p: 0 }}
+            onClick={() => handleDropdownClose(`/gendox/admin/skills/?organizationId=${organizationId}`)}
+          >
+            <Box sx={{ ...styles, textDecoration: 'none' }}>
+              <Icon icon='mdi:creation-outline' />
+              System skills
+            </Box>
+          </MenuItem>
+        </RequireSuperAdmin>
         <Divider />
         <MenuItem
           onClick={handleLogout}

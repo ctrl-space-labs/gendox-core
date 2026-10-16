@@ -18,6 +18,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectAgentRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TemplateRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.skills.SkillService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.AiModelUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.CancellationToken;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.DocumentUtils;
@@ -29,6 +30,7 @@ import org.apache.logging.log4j.util.Strings;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -69,6 +71,11 @@ public class CompletionService {
 
     private ObjectMapper objectMapper;
     private AiModelService aiModelService;
+    private SkillService skillService;
+
+    /** Tool rounds a completion may take before it must answer; deep thinking gets 20. Skill work (read a skill, look, then change) needs more than a few. */
+    @Value("${gendox.agents.max-tool-iterations:12}")
+    private int maxToolIterations = 12;
 
     @Autowired
     public CompletionService(@Lazy CompletionService self,
@@ -87,7 +94,8 @@ public class CompletionService {
                              DocumentUtils documentUtils,
                              ObjectMapper objectMapper,
                              AiModelService aiModelService,
-                             AiToolRegistry aiToolRegistry) {
+                             AiToolRegistry aiToolRegistry,
+                             SkillService skillService) {
         this.self = self;
         this.projectService = projectService;
         this.messageAiMessageConverter = messageAiMessageConverter;
@@ -104,6 +112,7 @@ public class CompletionService {
         this.objectMapper = objectMapper;
         this.aiModelService = aiModelService;
         this.aiToolRegistry = aiToolRegistry;
+        this.skillService = skillService;
     }
 
     private CompletionResponse getCompletionForMessages(List<AiModelMessage> aiModelMessages, String agentRole, AiModel aiModel,
@@ -253,6 +262,7 @@ public class CompletionService {
                 .filter(part -> !"text".equals(part.getType()))
                 .toList();
         AiModelMessage promptMessage = AiModelMessage.builder()
+                .id(message.getId()) // a tool in a background job finds who started it from this message
                 .content(runtimeContext.question())
                 .contentParts(contentParts)
                 .role(message.getRole() != null ? message.getRole() : "user")
@@ -269,7 +279,7 @@ public class CompletionService {
         int iteration = 0;
         // TODO: this indicate that is a deep thinking task, should be more explicit and not inferred by the presence cancelation token.
         boolean isDeepThinking = runtimeContext.cancellationToken() != null;
-        int maxIterations = isDeepThinking ? 20 : 5;
+        int maxIterations = isDeepThinking ? 20 : maxToolIterations;
 
         do {
             if (runtimeContext.cancellationToken() != null && runtimeContext.cancellationToken().isCancelled()) {
@@ -366,8 +376,10 @@ public class CompletionService {
                 .map(Project::getProjectAgent)
                 .orElse(null);
 
+        List<AgentSkill> agentSkills = skillsFor(agent, message, overrides);
+
         String question = resolveQuestion(message, nearestSections, agent);
-        String agentRole = resolveSystemPrompt(agent, overrides);
+        String agentRole = appendSkillsHeader(resolveSystemPrompt(agent, overrides), agentSkills);
         AiModel completionModel = resolveCompletionModel(agent, overrides);
         String completionApiKey = resolveCompletionApiKey(agent, overrides);
         Long maxTokens = resolveMaxTokens(agent, overrides);
@@ -376,7 +388,7 @@ public class CompletionService {
         UUID projectId = resolveProjectId(project, overrides);
         UUID organizationId = resolveOrganizationId(project, overrides);
         UUID createdByAgentUserId = resolveCreatedByAgentUserId(agent, overrides);
-        List<AiTools> availableTools = resolveAvailableTools(agent, overrides);
+        List<AiTools> availableTools = resolveAvailableTools(agent, overrides, agentSkills);
 
         AiModelRequestParams aiModelRequestParams = AiModelRequestParams.builder()
                 .maxTokens(maxTokens)
@@ -476,8 +488,10 @@ public class CompletionService {
         throw missingOverrideException("createdByAgentUserId");
     }
 
-    private List<AiTools> resolveAvailableTools(@Nullable ProjectAgent agent,
-                                                 @Nullable CompletionRuntimeOverridesDTO overrides) {
+    // package-private for tests
+    List<AiTools> resolveAvailableTools(@Nullable ProjectAgent agent,
+                                                 @Nullable CompletionRuntimeOverridesDTO overrides,
+                                                 List<AgentSkill> agentSkills) {
         List<AiTools> tools;
         if (overrides != null && overrides.getAiTools() != null && !overrides.getAiTools().isEmpty()) {
             tools = overrides.getAiTools();
@@ -487,6 +501,8 @@ public class CompletionService {
             return Collections.emptyList();
         }
 
+        tools = withSkillTools(tools, agentSkills);
+
         List<String> excluded = overrides != null ? overrides.getExcludedToolNames() : Collections.emptyList();
         if (excluded == null || excluded.isEmpty()) {
             return tools;
@@ -494,16 +510,79 @@ public class CompletionService {
 
         return tools.stream()
                 .filter(tool -> {
-                    try {
-                        JsonNode fn = objectMapper.readTree(tool.getJsonSchema());
-                        String name = fn.path("name").asText();
-                        return !excluded.contains(name);
-                    } catch (JsonProcessingException e) {
-                        logger.warn("Could not parse tool JSON schema while filtering excluded tools; keeping tool. Error: {}", e.getMessage());
-                        return true;
-                    }
+                    String name = toolName(tool);
+                    return name == null || !excluded.contains(name);
                 })
                 .collect(Collectors.toList());
+    }
+
+    /** The function name in a tool's JSON schema, or null when the schema can't be read. */
+    private String toolName(AiTools tool) {
+        try {
+            return objectMapper.readTree(tool.getJsonSchema()).path("name").asText();
+        } catch (JsonProcessingException e) {
+            logger.warn("Could not parse tool JSON schema; keeping tool. Error: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * An agent with skills also gets read_skill and the tools its skills list in {@code allowed-tools},
+     * each defined by its AI_TOOL_EXAMPLES row. None of them is stored on the agent: they are here only while a skill brings them, and an agent
+     * tool of the same name wins. Never changes the agent's own (managed) list.
+     */
+    private List<AiTools> withSkillTools(List<AiTools> tools, List<AgentSkill> agentSkills) {
+        List<String> skillToolNames = skillService.chatToolNames(agentSkills);
+        if (skillToolNames.isEmpty()) {
+            return tools;
+        }
+        Set<String> agentToolNames = tools.stream().map(this::toolName).collect(Collectors.toSet());
+        Map<String, JsonNode> examples = typeService.getToolExampleDefinitions();
+        List<AiTools> withSkillTools = new ArrayList<>(tools);
+        for (String name : skillToolNames) {
+            if (agentToolNames.contains(name)) {
+                continue;
+            }
+            // the tool's example row, as the agent's own tools get it; read_skill has none
+            Optional<String> definition = examples.containsKey(name)
+                    ? Optional.of(examples.get(name).toString())
+                    : aiToolRegistry.getDefinition(name);
+            definition.ifPresent(json -> withSkillTools.add(AiTools.builder()
+                    .type("function")
+                    .jsonSchema(json)
+                    .build()));
+        }
+        return withSkillTools;
+    }
+
+    private static boolean hasSystemPromptOverride(@Nullable CompletionRuntimeOverridesDTO overrides) {
+        return overrides != null && overrides.getSystemPrompt() != null && !overrides.getSystemPrompt().isBlank();
+    }
+
+    /**
+     * The skills a completion gets: every skill of the agent, in chats and task runs alike, plus the
+     * Gendox assistant skill for a chat from a Gendox page. A caller that replaces the system prompt
+     * (a sub-agent) speaks as someone else and gets none.
+     */
+    // package-private for tests
+    List<AgentSkill> skillsFor(@Nullable ProjectAgent agent, Message prompt, @Nullable CompletionRuntimeOverridesDTO overrides) {
+        if (agent == null || hasSystemPromptOverride(overrides)) {
+            return List.of();
+        }
+        return skillService.getCompletionSkills(agent.getId(), prompt);
+    }
+
+    /**
+     * The skills header goes at the end of the system prompt, never into a message: the system
+     * prompt is sent with every request anyway, and an unchanged header keeps the prefix cacheable.
+     */
+    // package-private for tests
+    String appendSkillsHeader(String systemPrompt, List<AgentSkill> agentSkills) {
+        String header = skillService.buildSkillsHeader(agentSkills);
+        if (header == null) {
+            return systemPrompt;
+        }
+        return systemPrompt + "\n\n" + header;
     }
 
     private String resolveSystemPrompt(@Nullable ProjectAgent agent,

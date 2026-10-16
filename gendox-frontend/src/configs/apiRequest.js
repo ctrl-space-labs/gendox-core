@@ -234,6 +234,11 @@ export default {
 
   getToolExamples: () => `${url}types/ai-tool-examples`,
 
+  // Gendox (system) skills: the library agents add skills from; changes are super admin only
+  skills: () => `${url}skills`,
+  skill: name => `${url}skills/${encodeURIComponent(name)}`,
+  skillTools: () => `${url}skills/tools`,
+
   createTask: (organizationId, projectId) => `${url}organizations/${organizationId}/projects/${projectId}/tasks`,
 
   duplicateTask: (organizationId, projectId) =>

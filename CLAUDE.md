@@ -94,7 +94,12 @@ docker-compose logs -f gendox-api
 Available compose environments in `gendox-compose-scripts/`:
 - `build-ci-installation/` — CI build (`.env.local`)
 - `dev-ci-installation/` — Development CI (`.env`)
-- `local-tests-installation/` — Local e2e testing (`docker-compose-with-tests.yml`)
+- `local-development-test/` — **Use this one for agentic development and testing.** A full stack (DB, API, Keycloak, frontend) isolated from your normal local setup: its own Postgres volume and shifted ports (DB 5533, API 8081, Keycloak 8543, frontend 3100), so it can run beside `dev-ci-installation`. See its `README.md`.
+  - Start: `cp env.local.example .env.local` (first time), then `docker compose --env-file .env.local up -d`. `--env-file` is required.
+  - Migrations run only on an empty data directory, so pick up a new migration with `docker compose --env-file .env.local down -v` and `up -d` again.
+  - `keycloak-init/gendox-test-users.sh` adds a test user and a direct-grant client, so tokens can be fetched without a browser (credentials in that script).
+  - Point agents at the `mock-gemini-2.0-flash` model to exercise completions with no API key and no cost.
+- `local-tests-installation/` — Older local e2e file (`docker-compose-with-tests.yml`). Currently broken (healthcheck targets the wrong port); not a basis for testing.
 
 ## Architecture Overview
 

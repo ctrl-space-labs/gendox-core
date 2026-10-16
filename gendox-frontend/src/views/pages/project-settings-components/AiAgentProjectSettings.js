@@ -28,7 +28,7 @@ import Radio from '@mui/material/Radio'
 import { localStorageConstants } from 'src/utils/generalConstants'
 import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
-import {fetchAiModels, fetchExampleTools, updateProjectAgent} from 'src/store/activeProjectAgent/activeProjectAgent'
+import {fetchAiModels, fetchExampleTools, fetchSkillLibrary, fetchSkillTools, updateProjectAgent} from 'src/store/activeProjectAgent/activeProjectAgent'
 import { fetchProject } from 'src/store/activeProject/activeProject'
 import commonConfig from 'src/configs/common.config.js'
 import Dialog from "@mui/material/Dialog";
@@ -38,6 +38,8 @@ import { useRouter } from 'next/router'
 import RequireOrgRoles from 'src/authentication/components/RequireOrgRoles'
 import AgentEmbedSnippet from 'src/views/pages/project-settings-components/AgentEmbedSnippet'
 import AiModelOption from 'src/views/custom-components/ai-model/AiModelOption'
+import { parseSkill } from 'src/utils/skillMarkdown'
+import AgentSkillsSection from 'src/views/pages/project-settings-components/AgentSkillsSection'
 
 
 const AiAgentProjectSettings = () => {
@@ -48,7 +50,7 @@ const AiAgentProjectSettings = () => {
 
   const { projectDetails: project, isBlurring: isUpdatingProject } = useSelector(state => state.activeProject)
 
-  const { isFetchingAiModels, isUpdatingProjectAgent, aiModels, exampleTools, isFetchingExampleTools } = useSelector(state => state.activeProjectAgent)
+  const { isFetchingAiModels, isUpdatingProjectAgent, aiModels, exampleTools, isFetchingExampleTools, skillLibrary, isFetchingSkillLibrary, skillTools } = useSelector(state => state.activeProjectAgent)
   const { semanticModels, completionModels, decisionModels, moderationModels, rerankModels } = aiModels
   const isLoading = isUpdatingProjectAgent || isFetchingAiModels || isUpdatingProject || isFetchingExampleTools
 
@@ -81,6 +83,7 @@ const AiAgentProjectSettings = () => {
     topP: project.projectAgent.topP,
     agentBehavior: project.projectAgent.agentBehavior,
     aiTools: project.projectAgent.aiTools,
+    agentSkills: project.projectAgent.agentSkills || [],
     selected: project.projectAgent.privateAgent ? 'private' : 'public'
   }
 
@@ -95,6 +98,13 @@ const AiAgentProjectSettings = () => {
   } = useForm({ defaultValues })
 
   const aiTools = watch('aiTools');
+  const agentSkills = watch('agentSkills');
+
+  // After a save the project is fetched again: take the saved skills, so a new skill gets its id
+  // and is not added a second time by the next save.
+  useEffect(() => {
+    setValue('agentSkills', project.projectAgent.agentSkills || [])
+  }, [project.projectAgent.agentSkills, setValue])
 
   const handleAddTool = () => {
     setEditingIndex(null)
@@ -223,6 +233,8 @@ const AiAgentProjectSettings = () => {
     }
     if (token) {
       dispatch(fetchExampleTools({ token }))
+      dispatch(fetchSkillLibrary({ token }))
+      dispatch(fetchSkillTools({ token }))
     }
   }, [organizationId, projectId, token, dispatch])
 
@@ -251,7 +263,8 @@ const AiAgentProjectSettings = () => {
         advancedSearchEnable: data.advancedSearchEnable,
         rerankEnable: data.rerankEnable,
         autoDigitization: data.autoDigitization,
-        aiTools: data.aiTools
+        aiTools: data.aiTools,
+        agentSkills: data.agentSkills
       }
     }
     dispatch(updateProjectAgent({ organizationId, projectId, payload: updatedProjectPayload, token }))
@@ -671,7 +684,7 @@ const AiAgentProjectSettings = () => {
 
                   {/* list of existing tools */}
                   <Grid item xs={12}>
-                    <Stack direction='row' spacing={2} flexWrap='wrap'>
+                    <Stack direction='row' spacing={2} useFlexGap flexWrap='wrap'>
                       {aiTools.map((tool, idx) => {
                         console.log(`Tool #${idx + 1} :`, tool);
                         const toolSchemaObj = JSON.parse(tool.jsonSchema)
@@ -696,13 +709,40 @@ const AiAgentProjectSettings = () => {
                               deleteIcon={<Icon icon='mdi:close'/>}
                               icon={<Icon icon='mdi:curly-braces'/>}
                               label={toolSchemaObj.name}
-                              sx={{mb: 1}}
+                              size='small'
                             />
                           </Tooltip>
                         )
                         }
                       )}
 
+                      {/* tools the agent's skills bring: not stored on the agent, so they are removed with the skill */}
+                      {(() => {
+                        const ownToolNames = new Set(aiTools.map(tool => JSON.parse(tool.jsonSchema).name))
+                        const fromSkills = new Map()
+                        ;(agentSkills || []).forEach(skill =>
+                          parseSkill(skill.content).tools
+                            .filter(name => !ownToolNames.has(name))
+                            .forEach(name => fromSkills.set(name, [...(fromSkills.get(name) || []), skill.name]))
+                        )
+                        const descriptions = new Map(skillTools.map(tool => [tool.name, tool.description]))
+
+                        return [...fromSkills.keys()].sort().map(name => (
+                          <Tooltip
+                            key={`skill-tool-${name}`}
+                            title={`${descriptions.get(name) || ''}\n\nFrom the skill ${fromSkills.get(name).join(', ')}`.trim()}
+                            arrow
+                            placement='top'
+                            componentsProps={{
+                              tooltip: {
+                                sx: {whiteSpace: 'pre-line', maxWidth: 300}
+                              }
+                            }}
+                          >
+                            <Chip variant='filled' icon={<Icon icon='mdi:curly-braces'/>} label={name} size='small' />
+                          </Tooltip>
+                        ))
+                      })()}
                     </Stack>
                   </Grid>
                   {/* add tool button */}
@@ -810,14 +850,25 @@ const AiAgentProjectSettings = () => {
                   </Dialog>
                 </>
 
-                {/* 4. Access */}
+                {/* 4. Skills */}
+                <AgentSkillsSection
+                  sectionNumber={4}
+                  skills={agentSkills}
+                  onChange={updated => setValue('agentSkills', updated, { shouldDirty: true })}
+                  library={skillLibrary}
+                  libraryLoading={isFetchingSkillLibrary}
+                  onOpenLibrary={() => token && dispatch(fetchSkillLibrary({ token }))}
+                  knownTools={skillTools.map(tool => tool.name)}
+                />
+
+                {/* 5. Access */}
                 <>
                   <Grid item xs={12}>
                     <Divider sx={{ mt: 5, mb: '0 !important' }} />
                   </Grid>
                   <Grid item xs={12} sx={{ display: 'flex', alignItems: 'center' }}>
                     <Typography variant='body2' sx={{ fontWeight: 600, color: 'primary.main' }}>
-                      4. Access
+                      5. Access
                     </Typography>
                     <Tooltip title='With a public Agent you can use the API without any authentication, use with caution.'>
                       <IconButton color='primary' sx={{ ml: 1 }}>
