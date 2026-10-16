@@ -1,5 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.services.chat.ChatCompletionRun;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -234,11 +236,19 @@ public class CompletionService {
     public List<Message> getCompletion(Message message, List<DocumentInstanceSectionDTO> nearestSections, @Nullable Project project,
                                        @Nullable ObjectNode responseJsonSchema,
                                        @Nullable CompletionRuntimeOverridesDTO overrides) throws GendoxException {
+        return getCompletion(message, nearestSections, project, responseJsonSchema, overrides, null);
+    }
+
+    public List<Message> getCompletion(Message message, List<DocumentInstanceSectionDTO> nearestSections, @Nullable Project project,
+                                      @Nullable ObjectNode responseJsonSchema, @Nullable CompletionRuntimeOverridesDTO overrides,
+                                      @Nullable ChatCompletionRun chat) throws GendoxException {
         CompletionRuntimeContext runtimeContext = resolveCompletionRuntimeContext(message, nearestSections, project, overrides);
         runModerationIfEnabled(runtimeContext);
 
         List<AiModelMessage> previousMessages;
-        if (overrides != null && overrides.getPreviousMessages() != null && !overrides.getPreviousMessages().isEmpty()) {
+        if (chat != null) {
+            previousMessages = chat.messages();
+        } else if (overrides != null && overrides.getPreviousMessages() != null && !overrides.getPreviousMessages().isEmpty()) {
             // TODO handle this in the resolveCompletionRuntimeContext
             previousMessages = overrides.getPreviousMessages();
         } else {
@@ -257,7 +267,7 @@ public class CompletionService {
                 .contentParts(contentParts)
                 .role(message.getRole() != null ? message.getRole() : "user")
                 .build();
-        previousMessages.add(promptMessage);
+        if (chat == null) previousMessages.add(promptMessage);
 
         // Pre-load audit log types so we reuse them in the loop
         Type completionRequestType = typeService.getAuditLogTypeByName("COMPLETION_REQUEST");
@@ -266,7 +276,7 @@ public class CompletionService {
         List<Message> allResponseMessages = new ArrayList<>();
 
         boolean hasToolCalls;
-        int iteration = 0;
+        int iteration = chat == null ? 0 : chat.turn().getIteration();
         // TODO: this indicate that is a deep thinking task, should be more explicit and not inferred by the presence cancelation token.
         boolean isDeepThinking = runtimeContext.cancellationToken() != null;
         int maxIterations = isDeepThinking ? 20 : 5;
@@ -279,14 +289,18 @@ public class CompletionService {
 
             // TODO add from the orginal thread, the system prompt and the first user message to give to the subagent the original context
             //  and also to hit cache for the long original messages.
-            CompletionResponse completionResponse = getCompletionForMessages(previousMessages,
+            CompletionResponse completionResponse = chat == null ? getCompletionForMessages(previousMessages,
                     runtimeContext.agentRole(),
                     runtimeContext.completionModel(),
                     runtimeContext.aiModelRequestParams(),
                     runtimeContext.completionApiKey(),
                     runtimeContext.availableTools(),
                     "auto",
-                    responseJsonSchema);
+                    responseJsonSchema)
+                    : aiModelUtils.getAiModelApiAdapterImpl(runtimeContext.completionModel().getApiType().getName())
+                    .askCompletion(previousMessages, runtimeContext.agentRole(), runtimeContext.completionModel(),
+                            runtimeContext.aiModelRequestParams(), runtimeContext.completionApiKey(), chat.tools(),
+                            "auto", responseJsonSchema, chat.deltas());
 
             saveCompletionAuditLogs(completionResponse, runtimeContext, completionRequestType, completionResponseType);
 
@@ -296,8 +310,7 @@ public class CompletionService {
             completionResponseMessage.setThreadId(message.getThreadId());
             completionResponseMessage.setCreatedBy(runtimeContext.createdByAgentUserId());
             completionResponseMessage.setUpdatedBy(runtimeContext.createdByAgentUserId());
-            completionResponseMessage = messageService.createMessage(completionResponseMessage);
-
+            completionResponseMessage = chat == null ? messageService.createMessage(completionResponseMessage) : chat.create(completionResponseMessage);
             allResponseMessages.add(completionResponseMessage);
             hasToolCalls = "tool_calls".equals(completionResponse.getChoices().getFirst().getFinishReason());
 
@@ -310,8 +323,8 @@ public class CompletionService {
                         previousMessages,
                         runtimeContext.project(),
                         runtimeContext.agent(),
-                        runtimeContext.availableTools(),
-                        runtimeContext.cancellationToken()
+                        chat == null ? runtimeContext.availableTools() : chat.tools(),
+                        runtimeContext.cancellationToken(), chat
                 );
 
                 // Save tool response messages.
@@ -321,9 +334,16 @@ public class CompletionService {
                     toolResponse.setThreadId(message.getThreadId());
                     toolResponse.setCreatedBy(runtimeContext.createdByAgentUserId());
                     toolResponse.setUpdatedBy(runtimeContext.createdByAgentUserId());
-                    messageService.createMessage(toolResponse);
+                    if (chat == null) messageService.createMessage(toolResponse);
+                    else chat.create(toolResponse);
                     allResponseMessages.add(toolResponse);
                 });
+
+                if (chat != null && !chat.turn().getPendingCalls().isEmpty()) {
+                    if (chat.turn().getIteration() == maxIterations - 1)
+                        chat.warning("SYSTEM WARNING: You are approaching the maximum number of tool-calling iterations. In your NEXT message provide the final answer with no more tool calls.");
+                    if (chat.waitForTools()) return allResponseMessages;
+                }
 
                 // Sanity check: all tools responded
                 if (completionResponseMessage.getToolCalls() == null ||
@@ -332,8 +352,11 @@ public class CompletionService {
                     hasToolCalls = false; // avoid infinite loop with inconsistent state
                 } else {
                     // Extend previousMessages for the *next* iteration ===
-                    previousMessages.add(completionResponse.getChoices().get(0).getMessage());
-                    previousMessages.addAll(toolResponseMessages);
+                    if (chat != null) previousMessages = chat.messages();
+                    else {
+                        previousMessages.add(completionResponse.getChoices().get(0).getMessage());
+                        previousMessages.addAll(toolResponseMessages);
+                    }
                 }
             }
 
@@ -341,7 +364,10 @@ public class CompletionService {
 
             if (iteration == maxIterations - 1 && hasToolCalls) {
                 logger.warn("Sending warning message to LLM about approaching max tool-calling iterations (iteration {})", iteration);
-                previousMessages.add(AiModelMessage.builder()
+                if (chat != null) {
+                    chat.warning("SYSTEM WARNING: You are approaching the maximum number of tool-calling iterations. In your NEXT message provide the final answer with no more tool calls.");
+                    previousMessages = chat.messages();
+                } else previousMessages.add(AiModelMessage.builder()
                         .role("user")
                         .content("SYSTEM WARNING: You are approaching the maximum number of tool-calling iterations. "
                                 + "In your NEXT message you MUST provide the final answer to the user (no more tool calls). "
@@ -691,7 +717,8 @@ public class CompletionService {
      * @param availableTools
      * @return
      */
-    private List<AiModelMessage> handleToolExecution(Message completionResponseMessage, List<AiModelMessage> parentPreviousMessages, @Nullable Project project, @Nullable ProjectAgent agent, List<AiTools> availableTools, @Nullable CancellationToken cancellationToken) {
+    private List<AiModelMessage> handleToolExecution(Message completionResponseMessage, List<AiModelMessage> parentPreviousMessages, @Nullable Project project, @Nullable ProjectAgent agent, List<AiTools> availableTools, @Nullable CancellationToken cancellationToken,
+                                                     @Nullable ChatCompletionRun chat) {
         Map<String, AiTools> toolMap = new HashMap<>();
         //map available tools for quick lookup, parse the jsonSchema to JsonNode and find the .function.name property
         availableTools.forEach(tool -> {
@@ -716,6 +743,7 @@ public class CompletionService {
                 throw new GendoxRuntimeException(HttpStatus.BAD_REQUEST, "AI_TOOL_NOT_FOUND", "Tool with name " + toolName + " not found in available tools");
             }
 
+            if (chat != null && chat.defer(completionResponseMessage, toolCall, toolDefinition, aiToolRegistry.supports(toolName))) return;
             JsonNode args = toolCall.get("function").get("arguments");
             ToolExecutionContext ctx = new ToolExecutionContext(project, agent, completionResponseMessage, parentPreviousMessages, toolDefinition, cancellationToken);
             JsonNode result = aiToolRegistry.execute(toolName, args, ctx);

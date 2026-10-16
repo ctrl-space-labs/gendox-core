@@ -47,6 +47,16 @@ public class MistralCompletionResponseConverter {
         AiModelMessage.AiModelMessageBuilder builder = AiModelMessage.builder()
                 .role(message.getRole())
                 .content(message.getContent());
+        if (message.getTool_calls() != null && !message.getTool_calls().isEmpty()) {
+            var calls = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.arrayNode();
+            for (var call : message.getTool_calls()) {
+                var node = calls.addObject().put("id", call.getId()).put("type", "function");
+                var args = call.getFunction().getArguments();
+                node.putObject("function").put("name", call.getFunction().getName())
+                        .put("arguments", args == null ? "{}" : args.isTextual() ? args.asText() : args.toString());
+            }
+            builder.toolCalls(calls);
+        }
 
         if (message.getThinking() != null) {
             builder.reasoningContent(message.getThinking());

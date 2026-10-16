@@ -370,12 +370,17 @@ public class ProjectAgentService {
         Set<UUID> keepIds = new HashSet<>();
 
         for (AiTools incTool : incomingTools) {
+            if (incTool.getExecution() == null) incTool.setExecution("ACTION");
+            if (!java.util.Set.of("ACTION", "CLIENT").contains(incTool.getExecution()))
+                throw new dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxRuntimeException(
+                        org.springframework.http.HttpStatus.BAD_REQUEST, "INVALID_TOOL_EXECUTION", "Tool execution must be ACTION or CLIENT");
             UUID id = incTool.getId();
 
             if (id != null && currentToolsById.containsKey(id)) {
                 // update existing
                 AiTools managed = currentToolsById.get(id);
                 managed.setJsonSchema(incTool.getJsonSchema());
+                managed.setExecution(incTool.getExecution() == null ? "ACTION" : incTool.getExecution());
 
                 keepIds.add(id);
             } else {

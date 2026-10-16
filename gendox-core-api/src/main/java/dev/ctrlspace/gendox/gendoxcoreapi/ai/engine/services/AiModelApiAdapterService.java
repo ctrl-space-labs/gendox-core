@@ -1,5 +1,8 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.CompletionDelta;
+import java.util.function.Consumer;
+
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
@@ -16,6 +19,12 @@ public interface AiModelApiAdapterService {
     CompletionResponse askCompletion(List<AiModelMessage> messages, String agentRole, AiModel aiModel,
                                      AiModelRequestParams aiModelRequestParams, String apiKey, List<AiTools> tools, String toolChoice,
                                      @Nullable ObjectNode responseJsonSchema);
+
+    default CompletionResponse askCompletion(List<AiModelMessage> messages, String agentRole, AiModel aiModel,
+            AiModelRequestParams params, String apiKey, List<AiTools> tools, String toolChoice,
+            @Nullable ObjectNode schema, Consumer<CompletionDelta> listener) {
+        return askCompletion(messages, agentRole, aiModel, params, apiKey, tools, toolChoice, schema);
+    }
 
     ModerationResponse askModeration(String message, String apiKey, AiModel aiModel);
     RerankResponse askRerank(List<String> documents, String query, AiModel aiModel, String apiKey);

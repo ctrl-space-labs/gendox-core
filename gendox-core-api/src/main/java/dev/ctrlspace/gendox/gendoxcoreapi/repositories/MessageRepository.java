@@ -92,6 +92,17 @@ public interface MessageRepository extends JpaRepository<Message, UUID>, Queryds
             @Param("endDate") Instant endDate
     );
 
+    @Query("select distinct m from Message m left join fetch m.localContexts c left join fetch c.document where m.id in :ids")
+    List<Message> findWithContextsByIds(@Param("ids") List<UUID> ids);
+
+    @Query("select m.id from Message m where m.threadId = :threadId and m.createdAt <= :before and m.id <> :currentId order by m.createdAt, m.id")
+    List<UUID> findHistoryIds(@Param("threadId") UUID threadId, @Param("before") Instant before, @Param("currentId") UUID currentId);
+
+    @Query("select distinct m from Message m left join fetch m.messageSections where m.id in :ids")
+    List<Message> findWithSectionsByIds(@Param("ids") List<UUID> ids);
+
+    java.util.Optional<Message> findFirstByThreadIdAndRoleAndToolCallIdOrderByCreatedAtDesc(UUID threadId, String role, String toolCallId);
+
     boolean existsByIdAndThreadId(UUID id, UUID threadId);
 
     @Query("""

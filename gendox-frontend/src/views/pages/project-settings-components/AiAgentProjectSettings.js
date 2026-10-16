@@ -55,6 +55,7 @@ const AiAgentProjectSettings = () => {
   /* ----------  Add these state hooks (place near the other hooks, before the return)  ---------- */
   const [toolModalOpen, setToolModalOpen] = useState(false)                     // add / edit modal
   const [editingIndex, setEditingIndex] = useState(null)         // index of tool under edit
+  const [toolExecution, setToolExecution] = useState('ACTION')
   const [toolSchema, setToolSchema] = useState('')                              // JSON string in modal textarea
 
   const { id: projectId, organizationId } = project
@@ -99,6 +100,7 @@ const AiAgentProjectSettings = () => {
   const handleAddTool = () => {
     setEditingIndex(null)
     setToolSchema('')
+    setToolExecution('ACTION')
     setToolModalOpen(true)
   }
 
@@ -109,6 +111,7 @@ const AiAgentProjectSettings = () => {
 
   const handleEditTool = (idx) => {
     setEditingIndex(idx)
+    setToolExecution(aiTools[idx].execution || 'ACTION')
     setToolSchema(JSON.stringify(JSON.parse(aiTools[idx].jsonSchema), null, 2))
     setToolModalOpen(true)
   }
@@ -127,6 +130,7 @@ const AiAgentProjectSettings = () => {
       let updatedTools;
       const newTool = {
         type: "function",
+        execution: toolExecution,
         jsonSchema: toolSchemaStr,
       };
 
@@ -783,6 +787,12 @@ const AiAgentProjectSettings = () => {
                       </FormControl>
 
                       {/* JSON editor */}
+                      <TextField select fullWidth label='Client tool execution' value={toolExecution}
+                        onChange={event => setToolExecution(event.target.value)} sx={{ mb: 2 }}
+                        helperText='Built-in Gendox tools always run on the server.'>
+                        <MenuItem value='ACTION'>Async — continue without the result</MenuItem>
+                        <MenuItem value='CLIENT'>Sync — wait for the host result</MenuItem>
+                      </TextField>
                       <TextField
                         fullWidth
                         multiline

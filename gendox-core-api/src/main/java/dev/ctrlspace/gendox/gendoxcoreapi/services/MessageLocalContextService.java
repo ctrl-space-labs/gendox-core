@@ -156,6 +156,10 @@ public class MessageLocalContextService {
 
 
     public @NotNull List<ContentPart> getImageContentPartsFromLocalContext(Message message) {
+        return getImageContentPartsFromLocalContext(message, false);
+    }
+
+    public @NotNull List<ContentPart> getImageContentPartsFromLocalContext(Message message, boolean required) {
         List<ContentPart> attachedImages = message.getLocalContexts().stream()
                 .filter(c -> "ATTACHED_DOCUMENT".equals(c.getContextTypeName()))
                 .map(c -> c.getDocument())
@@ -176,6 +180,7 @@ public class MessageLocalContextService {
                                         .build())
                                 .build();
                     } catch (Exception e) {
+                        if (required) throw new IllegalStateException("An original image attachment is unavailable", e);
                         return null;
                     }
                 })

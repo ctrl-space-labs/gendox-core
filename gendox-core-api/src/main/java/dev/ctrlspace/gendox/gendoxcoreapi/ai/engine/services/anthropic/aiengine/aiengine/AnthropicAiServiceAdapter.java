@@ -1,5 +1,9 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.anthropic.aiengine.aiengine;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.ProviderStreamClient;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.CompletionDelta;
+import java.util.function.Consumer;
+
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.AnthropicCompletionResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.AnthropicMessagesConverter;
@@ -37,6 +41,9 @@ public class AnthropicAiServiceAdapter implements AiModelApiAdapterService {
     private RestTemplate restTemplate;
     private AnthropicCompletionResponseConverter anthropicCompletionResponseConverter;
     private AnthropicMessagesConverter anthropicMessagesConverter;
+
+    @Autowired
+    private com.fasterxml.jackson.databind.ObjectMapper streamMapper;
 
     @Autowired
     public AnthropicAiServiceAdapter(RestTemplate restTemplate,
@@ -85,6 +92,11 @@ public class AnthropicAiServiceAdapter implements AiModelApiAdapterService {
 
     @Override
     public CompletionResponse askCompletion(List<AiModelMessage> messages, String agentRole, AiModel aiModel, AiModelRequestParams aiModelRequestParams, String apiKey, List<AiTools> tools, String toolChoice, @Nullable ObjectNode responseJsonSchema) {
+        return askCompletion(messages, agentRole, aiModel, aiModelRequestParams, apiKey, tools, toolChoice, responseJsonSchema, null);
+    }
+
+    @Override
+    public CompletionResponse askCompletion(List<AiModelMessage> messages, String agentRole, AiModel aiModel, AiModelRequestParams aiModelRequestParams, String apiKey, List<AiTools> tools, String toolChoice, @Nullable ObjectNode responseJsonSchema, Consumer<CompletionDelta> listener){
         if (Strings.isNotEmpty(agentRole)) {
             upsertSystemPrompt(messages, agentRole);
         }
@@ -163,7 +175,10 @@ public class AnthropicAiServiceAdapter implements AiModelApiAdapterService {
         anthropicRequestBuilder.outputConfig(outputConfig.build());
 
         AnthropicCompletionRequest anthropicRequest = anthropicRequestBuilder.build();
-        AnthropicCompletionResponse anthropicResponse = this.getCompletionResponse(anthropicRequest, aiModel, apiKey);
+        AnthropicCompletionResponse anthropicResponse = listener == null ? this.getCompletionResponse(anthropicRequest, aiModel, apiKey) :
+                ProviderStreamClient.complete(
+                        restTemplate, streamMapper, aiModel.getUrl(), buildHeader(apiKey), anthropicRequest,
+                        ProviderStreamClient.Protocol.ANTHROPIC, AnthropicCompletionResponse.class, listener);
 
         return anthropicCompletionResponseConverter.toCompletionResponse(anthropicResponse);
     }

@@ -18,6 +18,12 @@ import java.util.UUID;
 public class CompletionRequestDTO {
 
     private String value;
+    private String role;
+    private String toolCallId;
+    @Builder.Default
+    private boolean stream = false;
+    @Builder.Default
+    private boolean clientToolResults = false;
     private UUID threadId;
 
     @Builder.Default

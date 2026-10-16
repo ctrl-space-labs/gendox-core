@@ -1,5 +1,9 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.services.chat.ChatCompletionRun;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.chat.ChatCompletionService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.chat.ChatEventStream;
+
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -15,6 +19,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -65,6 +71,8 @@ public class EmbeddingsController {
     private MessageLocalContextConverter messageLocalContextConverter;
     private MessageLocalContextService messageLocalContextService;
     private DeepThinkingBatchService deepThinkingBatchService;
+    @Autowired
+    private ChatCompletionService chatCompletions;
 
 
     @Value("${proven-ai.enabled}")
@@ -168,10 +176,9 @@ public class EmbeddingsController {
     @PreAuthorize(" @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectsFromRequestParams') || " +
             "@securityUtils.isPublicProject(#projectId)")
     @PostMapping("/messages/completions")
-    @Operation(summary = "Semantic completion of message",
-            description = "Find a message within a project that semantically completes the given input message. " +
-                    "This endpoint calculates the embedding for the input message and searches for a complementary message " +
-                    "in the context of the provided project.")
+    @Operation(summary = "Complete a user or tool message",
+            description = "Normal chat retrieves project knowledge through advanced_search. " +
+                    "Set stream=true for SSE; omit it for JSON. Tool replies use role=tool and toolCallId on this same endpoint.")
     @Observed(name = "EmbeddingsController.getCompletionSearch",
             contextualName = "EmbeddingsController#getCompletionSearch",
             lowCardinalityKeyValues = {
@@ -180,11 +187,30 @@ public class EmbeddingsController {
                     ObservabilityTags.LOG_METHOD_NAME, "true",
                     ObservabilityTags.LOG_ARGS, "false"
             })
-    public ResponseEntity<CompletionMessageDTO> getCompletionSearch(@RequestBody CompletionRequestDTO completionRequestDTO,
+    public ResponseEntity<?> getCompletionSearch(@RequestBody CompletionRequestDTO completionRequestDTO,
                                                                     @RequestParam String projectId,
                                                                     Authentication authentication,
                                                                     HttpServletRequest request) throws Exception {
 
+        String role = completionRequestDTO.getRole() == null ? "user" : completionRequestDTO.getRole();
+        if (!role.equals("user") && !role.equals("tool"))
+            throw new GendoxException("INVALID_MESSAGE_ROLE", "Only user and tool messages are accepted", HttpStatus.BAD_REQUEST);
+        if (role.equals("tool")) {
+            if (completionRequestDTO.isDeepThinking())
+                throw new GendoxException("INVALID_TOOL_REPLY", "Tool replies cannot start deep-thinking jobs", HttpStatus.BAD_REQUEST);
+            var stream = completionRequestDTO.isStream() ? new ChatEventStream() : null;
+            try {
+                var run = chatCompletions.reply(completionRequestDTO, UUID.fromString(projectId),
+                        request.getHeader("X-Gendox-Completion-Token"), stream == null ? (event, data) -> {} : stream);
+                if (run == null) {
+                    if (stream != null) stream.detach();
+                    return ResponseEntity.accepted().body(chatCompletions.status(completionRequestDTO.getThreadId(), request.getHeader("X-Gendox-Completion-Token")));
+                }
+                return runChatCompletion(run, stream);
+            } catch (Exception e) { if (stream != null) stream.detach(); throw e; }
+        }
+        if (completionRequestDTO.getValue() == null)
+            throw new GendoxException("MESSAGE_REQUIRED", "Message value is required", HttpStatus.BAD_REQUEST);
         Project project = projectService.getProjectById(UUID.fromString(projectId));
         // check if the message is within the subscription limits
         if (!subscriptionValidationService.canSendMessage(project.getOrganizationId(), project.getProjectAgent().getCompletionModel())) {
@@ -214,28 +240,39 @@ public class EmbeddingsController {
                 )
         );
         message.setLocalContexts(contexts);
+        if (!completionRequestDTO.isDeepThinking()) {
+            var stream = completionRequestDTO.isStream() ? new ChatEventStream() : null;
+            try {
+                var run = chatCompletions.begin(message, project, completionRequestDTO, stream == null ? (event, data) -> {} : stream);
+                return runChatCompletion(run, stream);
+            } catch (Exception e) { if (stream != null) stream.detach(); throw e; }
+        }
         Message savedMessage = messageService.createMessage(message);
 
         List<ContentPart> attachedImages = messageLocalContextService.getImageContentPartsFromLocalContext(message);
         savedMessage.setAdditionalResources(attachedImages);
 
-        CompletionMessageDTO response;
-        if (completionRequestDTO.isDeepThinking()) {
-            JobExecution jobExecution = deepThinkingBatchService.runDeepThinking(
-                    savedMessage.getId(), project.getId(), savedMessage.getThreadId());
-
-            response = CompletionMessageDTO.builder()
-                    .jobExecutionId(jobExecution.getId())
-                    .threadId(savedMessage.getThreadId())
-                    .build();
-
-            return ResponseEntity.accepted().body(response);
-        }
-
-        response = completionService.getCompletionSearch(savedMessage, project);
-        return ResponseEntity.ok(response);
+        JobExecution jobExecution = deepThinkingBatchService.runDeepThinking(
+                savedMessage.getId(), project.getId(), savedMessage.getThreadId());
+        CompletionMessageDTO response = CompletionMessageDTO.builder()
+                .jobExecutionId(jobExecution.getId()).threadId(savedMessage.getThreadId()).build();
+        return ResponseEntity.accepted().body(response);
     }
 
+
+    private ResponseEntity<?> runChatCompletion(ChatCompletionRun run,
+            ChatEventStream stream) {
+        if (stream == null) return ResponseEntity.ok(chatCompletions.execute(run));
+        chatCompletions.executeAsync(run);
+        return ResponseEntity.ok().contentType(MediaType.TEXT_EVENT_STREAM)
+                .header("Cache-Control", "no-cache, no-transform").header("X-Accel-Buffering", "no").body(stream.emitter());
+    }
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable') || @securityUtils.isPublicThread(#threadId)")
+    @GetMapping("/threads/{threadId}/completion-status")
+    public Map<String, Object> getCompletionStatus(@PathVariable UUID threadId, HttpServletRequest request) {
+        return chatCompletions.status(threadId, request.getHeader("X-Gendox-Completion-Token"));
+    }
 
     @PostMapping("/messages/moderation")
     public ModerationResponse getModerationCheck(@RequestBody String message) throws GendoxException {

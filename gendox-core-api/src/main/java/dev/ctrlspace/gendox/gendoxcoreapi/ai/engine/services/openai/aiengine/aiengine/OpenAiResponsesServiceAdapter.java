@@ -1,5 +1,9 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.ProviderStreamClient;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.CompletionDelta;
+import java.util.function.Consumer;
+
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.OpenAiResponsesConverter;
@@ -44,6 +48,9 @@ public class OpenAiResponsesServiceAdapter implements AiModelApiAdapterService {
     private final OpenAiResponsesConverter responsesConverter;
 
     @Autowired
+    private com.fasterxml.jackson.databind.ObjectMapper streamMapper;
+
+    @Autowired
     public OpenAiResponsesServiceAdapter(RestTemplate restTemplate,
                                          OpenAiResponsesConverter responsesConverter) {
         this.restTemplate = restTemplate;
@@ -66,6 +73,18 @@ public class OpenAiResponsesServiceAdapter implements AiModelApiAdapterService {
                                             List<AiTools> tools,
                                             String toolChoice,
                                             @Nullable ObjectNode responseJsonSchema) {
+        return askCompletion(messages, agentRole, aiModel, aiModelRequestParams, apiKey, tools, toolChoice, responseJsonSchema, null);
+    }
+
+    @Override
+    public CompletionResponse askCompletion(List<AiModelMessage> messages,
+                                            String agentRole,
+                                            AiModel aiModel,
+                                            AiModelRequestParams aiModelRequestParams,
+                                            String apiKey,
+                                            List<AiTools> tools,
+                                            String toolChoice,
+                                            @Nullable ObjectNode responseJsonSchema, Consumer<CompletionDelta> listener){
 
         List<OpenAiResponsesItem> input = responsesConverter.toInputItems(messages, aiModel.getId());
 
@@ -103,7 +122,10 @@ public class OpenAiResponsesServiceAdapter implements AiModelApiAdapterService {
             requestBuilder.text(toTextConfig(responseJsonSchema));
         }
 
-        OpenAiResponsesResponse response = getResponse(requestBuilder.build(), aiModel, apiKey);
+        OpenAiResponsesResponse response = listener == null ? getResponse(requestBuilder.build(), aiModel, apiKey) :
+                ProviderStreamClient.complete(
+                        restTemplate, streamMapper, aiModel.getUrl(), buildHeader(apiKey), requestBuilder.build(),
+                        ProviderStreamClient.Protocol.RESPONSES, OpenAiResponsesResponse.class, listener);
         return responsesConverter.toCompletionResponse(response);
     }
 

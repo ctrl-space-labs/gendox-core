@@ -1,6 +1,8 @@
+import { useEffect } from 'react'
+import { useIFrameMessageManager } from 'src/authentication/context/IFrameMessageManagerContext'
 import { Box, useMediaQuery, useTheme } from '@mui/material'
 import { useDispatch, useSelector } from 'react-redux'
-import { fetchMessageMetadata } from 'src/store/chat/gendoxChat'
+import { fetchMessageMetadata, recoverCompletion, submitClientToolResult } from 'src/store/chat/gendoxChat'
 import { ResponsiveCardContent } from 'src/utils/responsiveCardContent'
 import { localStorageConstants } from '../../../utils/generalConstants'
 import { useRouter } from 'next/router'
@@ -16,6 +18,7 @@ import ChatConversationThreadMessagesArea from 'src/views/pages/chat/conversatio
 // ─────────────────────────────────────────────────────────────────────────────
 const ChatConversation = props => {
   const dispatch = useDispatch()
+  const iFrameMessageManager = useIFrameMessageManager()
   const theme = useTheme()
   /**
    *  The below variable will hide the current layout menu at given screen size.
@@ -31,9 +34,38 @@ const ChatConversation = props => {
   const { organizationId, projectId } = router.query
   const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
   // Grab state data from Redux
-  const { currentThread, isSendingMessage, isLoadingMessages } = useSelector(
+  const { currentThread, isSendingMessage, isLoadingMessages, completionStatus } = useSelector(
     state => state.gendoxChat
   )
+
+  useEffect(() => {
+    if (!currentThread?.threadId) return
+    let stopped = false
+    let timer
+    const poll = async () => {
+      await dispatch(recoverCompletion({ threadId: currentThread.threadId, projectId: currentThread.projectId,
+        organizationId: currentThread.organizationId, token, iFrameMessageManager }))
+      if (!stopped) timer = setTimeout(poll, 2000)
+    }
+    poll()
+    return () => { stopped = true; clearTimeout(timer) }
+  }, [currentThread?.threadId, currentThread?.projectId, token, dispatch, iFrameMessageManager])
+
+  useEffect(() => {
+    const manager = iFrameMessageManager?.messageManager
+    if (!manager || !currentThread?.projectId) return
+    const handler = event => {
+      if (event.type !== 'gendox.events.chat.message.tool_calls.response') return
+      for (const result of event.payload || []) {
+        if (result.threadId !== currentThread.threadId) continue
+        dispatch(submitClientToolResult({ result, token, projectId: currentThread.projectId,
+          organizationId: currentThread.organizationId, iFrameMessageManager }))
+      }
+    }
+    manager.addHandler(handler)
+    manager.sendMessage({ type: 'gendox.events.chat.message.tool_calls.ready', payload: { threadId: currentThread.threadId } })
+    return () => manager.removeHandler(handler)
+  }, [currentThread?.threadId, currentThread?.projectId, token, dispatch, iFrameMessageManager])
 
   return (
     <ResponsiveCardContent
@@ -81,7 +113,7 @@ const ChatConversation = props => {
           />
         </Box>
 
-        <AiResponseLoader isSending={isSendingMessage} />
+        <AiResponseLoader isSending={isSendingMessage} completionStatus={completionStatus} />
 
         <Box sx={{ p: '0.5rem' }}>
           <ChatConversationInputSection

@@ -18,13 +18,21 @@ import java.util.List;
 public class CohereCompletionRequest {
     private String model;
     private List<Message> messages;
+    private List<dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.OpenAiCompletionRequest.ToolDto> tools;
+    private String tool_choice;
 
     @Data
     @Builder(toBuilder = true)
     @NoArgsConstructor
     @AllArgsConstructor
     public static class Message {
-        private String role; // "user" or "assistant"
+        private String role;
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        private com.fasterxml.jackson.databind.JsonNode tool_calls;
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        private String tool_call_id;
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        private String tool_plan;
         private List<Content> content;
 
         @Data

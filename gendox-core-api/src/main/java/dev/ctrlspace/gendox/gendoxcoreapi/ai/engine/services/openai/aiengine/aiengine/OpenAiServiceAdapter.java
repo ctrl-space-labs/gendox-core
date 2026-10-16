@@ -1,5 +1,9 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.ProviderStreamClient;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.CompletionDelta;
+import java.util.function.Consumer;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.knuddels.jtokkit.Encodings;
@@ -253,6 +257,17 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
                                             List<AiTools> tools,
                                             String toolChoice,
                                             @Nullable ObjectNode responseJsonSchema) {
+        return askCompletion(messages, agentRole, aiModel, aiModelRequestParams, apiKey, tools, toolChoice, responseJsonSchema, null);
+    }
+
+    @Override
+    public CompletionResponse askCompletion(List<AiModelMessage> messages,
+                                            String agentRole, AiModel aiModel,
+                                            AiModelRequestParams aiModelRequestParams,
+                                            String apiKey,
+                                            List<AiTools> tools,
+                                            String toolChoice,
+                                            @Nullable ObjectNode responseJsonSchema, Consumer<CompletionDelta> listener){
         if (Strings.isNotEmpty(agentRole)) {
             upsertSystemPrompt(messages, agentRole);
         }
@@ -294,7 +309,10 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
         restoreReasoning(messages, aiModel);
 
         OpenAiCompletionRequest openAiCompletionRequest = openAiGptRequestBuilder.build();
-        OpenAiCompletionResponse openAiCompletionResponse = this.getCompletionResponse(openAiCompletionRequest, aiModel, apiKey);
+        OpenAiCompletionResponse openAiCompletionResponse = listener == null ? this.getCompletionResponse(openAiCompletionRequest, aiModel, apiKey) :
+                ProviderStreamClient.complete(
+                        restTemplate, objectMapper, aiModel.getUrl(), buildHeader(apiKey), openAiCompletionRequest,
+                        ProviderStreamClient.Protocol.CHAT, OpenAiCompletionResponse.class, listener);
         CompletionResponse completionResponse = openAiCompletionResponseConverter.toCompletionResponse(openAiCompletionResponse);
 
         extractReasoning(completionResponse);

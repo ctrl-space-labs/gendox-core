@@ -92,8 +92,12 @@ public class MistralCompletionRequest {
     @Builder(toBuilder = true)
     @AllArgsConstructor
     @NoArgsConstructor
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class MistralMessage {
         private String role;
+        private com.fasterxml.jackson.databind.JsonNode tool_calls;
+        private String tool_call_id;
+        private String name;
 
         @JsonIgnore
         private String content;
