@@ -426,14 +426,18 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
 
         Integration integration = loadIntegration(integrationId);
 
-        if (!subscriptionValidationService.canUseWebScrape(integration.getOrganizationId())) {
+              if (!subscriptionValidationService.canUseWebScrape(integration.getOrganizationId())) {
             throw new GendoxException("WEB_SCRAPE_NOT_IN_PLAN",
                     "Web scraping is not included in the plan of organization "
                             + integration.getOrganizationId(),
                     HttpStatus.FORBIDDEN);
         }
 
+        // fail on the click rather than in the background job, where nobody sees it
+        webScrapeProviderUtils.resolveApiKey(integration.getOrganizationId());
+
         return integration;
+
     }
 
     private Integration loadIntegration(UUID integrationId) throws GendoxException {

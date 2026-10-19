@@ -231,3 +231,6 @@ a.eo-chip.warn { border-color: color-mix(in srgb, var(--warn) 40%, transparent);
 .vd-raw[open] summary .lucide { transform: rotate(180deg); }
 .vd-raw pre { margin-top: 10px; padding: 14px; max-height: 420px; overflow: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2); font: 12px/1.6 var(--font-mono); white-space: pre-wrap; }
 @media (max-width: 760px) { .vd-controls { grid-template-columns: 1fr; } }
+
+/* editing a document: no outline, the sections take the whole width */
+.docpage.editing { grid-template-columns: minmax(0, 1fr); }

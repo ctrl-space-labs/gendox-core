@@ -57,8 +57,8 @@ public class WebScrapeProviderUtils {
 
         if (platformApiKey == null || platformApiKey.isBlank()) {
             throw new GendoxException("WEB_SCRAPE_API_KEY_NOT_FOUND",
-                    "No web scrape API key found for organization " + organizationId,
-                    HttpStatus.BAD_REQUEST);
+                    "No web scrape API key is set. Add one in Connected services."
+            , HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
         return platformApiKey;

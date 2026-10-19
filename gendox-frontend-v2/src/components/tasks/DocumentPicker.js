@@ -209,7 +209,7 @@ const DocumentPicker = ({
                   </td>
                   )}
                   <td>
-                    <div className='row' style={{ gap: 10 }}>
+                    <div className='row' style={{ gap: 10, maxWidth: 480 }}>
                       <FileTile name={fileNameOf(doc)} />
                       <span className='trunc'>{doc.title || fileNameOf(doc)}</span>
                     </div>

@@ -508,7 +508,7 @@ const DocumentView = () => {
           )}
         </div>
 
-        <div className={`docpage ${asking && mode === 'view' ? 'asking' : ''}`}>
+        <div className={`docpage ${mode === 'edit' ? 'editing' : asking ? 'asking' : ''}`}>
           {mode === 'view' && (
             <nav className='outline'>
               {titled.length > 0 && (

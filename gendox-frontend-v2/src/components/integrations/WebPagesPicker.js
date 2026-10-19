@@ -40,6 +40,17 @@ const pathOf = (url, base) => {
   }
 }
 
+// why a page couldn't be read, in words, from the provider's HTTP status when there is one
+const failureOf = message => {
+  const status = Number(/HTTP (\d{3})/.exec(message)?.[1])
+  if (status === 429) return 'Firecrawl is limiting requests (too many in a short time, or the plan’s limit). Wait a minute and read it again.'
+  if (status === 402) return 'The Firecrawl account has run out of credits.'
+  if (status === 401 || status === 403) return 'Firecrawl refused the API key.'
+  if (status >= 500) return 'Firecrawl had an error. Try again later.'
+
+  return message
+}
+
 /**
  * A crawled website's pages, and what is read into the knowledge.
  * Find pages (free) and Search deeper (every visited page is billed) list them; ticks choose them;
@@ -150,6 +161,7 @@ const WebPagesPicker = ({ organizationId, integration, agentName, onRunFinished 
       } else if (ticks >= GIVE_UP_AFTER) {
         clearInterval(timer.current)
         setBusy(null)
+        toast.error(`${label} has not finished after ${Math.round((GIVE_UP_AFTER * POLL_MS) / 60000)} minutes. It may have failed: the pages found so far are listed, and you can try again.`)
       }
     }, POLL_MS)
   }
@@ -325,7 +337,7 @@ const WebPagesPicker = ({ organizationId, integration, agentName, onRunFinished 
                         <td className='chk' onClick={e => e.stopPropagation()}>
                           <input type='checkbox' checked={Boolean(p.isSelected)} disabled={gone} onChange={e => pick(p.id, e.target.checked)} aria-label='Read this page' />
                         </td>
-                        <td style={{ minWidth: 0 }}>
+                        <td style={{ width: '100%', whiteSpace: 'normal' }}>
                           <div className='row' style={{ gap: 6, alignItems: 'flex-start' }}>
                             <span style={{ overflowWrap: 'anywhere' }}>{p.title || pathOf(p.url, integration.url)}</span>
                             <a href={p.url} target='_blank' rel='noreferrer' onClick={e => e.stopPropagation()} title='Open the page' className='faint'>
@@ -333,6 +345,9 @@ const WebPagesPicker = ({ organizationId, integration, agentName, onRunFinished 
                             </a>
                           </div>
                           {p.title && <div className='faint sm'>{pathOf(p.url, integration.url)}</div>}
+                          {p.status === 'FAILED' && p.errorMessage && (
+                            <div className='sm' style={{ color: 'var(--err)' }}>{failureOf(p.errorMessage)}</div>
+                          )}
                         </td>
                         <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>
                           <div className='row' style={{ gap: 6, justifyContent: 'flex-end' }}>

@@ -139,8 +139,9 @@ export const imageFilesFromPaste = event => {
 }
 
 // A short plain-text line from a Markdown message, for lists and previews
-export const toPlainPreview = (text = '') =>
-  text
+// (the API sends null for a thread with no message yet, which a default parameter would not catch)
+export const toPlainPreview = text =>
+  String(text ?? '')
     .replace(/```[\s\S]*?```/g, ' ')
     .replace(/[#>*_`~|]+/g, '')
     .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
@@ -148,5 +149,5 @@ export const toPlainPreview = (text = '') =>
     .trim()
 
 // "order-note-362d4343-f31e-4e5a-b6d1-da265542ed16.txt" → "order-note.txt": the suffix withUniqueFileName adds
-export const displayFileName = (name = '') =>
-  name.replace(/-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?=\.[^.]+$|$)/i, '')
+export const displayFileName = name =>
+  String(name ?? '').replace(/-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?=\.[^.]+$|$)/i, '')
