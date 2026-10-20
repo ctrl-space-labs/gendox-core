@@ -1,9 +1,9 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.ProviderStreamClient;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.CompletionDelta;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.ProviderStreamClient;
 import java.util.function.Consumer;
-
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.OpenAiResponsesConverter;
@@ -45,10 +45,10 @@ public class OpenAiResponsesServiceAdapter implements AiModelApiAdapterService {
     private final Logger logger = LoggerFactory.getLogger(OpenAiResponsesServiceAdapter.class);
 
     private final RestTemplate restTemplate;
-    private final OpenAiResponsesConverter responsesConverter;
-
+    // Reads the streamed frames; the non-streaming path keeps using the RestTemplate's converters
     @Autowired
-    private com.fasterxml.jackson.databind.ObjectMapper streamMapper;
+    private ObjectMapper objectMapper;
+    private final OpenAiResponsesConverter responsesConverter;
 
     @Autowired
     public OpenAiResponsesServiceAdapter(RestTemplate restTemplate,
@@ -76,6 +76,7 @@ public class OpenAiResponsesServiceAdapter implements AiModelApiAdapterService {
         return askCompletion(messages, agentRole, aiModel, aiModelRequestParams, apiKey, tools, toolChoice, responseJsonSchema, null);
     }
 
+    /** @param deltas receives the tokens as they arrive; null sends an ordinary (non-streaming) request */
     @Override
     public CompletionResponse askCompletion(List<AiModelMessage> messages,
                                             String agentRole,
@@ -84,7 +85,8 @@ public class OpenAiResponsesServiceAdapter implements AiModelApiAdapterService {
                                             String apiKey,
                                             List<AiTools> tools,
                                             String toolChoice,
-                                            @Nullable ObjectNode responseJsonSchema, Consumer<CompletionDelta> listener){
+                                            @Nullable ObjectNode responseJsonSchema,
+                                            @Nullable Consumer<CompletionDelta> deltas) {
 
         List<OpenAiResponsesItem> input = responsesConverter.toInputItems(messages, aiModel.getId());
 
@@ -122,10 +124,13 @@ public class OpenAiResponsesServiceAdapter implements AiModelApiAdapterService {
             requestBuilder.text(toTextConfig(responseJsonSchema));
         }
 
-        OpenAiResponsesResponse response = listener == null ? getResponse(requestBuilder.build(), aiModel, apiKey) :
-                ProviderStreamClient.complete(
-                        restTemplate, streamMapper, aiModel.getUrl(), buildHeader(apiKey), requestBuilder.build(),
-                        ProviderStreamClient.Protocol.RESPONSES, OpenAiResponsesResponse.class, listener);
+        OpenAiResponsesResponse response;
+        if (deltas == null) {
+            response = getResponse(requestBuilder.build(), aiModel, apiKey);
+        } else {
+            response = ProviderStreamClient.complete(restTemplate, objectMapper, aiModel.getUrl(), buildHeader(apiKey),
+                    requestBuilder.build(), ProviderStreamClient.Protocol.RESPONSES, OpenAiResponsesResponse.class, deltas);
+        }
         return responsesConverter.toCompletionResponse(response);
     }
 

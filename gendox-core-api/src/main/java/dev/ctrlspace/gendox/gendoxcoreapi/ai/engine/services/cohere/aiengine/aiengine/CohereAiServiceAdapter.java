@@ -1,9 +1,9 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.cohere.aiengine.aiengine;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.ProviderStreamClient;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.CompletionDelta;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.ProviderStreamClient;
 import java.util.function.Consumer;
-
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.CohereRerankResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.cohere.request.CohereCompletionRequest;
@@ -41,13 +41,13 @@ public class CohereAiServiceAdapter implements AiModelApiAdapterService {
 
     private Set<String> supportedApiTypeNames = Set.of("COHERE_API");
     private RestTemplate restTemplate;
+    // Reads the streamed frames; the non-streaming path keeps using the RestTemplate's converters
+    @Autowired
+    private ObjectMapper objectMapper;
     private CohereCompletionResponseConverter cohereCompletionResponseConverter;
     private CohereEmbeddingResponseConverter cohereEmbeddingResponseConverter;
     private CohereRerankResponseConverter cohereRerankResponseConverter;
 
-
-    @Autowired
-    private com.fasterxml.jackson.databind.ObjectMapper streamMapper;
 
     @Autowired
     public CohereAiServiceAdapter(CohereCompletionResponseConverter cohereCompletionResponseConverter,
@@ -132,11 +132,13 @@ public class CohereAiServiceAdapter implements AiModelApiAdapterService {
         return askCompletion(messages, agentRole, aiModel, aiModelRequestParams, apiKey, tools, toolChoice, responseJsonSchema, null);
     }
 
+    /** @param deltas receives the tokens as they arrive; null sends an ordinary (non-streaming) request */
     @Override
-    public CompletionResponse askCompletion(List<AiModelMessage> messages, String agentRole, AiModel aiModel, AiModelRequestParams aiModelRequestParams, String apiKey, List<AiTools> tools, String toolChoice, @Nullable ObjectNode responseJsonSchema, Consumer<CompletionDelta> listener){
+    public CompletionResponse askCompletion(List<AiModelMessage> messages, String agentRole, AiModel aiModel, AiModelRequestParams aiModelRequestParams, String apiKey, List<AiTools> tools, String toolChoice, @Nullable ObjectNode responseJsonSchema,
+                                            @Nullable Consumer<CompletionDelta> deltas) {
 
         if (Strings.isNotEmpty(agentRole)) {
-            messages.add(0, AiModelMessage.builder().role("system").content(agentRole).build());
+            messages.add(0, AiModelMessage.builder().role("user").content(agentRole).build());
         }
 
 
@@ -146,9 +148,7 @@ public class CohereAiServiceAdapter implements AiModelApiAdapterService {
                         messages.stream()
                                 .map(message -> CohereCompletionRequest.Message.builder()
                                         .role(message.getRole())
-                                        .tool_calls(message.getToolCalls()).tool_call_id(message.getToolCallId())
-                                        .tool_plan(message.getReasoningContent())
-                                        .content(message.getContent() == null || message.getContent().isEmpty() ? null : List.of(CohereCompletionRequest.Message.Content.builder()
+                                        .content(List.of(CohereCompletionRequest.Message.Content.builder()
                                                 .type("text")
                                                 .text(message.getContent())
                                                 .build()))
@@ -158,19 +158,14 @@ public class CohereAiServiceAdapter implements AiModelApiAdapterService {
 
 
 
-        if (tools != null && !tools.isEmpty()) {
-            cohereCommandRequestBuilder.tools(tools.stream().map(tool -> {
-                try {
-                    return dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.OpenAiCompletionRequest.ToolDto.builder()
-                            .type("function").function(streamMapper.readTree(tool.getJsonSchema())).build();
-                } catch (Exception e) { throw new IllegalArgumentException("Invalid tool schema", e); }
-            }).toList()).tool_choice("required".equals(toolChoice) ? "REQUIRED" : "AUTO");
-        }
         CohereCompletionRequest cohereCompletionRequest = cohereCommandRequestBuilder.build();
-        CohereCompletionResponse cohereCompletionResponse = listener == null ? this.getCompletionResponse(cohereCompletionRequest, aiModel, apiKey) :
-                ProviderStreamClient.complete(
-                        restTemplate, streamMapper, aiModel.getUrl(), buildHeader(apiKey), cohereCompletionRequest,
-                        ProviderStreamClient.Protocol.COHERE, CohereCompletionResponse.class, listener);
+        CohereCompletionResponse cohereCompletionResponse;
+        if (deltas == null) {
+            cohereCompletionResponse = this.getCompletionResponse(cohereCompletionRequest, aiModel, apiKey);
+        } else {
+            cohereCompletionResponse = ProviderStreamClient.complete(restTemplate, objectMapper, aiModel.getUrl(), buildHeader(apiKey),
+                    cohereCompletionRequest, ProviderStreamClient.Protocol.COHERE, CohereCompletionResponse.class, deltas);
+        }
 
         return cohereCompletionResponseConverter.toCompletionResponse(cohereCompletionResponse);
     }

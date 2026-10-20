@@ -23,9 +23,7 @@ public class CohereCompletionResponse {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class Message {
-        private String role;
-        private com.fasterxml.jackson.databind.JsonNode tool_calls;
-        private String tool_plan;
+        private String role; // "assistant"
         private List<Content> content;
 
         @Data

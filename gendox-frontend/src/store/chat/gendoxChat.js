@@ -941,10 +941,13 @@ async function _streamCompletion(context) {
           turnId = data.turnId
           const previousSession = readCompletionSession(threadId)
           saveCompletionSession(threadId, { turnId,
-            ...(previousSession.turnId !== turnId ? { dispatchedCalls: [] } : {}),
-            ...(data.resumeToken ? { resumeToken: data.resumeToken } : {}) })
+            ...(previousSession.turnId !== turnId ? { dispatchedCalls: [] } : {}) })
           if (iFrameMessageManager?.isEmbedded)
             updateSessionThreadId(iFrameMessageManager.originUrl, organizationId, projectId, threadId)
+        }
+        // A turn gets a resume token when it first waits for tools; an anonymous session sends it with the results
+        if (event === 'waiting_for_tools' && data.resumeToken) {
+          saveCompletionSession(threadId, { resumeToken: data.resumeToken })
         }
         if (event === 'message') data = { ...data, turnId, threadId }
         if (event === 'delta') data = { ...data, threadId }

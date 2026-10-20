@@ -50,6 +50,10 @@ public class ProjectAgentConverter implements GendoxConverter<ProjectAgent, Proj
             projectAgentDTO.setAdvancedSearchModel(projectAgent.getAdvancedSearchModel());
         }
 
+        if (projectAgent.getAdvancedSearchMode() != null) {
+            projectAgentDTO.setAdvancedSearchMode(projectAgent.getAdvancedSearchMode());
+        }
+
         if (projectAgent.getAutoDigitization() != null) {
             projectAgentDTO.setAutoDigitization(projectAgent.getAutoDigitization());
         }
@@ -102,6 +106,10 @@ public class ProjectAgentConverter implements GendoxConverter<ProjectAgent, Proj
 
         if (projectAgentDTO.getAdvancedSearchModel() != null) {
             projectAgent.setAdvancedSearchModel(projectAgentDTO.getAdvancedSearchModel());
+        }
+
+        if (projectAgentDTO.getAdvancedSearchMode() != null) {
+            projectAgent.setAdvancedSearchMode(projectAgentDTO.getAdvancedSearchMode());
         }
 
         if (projectAgentDTO.getAutoDigitization() != null) {

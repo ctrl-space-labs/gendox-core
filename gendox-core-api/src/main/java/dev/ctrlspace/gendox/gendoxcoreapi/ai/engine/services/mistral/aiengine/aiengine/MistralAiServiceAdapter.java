@@ -1,9 +1,9 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.mistral.aiengine.aiengine;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.ProviderStreamClient;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.CompletionDelta;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.ProviderStreamClient;
 import java.util.function.Consumer;
-
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.MistralCompletionResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.MistralEmbeddingResponseConverter;
@@ -39,12 +39,12 @@ public class MistralAiServiceAdapter implements AiModelApiAdapterService {
     Logger logger = LoggerFactory.getLogger(MistralAiServiceAdapter.class);
     private Set<String> supportedApiTypeNames = Set.of("MISTRAL_AI_API");
     private RestTemplate restTemplate;
+    // Reads the streamed frames; the non-streaming path keeps using the RestTemplate's converters
+    @Autowired
+    private ObjectMapper objectMapper;
     private MistralEmbeddingResponseConverter mistralEmbeddingResponseConverter;
     private MistralCompletionResponseConverter mistralCompletionResponseConverter;
     private MistralModerationResponseConverter mistralModerationResponseConverter;
-
-    @Autowired
-    private com.fasterxml.jackson.databind.ObjectMapper streamMapper;
 
     @Autowired
     public MistralAiServiceAdapter(RestTemplate restTemplate,
@@ -127,15 +127,17 @@ public class MistralAiServiceAdapter implements AiModelApiAdapterService {
         return askCompletion(messages, agentRole, aiModel, aiModelRequestParams, apiKey, tools, toolChoice, responseJsonSchema, null);
     }
 
+    /** @param deltas receives the tokens as they arrive; null sends an ordinary (non-streaming) request */
     @Override
-    public CompletionResponse askCompletion(List<AiModelMessage> messages, String agentRole, AiModel aiModel, AiModelRequestParams aiModelRequestParams, String apiKey, List<AiTools> tools, String toolChoice, @Nullable ObjectNode responseJsonSchema, Consumer<CompletionDelta> listener){
+    public CompletionResponse askCompletion(List<AiModelMessage> messages, String agentRole, AiModel aiModel, AiModelRequestParams aiModelRequestParams, String apiKey, List<AiTools> tools, String toolChoice, @Nullable ObjectNode responseJsonSchema,
+                                            @Nullable Consumer<CompletionDelta> deltas) {
         if (Strings.isNotEmpty(agentRole)) {
             messages.add(0, AiModelMessage.builder().role("system").content(agentRole).build());
         }
 
         List<MistralCompletionRequest.MistralMessage> mistralMessages = messages.stream()
                 .map(m -> MistralCompletionRequest.MistralMessage.builder()
-                        .role(m.getRole()).tool_calls(m.getToolCalls()).tool_call_id(m.getToolCallId()).name(m.getName())
+                        .role(m.getRole())
                         .content(m.getContent())
                         .thinking(aiModel.getId().equals(m.getAiModelId()) ? m.getReasoningContent() : null)
                         .build())
@@ -154,19 +156,14 @@ public class MistralAiServiceAdapter implements AiModelApiAdapterService {
             }
         }
 
-        if (tools != null && !tools.isEmpty()) {
-            completionRequestBuilder.tools(tools.stream().map(tool -> {
-                try {
-                    var function = streamMapper.readValue(tool.getJsonSchema(), MistralCompletionRequest.Tool.ToolFunction.class);
-                    return MistralCompletionRequest.Tool.builder().type("function").function(function).build();
-                } catch (Exception e) { throw new IllegalArgumentException("Invalid tool schema", e); }
-            }).toList()).tool_choice(toolChoice == null ? "auto" : toolChoice);
-        }
         MistralCompletionRequest completionRequest = completionRequestBuilder.build();
-        MistralCompletionResponse mistralCompletionResponse = listener == null ? this.getCompletionResponse(completionRequest, aiModel, apiKey) :
-                ProviderStreamClient.complete(
-                        restTemplate, streamMapper, aiModel.getUrl(), buildHeader(apiKey), completionRequest,
-                        ProviderStreamClient.Protocol.MISTRAL, MistralCompletionResponse.class, listener);
+        MistralCompletionResponse mistralCompletionResponse;
+        if (deltas == null) {
+            mistralCompletionResponse = this.getCompletionResponse(completionRequest, aiModel, apiKey);
+        } else {
+            mistralCompletionResponse = ProviderStreamClient.complete(restTemplate, objectMapper, aiModel.getUrl(), buildHeader(apiKey),
+                    completionRequest, ProviderStreamClient.Protocol.MISTRAL, MistralCompletionResponse.class, deltas);
+        }
         logger.trace("Completion Response: {}", mistralCompletionResponse);
         CompletionResponse completionResponse = mistralCompletionResponseConverter.toCompletionResponse(mistralCompletionResponse);
         logger.trace("Completion Response: {}", completionResponse);

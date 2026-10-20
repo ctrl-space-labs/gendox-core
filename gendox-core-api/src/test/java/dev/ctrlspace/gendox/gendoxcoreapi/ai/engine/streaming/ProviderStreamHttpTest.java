@@ -40,23 +40,4 @@ class ProviderStreamHttpTest {
         assertEquals(List.of(new CompletionDelta("value", "answer")), deltas);
         server.verify();
     }
-    @Test void cohereToolOnlyReplyRetainsArgumentsAndUsage() throws Exception {
-        var response = mapper.readValue("""
-          {"id":"x","finish_reason":"TOOL_CALL","message":{"role":"assistant","tool_plan":"look it up","tool_calls":[{"id":"a","type":"function","function":{"name":"advanced_search","arguments":"{}"}}]},"usage":{"billed_units":{"input_tokens":2,"output_tokens":3}}}
-          """, CohereCompletionResponse.class);
-        var result = new CohereCompletionResponseConverter().toCompletionResponse(response);
-        assertEquals("tool_calls", result.getChoices().getFirst().getFinishReason());
-        assertEquals("look it up", result.getChoices().getFirst().getMessage().getReasoningContent());
-        assertEquals("{}", result.getChoices().getFirst().getMessage().getToolCalls().get(0).path("function").path("arguments").asText());
-        assertEquals(5, result.getUsage().getTotalTokens());
-    }
-    @Test void mistralToolOnlyReplyMapsToExistingLoopFinishReason() throws Exception {
-        var response = mapper.readValue("""
-          {"id":"x","choices":[{"index":0,"finish_reason":"tool_calls","message":{"role":"assistant","content":[{"type":"thinking","thinking":[{"type":"text","text":"reason"}]}],"tool_calls":[{"id":"a","type":"function","function":{"name":"advanced_search","arguments":"{}"}}]}}],"usage":{"prompt_tokens":2,"completion_tokens":3,"total_tokens":5}}
-          """, MistralCompletionResponse.class);
-        var result = new MistralCompletionResponseConverter().toCompletionResponse(response);
-        assertEquals("tool_calls", result.getChoices().getFirst().getFinishReason());
-        assertEquals("reason", result.getChoices().getFirst().getMessage().getReasoningContent());
-        assertEquals("{}", result.getChoices().getFirst().getMessage().getToolCalls().get(0).path("function").path("arguments").asText());
-    }
 }

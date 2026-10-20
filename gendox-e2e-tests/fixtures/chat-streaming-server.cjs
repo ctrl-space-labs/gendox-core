@@ -18,7 +18,7 @@ async function completion(req, res, body) {
   current.status = 'GENERATING'
   res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' })
   const emit = (event, data) => { if (!res.destroyed) res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`) }
-  emit('start', { threadId: 'thread', turnId: 'turn', resumeToken: 'test-session' })
+  emit('start', { threadId: 'thread', turnId: 'turn' })
   if (body.role !== 'tool' && current.mode !== 'plain') {
     const navigation = current.mode === 'navigation'
     const call = { id: 'call', type: 'function', function: { name: navigation ? 'open_web_page' : 'lookup', arguments: JSON.stringify(navigation ? { url: base + '/test-host?resumed=1' } : { query: 'order' }) } }
@@ -28,7 +28,7 @@ async function completion(req, res, body) {
     if (!navigation) {
       current.status = 'WAITING_FOR_TOOLS'
       current.pendingCalls = [{ id: 'call', messageId: 'call-message', name: 'lookup', arguments: call.function.arguments }]
-      emit('waiting_for_tools', { threadId: 'thread', turnId: 'turn', status: current.status, pendingCalls: current.pendingCalls })
+      emit('waiting_for_tools', { threadId: 'thread', turnId: 'turn', status: current.status, pendingCalls: current.pendingCalls, resumeToken: 'test-session' })
       res.end(); return
     }
     emit('tool_calls', { threadId: 'thread', turnId: 'turn', messageId: 'call-message', execution: 'ACTION', toolCalls: [call] })

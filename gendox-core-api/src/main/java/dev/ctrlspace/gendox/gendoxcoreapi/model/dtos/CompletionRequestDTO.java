@@ -18,6 +18,7 @@ import java.util.UUID;
 public class CompletionRequestDTO {
 
     private String value;
+    // "user" (default) for a question; "tool" returns the result of a CLIENT tool call in value
     private String role;
     private String toolCallId;
     @Builder.Default

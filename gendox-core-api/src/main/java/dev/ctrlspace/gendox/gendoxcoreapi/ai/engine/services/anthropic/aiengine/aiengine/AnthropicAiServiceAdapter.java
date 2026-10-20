@@ -1,9 +1,9 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.anthropic.aiengine.aiengine;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.ProviderStreamClient;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.CompletionDelta;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.ProviderStreamClient;
 import java.util.function.Consumer;
-
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.AnthropicCompletionResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.AnthropicMessagesConverter;
@@ -39,11 +39,11 @@ public class AnthropicAiServiceAdapter implements AiModelApiAdapterService {
 
     private static final Set<String> ANTHROPIC_EFFORTS = Set.of("low", "medium", "high", "xhigh", "max");
     private RestTemplate restTemplate;
+    // Reads the streamed frames; the non-streaming path keeps using the RestTemplate's converters
+    @Autowired
+    private ObjectMapper objectMapper;
     private AnthropicCompletionResponseConverter anthropicCompletionResponseConverter;
     private AnthropicMessagesConverter anthropicMessagesConverter;
-
-    @Autowired
-    private com.fasterxml.jackson.databind.ObjectMapper streamMapper;
 
     @Autowired
     public AnthropicAiServiceAdapter(RestTemplate restTemplate,
@@ -95,8 +95,10 @@ public class AnthropicAiServiceAdapter implements AiModelApiAdapterService {
         return askCompletion(messages, agentRole, aiModel, aiModelRequestParams, apiKey, tools, toolChoice, responseJsonSchema, null);
     }
 
+    /** @param deltas receives the tokens as they arrive; null sends an ordinary (non-streaming) request */
     @Override
-    public CompletionResponse askCompletion(List<AiModelMessage> messages, String agentRole, AiModel aiModel, AiModelRequestParams aiModelRequestParams, String apiKey, List<AiTools> tools, String toolChoice, @Nullable ObjectNode responseJsonSchema, Consumer<CompletionDelta> listener){
+    public CompletionResponse askCompletion(List<AiModelMessage> messages, String agentRole, AiModel aiModel, AiModelRequestParams aiModelRequestParams, String apiKey, List<AiTools> tools, String toolChoice, @Nullable ObjectNode responseJsonSchema,
+                                            @Nullable Consumer<CompletionDelta> deltas) {
         if (Strings.isNotEmpty(agentRole)) {
             upsertSystemPrompt(messages, agentRole);
         }
@@ -175,10 +177,13 @@ public class AnthropicAiServiceAdapter implements AiModelApiAdapterService {
         anthropicRequestBuilder.outputConfig(outputConfig.build());
 
         AnthropicCompletionRequest anthropicRequest = anthropicRequestBuilder.build();
-        AnthropicCompletionResponse anthropicResponse = listener == null ? this.getCompletionResponse(anthropicRequest, aiModel, apiKey) :
-                ProviderStreamClient.complete(
-                        restTemplate, streamMapper, aiModel.getUrl(), buildHeader(apiKey), anthropicRequest,
-                        ProviderStreamClient.Protocol.ANTHROPIC, AnthropicCompletionResponse.class, listener);
+        AnthropicCompletionResponse anthropicResponse;
+        if (deltas == null) {
+            anthropicResponse = this.getCompletionResponse(anthropicRequest, aiModel, apiKey);
+        } else {
+            anthropicResponse = ProviderStreamClient.complete(restTemplate, objectMapper, aiModel.getUrl(), buildHeader(apiKey),
+                    anthropicRequest, ProviderStreamClient.Protocol.ANTHROPIC, AnthropicCompletionResponse.class, deltas);
+        }
 
         return anthropicCompletionResponseConverter.toCompletionResponse(anthropicResponse);
     }

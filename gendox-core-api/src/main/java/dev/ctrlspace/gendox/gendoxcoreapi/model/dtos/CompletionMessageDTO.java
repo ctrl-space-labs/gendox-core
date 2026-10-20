@@ -1,5 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model.dtos;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -15,11 +17,12 @@ import java.util.UUID;
 @NoArgsConstructor
 @Builder(toBuilder = true)
 public class CompletionMessageDTO {
-    @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    // Set only when the turn stopped to wait for CLIENT tool results (WAITING_FOR_TOOLS)
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private String status;
-    @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private UUID turnId;
-    @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private String resumeToken;
     private List<Message> messages;
     private UUID threadId;

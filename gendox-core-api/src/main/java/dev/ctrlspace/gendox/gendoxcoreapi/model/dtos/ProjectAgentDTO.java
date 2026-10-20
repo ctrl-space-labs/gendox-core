@@ -48,6 +48,7 @@ public class ProjectAgentDTO {
     private AiModel rerankModel;
     private Boolean advancedSearchEnable;
     private AiModel advancedSearchModel;
+    private String advancedSearchMode;
     private Boolean autoDigitization;
     private List<AiTools> aiTools = new ArrayList<>();
 

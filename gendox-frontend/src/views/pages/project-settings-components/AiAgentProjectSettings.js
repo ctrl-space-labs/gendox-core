@@ -71,6 +71,7 @@ const AiAgentProjectSettings = () => {
     moderationCheck: project.projectAgent.moderationCheck,
     rerankEnable: project.projectAgent.rerankEnable,
     advancedSearchEnable: project.projectAgent.advancedSearchEnable,
+    advancedSearchMode: project.projectAgent.advancedSearchMode || 'ALWAYS',
     autoDigitization: project.projectAgent.autoDigitization ?? false,
     documentSplitterType: project.projectAgent.documentSplitterType?.name || '',
     maxToken: project.projectAgent.maxToken,
@@ -252,6 +253,7 @@ const AiAgentProjectSettings = () => {
         maxCompletionLimit: data.maxCompletionLimit,
         agentBehavior: data.agentBehavior,
         moderationCheck: data.moderationCheck,
+        advancedSearchMode: data.advancedSearchMode,
         advancedSearchEnable: data.advancedSearchEnable,
         rerankEnable: data.rerankEnable,
         autoDigitization: data.autoDigitization,
@@ -541,6 +543,24 @@ const AiAgentProjectSettings = () => {
                             />
                           </FormControl>
                         )}
+                      </Grid>
+
+                      {/* Knowledge search: how the agent retrieves project documents in chat */}
+                      <Grid item xs={12} sx={{ mb: 2 }}>
+                        <FormControl fullWidth>
+                          <InputLabel id='advanced-search-mode'>Knowledge Search</InputLabel>
+                          <Controller
+                            name='advancedSearchMode'
+                            control={control}
+                            render={({ field }) => (
+                              <Select {...field} labelId='advanced-search-mode' label='Knowledge Search'>
+                                <MenuItem value='ALWAYS'>Always: search the documents before every answer</MenuItem>
+                                <MenuItem value='AUTO'>Auto: the agent decides when to search</MenuItem>
+                                <MenuItem value='OFF'>Off: answer without searching the documents</MenuItem>
+                              </Select>
+                            )}
+                          />
+                        </FormControl>
                       </Grid>
 
                       {/* Advanced Search */}

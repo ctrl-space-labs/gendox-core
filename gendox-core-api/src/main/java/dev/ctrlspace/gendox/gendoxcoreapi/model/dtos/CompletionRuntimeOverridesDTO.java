@@ -39,6 +39,10 @@ public class CompletionRuntimeOverridesDTO {
 
     private List<AiModelMessage> previousMessages;
 
+    // A resumed chat turn: the messages it already made after its question, and its model calls so far
+    private List<AiModelMessage> turnMessages;
+    private int turnIterations;
+
     /**
      * Tool names that should be removed from the available tools list before sending the request to the LLM.
      * Use this to prevent a sub-agent from calling tools it should not have access to

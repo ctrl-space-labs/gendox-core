@@ -204,6 +204,10 @@ public class ProjectAgentService {
         if (projectAgent.getAdvancedSearchEnable() == null) {
             projectAgent.setAdvancedSearchEnable(false);
         }
+        if (projectAgent.getAdvancedSearchMode() == null) {
+            projectAgent.setAdvancedSearchMode("ALWAYS");
+        }
+        validateAdvancedSearchMode(projectAgent.getAdvancedSearchMode());
         if (projectAgent.getAutoDigitization() == null) {
             projectAgent.setAutoDigitization(false);
         }
@@ -340,6 +344,10 @@ public class ProjectAgentService {
         if (projectAgent.getAdvancedSearchModel() != null && projectAgent.getAdvancedSearchEnable()) {
             existingProjectAgent.setAdvancedSearchModel(aiModelService.getByName(projectAgent.getAdvancedSearchModel().getName()));
         }
+        if (projectAgent.getAdvancedSearchMode() != null) {
+            validateAdvancedSearchMode(projectAgent.getAdvancedSearchMode());
+            existingProjectAgent.setAdvancedSearchMode(projectAgent.getAdvancedSearchMode());
+        }
         if (projectAgent.getAutoDigitization() != null) {
             existingProjectAgent.setAutoDigitization(projectAgent.getAutoDigitization());
         }
@@ -350,6 +358,12 @@ public class ProjectAgentService {
 
         existingProjectAgent = projectAgentRepository.save(existingProjectAgent);
         return existingProjectAgent;
+    }
+
+    private void validateAdvancedSearchMode(String mode) {
+        if (!Set.of("ALWAYS", "AUTO", "OFF").contains(mode)) {
+            throw new GendoxRuntimeException(HttpStatus.BAD_REQUEST, "INVALID_ADVANCED_SEARCH_MODE", "Advanced search mode must be ALWAYS, AUTO or OFF");
+        }
     }
 
     /**
@@ -370,17 +384,19 @@ public class ProjectAgentService {
         Set<UUID> keepIds = new HashSet<>();
 
         for (AiTools incTool : incomingTools) {
-            if (incTool.getExecution() == null) incTool.setExecution("ACTION");
-            if (!java.util.Set.of("ACTION", "CLIENT").contains(incTool.getExecution()))
-                throw new dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxRuntimeException(
-                        org.springframework.http.HttpStatus.BAD_REQUEST, "INVALID_TOOL_EXECUTION", "Tool execution must be ACTION or CLIENT");
+            if (incTool.getExecution() == null) {
+                incTool.setExecution("ACTION");
+            }
+            if (!Set.of("ACTION", "CLIENT").contains(incTool.getExecution())) {
+                throw new GendoxRuntimeException(HttpStatus.BAD_REQUEST, "INVALID_TOOL_EXECUTION", "Tool execution must be ACTION or CLIENT");
+            }
             UUID id = incTool.getId();
 
             if (id != null && currentToolsById.containsKey(id)) {
                 // update existing
                 AiTools managed = currentToolsById.get(id);
                 managed.setJsonSchema(incTool.getJsonSchema());
-                managed.setExecution(incTool.getExecution() == null ? "ACTION" : incTool.getExecution());
+                managed.setExecution(incTool.getExecution());
 
                 keepIds.add(id);
             } else {

@@ -75,10 +75,7 @@ public class MistralCompletionResponse {
                     String type = chunk.path("type").asText("");
                     if ("thinking".equals(type)) {
                         String value = chunk.hasNonNull("thinking")
-                                ? (chunk.get("thinking").isArray()
-                                ? java.util.stream.StreamSupport.stream(chunk.get("thinking").spliterator(), false)
-                                    .map(part -> part.path("text").asText("")).collect(java.util.stream.Collectors.joining())
-                                : chunk.get("thinking").asText())
+                                ? chunk.get("thinking").asText()
                                 : chunk.path("text").asText("");
                         if (!value.isEmpty()) {
                             thoughts.add(value);
@@ -110,7 +107,7 @@ public class MistralCompletionResponse {
                 @NoArgsConstructor
                 public static class ToolFunction {
                     private String name;
-                    private JsonNode arguments;
+                    private Map<String, Object> arguments;
                 }
             }
         }

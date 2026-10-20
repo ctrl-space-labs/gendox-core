@@ -21,14 +21,16 @@ public class CohereCompletionResponseConverter {
                 .build();
 
 
-        var message = cohereCompletionResponse.getMessage();
-        String text = message.getContent() == null ? "" : message.getContent().stream()
-                .map(c -> c.getText() == null ? "" : c.getText()).collect(java.util.stream.Collectors.joining());
-        List<Choice> mappedChoices = List.of(Choice.builder().index(0)
-                .finishReason(message.getTool_calls() != null && !message.getTool_calls().isEmpty() ? "tool_calls" : cohereCompletionResponse.getFinish_reason())
-                .message(AiModelMessage.builder().role(message.getRole()).content(text)
-                        .toolCalls(message.getTool_calls()).reasoningContent(message.getTool_plan()).build()).build());
-
+        List<Choice> mappedChoices = cohereCompletionResponse.getMessage().getContent().stream()
+                .map(content -> Choice.builder()
+                        .index(0)
+                        .finishReason(cohereCompletionResponse.getFinish_reason())
+                        .message(AiModelMessage.builder()
+                                .content(content.getText())
+                                .role(cohereCompletionResponse.getMessage().getRole())
+                                .build())
+                        .build())
+                .toList();
 
         CompletionResponse completionResponse = CompletionResponse.builder()
                 .id(cohereCompletionResponse.getId())

@@ -1,9 +1,8 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.ProviderStreamClient;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.CompletionDelta;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.ProviderStreamClient;
 import java.util.function.Consumer;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.knuddels.jtokkit.Encodings;
@@ -248,7 +247,6 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
 
     }
 
-    @SneakyThrows
     @Override
     public CompletionResponse askCompletion(List<AiModelMessage> messages,
                                             String agentRole, AiModel aiModel,
@@ -260,6 +258,8 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
         return askCompletion(messages, agentRole, aiModel, aiModelRequestParams, apiKey, tools, toolChoice, responseJsonSchema, null);
     }
 
+    /** @param deltas receives the tokens as they arrive; null sends an ordinary (non-streaming) request */
+    @SneakyThrows
     @Override
     public CompletionResponse askCompletion(List<AiModelMessage> messages,
                                             String agentRole, AiModel aiModel,
@@ -267,7 +267,8 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
                                             String apiKey,
                                             List<AiTools> tools,
                                             String toolChoice,
-                                            @Nullable ObjectNode responseJsonSchema, Consumer<CompletionDelta> listener){
+                                            @Nullable ObjectNode responseJsonSchema,
+                                            @Nullable Consumer<CompletionDelta> deltas) {
         if (Strings.isNotEmpty(agentRole)) {
             upsertSystemPrompt(messages, agentRole);
         }
@@ -309,10 +310,13 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
         restoreReasoning(messages, aiModel);
 
         OpenAiCompletionRequest openAiCompletionRequest = openAiGptRequestBuilder.build();
-        OpenAiCompletionResponse openAiCompletionResponse = listener == null ? this.getCompletionResponse(openAiCompletionRequest, aiModel, apiKey) :
-                ProviderStreamClient.complete(
-                        restTemplate, objectMapper, aiModel.getUrl(), buildHeader(apiKey), openAiCompletionRequest,
-                        ProviderStreamClient.Protocol.CHAT, OpenAiCompletionResponse.class, listener);
+        OpenAiCompletionResponse openAiCompletionResponse;
+        if (deltas == null) {
+            openAiCompletionResponse = this.getCompletionResponse(openAiCompletionRequest, aiModel, apiKey);
+        } else {
+            openAiCompletionResponse = ProviderStreamClient.complete(restTemplate, objectMapper, aiModel.getUrl(), buildHeader(apiKey),
+                    openAiCompletionRequest, ProviderStreamClient.Protocol.CHAT, OpenAiCompletionResponse.class, deltas);
+        }
         CompletionResponse completionResponse = openAiCompletionResponseConverter.toCompletionResponse(openAiCompletionResponse);
 
         extractReasoning(completionResponse);

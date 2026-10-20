@@ -1,8 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.impl;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.CompletionDelta;
-import java.util.function.Consumer;
-
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Choice;
@@ -17,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.Set;
 
 @Service
@@ -47,6 +46,34 @@ public class MockGeminiServiceAdapter implements AiModelApiAdapterService {
                                 .object("embedding")
                                 .build()))
                 .build();
+    }
+
+    /** Streams the canned answer in small pieces, so streaming can be tried without a provider. */
+    @Override
+    public CompletionResponse askCompletion(List<AiModelMessage> messages, String agentRole, AiModel aiModel,
+                                            AiModelRequestParams aiModelRequestParams, String apiKey,
+                                            List<AiTools> tools, String toolChoice,
+                                            @Nullable ObjectNode responseJsonSchema,
+                                            @Nullable Consumer<CompletionDelta> deltas) {
+        CompletionResponse response = askCompletion(messages, agentRole, aiModel, aiModelRequestParams, apiKey, tools, toolChoice, responseJsonSchema);
+        if (deltas == null) {
+            return response;
+        }
+        AiModelMessage message = response.getChoices().getFirst().getMessage();
+        streamInPieces("reasoningContent", message.getReasoningContent(), deltas);
+        streamInPieces("value", message.getContent(), deltas);
+        return response;
+    }
+
+    private static void streamInPieces(String field, String text, Consumer<CompletionDelta> deltas) {
+        if (text == null) {
+            return;
+        }
+        int pieceLength = 32;
+        for (int start = 0; start < text.length(); start += pieceLength) {
+            int end = Math.min(start + pieceLength, text.length());
+            deltas.accept(new CompletionDelta(field, text.substring(start, end)));
+        }
     }
 
     @Override
@@ -100,25 +127,6 @@ public class MockGeminiServiceAdapter implements AiModelApiAdapterService {
 
     private static String abbreviate(String text) {
         return text.length() <= 120 ? text : text.substring(0, 120) + "...";
-    }
-
-    @Override
-    public CompletionResponse askCompletion(List<AiModelMessage> messages, String agentRole, AiModel aiModel,
-            AiModelRequestParams params, String apiKey, List<AiTools> tools, String toolChoice,
-            @Nullable ObjectNode schema, Consumer<CompletionDelta> listener) {
-        CompletionResponse result = askCompletion(messages, agentRole, aiModel, params, apiKey, tools, toolChoice, schema);
-        if (listener != null) {
-            var message = result.getChoices().getFirst().getMessage();
-            streamMock("reasoningContent", message.getReasoningContent(), listener);
-            streamMock("value", message.getContent(), listener);
-        }
-        return result;
-    }
-
-    private void streamMock(String field, String text, Consumer<CompletionDelta> listener) {
-        if (text == null) return;
-        for (int i = 0; i < text.length(); i += 32)
-            listener.accept(new CompletionDelta(field, text.substring(i, Math.min(i + 32, text.length()))));
     }
 
     @Override

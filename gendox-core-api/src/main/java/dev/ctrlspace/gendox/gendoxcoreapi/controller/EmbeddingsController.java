@@ -1,13 +1,10 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.services.chat.ChatCompletionRun;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.chat.ChatCompletionService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.chat.ChatEventStream;
-
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Map;
 import java.util.UUID;
 
@@ -18,8 +15,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.security.concurrent.DelegatingSecurityContextRunnable;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -40,6 +40,10 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.MessageLocalContext;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionMessageDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionRequestDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionStatusDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.CompletionTurn;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.CompletionListener;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.CompletionTurnService;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ContentPart;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.CompletionService;
@@ -71,9 +75,12 @@ public class EmbeddingsController {
     private MessageLocalContextConverter messageLocalContextConverter;
     private MessageLocalContextService messageLocalContextService;
     private DeepThinkingBatchService deepThinkingBatchService;
-    @Autowired
-    private ChatCompletionService chatCompletions;
+    private CompletionTurnService completionTurnService;
+    private TaskExecutor taskExecutor;
 
+    // Identifies an anonymous chat session when it answers or checks a waiting turn
+    private static final String COMPLETION_TOKEN_HEADER = "X-Gendox-Completion-Token";
+    private static final String TOOL_ROLE = "tool";
 
     @Value("${proven-ai.enabled}")
     private Boolean provenAiEnabled;
@@ -88,7 +95,9 @@ public class EmbeddingsController {
                                 ProjectService projectService,
                                 MessageLocalContextConverter messageLocalContextConverter,
                                 MessageLocalContextService messageLocalContextService,
-                                DeepThinkingBatchService deepThinkingBatchService) {
+                                DeepThinkingBatchService deepThinkingBatchService,
+                                CompletionTurnService completionTurnService,
+                                @Qualifier("taskExecutor") TaskExecutor taskExecutor) {
         this.embeddingService = embeddingService;
         this.trainingService = trainingService;
         this.completionService = completionService;
@@ -99,6 +108,8 @@ public class EmbeddingsController {
         this.messageLocalContextConverter = messageLocalContextConverter;
         this.messageLocalContextService = messageLocalContextService;
         this.deepThinkingBatchService = deepThinkingBatchService;
+        this.completionTurnService = completionTurnService;
+        this.taskExecutor = taskExecutor;
     }
 
 
@@ -176,9 +187,12 @@ public class EmbeddingsController {
     @PreAuthorize(" @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectsFromRequestParams') || " +
             "@securityUtils.isPublicProject(#projectId)")
     @PostMapping("/messages/completions")
-    @Operation(summary = "Complete a user or tool message",
-            description = "Normal chat retrieves project knowledge through advanced_search. " +
-                    "Set stream=true for SSE; omit it for JSON. Tool replies use role=tool and toolCallId on this same endpoint.")
+    @Operation(summary = "Semantic completion of message",
+            description = "Find a message within a project that semantically completes the given input message. " +
+                    "This endpoint calculates the embedding for the input message and searches for a complementary message " +
+                    "in the context of the provided project. Set stream=true to receive the answer as Server-Sent Events. " +
+                    "A message with role=tool returns the result of a CLIENT tool call (toolCallId, value) to a turn " +
+                    "that waits for it; until every waiting call has a result this returns 202 with the turn status.")
     @Observed(name = "EmbeddingsController.getCompletionSearch",
             contextualName = "EmbeddingsController#getCompletionSearch",
             lowCardinalityKeyValues = {
@@ -192,25 +206,10 @@ public class EmbeddingsController {
                                                                     Authentication authentication,
                                                                     HttpServletRequest request) throws Exception {
 
-        String role = completionRequestDTO.getRole() == null ? "user" : completionRequestDTO.getRole();
-        if (!role.equals("user") && !role.equals("tool"))
-            throw new GendoxException("INVALID_MESSAGE_ROLE", "Only user and tool messages are accepted", HttpStatus.BAD_REQUEST);
-        if (role.equals("tool")) {
-            if (completionRequestDTO.isDeepThinking())
-                throw new GendoxException("INVALID_TOOL_REPLY", "Tool replies cannot start deep-thinking jobs", HttpStatus.BAD_REQUEST);
-            var stream = completionRequestDTO.isStream() ? new ChatEventStream() : null;
-            try {
-                var run = chatCompletions.reply(completionRequestDTO, UUID.fromString(projectId),
-                        request.getHeader("X-Gendox-Completion-Token"), stream == null ? (event, data) -> {} : stream);
-                if (run == null) {
-                    if (stream != null) stream.detach();
-                    return ResponseEntity.accepted().body(chatCompletions.status(completionRequestDTO.getThreadId(), request.getHeader("X-Gendox-Completion-Token")));
-                }
-                return runChatCompletion(run, stream);
-            } catch (Exception e) { if (stream != null) stream.detach(); throw e; }
+        if (TOOL_ROLE.equals(completionRequestDTO.getRole())) {
+            return postToolResult(completionRequestDTO, UUID.fromString(projectId), request);
         }
-        if (completionRequestDTO.getValue() == null)
-            throw new GendoxException("MESSAGE_REQUIRED", "Message value is required", HttpStatus.BAD_REQUEST);
+
         Project project = projectService.getProjectById(UUID.fromString(projectId));
         // check if the message is within the subscription limits
         if (!subscriptionValidationService.canSendMessage(project.getOrganizationId(), project.getProjectAgent().getCompletionModel())) {
@@ -240,39 +239,73 @@ public class EmbeddingsController {
                 )
         );
         message.setLocalContexts(contexts);
-        if (!completionRequestDTO.isDeepThinking()) {
-            var stream = completionRequestDTO.isStream() ? new ChatEventStream() : null;
-            try {
-                var run = chatCompletions.begin(message, project, completionRequestDTO, stream == null ? (event, data) -> {} : stream);
-                return runChatCompletion(run, stream);
-            } catch (Exception e) { if (stream != null) stream.detach(); throw e; }
-        }
         Message savedMessage = messageService.createMessage(message);
 
         List<ContentPart> attachedImages = messageLocalContextService.getImageContentPartsFromLocalContext(message);
         savedMessage.setAdditionalResources(attachedImages);
 
-        JobExecution jobExecution = deepThinkingBatchService.runDeepThinking(
-                savedMessage.getId(), project.getId(), savedMessage.getThreadId());
-        CompletionMessageDTO response = CompletionMessageDTO.builder()
-                .jobExecutionId(jobExecution.getId()).threadId(savedMessage.getThreadId()).build();
-        return ResponseEntity.accepted().body(response);
+        CompletionMessageDTO response;
+        if (completionRequestDTO.isDeepThinking()) {
+            JobExecution jobExecution = deepThinkingBatchService.runDeepThinking(
+                    savedMessage.getId(), project.getId(), savedMessage.getThreadId());
+
+            response = CompletionMessageDTO.builder()
+                    .jobExecutionId(jobExecution.getId())
+                    .threadId(savedMessage.getThreadId())
+                    .build();
+
+            return ResponseEntity.accepted().body(response);
+        }
+
+        return respond(completionRequestDTO.isStream(), completionRequestDTO.isClientToolResults(), savedMessage,
+                listener -> completionService.getCompletionSearch(savedMessage, project, listener));
     }
 
+    /**
+     * Saves the result of a CLIENT tool call. The turn continues once every call it waits for has a
+     * result; until then the answer is 202 with the turn's status.
+     */
+    private ResponseEntity<?> postToolResult(CompletionRequestDTO toolResult, UUID projectId, HttpServletRequest request) throws Exception {
+        String resumeToken = request.getHeader(COMPLETION_TOKEN_HEADER);
+        Optional<CompletionTurn> resumed = completionTurnService.saveResult(toolResult.getThreadId(), toolResult.getToolCallId(),
+                toolResult.getValue(), projectId, resumeToken);
+        if (resumed.isEmpty()) {
+            return ResponseEntity.accepted().body(completionTurnService.getStatus(toolResult.getThreadId(), resumeToken));
+        }
 
-    private ResponseEntity<?> runChatCompletion(ChatCompletionRun run,
-            ChatEventStream stream) {
-        if (stream == null) return ResponseEntity.ok(chatCompletions.execute(run));
-        chatCompletions.executeAsync(run);
-        return ResponseEntity.ok().contentType(MediaType.TEXT_EVENT_STREAM)
-                .header("Cache-Control", "no-cache, no-transform").header("X-Accel-Buffering", "no").body(stream.emitter());
+        CompletionTurn turn = resumed.get();
+        Message question = messageService.getMessageById(turn.getUserMessageId());
+        return respond(toolResult.isStream(), true, question, listener -> completionService.resumeCompletionSearch(turn, listener));
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable') || @securityUtils.isPublicThread(#threadId)")
     @GetMapping("/threads/{threadId}/completion-status")
-    public Map<String, Object> getCompletionStatus(@PathVariable UUID threadId, HttpServletRequest request) {
-        return chatCompletions.status(threadId, request.getHeader("X-Gendox-Completion-Token"));
+    @Operation(summary = "Get the status of a thread's latest chat turn",
+            description = "IDLE, GENERATING or WAITING_FOR_TOOLS, with the calls a waiting turn needs results for. " +
+                    "Lets a reloaded page show a turn that is still running.")
+    public CompletionStatusDTO getCompletionStatus(@PathVariable UUID threadId, HttpServletRequest request) {
+        return completionTurnService.getStatus(threadId, request.getHeader(COMPLETION_TOKEN_HEADER));
     }
+
+    /**
+     * Answers with JSON, or with Server-Sent Events while the completion runs in the background,
+     * where it continues even if the browser goes away.
+     */
+    private ResponseEntity<?> respond(boolean stream, boolean waitsForClientTools, Message question,
+                                      SseCompletionListener.ChatCompletion completion) throws Exception {
+        if (!stream) {
+            return ResponseEntity.ok(completion.run(new CompletionListener(waitsForClientTools)));
+        }
+
+        SseCompletionListener events = new SseCompletionListener(question, waitsForClientTools);
+        taskExecutor.execute(new DelegatingSecurityContextRunnable(() -> events.run(completion)));
+        return ResponseEntity.ok()
+                .contentType(MediaType.TEXT_EVENT_STREAM)
+                .header("Cache-Control", "no-cache, no-transform")
+                .header("X-Accel-Buffering", "no")
+                .body(events.getEmitter());
+    }
+
 
     @PostMapping("/messages/moderation")
     public ModerationResponse getModerationCheck(@RequestBody String message) throws GendoxException {

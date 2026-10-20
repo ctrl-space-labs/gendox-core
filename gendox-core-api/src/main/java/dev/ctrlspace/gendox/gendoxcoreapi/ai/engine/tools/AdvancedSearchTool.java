@@ -23,6 +23,8 @@ import java.util.List;
 @Component
 public class AdvancedSearchTool implements AiToolHandler {
 
+    public static final String TOOL_NAME = "advanced_search";
+
     private static final Logger logger = LoggerFactory.getLogger(AdvancedSearchTool.class);
 
     private final EmbeddingService embeddingService;
@@ -36,12 +38,12 @@ public class AdvancedSearchTool implements AiToolHandler {
 
     @Override
     public String getName() {
-        return "advanced_search";
+        return TOOL_NAME;
     }
 
     @Override
     public String getDescription() {
-        return "Search project knowledge and return matching document sections. Use this before answering factual questions about project documents; search again when the results do not answer the question.";
+        return "Compose a single semantic-search query for the vector store and return the matching document sections.";
     }
 
     @Override
@@ -70,7 +72,7 @@ public class AdvancedSearchTool implements AiToolHandler {
     public JsonNode execute(JsonNode argumentsNode, ToolExecutionContext context) throws GendoxException {
         JsonNode arguments;
         try {
-            arguments = argumentsNode.isTextual() ? objectMapper.readTree(argumentsNode.asText()) : argumentsNode;
+            arguments = objectMapper.readTree(argumentsNode.asText());
         } catch (Exception e) {
             throw new IllegalArgumentException("Invalid tool arguments JSON: " + argumentsNode, e);
         }
@@ -92,8 +94,8 @@ public class AdvancedSearchTool implements AiToolHandler {
                     context.project(),
                     PageRequest.of(0, maxSearchLimit)
             );
-            // The returned text stays limited to maxCompletionLimit. Metadata for the other
-            // matches is retained so the Sources UI can still show search-history entries.
+            // keep the top #maxCompletionLimit
+            sections = sections.subList(0, Math.min(sections.size(), maxCompletionLimit));
 
         } catch (IOException | NoSuchAlgorithmException e) {
             throw new GendoxException("ADVANCED_SEARCH_TOOL_FAILED",
@@ -103,16 +105,7 @@ public class AdvancedSearchTool implements AiToolHandler {
 
         logger.debug("AdvancedSearchTool found {} sections", sections.size());
 
-        int count = Math.min(sections.size(), maxCompletionLimit);
-        ObjectNode result = (ObjectNode) buildResult(searchQuery, sections.subList(0, count));
-        result.path("sections").forEach(section -> ((ObjectNode)section).put("is_completion_participant", true));
-        ObjectNode history = (ObjectNode) buildResult(searchQuery, sections.subList(count, sections.size()));
-        history.path("sections").forEach(section -> {
-            ((ObjectNode)section).remove("section_text");
-            ((ObjectNode)section).put("is_completion_participant", false);
-        });
-        result.set("search_history", history.get("sections"));
-        return result;
+        return buildResult(searchQuery, sections);
     }
 
     /**
@@ -167,12 +160,6 @@ public class AdvancedSearchTool implements AiToolHandler {
 
             sectionNode.put("section_text", section.getSectionValue());
             sectionNode.put("distance", section.getDistanceFromQuestion());
-            sectionNode.set("provenance", objectMapper.valueToTree(
-                    dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProvenAiMetadata.builder()
-                        .sectionId(section.getId()).iscc(section.getDocumentSectionIsccCode())
-                        .title(documentTitle).documentURL(section.getDocumentURL()).tokens(section.getTokenCount())
-                        .ownerName(section.getOwnerName()).signedPermissionOfUseVc(section.getSignedPermissionOfUseVc())
-                        .aiModelName(section.getAiModelName()).build()));
 
             sectionsArray.add(sectionNode);
         }
