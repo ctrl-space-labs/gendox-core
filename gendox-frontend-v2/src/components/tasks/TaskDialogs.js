@@ -95,6 +95,7 @@ export const TaskFormDialog = ({ open, task, type = 'DOCUMENT_INSIGHTS', organiz
 
   return (
     <Dialog
+      busy={saving}
       open={open}
       onClose={onClose}
       title={task ? `Edit ${task.title}` : 'New task'}
@@ -315,6 +316,7 @@ export const DuplicateTaskDialog = ({ task, organizationId, projectId, onClose, 
 
   return (
     <Dialog
+      busy={saving}
       open={!!task}
       onClose={onClose}
       title='Duplicate task'

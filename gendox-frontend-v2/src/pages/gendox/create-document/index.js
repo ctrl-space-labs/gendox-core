@@ -94,12 +94,13 @@ const CreateDocumentPage = () => {
         </button>
         <span className='sp' />
         <span className='faint sm'>{dirty ? 'Unsaved changes' : 'Not saved yet'}</span>
-        <button className='btn primary' onClick={save} disabled={isSaving}>
+        <button aria-busy={isSaving} className='btn primary' onClick={save} disabled={isSaving}>
           <Check className='lucide' />
           {isSaving ? 'Saving…' : 'Save to knowledge'}
         </button>
       </div>
 
+      <fieldset className='lock' disabled={isSaving}>
       <div>
         <input
           ref={titleRef}
@@ -151,6 +152,7 @@ const CreateDocumentPage = () => {
           </div>
         </div>
       </div>
+      </fieldset>
 
       <ConfirmDialog
         open={confirmLeave}

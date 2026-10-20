@@ -106,6 +106,7 @@ const ThreadMenu = ({ thread, openHref, onDeleted, className = 'menu-x' }) => {
       </Menu>
 
       <Dialog
+        busy={isSaving}
         open={renameOpen}
         onClose={() => setRenameOpen(false)}
         title='Rename conversation'

@@ -4,7 +4,7 @@ import { useAuth } from 'src/authentication/useAuth'
 
 /**
  * The organization and the agent (project) the URL points at, read from the signed-in user's profile.
- * `href(path)` builds a link that keeps both, e.g. href('/gendox/home').
+ * `href(path)` builds a link that keeps both, e.g. href('/gendox/agent-home').
  */
 const useActiveScope = () => {
   const router = useRouter()

@@ -64,7 +64,7 @@ const AgentScope = ({ project, tab }) => {
               ))}
             </Menu>
           )}
-          <Link className='btn s primary' href={href('/gendox/chat')}>
+          <Link className='btn s primary' href={`${href('/gendox/agent-home')}#/chat/new`}>
             <MessageSquareText className='lucide' />
             Chat
           </Link>

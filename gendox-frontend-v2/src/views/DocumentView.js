@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from 'src/authentication/useAuth'
 import useActiveScope from 'src/hooks/useActiveScope'
+import useOrganizationUsers from 'src/hooks/useOrganizationUsers'
 import { fetchProject } from 'src/store/activeProject/activeProject'
 import documentService from 'src/gendox-sdk/documentService'
 import { getErrorMessage } from 'src/utils/errorHandler'
@@ -155,6 +156,7 @@ const DocumentView = () => {
   const view = useView()
   const { user } = useAuth()
   const { organizationId, projectId, href } = useActiveScope()
+  const organizationUsers = useOrganizationUsers(organizationId)
   const { documentId, sectionId, ask } = view.query
 
   const [loaded, setLoaded] = useState({ document: null, sections: [], error: null })
@@ -403,7 +405,7 @@ const DocumentView = () => {
     )
   }
 
-  const author = authorOf(document, projectMembers)
+  const author = authorOf(document, projectMembers, organizationUsers)
   const titled = sections.filter(sectionTitleOf)
 
   return (

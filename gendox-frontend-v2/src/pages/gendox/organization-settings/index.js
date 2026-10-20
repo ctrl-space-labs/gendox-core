@@ -31,6 +31,7 @@ const OrganizationSettingsPage = () => {
   const [fields, setFields] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [typed, setTyped] = useState('')
 
   useEffect(() => {
@@ -79,14 +80,16 @@ const OrganizationSettingsPage = () => {
   }
 
   const deleteOrganization = async () => {
+    setIsDeleting(true)
     try {
       await organizationService.deactivateOrganizationById(organizationId, getToken())
       toast.success(`${saved.name} deleted`)
       const next = organizations.find(o => o.id !== organizationId)
       // a full load: the guard picks the next organization, or sends to create one
-      window.location.href = next ? `/gendox/home/?organizationId=${next.id}` : '/gendox/create-organization/'
+      window.location.href = next ? `/gendox/agent-home/?organizationId=${next.id}` : '/gendox/create-organization/'
     } catch (error) {
       toast.error(`Couldn’t delete the organization. ${getErrorMessage(error)}`)
+      setIsDeleting(false)
     }
   }
 
@@ -98,6 +101,7 @@ const OrganizationSettingsPage = () => {
     <main className='content'>
       <OrgScope tab='general' />
       <div>
+        <fieldset className='lock' disabled={isSaving}>
         <section className='sect' style={{ paddingTop: 8 }}>
           <header>
             <h2>Organization</h2>
@@ -137,13 +141,14 @@ const OrganizationSettingsPage = () => {
                 <button className='btn ghost' disabled={!dirty || isSaving} onClick={() => setFields(saved)}>
                   Discard
                 </button>
-                <button className='btn primary' disabled={!dirty || isSaving} onClick={save}>
+                <button aria-busy={isSaving} className='btn primary' disabled={!dirty || isSaving} onClick={save}>
                   {isSaving ? 'Saving…' : 'Save'}
                 </button>
               </div>
             )}
           </div>
         </section>
+        </fieldset>
         {canDelete && (
           <section className='sect'>
             <header>
@@ -173,6 +178,7 @@ const OrganizationSettingsPage = () => {
       </div>
 
       <Dialog
+        busy={isDeleting}
         open={deleteOpen}
         onClose={() => setDeleteOpen(false)}
         size='s'
@@ -182,8 +188,8 @@ const OrganizationSettingsPage = () => {
             <button className='btn' onClick={() => setDeleteOpen(false)}>
               Cancel
             </button>
-            <button className='btn danger-solid' disabled={typed !== saved.name} onClick={deleteOrganization}>
-              Delete organization
+            <button aria-busy={isDeleting} className='btn danger-solid' disabled={typed !== saved.name || isDeleting} onClick={deleteOrganization}>
+              {isDeleting ? 'Deleting…' : 'Delete organization'}
             </button>
           </>
         }

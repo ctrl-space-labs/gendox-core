@@ -8,6 +8,7 @@ import {
   ChevronRight,
   FilePenLine,
   FileText,
+  Globe,
   Library,
   MessageSquareText,
   Pause,
@@ -20,9 +21,12 @@ import {
 } from 'lucide-react'
 import { useAuth } from 'src/authentication/useAuth'
 import useActiveScope from 'src/hooks/useActiveScope'
+import useOrganizationUsers from 'src/hooks/useOrganizationUsers'
+import useHasOrgRole from 'src/authentication/hooks/useHasOrgRole'
 import { fetchProject } from 'src/store/activeProject/activeProject'
 import { fetchProjectDocuments } from 'src/store/activeDocument/activeDocument'
 import documentService from 'src/gendox-sdk/documentService'
+import webScrapeService from 'src/gendox-sdk/webScrapeService'
 import searchService from 'src/gendox-sdk/searchService'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import { localStorageConstants } from 'src/utils/generalConstants'
@@ -30,11 +34,13 @@ import { isValidOrganizationAndProject } from 'src/utils/validators'
 import AppLayout from 'src/layouts/AppLayout'
 import AgentScope from 'src/components/agent/AgentScope'
 import UploadDialog from 'src/components/knowledge/UploadDialog'
+import AgentIntegrations, { loadIntegrationRows } from 'src/components/integrations/AgentIntegrations'
+import { AddIntegrationDialog } from 'src/components/integrations/IntegrationDialogs'
 import {
+  addedByOf,
   authorOf,
   createdAtOf,
   fileNameOf,
-  formatDate,
   formatDateTime,
   formatSize,
   plural,
@@ -42,6 +48,7 @@ import {
   sortSections,
   sourceOf,
   tileTypeOf,
+  timeAgo,
   typeNameOf,
   updatedAtOf
 } from 'src/components/knowledge/documentUtils'
@@ -69,7 +76,7 @@ const useDebounced = (value, delay) => {
 }
 
 // The selected document: its details and first sections (GET documents/{id})
-const DocumentPanel = ({ document, members, documentHref, onDelete }) => {
+const DocumentPanel = ({ document, members, organizationUsers, documentHref, onDelete }) => {
   const [details, setDetails] = useState(null)
 
   useEffect(() => {
@@ -87,7 +94,7 @@ const DocumentPanel = ({ document, members, documentHref, onDelete }) => {
 
   const sections = sortSections(details?.documentInstanceSections)
   const isReady = sections.length > 0
-  const author = authorOf(document, members)
+  const author = addedByOf(document, members, organizationUsers)
   // the full document has the size and page count the list leaves out
   const pages = details?.numberOfPages ?? document.numberOfPages
   const size = details?.fileSizeBytes ?? document.fileSizeBytes
@@ -100,19 +107,19 @@ const DocumentPanel = ({ document, members, documentHref, onDelete }) => {
           <h3 style={{ fontSize: 15, lineHeight: 1.35, wordBreak: 'break-word' }}>{document.title}</h3>
           <div style={{ marginTop: 8 }}>
             {!details ? (
-              <span className='faint sm'>Loading…</span>
+              <span className='skel' style={{ width: 130, height: 22, borderRadius: 99 }} />
             ) : isReady ? (
-              <span className='badge dot ok'>Ready · {plural(sections.length, 'section')}</span>
+              <span className='badge dot ok fade-in'>Ready · {plural(sections.length, 'section')}</span>
             ) : details.failed ? (
-              <span className='badge dot err'>Couldn’t load</span>
+              <span className='badge dot err fade-in'>Couldn’t load</span>
             ) : (
-              <span className='badge dot'>Not processed yet</span>
+              <span className='badge dot fade-in'>Not processed yet</span>
             )}
           </div>
         </div>
       </div>
       {details && !details.failed && !isReady && (
-        <section>
+        <section className='fade-in'>
           <p className='muted sm'>
             It has no sections yet, so answers can’t cite it. Sections appear once the document has been processed.
           </p>
@@ -134,18 +141,10 @@ const DocumentPanel = ({ document, members, documentHref, onDelete }) => {
               </>
             )}
           </dd>
-          {pages > 0 && (
-            <>
-              <dt>Pages</dt>
-              <dd className='num'>{pages}</dd>
-            </>
-          )}
-          {size > 0 && (
-            <>
-              <dt>Size</dt>
-              <dd className='num'>{formatSize(size)}</dd>
-            </>
-          )}
+          <dt>Pages</dt>
+          <dd className='num'>{pages > 0 ? pages : details ? '—' : <span className='skel' style={{ width: 28 }} />}</dd>
+          <dt>Size</dt>
+          <dd className='num'>{size > 0 ? formatSize(size) : details ? '—' : <span className='skel' style={{ width: 56 }} />}</dd>
           {author && (
             <>
               <dt>Added by</dt>
@@ -159,7 +158,7 @@ const DocumentPanel = ({ document, members, documentHref, onDelete }) => {
         </dl>
       </section>
       {isReady && (
-        <section>
+        <section className='fade-in'>
           <div className='label'>First sections</div>
           <div className='stack' style={{ gap: 8 }}>
             {sections.slice(0, 3).map(section => (
@@ -184,7 +183,7 @@ const DocumentPanel = ({ document, members, documentHref, onDelete }) => {
           Open
         </Link>
         {isReady && (
-          <Link className='btn s' href={`${documentHref(document.id)}&ask=1`}>
+          <Link className='btn s fade-in' href={`${documentHref(document.id)}&ask=1`}>
             <MessageSquareText className='lucide' />
             Ask about it
           </Link>
@@ -280,7 +279,7 @@ const Passages = ({ query, projectId, documentHref }) => {
       })}
       {hasMore && (
         <div className='pager'>
-          <button className='btn s' disabled={isLoading} onClick={() => load(page + 1, false)}>
+          <button aria-busy={isLoading} className='btn s' disabled={isLoading} onClick={() => load(page + 1, false)}>
             {isLoading ? 'Loading…' : 'Load more'}
           </button>
         </div>
@@ -290,11 +289,25 @@ const Passages = ({ query, projectId, documentHref }) => {
 }
 
 // What the agent reads, searches and cites: its documents.
+// The table's State: its sections once processed, else whether it is on its way. The list carries the
+// count only when the API sends `sectionCount`; until then the cell is empty (see the selected document's panel).
+const DocumentState = ({ count, autoTraining }) => {
+  if (count === undefined || count === null) return <span className='faint'>—</span>
+  if (count > 0) return <span className='badge dot ok'>{plural(count, 'section')}</span>
+
+  return autoTraining ? (
+    <span className='badge dot info'>Processing</span>
+  ) : (
+    <span className='badge dot'>Waiting to process</span>
+  )
+}
+
 const KnowledgePage = () => {
   const dispatch = useDispatch()
   const router = useRouter()
   const { user } = useAuth()
   const { project, organizationId, projectId, href } = useActiveScope()
+  const organizationUsers = useOrganizationUsers(organizationId)
 
   const { projectDetails, projectMembers } = useSelector(state => state.activeProject)
   const { projectDocuments, isBlurring } = useSelector(state => state.activeDocument)
@@ -305,6 +318,27 @@ const KnowledgePage = () => {
   const [selectedId, setSelectedId] = useState(null)
   const [checked, setChecked] = useState(() => new Set())
   const [uploadOpen, setUploadOpen] = useState(false)
+  const [addingSite, setAddingSite] = useState(false)
+  const [budget, setBudget] = useState(null)
+  const integrationsRef = useRef(null)
+  const canAddIntegrations = useHasOrgRole({ organizationId, roles: ['OP_EDIT_INTEGRATIONS'] })
+
+  // the dialog says how many pages are left this period
+  useEffect(() => {
+    if (!addingSite || !organizationId) return
+    webScrapeService
+      .getBudget(organizationId, getToken())
+      .then(r => setBudget(r.data))
+      .catch(() => setBudget(null))
+  }, [addingSite, organizationId])
+
+  // a website was added: show it, and open its page to pick what to read
+  const onSiteAdded = async url => {
+    integrationsRef.current?.reload()
+    const rows = await loadIntegrationRows(organizationId).catch(() => [])
+    const added = rows.find(row => row.integration && row.url.replace(/\/$/, '') === url.replace(/\/$/, ''))
+    if (added) router.push(href('/gendox/integration', { integrationId: added.integration.id, from: 'knowledge' }))
+  }
   const [confirm, setConfirm] = useState(null)
   const [isProcessing, setIsProcessing] = useState(false)
   const panelRef = useRef(null)
@@ -422,6 +456,12 @@ const KnowledgePage = () => {
             <FilePenLine className='lucide' />
             Write
           </Link>
+          {canAddIntegrations && (
+            <button className='btn' onClick={() => setAddingSite(true)}>
+              <Globe className='lucide' />
+              Add website
+            </button>
+          )}
           <button className='btn primary' onClick={() => setUploadOpen(true)}>
             <Upload className='lucide' />
             Upload files
@@ -437,12 +477,20 @@ const KnowledgePage = () => {
               </b>
               <span className='muted'>New documents aren’t used in answers until you process them.</span>
             </div>
-            <button className='btn s' onClick={processNow} disabled={isProcessing}>
+            <button aria-busy={isProcessing} className='btn s' onClick={processNow} disabled={isProcessing}>
               <Play className='lucide' />
               {isProcessing ? 'Starting…' : 'Process now'}
             </button>
           </div>
         )}
+
+        <AgentIntegrations
+          ref={integrationsRef}
+          organizationId={organizationId}
+          projectId={projectId}
+          agentName={agentName}
+          href={href}
+        />
 
         {hasNoDocuments ? (
           <div className='card'>
@@ -529,13 +577,15 @@ const KnowledgePage = () => {
                                 />
                               </th>
                               <th>Name</th>
-                              <th className='hide-n'>Type</th>
+                              <th>State</th>
+                              <th className='hide-n' style={{ textAlign: 'right' }}>Pages</th>
+                              <th className='hide-n' style={{ textAlign: 'right' }}>Size</th>
                               <th className='hide-n'>Updated</th>
                             </tr>
                           </thead>
                           <tbody style={{ opacity: isBlurring ? 0.5 : 1 }}>
                             {rows.map(document => {
-                              const author = authorOf(document, projectMembers)
+                              const author = authorOf(document, projectMembers, organizationUsers)
 
                               return (
                                 <tr
@@ -566,8 +616,18 @@ const KnowledgePage = () => {
                                       </div>
                                     </div>
                                   </td>
-                                  <td className='hide-n muted'>{typeNameOf(document)}</td>
-                                  <td className='hide-n muted sm'>{formatDate(updatedAtOf(document))}</td>
+                                  <td>
+                                    <DocumentState count={document.sectionCount} autoTraining={details?.autoTraining !== false} />
+                                  </td>
+                                  <td className='hide-n muted num' style={{ textAlign: 'right' }}>
+                                    {document.numberOfPages ?? '—'}
+                                  </td>
+                                  <td className='hide-n muted num' style={{ textAlign: 'right' }}>
+                                    {formatSize(document.fileSizeBytes) || '—'}
+                                  </td>
+                                  <td className='hide-n muted sm' title={formatDateTime(updatedAtOf(document))}>
+                                    {timeAgo(updatedAtOf(document))}
+                                  </td>
                                 </tr>
                               )
                             })}
@@ -618,6 +678,7 @@ const KnowledgePage = () => {
                   key={selected.id}
                   document={selected}
                   members={projectMembers}
+                  organizationUsers={organizationUsers}
                   documentHref={documentHref}
                   onDelete={() =>
                     setConfirm({
@@ -635,6 +696,13 @@ const KnowledgePage = () => {
         )}
       </div>
 
+      <AddIntegrationDialog
+        open={addingSite}
+        initialType='WEB_SCRAPE_INTEGRATION'
+        onClose={() => setAddingSite(false)}
+        onAdded={onSiteAdded}
+        budget={budget}
+      />
       <UploadDialog
         open={uploadOpen}
         onClose={() => {

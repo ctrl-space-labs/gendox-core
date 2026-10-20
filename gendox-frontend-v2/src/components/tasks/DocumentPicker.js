@@ -127,6 +127,7 @@ const DocumentPicker = ({
 
   return (
     <Dialog
+      busy={saving}
       open={open}
       onClose={onClose}
       title={title}

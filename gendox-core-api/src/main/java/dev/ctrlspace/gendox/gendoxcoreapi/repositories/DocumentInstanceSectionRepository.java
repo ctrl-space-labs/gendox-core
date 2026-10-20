@@ -18,7 +18,7 @@ import java.util.Set;
 import java.util.UUID;
 
 @Repository
-public interface DocumentInstanceSectionRepository extends JpaRepository<DocumentInstanceSection, UUID> , QuerydslPredicateExecutor<DocumentInstanceSection> {
+public interface DocumentInstanceSectionRepository extends JpaRepository<DocumentInstanceSection, UUID>, QuerydslPredicateExecutor<DocumentInstanceSection> {
 
     @EntityGraph(attributePaths = {"documentSectionMetadata", "documentInstance"})
     Page<DocumentInstanceSection> findAll(Predicate predicate, Pageable pageable);
@@ -47,6 +47,11 @@ public interface DocumentInstanceSectionRepository extends JpaRepository<Documen
     @Query("SELECT COUNT(dis) FROM DocumentInstanceSection dis WHERE dis.documentInstance.id IN :documentInstanceIds")
     long countByDocumentInstanceIds(@Param("documentInstanceIds") Set<UUID> documentInstanceIds);
 
+    // [documentInstanceId, count] for each document that has sections; one query for a page of a document list
+    @Query("SELECT dis.documentInstance.id, COUNT(dis) FROM DocumentInstanceSection dis " +
+            "WHERE dis.documentInstance.id IN :documentInstanceIds GROUP BY dis.documentInstance.id")
+    List<Object[]> countGroupedByDocumentInstanceIds(@Param("documentInstanceIds") Set<UUID> documentInstanceIds);
+
     // Deletes all sections for the doc, then deletes ONLY metadata no longer referenced by any section
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(value = """
@@ -65,7 +70,6 @@ public interface DocumentInstanceSectionRepository extends JpaRepository<Documen
             WHERE m.id = d.id;
             """, nativeQuery = true)
     int deleteSectionsAndOrphanMetadata(@Param("documentId") UUID documentId);
-
 
 
 }

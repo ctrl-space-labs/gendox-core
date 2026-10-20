@@ -13,7 +13,7 @@ const SaveBar = ({ visible, isSaving, onDiscard, onSave, saveLabel = 'Save chang
       <button className='btn ghost' onClick={onDiscard} disabled={isSaving}>
         Discard
       </button>
-      <button className='btn primary' onClick={onSave} disabled={isSaving}>
+      <button aria-busy={isSaving} className='btn primary' onClick={onSave} disabled={isSaving}>
         {isSaving ? 'Saving…' : saveLabel}
       </button>
     </div>

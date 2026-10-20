@@ -24,6 +24,7 @@ const DeleteAgentDialog = ({ open, onClose, name, onDelete }) => {
 
   return (
     <Dialog
+      busy={isDeleting}
       open={open}
       onClose={onClose}
       title={`Delete ${name}?`}
@@ -33,7 +34,7 @@ const DeleteAgentDialog = ({ open, onClose, name, onDelete }) => {
           <button className='btn' onClick={onClose}>
             Cancel
           </button>
-          <button
+          <button aria-busy={isDeleting}
             className='btn danger-solid'
             disabled={typed !== name || isDeleting}
             onClick={async () => {
@@ -158,6 +159,7 @@ const AgentSettingsPage = () => {
             <h2>General</h2>
             <p>The name people see when they chat, and what the agent is for.</p>
           </header>
+          <fieldset className='lock' disabled={isSaving}>
           <div className='card card-b form'>
             <div className='field'>
               <label htmlFor='agent-name'>Name</label>
@@ -184,12 +186,13 @@ const AgentSettingsPage = () => {
             {canEdit && (
               <div className='row'>
                 <span className='sp' />
-                <button className='btn primary' onClick={saveGeneral} disabled={!dirty || isSaving}>
+                <button aria-busy={isSaving} className='btn primary' onClick={saveGeneral} disabled={!dirty || isSaving}>
                   {isSaving ? 'Saving…' : 'Save'}
                 </button>
               </div>
             )}
           </div>
+          </fieldset>
         </section>
 
         <section className='sect'>
@@ -218,7 +221,7 @@ const AgentSettingsPage = () => {
                 <b>Process waiting documents now</b>
                 <p>Reads every document that hasn’t been processed yet.</p>
               </div>
-              <button className='btn s' onClick={processNow} disabled={isProcessing}>
+              <button aria-busy={isProcessing} className='btn s' onClick={processNow} disabled={isProcessing}>
                 <Play className='lucide' />
                 {isProcessing ? 'Starting…' : 'Process now'}
               </button>

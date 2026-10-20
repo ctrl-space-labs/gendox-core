@@ -1,15 +1,12 @@
 import Link from 'next/link'
-import { useRouter } from 'next/router'
 import {
   BookOpen,
-  Bot,
   Building2,
   Cable,
   Check,
   ChevronsUpDown,
   CreditCard,
   KeyRound,
-  House,
   LogOut,
   Monitor,
   Moon,
@@ -21,11 +18,11 @@ import {
 import { useAuth } from 'src/authentication/useAuth'
 import useActiveScope from 'src/hooks/useActiveScope'
 import useThemePreference from 'src/hooks/useThemePreference'
-import useHomeLayout, { homePathOf } from 'src/hooks/useHomeLayout'
 import commonConfig from 'src/configs/common.config'
 import { sortByField } from 'src/utils/orderUtils'
 import Avatar from 'src/components/ui/Avatar'
 import Menu from 'src/components/ui/Menu'
+import WordPressIcon from 'src/components/ui/WordPressIcon'
 
 const themes = [
   { id: 'light', icon: Sun },
@@ -38,22 +35,15 @@ const organizationPages = [
   { title: 'Organization settings', icon: Building2, path: '/gendox/organization-settings' },
   { title: 'Members', icon: Users, path: '/gendox/organization-members' },
   { title: 'Integrations', icon: Cable, path: '/gendox/integrations' },
+  { title: 'WordPress', icon: WordPressIcon, path: '/gendox/wordpress' },
   { title: 'API keys', icon: KeyRound, path: '/gendox/api-keys' },
   { title: 'Plan & usage', icon: CreditCard, path: '/gendox/plan' }
-]
-
-// the two home layouts being compared (see useHomeLayout)
-const homes = [
-  { id: 'org', icon: House, title: 'Organization home' },
-  { id: 'agent', icon: Bot, title: 'Agent home' }
 ]
 
 const AccountMenu = () => {
   const { user, logout } = useAuth()
   const { organizations, organization, href } = useActiveScope()
   const [theme, setTheme] = useThemePreference()
-  const [home, setHome] = useHomeLayout()
-  const router = useRouter()
 
   const sortedOrganizations = sortByField([...organizations], 'name', organization?.id)
 
@@ -76,7 +66,7 @@ const AccountMenu = () => {
         <Link
           key={o.id}
           className='mi'
-          href={href('/gendox/home', { organizationId: o.id, projectId: undefined })}
+          href={href('/gendox/agent-home', { organizationId: o.id, projectId: undefined })}
         >
           <Avatar name={o.name} seed={o.id} size='s' />
           <span className='trunc' style={{ flex: 1 }}>
@@ -111,27 +101,6 @@ const AccountMenu = () => {
         <div className='seg'>
           {themes.map(({ id, icon: Icon }) => (
             <button key={id} title={id} className={id === theme ? 'on' : ''} onClick={() => setTheme(id)}>
-              <Icon className='lucide' />
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className='row' style={{ padding: '4px 10px' }}>
-        <span className='muted sm' style={{ flex: 1 }}>
-          Home
-        </span>
-        <div className='seg'>
-          {homes.map(({ id, icon: Icon, title }) => (
-            <button
-              key={id}
-              title={title}
-              className={id === home ? 'on' : ''}
-              onClick={() => {
-                if (id === home) return
-                setHome(id)
-                router.push(href(homePathOf(id)))
-              }}
-            >
               <Icon className='lucide' />
             </button>
           ))}

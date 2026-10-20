@@ -12,6 +12,7 @@ import AppLayout from 'src/layouts/AppLayout'
 import ConfirmDialog from 'src/components/ui/ConfirmDialog'
 import Dialog from 'src/components/ui/Dialog'
 import Empty from 'src/components/ui/Empty'
+import { SkeletonRows } from 'src/components/ui/Skeleton'
 
 const DURATIONS = [
   ['30', 'In 30 days'],
@@ -47,6 +48,7 @@ const CreateKeyDialog = ({ open, onClose, onCreate }) => {
 
   return (
     <Dialog
+      busy={isCreating}
       open={open}
       onClose={onClose}
       size='s'
@@ -61,7 +63,7 @@ const CreateKeyDialog = ({ open, onClose, onCreate }) => {
             <button className='btn' onClick={onClose}>
               Cancel
             </button>
-            <button className='btn primary' onClick={create} disabled={!name.trim() || isCreating}>
+            <button aria-busy={isCreating} className='btn primary' onClick={create} disabled={!name.trim() || isCreating}>
               {isCreating ? 'Creating…' : 'Create key'}
             </button>
           </>
@@ -253,6 +255,7 @@ const ApiKeysPage = () => {
                 </tr>
               </thead>
               <tbody>
+                {keys === null && <SkeletonRows columns={[null, '120px', '80px', '90px', null]} />}
                 {sorted.map(apiKey => (
                   <tr key={apiKey.id} style={{ cursor: 'default', opacity: apiKey.active ? 1 : 0.6 }}>
                     <td style={{ fontWeight: 500 }}>{apiKey.name}</td>

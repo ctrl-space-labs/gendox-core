@@ -1,23 +1,21 @@
 import { useMemo } from 'react'
 import Link from 'next/link'
 import { Check, ChevronsUpDown, LayoutGrid, Library, ListChecks, MessagesSquare, Plus, Settings, SquarePen } from 'lucide-react'
-import navigation from 'src/navigation'
 import useActiveScope from 'src/hooks/useActiveScope'
-import useHomeLayout, { homePathOf } from 'src/hooks/useHomeLayout'
 import { useChatThreads } from 'src/components/chat/useChat'
 import { groupThreadsByDate } from 'src/components/chat/chatUtils'
 import AccountMenu from 'src/layouts/components/AccountMenu'
 import Avatar from 'src/components/ui/Avatar'
 import Menu from 'src/components/ui/Menu'
 
-// the agent's pages in the agent layout; Settings stays lit on every agent settings page
+// the agent's pages; Settings stays lit on every agent settings page
 const agentNavigation = [
   { id: 'tasks', title: 'Tasks', icon: ListChecks, path: '/gendox/tasks' },
   { id: 'knowledge', title: 'Knowledge', icon: Library, path: '/gendox/knowledge' },
   { id: 'agents', title: 'Settings', icon: Settings, path: '/gendox/agent-behavior' }
 ]
 
-/** The agent layout's top: which agent, and a new chat in its workspace */
+/** The sidebar's top: which agent, and a new chat in its workspace */
 const AgentSwitcher = () => {
   const { projects, project, href } = useActiveScope()
 
@@ -64,7 +62,7 @@ const AgentSwitcher = () => {
   )
 }
 
-/** The agent layout's recent chats with the current agent; each opens as a tab in the workspace */
+/** Recent chats with the current agent; each opens as a tab in the workspace */
 const RecentChats = () => {
   const { organizationId, projectId, href } = useActiveScope()
   const threads = useChatThreads(organizationId)
@@ -102,55 +100,30 @@ const RecentChats = () => {
 
 const Sidebar = ({ page }) => {
   const { href } = useActiveScope()
-  const [layout] = useHomeLayout()
-  const agent = layout === 'agent'
 
   return (
     <aside className='sidebar'>
       <div className='side-head'>
-        <Link className='brand' href={href(homePathOf(layout))}>
+        <Link className='brand' href={href('/gendox/agent-home')}>
           <span className='mark'>G</span>
           Gendox
         </Link>
-        {agent && <AgentSwitcher />}
+        <AgentSwitcher />
       </div>
       <div className='side-nav'>
-        {agent ? (
-          <div>
-            <div className='nav-label'>Agent</div>
-            <nav className='nav'>
-              {agentNavigation.map(({ id, title, icon: Icon, path }) => (
-                <Link key={id} href={href(path)} className={id === page ? 'active' : ''}>
-                  <Icon className='lucide' />
-                  {title}
-                </Link>
-              ))}
-            </nav>
-          </div>
-        ) : (
-          navigation.map((group, index) => (
-            <div key={group.label ?? index}>
-              {group.label && <div className='nav-label'>{group.label}</div>}
-              <nav className='nav'>
-                {group.items.map(({ id, title, icon: Icon, path }) =>
-                  path ? (
-                    <Link key={id} href={href(path)} className={id === page ? 'active' : ''}>
-                      <Icon className='lucide' />
-                      {title}
-                    </Link>
-                  ) : (
-                    <a key={id} className='soon' aria-disabled='true' title='Not in the new frontend yet'>
-                      <Icon className='lucide' />
-                      {title}
-                    </a>
-                  )
-                )}
-              </nav>
-            </div>
-          ))
-        )}
+        <div>
+          <div className='nav-label'>Agent</div>
+          <nav className='nav'>
+            {agentNavigation.map(({ id, title, icon: Icon, path }) => (
+              <Link key={id} href={href(path)} className={id === page ? 'active' : ''}>
+                <Icon className='lucide' />
+                {title}
+              </Link>
+            ))}
+          </nav>
+        </div>
       </div>
-      {agent && <RecentChats />}
+      <RecentChats />
       <div className='side-foot'>
         <AccountMenu />
       </div>

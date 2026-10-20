@@ -9,7 +9,7 @@ import { selectChatSession } from 'src/store/chat/gendoxChat'
 import { getToken } from 'src/components/agent/useAgent'
 import Chat from 'src/components/chat/Chat'
 import { useChatSession } from 'src/components/chat/useChat'
-import { fileNameOf, formatDate } from 'src/components/knowledge/documentUtils'
+import { fileNameOf, formatDateTime, timeAgo } from 'src/components/knowledge/documentUtils'
 import UploadDialog from 'src/components/knowledge/UploadDialog'
 import FileTile from 'src/components/ui/FileTile'
 import { TaskFormDialog } from 'src/components/tasks/TaskDialogs'
@@ -177,7 +177,9 @@ export const DockKnowledge = () => {
           <a key={doc.id} className='dk-row' href={href('/gendox/document-instance', { documentId: doc.id })} title={doc.title}>
             <FileTile name={fileNameOf(doc)} className='dk-ic' />
             <span className='trunc'>{doc.title || fileNameOf(doc)}</span>
-            <span className='dk-meta'>{formatDate(doc.updateAt ?? doc.updatedAt ?? doc.createAt)}</span>
+            <span className='dk-meta' title={formatDateTime(doc.updateAt ?? doc.updatedAt ?? doc.createAt)}>
+              {timeAgo(doc.updateAt ?? doc.updatedAt ?? doc.createAt)}
+            </span>
           </a>
         ))}
         {result && result.totalElements > docs.length && (

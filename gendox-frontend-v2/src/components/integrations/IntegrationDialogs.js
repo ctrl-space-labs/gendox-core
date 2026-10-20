@@ -19,9 +19,10 @@ const ADDABLE = ['WEB_SCRAPE_INTEGRATION', 'API_INTEGRATION']
 /**
  * Add an integration. A crawled website: POST organizations/{o}/websites/web-scrape
  * { name, url, projectId, runIntervalMinutes, crawlPageLimit } creates the website and its integration together.
- * @param onAdded - (integrationId) => …
+ * @param onAdded - (url) => …, with the website's address once it is added
+ * @param initialType - opens on this kind's form (e.g. 'WEB_SCRAPE_INTEGRATION') instead of the choice of kinds
  */
-export const AddIntegrationDialog = ({ open, onClose, onAdded, budget }) => {
+export const AddIntegrationDialog = ({ open, onClose, onAdded, budget, initialType = null }) => {
   const { organizationId, projects, projectId, href } = useActiveScope()
   const [type, setType] = useState(null)
   const [fields, setFields] = useState({})
@@ -30,7 +31,7 @@ export const AddIntegrationDialog = ({ open, onClose, onAdded, budget }) => {
 
   useEffect(() => {
     if (!open) return
-    setType(null)
+    setType(initialType)
     setUrlError(false)
     setFields({ name: '', url: '', projectId: projectId || projects[0]?.id || '', every: '10080', limit: '100' })
   }, [open])
@@ -65,6 +66,7 @@ export const AddIntegrationDialog = ({ open, onClose, onAdded, budget }) => {
 
   return (
     <Dialog
+      busy={isAdding}
       open={open}
       onClose={onClose}
       title='Add an integration'
@@ -82,7 +84,7 @@ export const AddIntegrationDialog = ({ open, onClose, onAdded, budget }) => {
             Cancel
           </button>
           {type === 'WEB_SCRAPE_INTEGRATION' && (
-            <button className='btn primary' onClick={add} disabled={isAdding || !projects.length}>
+            <button aria-busy={isAdding} className='btn primary' onClick={add} disabled={isAdding || !projects.length}>
               {isAdding ? 'Adding…' : 'Add and find pages'}
             </button>
           )}
@@ -261,6 +263,7 @@ export const EditIntegrationDialog = ({ row, onClose, onSaved }) => {
 
   return (
     <Dialog
+      busy={isSaving}
       open
       onClose={onClose}
       size='s'
@@ -270,7 +273,7 @@ export const EditIntegrationDialog = ({ row, onClose, onSaved }) => {
           <button className='btn' onClick={onClose}>
             Cancel
           </button>
-          <button className='btn primary' onClick={save} disabled={isSaving}>
+          <button aria-busy={isSaving} className='btn primary' onClick={save} disabled={isSaving}>
             {isSaving ? 'Saving…' : 'Save'}
           </button>
         </>

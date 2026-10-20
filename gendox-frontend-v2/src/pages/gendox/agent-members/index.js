@@ -46,6 +46,7 @@ const InviteDialog = ({ open, onClose, agentName, organizationName, roles, canIn
 
   return (
     <Dialog
+      busy={isSending}
       open={open}
       onClose={onClose}
       title={`Invite to ${agentName}`}
@@ -54,7 +55,7 @@ const InviteDialog = ({ open, onClose, agentName, organizationName, roles, canIn
           <button className='btn' onClick={onClose}>
             Cancel
           </button>
-          <button className='btn primary' onClick={send} disabled={!canInvite || !role || isSending}>
+          <button aria-busy={isSending} className='btn primary' onClick={send} disabled={!canInvite || !role || isSending}>
             {isSending ? 'Sending…' : 'Send invitation'}
           </button>
         </>
@@ -118,6 +119,7 @@ const AddMembersDialog = ({ open, onClose, people, organizationName, onAdd }) =>
 
   return (
     <Dialog
+      busy={isAdding}
       open={open}
       onClose={onClose}
       size='s'
@@ -127,7 +129,7 @@ const AddMembersDialog = ({ open, onClose, people, organizationName, onAdd }) =>
           <button className='btn' onClick={onClose}>
             Cancel
           </button>
-          <button
+          <button aria-busy={isAdding}
             className='btn primary'
             disabled={chosen.size === 0 || isAdding}
             onClick={async () => {

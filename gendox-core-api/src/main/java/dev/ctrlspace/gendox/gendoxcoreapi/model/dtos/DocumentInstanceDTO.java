@@ -34,5 +34,6 @@ public class DocumentInstanceDTO {
     private List<DocumentInstanceSectionDTO> documentInstanceSections = new ArrayList<>();
     private Long fileSizeBytes;
     private Integer numberOfPages;
+    private Long sectionCount;
 
 }

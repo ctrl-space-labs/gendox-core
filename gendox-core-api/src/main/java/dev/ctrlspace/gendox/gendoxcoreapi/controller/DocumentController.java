@@ -38,6 +38,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 public class DocumentController {
@@ -111,11 +112,8 @@ public class DocumentController {
 
         Page<DocumentInstance> documentInstances = documentService.getAllDocuments(criteria, pageable);
 
-        // Convert the Page of DocumentInstance to a Page of DocumentDTO using the converter
-        Page<DocumentInstanceDTO> documentDTOs = documentInstances.map(document -> documentOnlyConverter.toDTO(document));
+        return toListPage(documentInstances);
 
-
-        return documentDTOs;
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
@@ -124,9 +122,9 @@ public class DocumentController {
     @Operation(summary = "Get all documents",
             description = "Retrieve a list of all documents based on the provided criteria.")
     public Page<DocumentInstanceDTO> getAllByCriteria(@PathVariable UUID organizationId,
-                                                     @PathVariable UUID projectId,
-                                                     @RequestBody DocumentCriteria criteria,
-                                                     Pageable pageable) throws GendoxException {
+                                                      @PathVariable UUID projectId,
+                                                      @RequestBody DocumentCriteria criteria,
+                                                      Pageable pageable) throws GendoxException {
         requireCriteriaMatchesPath(criteria, organizationId, projectId);
         if (pageable == null) {
             pageable = PageRequest.of(0, 100);
@@ -137,9 +135,19 @@ public class DocumentController {
 
         Page<DocumentInstance> documentInstances = documentService.getAllDocuments(criteria, pageable);
 
-        // Convert the Page of DocumentInstance to a Page of DocumentDTO using the converter
+        return toListPage(documentInstances);
+    }
+
+    /**
+     * A page of a document list as DTOs, each with its section count, which the Knowledge list shows as its state.
+     * Both list endpoints (GET …/documents and POST …/documents/search) answer through this.
+     */
+    private Page<DocumentInstanceDTO> toListPage(Page<DocumentInstance> documentInstances) {
         Page<DocumentInstanceDTO> documentDTOs = documentInstances.map(document -> documentOnlyConverter.toDTO(document));
 
+        Map<UUID, Long> sectionCounts = documentSectionService.countSectionsByDocument(
+                documentDTOs.stream().map(DocumentInstanceDTO::getId).collect(Collectors.toSet()));
+        documentDTOs.forEach(dto -> dto.setSectionCount(sectionCounts.getOrDefault(dto.getId(), 0L)));
 
         return documentDTOs;
     }
@@ -388,7 +396,7 @@ public class DocumentController {
             description = "Upload a single file and return the created or updated DocumentInstance.")
     public ResponseEntity<DocumentInstance> uploadSingleFile(@RequestParam("file") MultipartFile file,
                                                              @RequestParam(value = "messageAttachment", required = false, defaultValue = "false") boolean messageAttachment,
-                                                             @RequestParam(value = "threadId", required = false ) UUID threadId,
+                                                             @RequestParam(value = "threadId", required = false) UUID threadId,
                                                              @PathVariable UUID organizationId,
                                                              @PathVariable UUID projectId)
             throws IOException, GendoxException, JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException, NoSuchAlgorithmException {

@@ -8,6 +8,7 @@ import organizationWebSiteService from 'src/gendox-sdk/organizationWebSiteServic
 import useAgent, { getToken } from 'src/components/agent/useAgent'
 import { IntegrationTile, bareUrl, buildRows, formatWhen } from 'src/components/integrations/integrationUtils'
 import AppLayout from 'src/layouts/AppLayout'
+import { SkeletonList } from 'src/components/ui/Skeleton'
 
 /**
  * WordPress: the sites connected through the plugin (an OrganizationWebSite with an API_INTEGRATION, created by the
@@ -62,6 +63,7 @@ const WordPressPage = () => {
             All integrations
           </Link>
         </div>
+        {sites === null && <SkeletonList rows={2} />}
         {sites && sites.length === 0 && <div className='card-b faint sm'>No WordPress site is connected yet.</div>}
         {(sites ?? []).map(site => (
           <Link

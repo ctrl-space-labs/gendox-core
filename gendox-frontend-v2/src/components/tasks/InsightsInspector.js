@@ -365,6 +365,7 @@ const DocumentPane = ({ view, doc, ctx, head }) => {
   const tab = view.tab ?? docTabOf(doc, answered)
   const [prompt, setPrompt] = useState(doc.prompt)
   const [support, setSupport] = useState(doc.supportingDocumentIds)
+  const [saving, setSaving] = useState(false)
   const [foldAll, setFoldAll] = useState(false)
   const [exporting, setExporting] = useState(false)
 
@@ -377,6 +378,7 @@ const DocumentPane = ({ view, doc, ctx, head }) => {
   const dirty = prompt !== doc.prompt || JSON.stringify(support) !== JSON.stringify(doc.supportingDocumentIds)
 
   const save = async () => {
+    setSaving(true)
     try {
       await taskService.updateTaskNode(
         organizationId,
@@ -395,6 +397,8 @@ const DocumentPane = ({ view, doc, ctx, head }) => {
       setTab(answered ? 'answers' : 'setup')
     } catch (error) {
       toast.error(getErrorMessage(error))
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -449,6 +453,7 @@ const DocumentPane = ({ view, doc, ctx, head }) => {
           </article>
         ) : tab === 'setup' ? (
           <div className='form reading-w'>
+            <fieldset className='lock' disabled={saving}>
             <div className='field'>
               <label htmlFor='doc-prompt'>Instructions for this document</label>
               <textarea
@@ -492,8 +497,9 @@ const DocumentPane = ({ view, doc, ctx, head }) => {
             )}
             <div className='row'>
               <button
+                aria-busy={saving}
                 className='btn primary'
-                disabled={!dirty}
+                disabled={!dirty || saving}
                 onClick={() =>
                   answered
                     ? ask({
@@ -505,7 +511,7 @@ const DocumentPane = ({ view, doc, ctx, head }) => {
                     : save()
                 }
               >
-                Save
+                {saving ? 'Saving…' : 'Save'}
               </button>
               <button
                 className='btn ghost'
@@ -518,6 +524,7 @@ const DocumentPane = ({ view, doc, ctx, head }) => {
                 Discard changes
               </button>
             </div>
+            </fieldset>
           </div>
         ) : tab === 'text' ? (
           <div className='read reading-w'>
@@ -690,6 +697,7 @@ const QuestionPane = ({ view, question, ctx, head }) => {
   const decision = isDecision(question)
   const [form, setForm] = useState(() => questionForm(question))
   const [filter, setFilter] = useState(null)
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     setForm(questionForm(question))
@@ -711,6 +719,7 @@ const QuestionPane = ({ view, question, ctx, head }) => {
   const problem = questionProblem(form)
 
   const save = async () => {
+    setSaving(true)
     try {
       await taskService.updateTaskNode(
         organizationId,
@@ -734,6 +743,8 @@ const QuestionPane = ({ view, question, ctx, head }) => {
       reload()
     } catch (error) {
       toast.error(getErrorMessage(error))
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -807,6 +818,7 @@ const QuestionPane = ({ view, question, ctx, head }) => {
           </div>
         ) : (
           <div className='form reading-w'>
+            <fieldset className='lock' disabled={saving}>
             <QuestionForm
               form={form}
               onChange={setForm}
@@ -835,8 +847,9 @@ const QuestionPane = ({ view, question, ctx, head }) => {
             )}
             <div className='row'>
               <button
+                aria-busy={saving}
                 className='btn primary'
-                disabled={!dirty || !!problem}
+                disabled={!dirty || !!problem || saving}
                 title={problem ?? undefined}
                 onClick={() =>
                   changed && answered.length
@@ -849,13 +862,14 @@ const QuestionPane = ({ view, question, ctx, head }) => {
                     : save()
                 }
               >
-                Save
+                {saving ? 'Saving…' : 'Save'}
               </button>
               <button className='btn ghost' disabled={!dirty} onClick={() => setForm(questionForm(question))}>
                 Discard changes
               </button>
               {dirty && problem && <span className='sm' style={{ color: 'var(--err)' }}>{problem}</span>}
             </div>
+            </fieldset>
           </div>
         )}
       </div>
@@ -951,6 +965,7 @@ const NewQuestionsPane = ({ ctx, head }) => {
       {head('New questions', 'Add questions', 'Each question becomes a column. The AI answers it for every document.')}
       <div className='insp-b'>
         <div className='form reading-w'>
+          <fieldset className='lock' disabled={saving}>
           {forms.map((form, i) => (
             <div key={i} className={forms.length > 1 ? 'fact-block' : ''} style={forms.length > 1 ? { background: 'none' } : undefined}>
               {forms.length > 1 && (
@@ -970,14 +985,15 @@ const NewQuestionsPane = ({ ctx, head }) => {
           </button>
           <p className='faint sm'>Supporting documents can be added to a question once it’s saved.</p>
           <div className='row'>
-            <button className='btn primary' onClick={add} disabled={saving || !filled.length || !!problem}>
-              {filled.length > 1 ? `Add ${filled.length} questions` : 'Add question'}
+            <button aria-busy={saving} className='btn primary' onClick={add} disabled={saving || !filled.length || !!problem}>
+              {saving ? 'Adding…' : filled.length > 1 ? `Add ${filled.length} questions` : 'Add question'}
             </button>
             <button className='btn ghost' onClick={close}>
               Cancel
             </button>
             {filled.length > 0 && problem && <span className='sm' style={{ color: 'var(--err)' }}>{problem}</span>}
           </div>
+          </fieldset>
         </div>
       </div>
     </>

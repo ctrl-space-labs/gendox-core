@@ -234,3 +234,34 @@ a.eo-chip.warn { border-color: color-mix(in srgb, var(--warn) 40%, transparent);
 
 /* editing a document: no outline, the sections take the whole width */
 .docpage.editing { grid-template-columns: minmax(0, 1fr); }
+
+/* a placeholder the size of what is loading (the shimmer of an uploading chat file) */
+.skel { display: inline-block; height: .9em; border-radius: 4px; vertical-align: middle; background: linear-gradient(90deg, var(--surface-2) 30%, var(--surface-3) 50%, var(--surface-2) 70%) 0 0 / 300% 100%; animation: shimmer 1.2s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .skel { animation: none; } }
+
+/* moving to another page */
+.route-progress { position: fixed; top: 0; left: 0; z-index: 2000; height: 2px; background: var(--accent); box-shadow: 0 0 8px var(--accent); transition: width .2s ease-out; pointer-events: none; }
+.skel-row td { padding-block: 14px; }
+.table tbody tr.skel-row { cursor: default; }
+.table tbody tr.skel-row:hover { background: none; }
+.skel-list { display: flex; flex-direction: column; }
+.skel-item { display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+.skel-item:last-child { border-bottom: 0; }
+
+/* a button whose action is running: a small spinner takes the place of its icon */
+.btn[aria-busy='true'] { cursor: progress; }
+.btn[aria-busy='true'] > .lucide { display: none; }
+.btn[aria-busy='true']::before { content: ''; width: 13px; height: 13px; flex: none; border-radius: 50%; border: 2px solid color-mix(in srgb, currentColor 30%, transparent); border-top-color: currentColor; animation: spin .8s linear infinite; }
+
+/* the WordPress badge in a choice card keeps its own size (.choice span would make it text-sized) */
+.choice label > .wp { font: 700 9px/1 Georgia, serif; color: var(--text-2); }
+
+/* a form while its action runs: <fieldset className='lock' disabled={busy}> around its fields disables them all,
+   without changing the layout */
+fieldset.lock { display: contents; }
+fieldset.lock:disabled :is(.input, textarea, select, .switch, .seg, .choice, .md-editor, input[type='checkbox'], input[type='radio']) { opacity: .6; cursor: progress; }
+fieldset.lock:disabled .btn { opacity: .5; pointer-events: none; }
+
+/* what arrives after the rest of a panel eases in, instead of popping */
+.fade-in { animation: fade .25s ease-out; }
+@media (prefers-reduced-motion: reduce) { .fade-in { animation: none; } }

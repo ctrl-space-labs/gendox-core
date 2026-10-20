@@ -67,7 +67,7 @@ const IntegrationsPage = () => {
   const [budget, setBudget] = useState(null)
   const [show, setShow] = useState('on')
   const [query, setQuery] = useState('')
-  const [adding, setAdding] = useState(false)
+  const [adding, setAdding] = useState(false) // false, true, or the kind to open on
   const [editing, setEditing] = useState(null)
   const [removing, setRemoving] = useState(null)
   const [togglingId, setTogglingId] = useState(null)
@@ -99,7 +99,13 @@ const IntegrationsPage = () => {
   }, [load, organizationId])
 
   useEffect(() => {
-    if (router.isReady && window.location.hash === '#add') setAdding(true)
+    if (!router.isReady) return
+    // #add opens the choice of kinds, #add-website the website form (from New agent → Read a website)
+    const { hash } = window.location
+    if (hash !== '#add' && hash !== '#add-website') return
+    setAdding(hash === '#add' ? true : 'WEB_SCRAPE_INTEGRATION')
+    // consumed: a reload shouldn't open it again
+    history.replaceState(null, '', window.location.pathname + window.location.search)
   }, [router.isReady])
 
   const rows = useMemo(() => buildRows(integrations ?? [], websites), [integrations, websites])
@@ -337,7 +343,13 @@ const IntegrationsPage = () => {
         )}
       </div>
 
-      <AddIntegrationDialog open={adding} onClose={() => setAdding(false)} onAdded={onAdded} budget={budget} />
+      <AddIntegrationDialog
+        open={Boolean(adding)}
+        initialType={typeof adding === 'string' ? adding : null}
+        onClose={() => setAdding(false)}
+        onAdded={onAdded}
+        budget={budget}
+      />
       <EditIntegrationDialog row={editing} onClose={() => setEditing(null)} onSaved={load} />
       <RemoveIntegrationDialog row={removing} onClose={() => setRemoving(null)} onRemoved={load} />
     </main>

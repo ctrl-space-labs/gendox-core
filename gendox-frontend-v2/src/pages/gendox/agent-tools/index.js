@@ -164,6 +164,7 @@ const ToolDialog = ({ open, tool, examples, onClose, onSave }) => {
 
   return (
     <Dialog
+      busy={isSaving}
       open={open}
       onClose={onClose}
       size='l'
@@ -177,7 +178,7 @@ const ToolDialog = ({ open, tool, examples, onClose, onSave }) => {
           <button className='btn' onClick={onClose}>
             Cancel
           </button>
-          <button className='btn primary' onClick={submit} disabled={isSaving}>
+          <button aria-busy={isSaving} className='btn primary' onClick={submit} disabled={isSaving}>
             {isSaving ? 'Saving…' : tool ? 'Save' : 'Add tool'}
           </button>
         </>

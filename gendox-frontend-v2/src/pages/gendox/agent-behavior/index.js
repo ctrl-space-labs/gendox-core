@@ -171,6 +171,7 @@ const AgentBehaviorPage = () => {
       <AgentScope project={project} tab='behavior' />
       <div className='behav'>
         <div>
+          <fieldset className='lock' disabled={isSaving}>
           <section className='sect' style={{ paddingTop: 8, gridTemplateColumns: 'minmax(0, 1fr)' }}>
             <header>
               <h2>Instructions</h2>
@@ -471,6 +472,7 @@ const AgentBehaviorPage = () => {
             </div>
           </details>
 
+          </fieldset>
           <SaveBar
             visible={dirty && canEdit}
             isSaving={isSaving}

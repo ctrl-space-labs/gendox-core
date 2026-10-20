@@ -53,7 +53,7 @@ const ConversationsPage = () => {
   }, [threads, filter, agentFilter])
 
   const threadHref = thread =>
-    href('/gendox/chat', { projectId: thread.agent?.projectId, threadId: thread.threadId })
+    `${href('/gendox/agent-home', { projectId: thread.agent?.projectId })}#/chat/${thread.threadId}`
 
   const isFiltering = Boolean(filter.trim() || agentFilter)
 
@@ -65,7 +65,7 @@ const ConversationsPage = () => {
           <p>Your chats with every agent{organization ? ` in ${organization.name}` : ''}, newest first.</p>
         </div>
         <div className='actions'>
-          <Link className='btn primary' href={href('/gendox/chat')}>
+          <Link className='btn primary' href={`${href('/gendox/agent-home')}#/chat/new`}>
             <SquarePen className='lucide' />
             New chat
           </Link>
@@ -111,7 +111,7 @@ const ConversationsPage = () => {
                 : 'Start a chat with any agent and it will show up here.'
             }
             action={
-              <Link className='btn primary' href={href('/gendox/chat')}>
+              <Link className='btn primary' href={`${href('/gendox/agent-home')}#/chat/new`}>
                 New chat
               </Link>
             }

@@ -23,6 +23,7 @@ import Avatar from 'src/components/ui/Avatar'
 import ConfirmDialog from 'src/components/ui/ConfirmDialog'
 import Dialog from 'src/components/ui/Dialog'
 import Menu from 'src/components/ui/Menu'
+import { SkeletonList, SkeletonRows } from 'src/components/ui/Skeleton'
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const RANK = { ROLE_OWNER: 4, ROLE_ADMIN: 3, ROLE_EDITOR: 2, ROLE_READER: 1 }
@@ -58,6 +59,7 @@ const InviteDialog = ({ open, onClose, organizationName, projects, roles, canInv
 
   return (
     <Dialog
+      busy={isSending}
       open={open}
       onClose={onClose}
       title={`Invite people to ${organizationName}`}
@@ -66,7 +68,7 @@ const InviteDialog = ({ open, onClose, organizationName, projects, roles, canInv
           <button className='btn' onClick={onClose}>
             Cancel
           </button>
-          <button className='btn primary' onClick={send} disabled={!canInvite || !role || !projectId || isSending}>
+          <button aria-busy={isSending} className='btn primary' onClick={send} disabled={!canInvite || !role || !projectId || isSending}>
             {isSending ? 'Sending…' : 'Send invitations'}
           </button>
         </>
@@ -130,14 +132,14 @@ const OrganizationMembersPage = () => {
   const dispatch = useDispatch()
   const { user } = useAuth()
   const { organization, organizationId, projects } = useActiveScope()
-  const { organizationMembers, organizationPlans } = useSelector(state => state.activeOrganization)
+  const { organizationMembers, organizationPlans, isFetchingMembers } = useSelector(state => state.activeOrganization)
 
   const canInviteRole = useHasOrgRole({ organizationId, roles: ['OP_ADD_USERS'] })
   const canRemove = useHasOrgRole({ organizationId, roles: ['OP_REMOVE_USERS'] })
   const canInvite = hasPlanFeature(organizationPlans?.subscriptionPlan?.sku, planFeatures.INVITE_USERS)
 
   const [query, setQuery] = useState('')
-  const [invitations, setInvitations] = useState([])
+  const [invitations, setInvitations] = useState(null) // null while loading
   const [inviteOpen, setInviteOpen] = useState(false)
   const [removing, setRemoving] = useState(null)
 
@@ -257,6 +259,7 @@ const OrganizationMembersPage = () => {
               </tr>
             </thead>
             <tbody>
+              {isFetchingMembers && !organizationMembers?.length && <SkeletonRows columns={[null, '90px', '60px', null]} />}
               {members.map(member => {
                 const role = member.role?.name
                 const isMe = member.user.id === user?.id
@@ -334,9 +337,11 @@ const OrganizationMembersPage = () => {
         <div className='card'>
           <div className='card-h'>
             <h3>Pending invitations</h3>
-            <span className='faint sm'>{invitations.length}</span>
+            <span className='faint sm'>{invitations?.length ?? ''}</span>
           </div>
-          {invitations.length > 0 ? (
+          {invitations === null ? (
+            <SkeletonList rows={2} />
+          ) : invitations.length > 0 ? (
             invitations.map(invitation => (
               <div className='item' key={invitation.id}>
                 <span className='avatar s round' style={{ background: 'var(--surface-2)', color: 'var(--text-3)' }}>

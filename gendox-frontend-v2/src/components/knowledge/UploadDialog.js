@@ -96,7 +96,7 @@ const UploadDialog = ({ open, onClose, organizationId, projectId, agentName, aut
           <span className='faint sm' style={{ marginRight: 'auto' }}>
             {note}
           </span>
-          <button className='btn' onClick={close} disabled={busy}>
+          <button aria-busy={busy} className='btn' onClick={close} disabled={busy}>
             {busy ? 'Uploading…' : 'Close'}
           </button>
         </>

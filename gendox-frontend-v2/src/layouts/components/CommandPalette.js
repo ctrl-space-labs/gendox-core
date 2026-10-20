@@ -66,7 +66,7 @@ const CommandPalette = ({ open, onClose }) => {
 
     const agents = projects
       .filter(p => matches(p.name))
-      .map(p => ({ key: p.id, project: p, href: href('/gendox/home', { projectId: p.id }) }))
+      .map(p => ({ key: p.id, project: p, href: href('/gendox/agent-home', { projectId: p.id }) }))
 
     const documents = passages.map(passage => ({
       key: passage.id,
@@ -83,7 +83,7 @@ const CommandPalette = ({ open, onClose }) => {
     const actions = lower
       ? []
       : [
-          { key: 'new-chat', icon: SquarePen, title: 'New chat', href: href('/gendox/chat') },
+          { key: 'new-chat', icon: SquarePen, title: 'New chat', href: `${href('/gendox/agent-home')}#/chat/new` },
           ...(projectId
             ? [
                 { key: 'upload', icon: Upload, title: 'Upload documents', href: href('/gendox/knowledge') + '#upload' },

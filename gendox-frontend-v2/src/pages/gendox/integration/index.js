@@ -25,7 +25,8 @@ import Switch from 'src/components/ui/Switch'
  */
 const IntegrationPage = () => {
   const router = useRouter()
-  const { integrationId } = router.query
+  // ?from=knowledge: opened from an agent's Knowledge page, so back leads there instead of to the list
+  const { integrationId, from } = router.query
   const { organizationId, projects, href } = useActiveScope()
   const canEdit = useHasOrgRole({ organizationId, roles: ['OP_EDIT_INTEGRATIONS'] })
 
@@ -53,7 +54,9 @@ const IntegrationPage = () => {
     load()
   }, [load])
 
-  const listHref = href('/gendox/integrations')
+  const fromKnowledge = from === 'knowledge'
+  const listHref = href(fromKnowledge ? '/gendox/knowledge' : '/gendox/integrations', { integrationId: undefined, from: undefined })
+  const listTitle = fromKnowledge ? 'Knowledge' : 'Integrations'
 
   if (failed) {
     return (
@@ -66,7 +69,7 @@ const IntegrationPage = () => {
             action={
               <Link className='btn' href={listHref}>
                 <ArrowLeft className='lucide' />
-                Integrations
+                {listTitle}
               </Link>
             }
           />
@@ -107,7 +110,7 @@ const IntegrationPage = () => {
     <main className='content' style={{ maxWidth: 1100 }}>
       <Link className='btn ghost s' href={listHref} style={{ alignSelf: 'flex-start' }}>
         <ArrowLeft className='lucide' />
-        Integrations
+        {listTitle}
       </Link>
 
       <div className='page-h' style={{ marginTop: 4 }}>

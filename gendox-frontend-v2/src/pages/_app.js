@@ -13,6 +13,7 @@ import { AuthProvider } from 'src/authentication/context/AuthContext'
 import { IFrameMessageManagerProvider } from 'src/authentication/context/IFrameMessageManagerContext'
 import { registerAxiosInterceptors } from 'src/configs/axiosInterceptors'
 import Toasts from 'src/components/ui/Toasts'
+import RouteProgress from 'src/components/ui/RouteProgress'
 import OptionalAnalyticsTracking from 'src/components/analytics/OptionalAnalyticsTracking'
 
 // Register the global 401 -> '/' redirect interceptor once for the whole app
@@ -41,6 +42,7 @@ const App = props => {
             <RouteHandler routeType={routeType}>{getLayout(<Component {...pageProps} />)}</RouteHandler>
           </OrganizationProjectGuard>
           <Toasts />
+          <RouteProgress />
         </AuthProvider>
       </IFrameMessageManagerProvider>
     </Provider>

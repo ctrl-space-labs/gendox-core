@@ -120,7 +120,7 @@ const UserProfilePage = () => {
                       Settings
                     </Link>
                   ) : (
-                    <Link className='btn s' href={`/gendox/home/?organizationId=${o.id}`}>
+                    <Link className='btn s' href={`/gendox/agent-home/?organizationId=${o.id}`}>
                       Switch
                     </Link>
                   )}

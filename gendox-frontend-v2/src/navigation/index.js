@@ -6,20 +6,18 @@ import {
   KeyRound,
   Library,
   ListChecks,
-  MessageSquareText,
   MessagesSquare
 } from 'lucide-react'
 import WordPressIcon from 'src/components/ui/WordPressIcon'
 
 /**
- * The sidebar of the organization layout, grouped by the user's journey.
- * An item gets a `path` when its page exists in this app; until then it shows as not available yet.
+ * The app's pages, grouped by the user's journey, for the search (⌘K).
+ * The sidebar shows only the agent's pages; the rest are reached from the agent switcher and the account menu.
  */
 const navigation = [
   {
     items: [
-      { id: 'home', title: 'Home', icon: House, path: '/gendox/home' },
-      { id: 'chat', title: 'Chat', icon: MessageSquareText, path: '/gendox/chat' }
+      { id: 'home', title: 'Home', icon: House, path: '/gendox/agent-home' }
     ]
   },
   {

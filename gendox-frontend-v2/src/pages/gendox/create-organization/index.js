@@ -54,6 +54,7 @@ const CreateOrganizationPage = () => {
                 : 'First, a home for your team. Agents, knowledge and members live in an organization. You can invite people later.'}
             </p>
           </div>
+          <fieldset className='lock' disabled={isCreating}>
           <div className='field'>
             <label htmlFor='org-name'>Organization name</label>
             <input
@@ -91,7 +92,8 @@ const CreateOrganizationPage = () => {
               </div>
             </div>
           </details>
-          <button className='btn primary' style={{ height: 40 }} onClick={create} disabled={isCreating}>
+          </fieldset>
+          <button aria-busy={isCreating} className='btn primary' style={{ height: 40 }} onClick={create} disabled={isCreating}>
             {isCreating ? 'Creating…' : 'Create organization'}
             <ArrowRight className='lucide' />
           </button>
@@ -101,7 +103,7 @@ const CreateOrganizationPage = () => {
         </div>
         <p className='faint sm' style={{ textAlign: 'center' }}>
           {hasOrganizations ? (
-            <Link className='link' href='/gendox/home'>
+            <Link className='link' href='/gendox/agent-home'>
               Back to Gendox
             </Link>
           ) : (

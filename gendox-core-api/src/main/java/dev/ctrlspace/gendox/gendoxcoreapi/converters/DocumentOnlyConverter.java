@@ -57,6 +57,13 @@ public class DocumentOnlyConverter implements GendoxConverter<DocumentInstance, 
         if (documentInstance.getTitle() != null) {
             documentInstanceDTO.setTitle(documentInstance.getTitle());
         }
+        if (documentInstance.getFileSizeBytes() != null) {
+            documentInstanceDTO.setFileSizeBytes(documentInstance.getFileSizeBytes());
+        }
+        if (documentInstance.getNumberOfPages() != null) {
+            documentInstanceDTO.setNumberOfPages(documentInstance.getNumberOfPages());
+        }
+
 
         return documentInstanceDTO;
     }

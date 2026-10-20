@@ -10,6 +10,7 @@ import { configOf, formatWhen } from 'src/components/integrations/integrationUti
 import ConfirmDialog from 'src/components/ui/ConfirmDialog'
 import Empty from 'src/components/ui/Empty'
 import Spinner from 'src/components/ui/Spinner'
+import { SkeletonList } from 'src/components/ui/Skeleton'
 
 const PAGE_SIZE = 25
 const POLL_MS = 2000
@@ -59,6 +60,7 @@ const failureOf = message => {
  */
 const WebPagesPicker = ({ organizationId, integration, agentName, onRunFinished }) => {
   const [data, setData] = useState({ content: [], totalElements: 0 })
+  const [loaded, setLoaded] = useState(false) // the first page of the list has arrived
   const [ticked, setTicked] = useState(0)
   const [budget, setBudget] = useState(null)
   const [view, setView] = useState('')
@@ -110,6 +112,8 @@ const WebPagesPicker = ({ organizationId, integration, agentName, onRunFinished 
       setTicked(picked.data.totalElements)
     } catch (error) {
       toast.error(`Couldn’t load the pages. ${getErrorMessage(error)}`, { id: 'pages' })
+    } finally {
+      setLoaded(true)
     }
   }, [organizationId, integration.id, page, status, hasContent, search])
 
@@ -301,7 +305,9 @@ const WebPagesPicker = ({ organizationId, integration, agentName, onRunFinished 
           </button>
         </div>
 
-        {shown.length === 0 ? (
+        {!loaded ? (
+          <SkeletonList rows={4} />
+        ) : shown.length === 0 ? (
           <Empty
             icon={<Radar className='lucide' />}
             title={filtering ? 'No pages match' : 'No pages yet'}

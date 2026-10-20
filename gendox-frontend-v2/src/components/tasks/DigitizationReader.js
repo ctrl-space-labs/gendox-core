@@ -167,6 +167,7 @@ const Setup = ({ doc, ctx, onSaved }) => {
 
   return (
     <div className='insp-b'>
+      <fieldset className='lock' disabled={saving}>
       <div className='form reading-w'>
         <div className='field'>
           <label htmlFor='dz-prompt'>Instructions</label>
@@ -246,14 +247,15 @@ const Setup = ({ doc, ctx, onSaved }) => {
           </span>
         </div>
         <div className='row'>
-          <button className='btn primary' onClick={save} disabled={saving || !dirty || !!problem}>
-            Save
+          <button aria-busy={saving} className='btn primary' onClick={save} disabled={saving || !dirty || !!problem}>
+            {saving ? 'Saving…' : 'Save'}
           </button>
           <button className='btn ghost' onClick={reset} disabled={!dirty}>
             Discard changes
           </button>
         </div>
       </div>
+      </fieldset>
     </div>
   )
 }

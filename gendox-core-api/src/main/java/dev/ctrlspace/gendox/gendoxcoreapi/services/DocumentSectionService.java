@@ -63,12 +63,13 @@ public class DocumentSectionService {
     private AuditLogsService auditLogsService;
 
 
-    /** Lines of unchanged context kept around each EQUAL region in {@link #patchToDecodedText}. */
+    /**
+     * Lines of unchanged context kept around each EQUAL region in {@link #patchToDecodedText}.
+     */
     private static final int DIFF_CONTEXT_LINES = 3;
     // Matches Word bookmark anchors like {#_Hlk164247572}
     private static final Pattern WORD_DOC_BOOKMARK = Pattern.compile("\\{#[^}]+}");
     private static final int DIFF_PATCH_MARGIN = 50;
-
 
 
     @Lazy
@@ -223,7 +224,6 @@ public class DocumentSectionService {
     }
 
 
-
     /**
      * Compare two arbitrary plain-text strings using diff-match-patch: semantic cleanup, EQUAL
      * segments trimmed to {@link #DIFF_CONTEXT_LINES} lines of context when long.
@@ -328,9 +328,11 @@ public class DocumentSectionService {
         );
     }
 
-    private record CompiledRegex(String raw, Pattern pattern) {}
+    private record CompiledRegex(String raw, Pattern pattern) {
+    }
 
-    private record ContextWindow(String before, String after) {}
+    private record ContextWindow(String before, String after) {
+    }
 
     private static ContextWindow extractContextWindow(List<String> lines, int lineIndex,
                                                       int matchStart, int matchEnd,
@@ -376,6 +378,20 @@ public class DocumentSectionService {
 
     public List<DocumentInstanceSection> getSectionsByDocument(UUID documentInstanceId) {
         return documentInstanceSectionRepository.findByDocumentInstance(documentInstanceId);
+    }
+
+    /**
+     * How many sections each document has, for a page of a document list. Documents without sections are left out.
+     */
+    public Map<UUID, Long> countSectionsByDocument(Set<UUID> documentInstanceIds) {
+        if (documentInstanceIds == null || documentInstanceIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<UUID, Long> counts = new HashMap<>();
+        for (Object[] row : documentInstanceSectionRepository.countGroupedByDocumentInstanceIds(documentInstanceIds)) {
+            counts.put((UUID) row[0], (Long) row[1]);
+        }
+        return counts;
     }
 
     @Transactional
@@ -630,15 +646,15 @@ public class DocumentSectionService {
 
 
     /**
-     *  End-to-End split of document:
-     *  * Read document content
-     *  * Check if has changed since last split (by comparing document hash)
-     *  * If changed, split document into sections
-     *  * calculate new hash, total tokens and update document instance
-     *  * Create Sections
+     * End-to-End split of document:
+     * * Read document content
+     * * Check if has changed since last split (by comparing document hash)
+     * * If changed, split document into sections
+     * * calculate new hash, total tokens and update document instance
+     * * Create Sections
      *
      * @param documentInstance
-     * @param changeCheckFlag flag to enable checking if the document has changed since last split.
+     * @param changeCheckFlag  flag to enable checking if the document has changed since last split.
      * @return
      * @throws GendoxException
      */
@@ -670,8 +686,8 @@ public class DocumentSectionService {
         int totalTokens = gpt4oEncoding.countTokens(fileContent);
         // TODO in case of image files, the hash is always for the "" string, not the actual file content.
         String contentSHA256 = cryptographyUtils.calculateSHA256(fileContent);
-        
-        documentInstance.setTotalTokens((long)totalTokens);
+
+        documentInstance.setTotalTokens((long) totalTokens);
         documentInstance.setDocumentSha256Hash(contentSHA256);
         documentInstance = documentService.saveDocumentInstance(documentInstance);
 
@@ -679,9 +695,9 @@ public class DocumentSectionService {
                 this.createSections(documentInstance, contentSections);
 
         auditLogsService.createAuditLog(documentInstance.getOrganizationId(),
-                null,"CREATE_DOCUMENT_SECTIONS", (long) documentSections.size());
+                null, "CREATE_DOCUMENT_SECTIONS", (long) documentSections.size());
 
-        
+
         return documentSections;
     }
 

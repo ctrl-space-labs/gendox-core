@@ -13,6 +13,7 @@ import AppLayout from 'src/layouts/AppLayout'
 import Avatar from 'src/components/ui/Avatar'
 import ConfirmDialog from 'src/components/ui/ConfirmDialog'
 import Dialog from 'src/components/ui/Dialog'
+import { SkeletonList } from 'src/components/ui/Skeleton'
 
 const tail = key => (key ? `••••${String(key).slice(-4)}` : '')
 
@@ -37,6 +38,7 @@ const KeyDialog = ({ provider, replacing, onClose, onSave }) => {
 
   return (
     <Dialog
+      busy={isSaving}
       open={Boolean(provider)}
       onClose={onClose}
       size='s'
@@ -46,7 +48,7 @@ const KeyDialog = ({ provider, replacing, onClose, onSave }) => {
           <button className='btn' onClick={onClose}>
             Cancel
           </button>
-          <button className='btn primary' onClick={save} disabled={isSaving}>
+          <button aria-busy={isSaving} className='btn primary' onClick={save} disabled={isSaving}>
             {isSaving ? 'Saving…' : 'Save key'}
           </button>
         </>
@@ -84,8 +86,8 @@ const KeyDialog = ({ provider, replacing, onClose, onSave }) => {
 const ModelProvidersPage = () => {
   const { organizationId } = useActiveScope()
   const canEdit = useHasOrgRole({ organizationId, roles: ['OP_EDIT_ORGANIZATION_MODEL_KEYS'] })
-  const [providers, setProviders] = useState([])
-  const [keys, setKeys] = useState([])
+  const [providers, setProviders] = useState(null) // null while loading
+  const [keys, setKeys] = useState(null)
   const [query, setQuery] = useState('')
   const [editing, setEditing] = useState(null) // { provider, key }
   const [removing, setRemoving] = useState(null)
@@ -107,8 +109,9 @@ const ModelProvidersPage = () => {
     load()
   }, [load])
 
-  const keyOf = provider => keys.find(k => k.aiModelProvider?.id === provider.id)
-  const usable = providers.filter(p => !KEYLESS_PROVIDERS.includes(p.name))
+  const loaded = providers !== null && keys !== null
+  const keyOf = provider => (keys ?? []).find(k => k.aiModelProvider?.id === provider.id)
+  const usable = (providers ?? []).filter(p => !KEYLESS_PROVIDERS.includes(p.name))
 
   const { mine, rest } = useMemo(() => {
     const value = query.trim().toLowerCase()
@@ -151,7 +154,9 @@ const ModelProvidersPage = () => {
         <div>
           <h2>Model providers</h2>
           <p className='muted' style={{ marginTop: 4, maxWidth: 720 }}>
-            {withKey
+            {!loaded ? (
+              <span className='skel' style={{ width: 420, maxWidth: '100%' }} />
+            ) : withKey
               ? `Running on your own key for ${withKey} of ${usable.length} providers; usage is billed to your account with them. The rest use the allowance Gendox provides.`
               : `All ${usable.length} providers run on the allowance Gendox provides. Add your own key to use your own quota, and the models that need one.`}
           </p>
@@ -206,9 +211,11 @@ const ModelProvidersPage = () => {
       <div className='card'>
         <div className='card-h'>
           <h3>On the Gendox allowance</h3>
-          <span className='faint sm'>{rest.length}</span>
+          <span className='faint sm'>{loaded ? rest.length : ''}</span>
         </div>
-        {rest.length > 0 ? (
+        {!loaded ? (
+          <SkeletonList rows={3} />
+        ) : rest.length > 0 ? (
           <div className='grid' style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10, padding: 16 }}>
             {rest.map(provider => (
               <div

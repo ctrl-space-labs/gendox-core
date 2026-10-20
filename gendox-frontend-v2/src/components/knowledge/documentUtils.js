@@ -47,6 +47,27 @@ export const tileTypeOf = document => (document?.externalUrl ? 'web' : undefined
 export const formatDate = value =>
   value ? new Date(value).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : ''
 
+/**
+ * How long ago, the way a list of recent things reads: "Just now", "4m ago", "2h ago", "Yesterday", "3d ago",
+ * "1w ago", then the date. Pair it with the full date in a title, see formatDateTime.
+ */
+export const timeAgo = (value, now = new Date()) => {
+  if (!value) return ''
+  const date = new Date(value)
+  const minutes = Math.floor((now - date) / 60000)
+  if (minutes < 1) return 'Just now'
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  if (date >= startOfToday) return `${hours}h ago`
+  if (date >= new Date(startOfToday - 86400000)) return 'Yesterday'
+  const days = Math.floor((startOfToday - date) / 86400000) + 1
+  if (days < 7) return `${days}d ago`
+  if (days < 35) return `${Math.floor(days / 7)}w ago`
+
+  return formatDate(value)
+}
+
 export const formatDateTime = value =>
   value
     ? new Date(value).toLocaleString([], {
@@ -79,8 +100,32 @@ export const sortSections = sections =>
   )
 
 // the author's name from the agent's members, or nothing
-export const authorOf = (document, members) =>
-  members?.find(member => member.user?.id === document?.createdBy)?.user?.name || ''
+// the person who added it, looked up in each list given ({ user } entries: the agent's members, then the organization's)
+export const authorOf = (document, ...memberLists) => {
+  if (!document?.createdBy) return ''
+  for (const members of memberLists) {
+    const name = members?.find(member => member.user?.id === document.createdBy)?.user?.name
+    if (name) return name
+  }
+
+  return ''
+}
+
+// who or what added it: the person, else the site it was read from, else WordPress
+export const addedByOf = (document, ...memberLists) => {
+  const author = authorOf(document, ...memberLists)
+  if (author) return author
+  if (document?.externalUrl) {
+    try {
+      return new URL(document.externalUrl).hostname.replace(/^www\./, '')
+    } catch {
+      return ''
+    }
+  }
+  if (document?.fileType?.name === 'API_INTEGRATION_FILE') return 'WordPress'
+
+  return ''
+}
 
 // the list (DocumentInstanceDTO) says createAt / updateAt; a single document (GET documents/{id}) says createdAt / updatedAt
 export const createdAtOf = document => document?.createdAt ?? document?.createAt

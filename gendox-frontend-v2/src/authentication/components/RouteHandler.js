@@ -58,11 +58,11 @@ const getHomeRoute = () => {
 
   // If both selectedOrganizationId and selectedProjectId exist, return home URL with both query parameters
   if (selectedOrganizationId !== null && selectedProjectId !== null) {
-    return `/gendox/home/?organizationId=${selectedOrganizationId}&projectId=${selectedProjectId}`
+    return `/gendox/agent-home/?organizationId=${selectedOrganizationId}&projectId=${selectedProjectId}`
   }
 
   // Fallback URL (shouldn't be hit based on the above checks)
-  return '/gendox/home'
+  return '/gendox/agent-home'
 
 }
 

@@ -64,6 +64,7 @@ const ConnectorDialog = ({ type, current, onClose, onSave }) => {
 
   return (
     <Dialog
+      busy={isSaving}
       open
       onClose={onClose}
       size='s'
@@ -73,7 +74,7 @@ const ConnectorDialog = ({ type, current, onClose, onSave }) => {
           <button className='btn' onClick={onClose}>
             Cancel
           </button>
-          <button className='btn primary' onClick={save} disabled={!value.trim() || isSaving}>
+          <button aria-busy={isSaving} className='btn primary' onClick={save} disabled={!value.trim() || isSaving}>
             {isSaving ? 'Saving…' : 'Save'}
           </button>
         </>
@@ -103,7 +104,7 @@ const ConnectorDialog = ({ type, current, onClose, onSave }) => {
 const ConnectorsPage = () => {
   const { organization, organizationId, href } = useActiveScope()
   const canEdit = useHasOrgRole({ organizationId, roles: ['OP_UPDATE_ORGANIZATION'] })
-  const [connectors, setConnectors] = useState([])
+  const [connectors, setConnectors] = useState(null) // null while loading
   const [editing, setEditing] = useState(null)
   const [removing, setRemoving] = useState(null)
 
@@ -120,7 +121,7 @@ const ConnectorsPage = () => {
   }, [load])
 
   const valueOf = type => {
-    const connector = connectors.find(c => (c.connectorType?.name ?? c.connectorType) === type)
+    const connector = (connectors ?? []).find(c => (c.connectorType?.name ?? c.connectorType) === type)
 
     return connector?.config?.[SERVICES[type].field] || null
   }
@@ -164,6 +165,7 @@ const ConnectorsPage = () => {
       </div>
 
       {Object.entries(SERVICES).map(([type, service]) => {
+        const loaded = connectors !== null
         const value = valueOf(type)
         const Icon = service.icon
 
@@ -176,12 +178,20 @@ const ConnectorsPage = () => {
               <div style={{ flex: 1, minWidth: 240 }}>
                 <div className='row' style={{ gap: 8 }}>
                   <b style={{ fontWeight: 550 }}>{service.title}</b>
-                  {value ? <span className='badge dot ok'>Active</span> : <span className='badge'>{service.unset}</span>}
+                  {!loaded ? (
+                    <span className='skel' style={{ width: 64, height: 22, borderRadius: 99 }} />
+                  ) : value ? (
+                    <span className='badge dot ok'>Active</span>
+                  ) : (
+                    <span className='badge'>{service.unset}</span>
+                  )}
                 </div>
                 <p className='muted sm' style={{ marginTop: 2 }}>
                   {service.about}
                 </p>
-                {value ? (
+                {!loaded ? (
+                  <span className='skel' style={{ width: 220, marginTop: 10 }} />
+                ) : value ? (
                   <dl className='kv' style={{ marginTop: 10 }}>
                     <dt>{service.label}</dt>
                     <dd className='mono'>{shown(service, value)}</dd>
@@ -193,7 +203,7 @@ const ConnectorsPage = () => {
                   </p>
                 )}
               </div>
-              {canEdit && (
+              {canEdit && loaded && (
                 <div className='row'>
                   <button className='btn s' onClick={() => setEditing(type)}>
                     {value ? 'Change' : 'Set up'}

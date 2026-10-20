@@ -171,7 +171,7 @@ const PKCEAuthProvider = ({ children, initialAuth }) => {
   useEffect(() => {
     if (user && router.pathname.includes('oidc-callback')) {
       const { returnUrl } = router.query
-      const homeUrl = returnUrl ? decodeURIComponent(returnUrl) : '/gendox/home'
+      const homeUrl = returnUrl ? decodeURIComponent(returnUrl) : '/gendox/agent-home'
       window.location.href = homeUrl
     }
   }, [user])
