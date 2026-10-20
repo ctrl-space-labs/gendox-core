@@ -1,13 +1,13 @@
 -- Where a custom tool runs (#518):
 --   ACTION: the page or app acts on the call; the agent is told it was executed (how every custom tool works today).
 --   CLIENT: the page or app runs it and sends the result back; the agent waits for it.
-ALTER TABLE gendox_core.ai_tools ADD COLUMN execution varchar(16) NOT NULL DEFAULT 'ACTION'
+ALTER TABLE gendox_core.ai_tools ADD COLUMN IF NOT EXISTS execution varchar(16) NOT NULL DEFAULT 'ACTION'
     CHECK (execution IN ('ACTION', 'CLIENT'));
 
 -- A chat turn that stopped to wait for the results of CLIENT tool calls. Only a waiting turn gets a
 -- row; the messages themselves stay in gendox_core.message. There is no deadline: a call waits until
 -- the client sends its result or a new user message cancels it.
-CREATE TABLE gendox_core.completion_turn (
+CREATE TABLE IF NOT EXISTS gendox_core.completion_turn (
     id                   uuid PRIMARY KEY,
     thread_id            uuid        NOT NULL REFERENCES gendox_core.chat_thread(id),
     project_id           uuid        NOT NULL REFERENCES gendox_core.projects(id),
@@ -21,5 +21,5 @@ CREATE TABLE gendox_core.completion_turn (
     created_at           timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE UNIQUE INDEX completion_turn_one_waiting ON gendox_core.completion_turn(thread_id)
+CREATE UNIQUE INDEX IF NOT EXISTS completion_turn_one_waiting ON gendox_core.completion_turn(thread_id)
     WHERE status = 'WAITING_FOR_TOOLS';
