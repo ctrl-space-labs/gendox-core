@@ -1,5 +1,9 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.cohere.aiengine.aiengine;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.CompletionDelta;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.ProviderStreamClient;
+import java.util.function.Consumer;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.CohereRerankResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.cohere.request.CohereCompletionRequest;
@@ -37,6 +41,9 @@ public class CohereAiServiceAdapter implements AiModelApiAdapterService {
 
     private Set<String> supportedApiTypeNames = Set.of("COHERE_API");
     private RestTemplate restTemplate;
+    // Reads the streamed frames; the non-streaming path keeps using the RestTemplate's converters
+    @Autowired
+    private ObjectMapper objectMapper;
     private CohereCompletionResponseConverter cohereCompletionResponseConverter;
     private CohereEmbeddingResponseConverter cohereEmbeddingResponseConverter;
     private CohereRerankResponseConverter cohereRerankResponseConverter;
@@ -122,6 +129,13 @@ public class CohereAiServiceAdapter implements AiModelApiAdapterService {
 
     @Override
     public CompletionResponse askCompletion(List<AiModelMessage> messages, String agentRole, AiModel aiModel, AiModelRequestParams aiModelRequestParams, String apiKey, List<AiTools> tools, String toolChoice, @Nullable ObjectNode responseJsonSchema) {
+        return askCompletion(messages, agentRole, aiModel, aiModelRequestParams, apiKey, tools, toolChoice, responseJsonSchema, null);
+    }
+
+    /** @param deltas receives the tokens as they arrive; null sends an ordinary (non-streaming) request */
+    @Override
+    public CompletionResponse askCompletion(List<AiModelMessage> messages, String agentRole, AiModel aiModel, AiModelRequestParams aiModelRequestParams, String apiKey, List<AiTools> tools, String toolChoice, @Nullable ObjectNode responseJsonSchema,
+                                            @Nullable Consumer<CompletionDelta> deltas) {
 
         if (Strings.isNotEmpty(agentRole)) {
             messages.add(0, AiModelMessage.builder().role("user").content(agentRole).build());
@@ -145,7 +159,13 @@ public class CohereAiServiceAdapter implements AiModelApiAdapterService {
 
 
         CohereCompletionRequest cohereCompletionRequest = cohereCommandRequestBuilder.build();
-        CohereCompletionResponse cohereCompletionResponse = this.getCompletionResponse(cohereCompletionRequest, aiModel, apiKey);
+        CohereCompletionResponse cohereCompletionResponse;
+        if (deltas == null) {
+            cohereCompletionResponse = this.getCompletionResponse(cohereCompletionRequest, aiModel, apiKey);
+        } else {
+            cohereCompletionResponse = ProviderStreamClient.complete(restTemplate, objectMapper, aiModel.getUrl(), buildHeader(apiKey),
+                    cohereCompletionRequest, ProviderStreamClient.Protocol.COHERE, CohereCompletionResponse.class, deltas);
+        }
 
         return cohereCompletionResponseConverter.toCompletionResponse(cohereCompletionResponse);
     }

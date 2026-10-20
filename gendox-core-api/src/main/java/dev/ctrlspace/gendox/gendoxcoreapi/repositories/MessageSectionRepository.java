@@ -28,4 +28,9 @@ public interface MessageSectionRepository extends JpaRepository<MessageSection, 
                     "WHERE ms.document_id = :documentId")
     void deleteByDocumentId(UUID documentId);
 
+
+    List<MessageSection> findByMessageIdOrderByCreatedAtAsc(UUID messageId);
+
+    @Query("select ms from MessageSection ms where ms.message.id in :messageIds and ms.isCompletionParticipant = true order by ms.createdAt")
+    List<MessageSection> findCompletionParticipants(@Param("messageIds") List<UUID> messageIds);
 }

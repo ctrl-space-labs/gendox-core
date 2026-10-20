@@ -15,7 +15,7 @@ const STEP_TYPE_LABELS = {
   ERROR: 'Error'
 }
 
-const AiResponseLoader = ({ isSending }) => {
+const AiResponseLoader = ({ isSending, completionStatus }) => {
   const dispatch = useDispatch()
   const iFrameMessageManager = useIFrameMessageManager()
   const [statusMessage, setStatusMessage] = useState('')
@@ -220,7 +220,7 @@ const AiResponseLoader = ({ isSending }) => {
             fontWeight: 'bold', // Bold text for emphasis
             color: 'primary.main' // Use theme's primary color for text
           }}>
-          {statusMessage}
+          {completionStatus === 'WAITING_FOR_TOOLS' ? 'Waiting for your page…' : completionStatus === 'GENERATING' ? 'Generating…' : statusMessage}
         </Typography>
       </Box>
     )

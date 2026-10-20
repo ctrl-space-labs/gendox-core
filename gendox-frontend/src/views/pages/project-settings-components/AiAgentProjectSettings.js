@@ -57,6 +57,7 @@ const AiAgentProjectSettings = () => {
   /* ----------  Add these state hooks (place near the other hooks, before the return)  ---------- */
   const [toolModalOpen, setToolModalOpen] = useState(false)                     // add / edit modal
   const [editingIndex, setEditingIndex] = useState(null)         // index of tool under edit
+  const [toolExecution, setToolExecution] = useState('ACTION')
   const [toolSchema, setToolSchema] = useState('')                              // JSON string in modal textarea
 
   const { id: projectId, organizationId } = project
@@ -72,6 +73,7 @@ const AiAgentProjectSettings = () => {
     moderationCheck: project.projectAgent.moderationCheck,
     rerankEnable: project.projectAgent.rerankEnable,
     advancedSearchEnable: project.projectAgent.advancedSearchEnable,
+    advancedSearchMode: project.projectAgent.advancedSearchMode || 'ALWAYS',
     autoDigitization: project.projectAgent.autoDigitization ?? false,
     documentSplitterType: project.projectAgent.documentSplitterType?.name || '',
     maxToken: project.projectAgent.maxToken,
@@ -109,6 +111,7 @@ const AiAgentProjectSettings = () => {
   const handleAddTool = () => {
     setEditingIndex(null)
     setToolSchema('')
+    setToolExecution('ACTION')
     setToolModalOpen(true)
   }
 
@@ -119,6 +122,7 @@ const AiAgentProjectSettings = () => {
 
   const handleEditTool = (idx) => {
     setEditingIndex(idx)
+    setToolExecution(aiTools[idx].execution || 'ACTION')
     setToolSchema(JSON.stringify(JSON.parse(aiTools[idx].jsonSchema), null, 2))
     setToolModalOpen(true)
   }
@@ -137,6 +141,7 @@ const AiAgentProjectSettings = () => {
       let updatedTools;
       const newTool = {
         type: "function",
+        execution: toolExecution,
         jsonSchema: toolSchemaStr,
       };
 
@@ -260,6 +265,7 @@ const AiAgentProjectSettings = () => {
         maxCompletionLimit: data.maxCompletionLimit,
         agentBehavior: data.agentBehavior,
         moderationCheck: data.moderationCheck,
+        advancedSearchMode: data.advancedSearchMode,
         advancedSearchEnable: data.advancedSearchEnable,
         rerankEnable: data.rerankEnable,
         autoDigitization: data.autoDigitization,
@@ -552,6 +558,24 @@ const AiAgentProjectSettings = () => {
                         )}
                       </Grid>
 
+                      {/* Knowledge search: how the agent retrieves project documents in chat */}
+                      <Grid item xs={12} sx={{ mb: 2 }}>
+                        <FormControl fullWidth>
+                          <InputLabel id='advanced-search-mode'>Knowledge Search</InputLabel>
+                          <Controller
+                            name='advancedSearchMode'
+                            control={control}
+                            render={({ field }) => (
+                              <Select {...field} labelId='advanced-search-mode' label='Knowledge Search'>
+                                <MenuItem value='ALWAYS'>Always: search the documents before every answer</MenuItem>
+                                <MenuItem value='AUTO'>Auto: the agent decides when to search</MenuItem>
+                                <MenuItem value='OFF'>Off: answer without searching the documents</MenuItem>
+                              </Select>
+                            )}
+                          />
+                        </FormControl>
+                      </Grid>
+
                       {/* Advanced Search */}
                       <Grid item xs={12} sm={6} sx={{ mb: 2 }}>
                         <FormControlLabel
@@ -823,6 +847,12 @@ const AiAgentProjectSettings = () => {
                       </FormControl>
 
                       {/* JSON editor */}
+                      <TextField select fullWidth label='Client tool execution' value={toolExecution}
+                        onChange={event => setToolExecution(event.target.value)} sx={{ mb: 2 }}
+                        helperText='Built-in Gendox tools always run on the server.'>
+                        <MenuItem value='ACTION'>Async — continue without the result</MenuItem>
+                        <MenuItem value='CLIENT'>Sync — wait for the host result</MenuItem>
+                      </TextField>
                       <TextField
                         fullWidth
                         multiline

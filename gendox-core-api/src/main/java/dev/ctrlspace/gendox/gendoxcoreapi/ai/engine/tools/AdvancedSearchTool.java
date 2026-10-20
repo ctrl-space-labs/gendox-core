@@ -23,6 +23,8 @@ import java.util.List;
 @Component
 public class AdvancedSearchTool implements AiToolHandler {
 
+    public static final String TOOL_NAME = "advanced_search";
+
     private static final Logger logger = LoggerFactory.getLogger(AdvancedSearchTool.class);
 
     private final EmbeddingService embeddingService;
@@ -36,7 +38,7 @@ public class AdvancedSearchTool implements AiToolHandler {
 
     @Override
     public String getName() {
-        return "advanced_search";
+        return TOOL_NAME;
     }
 
     @Override

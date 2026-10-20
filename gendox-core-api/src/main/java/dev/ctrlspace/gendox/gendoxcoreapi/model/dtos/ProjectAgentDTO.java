@@ -49,6 +49,7 @@ public class ProjectAgentDTO {
     private AiModel rerankModel;
     private Boolean advancedSearchEnable;
     private AiModel advancedSearchModel;
+    private String advancedSearchMode;
     private Boolean autoDigitization;
     private List<AiTools> aiTools = new ArrayList<>();
     // null means "leave the agent's skills as they are", so clients that don't know about skills can't wipe them

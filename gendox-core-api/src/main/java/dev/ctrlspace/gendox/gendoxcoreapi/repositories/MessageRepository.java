@@ -12,6 +12,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -104,4 +105,13 @@ public interface MessageRepository extends JpaRepository<Message, UUID>, Queryds
                                         @Param("messageIds") List<UUID> messageIds);
 
 
+
+    @Query("select distinct m from Message m left join fetch m.localContexts c left join fetch c.document where m.id in :ids")
+    List<Message> findWithLocalContextsByIds(@Param("ids") List<UUID> ids);
+
+    List<Message> findByThreadIdAndCreatedAtAfterOrderByCreatedAtAsc(UUID threadId, Instant createdAt);
+
+    Optional<Message> findFirstByThreadIdOrderByCreatedAtDesc(UUID threadId);
+
+    Optional<Message> findFirstByThreadIdAndRoleAndToolCallIdOrderByCreatedAtDesc(UUID threadId, String role, String toolCallId);
 }

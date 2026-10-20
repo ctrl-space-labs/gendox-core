@@ -78,7 +78,7 @@ class CompletionServiceToolLimitTest {
         });
 
         // a model that never stops calling tools
-        when(adapter.askCompletion(any(), any(), any(), any(), any(), any(), any(), any())).thenAnswer(inv -> {
+        when(adapter.askCompletion(any(), any(), any(), any(), any(), any(), any(), any(), any())).thenAnswer(inv -> {
             toolChoices.add(inv.getArgument(6));
             AiModelMessage reply = new AiModelMessage();
             reply.setRole("assistant");

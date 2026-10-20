@@ -11,7 +11,10 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.Moderatio
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.AiToolRegistry;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.ToolExecutionContext;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.CompletionDelta;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.AdvancedSearchTool;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.MessageAiMessageConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.CompletionTurn.PendingCall;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxRuntimeException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
@@ -39,6 +42,7 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -65,6 +69,13 @@ public class CompletionService {
     private OrganizationModelKeyService organizationModelKeyService;
     private AuditLogsService auditLogsService;
     private DocumentUtils documentUtils;
+
+    // Field-injected: the turn service calls back into this service to resume a turn
+    @Autowired
+    @Lazy
+    private CompletionTurnService completionTurnService;
+    @Autowired
+    private MessageLocalContextService messageLocalContextService;
 
 
     private AiModelUtils aiModelUtils;
@@ -119,9 +130,18 @@ public class CompletionService {
                                                         AiModelRequestParams aiModelRequestParams, String apiKey, List<AiTools> tools, String toolChoice,
                                                         @Nullable ObjectNode responseJsonSchema) throws GendoxException {
 
+        return getCompletionForMessages(aiModelMessages, agentRole, aiModel, aiModelRequestParams, apiKey, tools, toolChoice, responseJsonSchema, null);
+    }
+
+    /** @param deltas receives the model's tokens as they arrive; null asks the provider for the whole response */
+    private CompletionResponse getCompletionForMessages(List<AiModelMessage> aiModelMessages, String agentRole, AiModel aiModel,
+                                                        AiModelRequestParams aiModelRequestParams, String apiKey, List<AiTools> tools, String toolChoice,
+                                                        @Nullable ObjectNode responseJsonSchema,
+                                                        @Nullable Consumer<CompletionDelta> deltas) throws GendoxException {
+
         //choose the correct aiModel adapter
         AiModelApiAdapterService aiModelApiAdapterService = aiModelUtils.getAiModelApiAdapterImpl(aiModel.getApiType().getName());
-        CompletionResponse completionResponse = aiModelApiAdapterService.askCompletion(aiModelMessages, agentRole, aiModel, aiModelRequestParams, apiKey, tools, toolChoice, responseJsonSchema);
+        CompletionResponse completionResponse = aiModelApiAdapterService.askCompletion(aiModelMessages, agentRole, aiModel, aiModelRequestParams, apiKey, tools, toolChoice, responseJsonSchema, deltas);
         return completionResponse;
     }
 
@@ -146,19 +166,16 @@ public class CompletionService {
                     ObservabilityTags.LOG_METHOD_NAME, "true",
                     ObservabilityTags.LOG_ARGS, "false"
             })
-    public CompletionMessageDTO getCompletionSearch(Message message, Project project) throws GendoxException, IOException, NoSuchAlgorithmException {
+    public CompletionMessageDTO getCompletionSearch(Message message, Project project, CompletionListener listener) throws GendoxException, IOException, NoSuchAlgorithmException {
+
+        // A new message ends a turn that still waits for the page's tool results
+        completionTurnService.cancelWaitingTurn(message.getThreadId());
 
         List<DocumentInstanceSectionDTO> topSectionsForCompletion = new ArrayList<>();
         List<DocumentInstanceSectionDTO> searchHistorySections = new ArrayList<>();
 
-        // search and rerank sections
-        List<DocumentInstanceSectionDTO> sectionDTOs = embeddingService.findClosestSections(
-                message,
-                project,
-                PageRequest.of(0, project.getProjectAgent().getMaxSearchLimit().intValue())
-        );
-
-
+        // search and rerank sections, unless the agent searches by itself (AUTO) or not at all (OFF)
+        List<DocumentInstanceSectionDTO> sectionDTOs = searchBeforeAnswering(message, project);
 
         int maxCompletionLimit = project.getProjectAgent().getMaxCompletionLimit().intValue();
 
@@ -172,20 +189,16 @@ public class CompletionService {
             }
         }
 
+        // Kept with the question too, so a later turn can render the question exactly as it was sent
+        messageService.createMessageSections(topSectionsForCompletion, message, true);
+        messageService.createMessageSections(searchHistorySections, message, false);
+
         // Get the actual completion
-        List<Message> completions = self.getCompletion(message, topSectionsForCompletion, project, null);
+        List<Message> completions = self.getCompletion(message, topSectionsForCompletion, project, null,
+                chatOverrides(message, project), listener);
 
         // Associate the sections with the completion messages
-        List<MessageSection> topCompletionMessageSections;
-        List<MessageSection> searchHistoryMessageSections;
-        for (Message m : completions) {
-            if (m.getRole().equals("assistant")) {
-                //each agent message connected with the sections
-                topCompletionMessageSections = messageService.createMessageSections(topSectionsForCompletion, m, true);
-                searchHistoryMessageSections = messageService.createMessageSections(searchHistorySections, m, false);
-                messageService.updateMessageWithSections(m, topCompletionMessageSections);
-            }
-        }
+        linkSources(message, completions);
 
         // Prepare the completion metadata
         List<ProvenAiMetadata> sectionInfos = sectionDTOs.stream()
@@ -201,13 +214,167 @@ public class CompletionService {
                         .build())
                 .collect(Collectors.toList());
 
-        return CompletionMessageDTO.builder()
-                .messages(completions)
-                .threadId(message.getThreadId())
-                .provenAiMetadata(sectionInfos) // Populate with detailed section info
+        return chatResponse(message, completions, sectionInfos, listener);
+    }
+
+    public CompletionMessageDTO getCompletionSearch(Message message, Project project) throws GendoxException, IOException, NoSuchAlgorithmException {
+        return getCompletionSearch(message, project, CompletionListener.none());
+    }
+
+    /**
+     * Continues a chat turn that waited for CLIENT tool results, once they are all saved. The
+     * question is rendered again with the sections it was asked with, so the request starts as before.
+     */
+    public CompletionMessageDTO resumeCompletionSearch(CompletionTurn turn, CompletionListener listener) throws GendoxException {
+        Project project = projectService.getProjectById(turn.getProjectId());
+        Message message = messageService.getMessagesWithLocalContexts(List.of(turn.getUserMessageId())).get(turn.getUserMessageId());
+        message.setAdditionalResources(messageLocalContextService.getImageContentPartsFromLocalContext(message));
+        List<DocumentInstanceSectionDTO> sections = messageService.getCompletionSections(List.of(message.getId()))
+                .getOrDefault(message.getId(), List.of());
+
+        CompletionRuntimeOverridesDTO overrides = chatOverrides(message, project).toBuilder()
+                .turnMessages(turnMessages(message))
+                .turnIterations(turn.getIteration())
                 .build();
+        List<Message> completions = self.getCompletion(message, sections, project, null, overrides, listener);
 
+        linkSources(message, completions);
+        return chatResponse(message, completions, List.of(), listener);
+    }
 
+    /** ALWAYS: search the documents, as chat always has. AUTO and OFF: the agent searches with advanced_search, or not at all. */
+    private List<DocumentInstanceSectionDTO> searchBeforeAnswering(Message message, Project project) throws GendoxException, IOException, NoSuchAlgorithmException {
+        if (!"ALWAYS".equals(searchMode(project.getProjectAgent()))) {
+            return List.of();
+        }
+        return embeddingService.findClosestSections(
+                message,
+                project,
+                PageRequest.of(0, project.getProjectAgent().getMaxSearchLimit().intValue())
+        );
+    }
+
+    private static String searchMode(ProjectAgent agent) {
+        if (agent.getAdvancedSearchMode() == null) {
+            return "ALWAYS";
+        }
+        return agent.getAdvancedSearchMode();
+    }
+
+    /**
+     * What chat sends differently from other callers: the history with every question rendered as it
+     * was sent (so the provider's prompt cache matches), and advanced_search among the tools.
+     */
+    private CompletionRuntimeOverridesDTO chatOverrides(Message message, Project project) throws GendoxException {
+        // A fixed order, so the question renders the same way every time
+        message.getLocalContexts().sort(Comparator.comparing(MessageLocalContext::getId));
+        return CompletionRuntimeOverridesDTO.builder()
+                .previousMessages(chatHistory(message, project.getProjectAgent()))
+                .aiTools(chatTools(project.getProjectAgent()))
+                .build();
+    }
+
+    private List<AiModelMessage> chatHistory(Message message, ProjectAgent agent) throws GendoxException {
+        List<AiModelMessage> history = new ArrayList<>(messageService.getPreviousMessages(message, 25));
+        List<UUID> questionIds = history.stream()
+                .filter(previous -> "user".equals(previous.getRole()))
+                .map(AiModelMessage::getId)
+                .toList();
+        Map<UUID, Message> questions = messageService.getMessagesWithLocalContexts(questionIds);
+        Map<UUID, List<DocumentInstanceSectionDTO>> sections = messageService.getCompletionSections(questionIds);
+
+        for (AiModelMessage previous : history) {
+            if (!"user".equals(previous.getRole()) || !questions.containsKey(previous.getId())) {
+                continue;
+            }
+            Message question = questions.get(previous.getId());
+            question.getLocalContexts().sort(Comparator.comparing(MessageLocalContext::getId));
+            previous.setContent(convertToAiModelTextQuestion(question, sections.getOrDefault(question.getId(), List.of()), agent));
+        }
+        return history;
+    }
+
+    /** The agent's tools in a stable (name) order, so the prompt cache matches, plus advanced_search unless search is OFF. */
+    private List<AiTools> chatTools(ProjectAgent agent) {
+        Map<String, AiTools> tools = new TreeMap<>();
+        for (AiTools tool : agent.getAiTools()) {
+            String name = toolName(tool);
+            if (name != null) {
+                tools.put(name, tool);
+            }
+        }
+        if (!"OFF".equals(searchMode(agent))) {
+            String search = aiToolRegistry.getOpenAiToolDefinitions(AdvancedSearchTool.TOOL_NAME).get(0).get("function").toString();
+            tools.put(AdvancedSearchTool.TOOL_NAME, AiTools.builder().type("function").jsonSchema(search).build());
+        }
+        return new ArrayList<>(tools.values());
+    }
+
+    /** The assistant and tool messages a waiting turn already saved after its question. */
+    private List<AiModelMessage> turnMessages(Message question) throws GendoxException {
+        List<AiModelMessage> turnMessages = new ArrayList<>();
+        for (Message saved : messageService.getMessagesAfter(question)) {
+            turnMessages.add(messageAiMessageConverter.toDTO(saved));
+        }
+        return turnMessages;
+    }
+
+    /**
+     * Each answer's sources: the sections searched before answering (kept with the question) and
+     * those the agent found with advanced_search during the turn.
+     */
+    private void linkSources(Message question, List<Message> completions) throws GendoxException {
+        List<MessageSection> sources = new ArrayList<>(messageService.getMessageSections(question.getId()));
+        sources.addAll(toolSearchSources(completions));
+
+        for (Message completion : completions) {
+            if (!"assistant".equals(completion.getRole())) {
+                continue;
+            }
+            List<MessageSection> links = messageService.copyMessageSections(sources, completion);
+            messageService.updateMessageWithSections(completion, links);
+        }
+    }
+
+    private List<MessageSection> toolSearchSources(List<Message> completions) {
+        List<MessageSection> sources = new ArrayList<>();
+        for (Message completion : completions) {
+            if (!"tool".equals(completion.getRole()) || !AdvancedSearchTool.TOOL_NAME.equals(completion.getName())) {
+                continue;
+            }
+            for (JsonNode section : readJson(completion.getValue()).path("sections")) {
+                MessageSection source = new MessageSection();
+                source.setSectionId(UUID.fromString(section.path("section_id").asText()));
+                source.setDocumentId(UUID.fromString(section.path("document_id").asText()));
+                source.setCompletionParticipant(true);
+                sources.add(source);
+            }
+        }
+        return sources;
+    }
+
+    private JsonNode readJson(String value) {
+        try {
+            return objectMapper.readTree(value);
+        } catch (JsonProcessingException e) {
+            return objectMapper.createObjectNode();
+        }
+    }
+
+    private CompletionMessageDTO chatResponse(Message question, List<Message> completions, List<ProvenAiMetadata> sectionInfos,
+                                              CompletionListener listener) {
+        CompletionMessageDTO.CompletionMessageDTOBuilder response = CompletionMessageDTO.builder()
+                .messages(completions)
+                .threadId(question.getThreadId())
+                .provenAiMetadata(sectionInfos); // Populate with detailed section info
+
+        CompletionTurn waitingTurn = listener.getWaitingTurn();
+        if (waitingTurn != null) {
+            response.status(waitingTurn.getStatus())
+                    .turnId(waitingTurn.getUserMessageId())
+                    .resumeToken(waitingTurn.getResumeToken());
+        }
+        return response.build();
     }
 
 
@@ -232,6 +399,12 @@ public class CompletionService {
         return getCompletion(message, nearestSections, null, responseJsonSchema, overrides);
     }
 
+    public List<Message> getCompletion(Message message, List<DocumentInstanceSectionDTO> nearestSections, @Nullable Project project,
+                                       @Nullable ObjectNode responseJsonSchema,
+                                       @Nullable CompletionRuntimeOverridesDTO overrides) throws GendoxException {
+        return getCompletion(message, nearestSections, project, responseJsonSchema, overrides, CompletionListener.none());
+    }
+
     @Observed(name = "CompletionService.getCompletion",
             contextualName = "CompletionService#getCompletion",
             lowCardinalityKeyValues = {
@@ -242,7 +415,8 @@ public class CompletionService {
             })
     public List<Message> getCompletion(Message message, List<DocumentInstanceSectionDTO> nearestSections, @Nullable Project project,
                                        @Nullable ObjectNode responseJsonSchema,
-                                       @Nullable CompletionRuntimeOverridesDTO overrides) throws GendoxException {
+                                       @Nullable CompletionRuntimeOverridesDTO overrides,
+                                       CompletionListener listener) throws GendoxException {
         CompletionRuntimeContext runtimeContext = resolveCompletionRuntimeContext(message, nearestSections, project, overrides);
         runModerationIfEnabled(runtimeContext);
 
@@ -268,6 +442,8 @@ public class CompletionService {
                 .role(message.getRole() != null ? message.getRole() : "user")
                 .build();
         previousMessages.add(promptMessage);
+        // A resumed turn continues after the messages it already made
+        previousMessages.addAll(resolveTurnMessages(overrides));
 
         // Pre-load audit log types so we reuse them in the loop
         Type completionRequestType = typeService.getAuditLogTypeByName("COMPLETION_REQUEST");
@@ -276,7 +452,7 @@ public class CompletionService {
         List<Message> allResponseMessages = new ArrayList<>();
 
         boolean hasToolCalls;
-        int iteration = 0;
+        int iteration = resolveTurnIterations(overrides);
         // TODO: this indicate that is a deep thinking task, should be more explicit and not inferred by the presence cancelation token.
         boolean isDeepThinking = runtimeContext.cancellationToken() != null;
         int maxIterations = isDeepThinking ? 20 : maxToolIterations;
@@ -296,7 +472,8 @@ public class CompletionService {
                     runtimeContext.completionApiKey(),
                     runtimeContext.availableTools(),
                     "auto",
-                    responseJsonSchema);
+                    responseJsonSchema,
+                    listener.deltas());
 
             saveCompletionAuditLogs(completionResponse, runtimeContext, completionRequestType, completionResponseType);
 
@@ -307,6 +484,7 @@ public class CompletionService {
             completionResponseMessage.setCreatedBy(runtimeContext.createdByAgentUserId());
             completionResponseMessage.setUpdatedBy(runtimeContext.createdByAgentUserId());
             completionResponseMessage = messageService.createMessage(completionResponseMessage);
+            listener.onMessage(completionResponseMessage);
 
             allResponseMessages.add(completionResponseMessage);
             hasToolCalls = "tool_calls".equals(completionResponse.getChoices().getFirst().getFinishReason());
@@ -314,14 +492,19 @@ public class CompletionService {
             if (hasToolCalls) {
                 logger.info("Tool calls detected in completion response");
 
-                // Execute all tools
+                // Execute all tools. CLIENT tools the client will answer are left pending, unless this is the last allowed call.
+                boolean canWaitForClient = listener.waitsForClientTools() && iteration + 1 < maxIterations;
+                List<PendingCall> pendingCalls = new ArrayList<>();
                 List<AiModelMessage> toolResponseMessages = handleToolExecution(
                         completionResponseMessage,
                         previousMessages,
                         runtimeContext.project(),
                         runtimeContext.agent(),
                         runtimeContext.availableTools(),
-                        runtimeContext.cancellationToken()
+                        runtimeContext.cancellationToken(),
+                        listener,
+                        canWaitForClient,
+                        pendingCalls
                 );
 
                 // Save tool response messages.
@@ -332,8 +515,16 @@ public class CompletionService {
                     toolResponse.setCreatedBy(runtimeContext.createdByAgentUserId());
                     toolResponse.setUpdatedBy(runtimeContext.createdByAgentUserId());
                     messageService.createMessage(toolResponse);
+                    listener.onMessage(toolResponse);
                     allResponseMessages.add(toolResponse);
                 });
+
+                // The turn stops here until the client posts the results (or they time out)
+                if (!pendingCalls.isEmpty()) {
+                    CompletionTurn turn = completionTurnService.suspend(message, completionResponseMessage, pendingCalls, iteration + 1);
+                    listener.onWaitingForTools(turn);
+                    return allResponseMessages;
+                }
 
                 // Sanity check: all tools responded
                 if (completionResponseMessage.getToolCalls() == null ||
@@ -425,6 +616,20 @@ public class CompletionService {
         }
         // TODO add text of attached documents in the message
         return convertToAiModelTextQuestion(message, nearestSections, agent);
+    }
+
+    private List<AiModelMessage> resolveTurnMessages(@Nullable CompletionRuntimeOverridesDTO overrides) {
+        if (overrides == null || overrides.getTurnMessages() == null) {
+            return List.of();
+        }
+        return overrides.getTurnMessages();
+    }
+
+    private int resolveTurnIterations(@Nullable CompletionRuntimeOverridesDTO overrides) {
+        if (overrides == null) {
+            return 0;
+        }
+        return overrides.getTurnIterations();
     }
 
     private void runModerationIfEnabled(CompletionRuntimeContext runtimeContext) throws GendoxException {
@@ -771,6 +976,16 @@ public class CompletionService {
      * @return
      */
     private List<AiModelMessage> handleToolExecution(Message completionResponseMessage, List<AiModelMessage> parentPreviousMessages, @Nullable Project project, @Nullable ProjectAgent agent, List<AiTools> availableTools, @Nullable CancellationToken cancellationToken) {
+        return handleToolExecution(completionResponseMessage, parentPreviousMessages, project, agent, availableTools, cancellationToken,
+                CompletionListener.none(), false, new ArrayList<>());
+    }
+
+    /**
+     * @param canWaitForClient whether CLIENT tools are left for the client to answer
+     * @param pendingCalls     receives the CLIENT calls left for the client; they get no tool message here
+     */
+    private List<AiModelMessage> handleToolExecution(Message completionResponseMessage, List<AiModelMessage> parentPreviousMessages, @Nullable Project project, @Nullable ProjectAgent agent, List<AiTools> availableTools, @Nullable CancellationToken cancellationToken,
+                                                     CompletionListener listener, boolean canWaitForClient, List<PendingCall> pendingCalls) {
         Map<String, AiTools> toolMap = new HashMap<>();
         //map available tools for quick lookup, parse the jsonSchema to JsonNode and find the .function.name property
         availableTools.forEach(tool -> {
@@ -787,12 +1002,24 @@ public class CompletionService {
 
 
         List<AiModelMessage> toolExecutionMessages = new ArrayList<>();
+        List<JsonNode> clientToolCalls = new ArrayList<>();
 
         completionResponseMessage.getToolCalls().forEach(toolCall -> {
             String toolName = toolCall.get("function").get("name").asText();
             AiTools toolDefinition = toolMap.get(toolName);
             if (toolDefinition == null) {
                 throw new GendoxRuntimeException(HttpStatus.BAD_REQUEST, "AI_TOOL_NOT_FOUND", "Tool with name " + toolName + " not found in available tools");
+            }
+
+            // Tools without a backend handler run on the page or app that sent the message
+            boolean runsOnClient = !aiToolRegistry.supports(toolName);
+            if (runsOnClient && canWaitForClient && "CLIENT".equals(toolDefinition.getExecution())) {
+                pendingCalls.add(new PendingCall(toolCall.get("id").asText(), completionResponseMessage.getId(), toolName,
+                        toolCall.get("function").get("arguments").asText()));
+                return;
+            }
+            if (runsOnClient) {
+                clientToolCalls.add(toolCall);
             }
 
             JsonNode args = toolCall.get("function").get("arguments");
@@ -807,6 +1034,9 @@ public class CompletionService {
             toolExecutionMessages.add(message);
         });
 
+        if (!clientToolCalls.isEmpty()) {
+            listener.onClientToolCalls(completionResponseMessage, clientToolCalls);
+        }
         return toolExecutionMessages;
     }
 

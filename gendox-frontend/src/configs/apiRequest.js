@@ -41,6 +41,8 @@ export default {
 
   createOrganization: () => `${url}organizations`,
 
+  completionStatus: threadId => `${url}threads/${threadId}/completion-status`,
+
   postCompletionModel: projectId => `${url}messages/completions?projectId=${projectId}`,
 
   // getThreadsByCriteria: (projectIdIn) => {

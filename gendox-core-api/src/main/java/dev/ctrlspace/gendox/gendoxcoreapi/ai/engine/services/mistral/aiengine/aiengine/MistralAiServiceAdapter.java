@@ -1,5 +1,9 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.mistral.aiengine.aiengine;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.CompletionDelta;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.ProviderStreamClient;
+import java.util.function.Consumer;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.MistralCompletionResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.MistralEmbeddingResponseConverter;
@@ -35,6 +39,9 @@ public class MistralAiServiceAdapter implements AiModelApiAdapterService {
     Logger logger = LoggerFactory.getLogger(MistralAiServiceAdapter.class);
     private Set<String> supportedApiTypeNames = Set.of("MISTRAL_AI_API");
     private RestTemplate restTemplate;
+    // Reads the streamed frames; the non-streaming path keeps using the RestTemplate's converters
+    @Autowired
+    private ObjectMapper objectMapper;
     private MistralEmbeddingResponseConverter mistralEmbeddingResponseConverter;
     private MistralCompletionResponseConverter mistralCompletionResponseConverter;
     private MistralModerationResponseConverter mistralModerationResponseConverter;
@@ -117,6 +124,13 @@ public class MistralAiServiceAdapter implements AiModelApiAdapterService {
 
     @Override
     public CompletionResponse askCompletion(List<AiModelMessage> messages, String agentRole, AiModel aiModel, AiModelRequestParams aiModelRequestParams, String apiKey, List<AiTools> tools, String toolChoice, @Nullable ObjectNode responseJsonSchema) {
+        return askCompletion(messages, agentRole, aiModel, aiModelRequestParams, apiKey, tools, toolChoice, responseJsonSchema, null);
+    }
+
+    /** @param deltas receives the tokens as they arrive; null sends an ordinary (non-streaming) request */
+    @Override
+    public CompletionResponse askCompletion(List<AiModelMessage> messages, String agentRole, AiModel aiModel, AiModelRequestParams aiModelRequestParams, String apiKey, List<AiTools> tools, String toolChoice, @Nullable ObjectNode responseJsonSchema,
+                                            @Nullable Consumer<CompletionDelta> deltas) {
         if (Strings.isNotEmpty(agentRole)) {
             messages.add(0, AiModelMessage.builder().role("system").content(agentRole).build());
         }
@@ -143,7 +157,13 @@ public class MistralAiServiceAdapter implements AiModelApiAdapterService {
         }
 
         MistralCompletionRequest completionRequest = completionRequestBuilder.build();
-        MistralCompletionResponse mistralCompletionResponse = this.getCompletionResponse(completionRequest, aiModel, apiKey);
+        MistralCompletionResponse mistralCompletionResponse;
+        if (deltas == null) {
+            mistralCompletionResponse = this.getCompletionResponse(completionRequest, aiModel, apiKey);
+        } else {
+            mistralCompletionResponse = ProviderStreamClient.complete(restTemplate, objectMapper, aiModel.getUrl(), buildHeader(apiKey),
+                    completionRequest, ProviderStreamClient.Protocol.MISTRAL, MistralCompletionResponse.class, deltas);
+        }
         logger.trace("Completion Response: {}", mistralCompletionResponse);
         CompletionResponse completionResponse = mistralCompletionResponseConverter.toCompletionResponse(mistralCompletionResponse);
         logger.trace("Completion Response: {}", completionResponse);
