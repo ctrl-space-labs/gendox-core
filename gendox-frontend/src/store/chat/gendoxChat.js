@@ -903,6 +903,8 @@ function _dispatchIncomingMessagesAndToolCalls({ apiMessages = [], responseThrea
 
 
 
+const DELTA_FLUSH_MS = 50
+
 const completionEvent = (dispatch, projectId, event, data) =>
   dispatch(chatActions.completionEvent({ projectId, event, data }))
 
@@ -933,9 +935,30 @@ async function _streamCompletion(context) {
   let threadId = payload.threadId
   completionEvent(dispatch, projectId, 'connect', { threadId, requestId })
   let turnId = readCompletionSession(threadId).turnId
+
+  // A fast model sends many tokens per network chunk. Rendering each one at once starves React's
+  // other updates (minified React error #185), so tokens are drawn in batches.
+  let deltas = []
+  let flushTimer = null
+  const flushDeltas = () => {
+    clearTimeout(flushTimer)
+    flushTimer = null
+    const batch = deltas
+    deltas = []
+    batch.forEach(delta => completionEvent(dispatch, projectId, 'delta', delta))
+  }
+
   try {
     const response = await completionService.postChatMessage(projectId, payload, token,
       readCompletionSession(threadId).resumeToken, async (event, data) => {
+        if (event === 'delta') {
+          deltas.push({ ...data, threadId, requestId })
+          if (!flushTimer) {
+            flushTimer = setTimeout(flushDeltas, DELTA_FLUSH_MS)
+          }
+          return
+        }
+        flushDeltas()
         if (event === 'start') {
           threadId = data.threadId
           turnId = data.turnId
@@ -950,7 +973,6 @@ async function _streamCompletion(context) {
           saveCompletionSession(threadId, { resumeToken: data.resumeToken })
         }
         if (event === 'message') data = { ...data, turnId, threadId }
-        if (event === 'delta') data = { ...data, threadId }
         data = { ...data, requestId }
         completionEvent(dispatch, projectId, event, data)
         if (event === 'tool_calls' || event === 'waiting_for_tools') dispatchHostCalls(data, context)
@@ -964,6 +986,7 @@ async function _streamCompletion(context) {
     }
     return response
   } catch (error) {
+    flushDeltas()
     completionEvent(dispatch, projectId, 'detached', { threadId, requestId })
     throw error
   }

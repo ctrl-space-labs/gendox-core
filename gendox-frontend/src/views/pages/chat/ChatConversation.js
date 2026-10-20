@@ -13,6 +13,9 @@ import ChatConversationHeader from 'src/views/pages/chat/conversation-components
 import AiResponseLoader from 'src/views/pages/chat/conversation-components/AiResponseLoader'
 import ChatConversationThreadMessagesArea from 'src/views/pages/chat/conversation-components/ChatConversationThreadMessagesArea'
 
+const ACTIVE_COMPLETION_STATUSES = ['GENERATING', 'WAITING_FOR_TOOLS']
+const COMPLETION_POLL_MS = 2000
+
 // ─────────────────────────────────────────────────────────────────────────────
 // GendoxChat – Parent component containing the three sub‐components
 // ─────────────────────────────────────────────────────────────────────────────
@@ -34,22 +37,33 @@ const ChatConversation = props => {
   const { organizationId, projectId } = router.query
   const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
   // Grab state data from Redux
-  const { currentThread, isSendingMessage, isLoadingMessages, completionStatus } = useSelector(
+  const { currentThread, isSendingMessage, isLoadingMessages, completionStatus, isStreaming } = useSelector(
     state => state.gendoxChat
   )
 
+  // A turn that runs without a stream on this page (after a reload, or while it waits for tools) is followed by polling
+  const followsTurnByPolling = !isStreaming && ACTIVE_COMPLETION_STATUSES.includes(completionStatus)
+
+  const checkCompletion = () => {
+    dispatch(recoverCompletion({ threadId: currentThread.threadId, projectId: currentThread.projectId,
+      organizationId: currentThread.organizationId, token, iFrameMessageManager }))
+  }
+
+  // Once per opened thread: a turn may still be running from before the page loaded
   useEffect(() => {
-    if (!currentThread?.threadId) return
-    let stopped = false
-    let timer
-    const poll = async () => {
-      await dispatch(recoverCompletion({ threadId: currentThread.threadId, projectId: currentThread.projectId,
-        organizationId: currentThread.organizationId, token, iFrameMessageManager }))
-      if (!stopped) timer = setTimeout(poll, 2000)
+    if (!currentThread?.threadId) {
+      return
     }
-    poll()
-    return () => { stopped = true; clearTimeout(timer) }
-  }, [currentThread?.threadId, currentThread?.projectId, token, dispatch, iFrameMessageManager])
+    checkCompletion()
+  }, [currentThread?.threadId])
+
+  useEffect(() => {
+    if (!currentThread?.threadId || !followsTurnByPolling) {
+      return
+    }
+    const timer = setInterval(checkCompletion, COMPLETION_POLL_MS)
+    return () => clearInterval(timer)
+  }, [currentThread?.threadId, followsTurnByPolling])
 
   useEffect(() => {
     const manager = iFrameMessageManager?.messageManager
