@@ -147,6 +147,11 @@ public class ProjectAgent {
     @OneToMany(mappedBy = "agent", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<AiTools> aiTools = new ArrayList<>();
 
+    @JsonManagedReference(value = "agentSkills")
+    @OneToMany(mappedBy = "agent", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("name ASC")
+    private List<AgentSkill> agentSkills = new ArrayList<>();
+
     public UUID getId() {
         return id;
     }
@@ -371,6 +376,14 @@ public class ProjectAgent {
 
     public void setAiTools(List<AiTools> aiTools) {
         this.aiTools = aiTools;
+    }
+
+    public List<AgentSkill> getAgentSkills() {
+        return agentSkills;
+    }
+
+    public void setAgentSkills(List<AgentSkill> agentSkills) {
+        this.agentSkills = agentSkills;
     }
 
     public Boolean getAdvancedSearchEnable() {

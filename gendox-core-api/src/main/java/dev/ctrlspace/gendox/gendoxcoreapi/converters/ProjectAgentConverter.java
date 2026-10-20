@@ -59,6 +59,7 @@ public class ProjectAgentConverter implements GendoxConverter<ProjectAgent, Proj
         }
 
         projectAgentDTO.setAiTools(projectAgent.getAiTools());
+        projectAgentDTO.setAgentSkills(projectAgent.getAgentSkills());
 
 
         return projectAgentDTO;
@@ -117,6 +118,7 @@ public class ProjectAgentConverter implements GendoxConverter<ProjectAgent, Proj
         }
 
         projectAgent.setAiTools(projectAgentDTO.getAiTools());
+        projectAgent.setAgentSkills(projectAgentDTO.getAgentSkills());
 
         return projectAgent;
     }

@@ -5,11 +5,17 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.Task;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TimePeriodDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskTypeConstants;
+import dev.ctrlspace.gendox.spring.batch.model.BatchJobExecution;
 import dev.ctrlspace.gendox.spring.batch.model.BatchJobExecutionParams;
+import dev.ctrlspace.gendox.spring.batch.model.criteria.BatchExecutionCriteria;
+import dev.ctrlspace.gendox.spring.batch.model.criteria.BatchExecutionParamCriteria;
 import dev.ctrlspace.gendox.spring.batch.repositories.BatchJobExecutionParamsRepository;
 import dev.ctrlspace.gendox.spring.batch.repositories.BatchJobExecutionRepository;
 import dev.ctrlspace.gendox.spring.batch.services.*;
 import dev.ctrlspace.gendox.spring.batch.utils.JobExecutionParamConstants;
+import dev.ctrlspace.gendox.spring.batch.utils.JobUtils;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.slf4j.Logger;
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.JobExecution;
@@ -22,6 +28,7 @@ import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -41,6 +48,7 @@ public class JobService {
     private final TaskService taskService;
     private final BatchJobExecutionRepository batchJobExecutionRepository;
     private final BatchJobExecutionParamsRepository batchJobExecutionParamsRepository;
+    private final JobUtils jobUtils;
 
     @Autowired
     public JobService(SplitterBatchService splitterBatchService,
@@ -51,7 +59,8 @@ public class JobService {
                       JobExplorer jobExplorer,
                       TaskService taskService,
                       BatchJobExecutionRepository batchJobExecutionRepository,
-                      BatchJobExecutionParamsRepository batchJobExecutionParamsRepository) {
+                      BatchJobExecutionParamsRepository batchJobExecutionParamsRepository,
+                      JobUtils jobUtils) {
         this.splitterBatchService = splitterBatchService;
         this.trainingBatchService = trainingBatchService;
         this.splitterAndTrainingBatchService = splitterAndTrainingBatchService;
@@ -61,6 +70,30 @@ public class JobService {
         this.taskService = taskService;
         this.batchJobExecutionRepository = batchJobExecutionRepository;
         this.batchJobExecutionParamsRepository = batchJobExecutionParamsRepository;
+        this.jobUtils = jobUtils;
+    }
+
+    /** The latest job executions of a task, newest first. */
+    public List<BatchJobExecution> getLatestTaskJobs(UUID projectId, UUID taskId, int count) {
+        BatchExecutionCriteria criteria = BatchExecutionCriteria.builder()
+                .matchAllParams(List.of(
+                        BatchExecutionParamCriteria.builder()
+                                .paramName(JobExecutionParamConstants.TASK_ID)
+                                .paramValue(taskId.toString())
+                                .build(),
+                        BatchExecutionParamCriteria.builder()
+                                .paramName(JobExecutionParamConstants.PROJECT_ID)
+                                .paramValue(projectId.toString())
+                                .build()))
+                .build();
+        return jobUtils.getJobsByCriteria(criteria,
+                PageRequest.of(0, count, Sort.by(Sort.Direction.DESC, "jobExecutionId"))).getContent();
+    }
+
+    /** Whether the task's latest job execution is still starting, running or stopping. */
+    public boolean isTaskRunning(UUID projectId, UUID taskId) {
+        return getLatestTaskJobs(projectId, taskId, 1).stream()
+                .anyMatch(execution -> Set.of("STARTING", "STARTED", "STOPPING").contains(execution.getStatus()));
     }
 
     /**

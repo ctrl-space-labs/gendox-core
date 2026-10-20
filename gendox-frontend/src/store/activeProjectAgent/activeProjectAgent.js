@@ -3,6 +3,7 @@ import projectService from 'src/gendox-sdk/projectService'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import toast from 'react-hot-toast'
 import typesService from "../../gendox-sdk/typesService";
+import skillService from 'src/gendox-sdk/skillService'
 
 // Async thunk to fetch AI models for the project agent
 export const fetchAiModels = createAsyncThunk(
@@ -33,6 +34,32 @@ export const fetchExampleTools = createAsyncThunk(
   }
 )
 
+// Async thunk to fetch the Gendox skills an agent can add
+export const fetchSkillLibrary = createAsyncThunk(
+  'activeProjectAgent/fetchSkillLibrary',
+  async ({ token }, thunkAPI) => {
+    try {
+      const response = await skillService.getSkillLibrary(token)
+      return response.data
+    } catch (error) {
+      toast.error(`${getErrorMessage(error)}`)
+      console.error('Failed to fetch the Gendox skills', error)
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
+    }
+  }
+)
+
+// Async thunk to fetch the built-in tools a skill can bring (allowed-tools)
+export const fetchSkillTools = createAsyncThunk('activeProjectAgent/fetchSkillTools', async ({ token }, thunkAPI) => {
+  try {
+    const response = await skillService.getSkillTools(token)
+    return response.data
+  } catch (error) {
+    console.error('Failed to fetch the skill tools', error)
+    return thunkAPI.rejectWithValue(error.response?.data || error.message)
+  }
+})
+
 // Async thunk to update the project agent
 export const updateProjectAgent = createAsyncThunk(
   'activeProjectAgent/updateProjectAgent',
@@ -60,6 +87,9 @@ const initialState = {
   isFetchingAiModels: false,
   isUpdatingProjectAgent: false,
   isFetchingExampleTools: false,
+  skillLibrary: [],
+  isFetchingSkillLibrary: false,
+  skillTools: [],
   error: null
 }
 
@@ -99,6 +129,22 @@ const activeProjectAgentSlice = createSlice({
         state.isFetchingExampleTools = false
         state.fetchStatus = 'failed'
         state.error = action.payload
+      })
+
+      .addCase(fetchSkillLibrary.pending, state => {
+        state.isFetchingSkillLibrary = true
+      })
+      .addCase(fetchSkillLibrary.fulfilled, (state, action) => {
+        state.isFetchingSkillLibrary = false
+        state.skillLibrary = action.payload
+      })
+      .addCase(fetchSkillLibrary.rejected, (state, action) => {
+        state.isFetchingSkillLibrary = false
+        state.error = action.payload
+      })
+
+      .addCase(fetchSkillTools.fulfilled, (state, action) => {
+        state.skillTools = action.payload
       })
 
       // Handle updating the project agent

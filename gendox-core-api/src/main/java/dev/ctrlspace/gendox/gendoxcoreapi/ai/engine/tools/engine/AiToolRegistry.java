@@ -92,6 +92,23 @@ public class AiToolRegistry {
     }
 
     /**
+     * The function definition ({@code name}, {@code description}, {@code parameters}) of a built-in
+     * tool, in the shape of {@code ai_tools.json_schema}. Lets a completion offer a tool the agent has
+     * no row for: read_skill, and the tools a skill lists in {@code allowed-tools}.
+     */
+    public Optional<String> getDefinition(String toolName) {
+        return Optional.ofNullable(handlersByName.get(toolName))
+                .map(handler -> buildOpenAiToolDefinition(handler).get("function").toString());
+    }
+
+    /** Every built-in tool, sorted by name: what a skill may list in {@code allowed-tools}. */
+    public List<AiToolHandler> getHandlers() {
+        return handlersByName.values().stream()
+                .sorted(java.util.Comparator.comparing(AiToolHandler::getName))
+                .toList();
+    }
+
+    /**
      * All tools, ready to send to OpenAI as "tools".
      * Delegates to the allowedToolNames variant using all registered tool names.
      */

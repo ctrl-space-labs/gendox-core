@@ -13,6 +13,7 @@ import org.springframework.stereotype.Repository;
 
 import org.springframework.data.domain.Pageable;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -39,6 +40,11 @@ public interface TaskNodeRepository extends JpaRepository<TaskNode, UUID>, Query
 
     @Query("SELECT tn FROM TaskNode tn WHERE tn.taskId = :taskId AND tn.nodeType.name = :nodeTypeName")
     List<TaskNode> findAllByTaskIdAndNodeTypeName(@Param("taskId") UUID taskId, @Param("nodeTypeName") String nodeTypeName);
+
+    @Query("SELECT tn FROM TaskNode tn WHERE tn.taskId = :taskId AND tn.documentId IN :documentIds AND tn.nodeType.name = :nodeTypeName")
+    List<TaskNode> findAllByTaskIdAndDocumentIdInAndNodeTypeName(@Param("taskId") UUID taskId,
+                                                                 @Param("documentIds") Collection<UUID> documentIds,
+                                                                 @Param("nodeTypeName") String nodeTypeName);
 
     @Query("SELECT tn FROM TaskNode tn WHERE tn.documentId = :documentId AND tn.nodeType.name = :nodeTypeName")
     List<TaskNode> findAllByDocumentIdAndNodeTypeName(@Param("documentId") UUID documentId, @Param("nodeTypeName") String nodeTypeName);

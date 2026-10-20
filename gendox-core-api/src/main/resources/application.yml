@@ -187,6 +187,8 @@ gendox:
     top_p: 0.95
     max_search_limit: 5
     max_completion_limit: 5
+    # tool rounds a completion may take before it must answer (deep thinking: 20)
+    max-tool-iterations: 12
   tasks:
     max-questions-per-bucket: 5
     max-question-tokens-per-bucket: 5000

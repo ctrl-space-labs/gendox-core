@@ -16,6 +16,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentSectionMetadataDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectAgentRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TemplateRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.skills.SkillService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.AiModelUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.DocumentUtils;
 import org.junit.jupiter.api.BeforeEach;
@@ -106,7 +107,7 @@ class CompletionServiceChatTest {
         service = new CompletionService(null, mock(ProjectService.class), new MessageAiMessageConverter(), embeddingService,
                 mock(ProjectAgentRepository.class), templateRepository, typeService, aiModelUtils, mock(ProjectAgentService.class),
                 mock(TrainingService.class), mock(OrganizationModelKeyService.class), messageService, auditLogsService,
-                mock(DocumentUtils.class), mapper, mock(AiModelService.class), aiToolRegistry);
+                mock(DocumentUtils.class), mapper, mock(AiModelService.class), aiToolRegistry, mock(SkillService.class));
         ReflectionTestUtils.setField(service, "self", service);
         ReflectionTestUtils.setField(service, "completionTurnService", completionTurnService);
         ReflectionTestUtils.setField(service, "messageLocalContextService", mock(MessageLocalContextService.class));
