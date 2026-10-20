@@ -14,7 +14,7 @@ import java.util.UUID;
 
 /**
  * A chat turn that waits for the results of CLIENT tool calls. The messages stay in the message
- * table; this row only says what the turn waits for, until when, and who may answer.
+ * table; this row only says what the turn waits for and who may answer.
  */
 @Entity
 @Table(name = "completion_turn", schema = "gendox_core")
@@ -41,7 +41,6 @@ public class CompletionTurn {
     private List<PendingCall> pendingCalls = new ArrayList<>();
 
     private int iteration;
-    private Instant deadline;
     private Instant createdAt;
 
     // Given once, to the session that sent the message; only its hash is stored

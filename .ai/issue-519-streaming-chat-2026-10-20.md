@@ -8,7 +8,8 @@ What changed since 2026-10-16:
 - **No state while a turn generates.** A `completion_turn` row exists only for a turn that waits for client tool results. No history snapshot, worker ownership, heartbeat or configuration fingerprint is stored.
 - **Retrieval is unchanged by default.** A per-agent `advanced_search_mode` (`ALWAYS` | `AUTO` | `OFF`, #542) decides it; `ALWAYS`, the default, keeps the search before answering.
 - **No copies of retrieved text.** The sections a question was asked with are linked to it (`message_section`) and rendered again from those links; nothing new is stored on the message.
-- **One API for every message.** A client tool result is a message with `role: "tool"` on `POST messages/completions`, not a separate endpoint (the redesign's `POST threads/{t}/messages/{m}/tool-results` is not added). The timeout is 2 minutes.
+- **One API for every message.** A client tool result is a message with `role: "tool"` on `POST messages/completions`, not a separate endpoint (the redesign's `POST threads/{t}/messages/{m}/tool-results` is not added).
+- **No timeout in the backend.** A waiting call waits until its result arrives or a new user message cancels it. Whether a tool gives up, and after how long, is the client's choice per tool (for example `open_web_page` may, a code-execution tool should not); a client that gives up posts an error result as the tool's value. How the frontend lets a tool developer set this is open.
 - Cohere and Mistral keep their current (tool-less) requests; they only gain streaming.
 
 ## Scope
@@ -57,11 +58,11 @@ Sources: the found sections are linked to the question (participants and search 
 
 `ai_tools.execution`: `ACTION` (default, *async*: the agent is told it was executed) or `CLIENT` (*sync*). A tool with a backend handler always runs in Gendox. A client opts in with `clientToolResults: true`; otherwise `CLIENT` tools behave as `ACTION`.
 
-When the model calls a `CLIENT` tool and the client can answer, the call gets no tool message; `CompletionTurnService.suspend` saves a `completion_turn` row (id = the question's id) with the pending calls, the model calls made so far and a 2-minute deadline, and the loop returns. A turn that waits again after resuming reuses its row. A turn on its last allowed model call does not wait; the call is treated as `ACTION`.
+When the model calls a `CLIENT` tool and the client can answer, the call gets no tool message; `CompletionTurnService.suspend` saves a `completion_turn` row (id = the question's id) with the pending calls and the model calls made so far, and the loop returns. A turn that waits again after resuming reuses its row. A turn on its last allowed model call does not wait; the call is treated as `ACTION`.
 
 A tool result is posted to the same `POST messages/completions?projectId=` as any message: `{"threadId", "role": "tool", "toolCallId", "value", "stream"}`. It creates no user message and does not count as a sent message. The backend finds the call among the thread's waiting turn by its id. While other calls wait it returns 202 with the status; the last result marks the turn `RESUMED` (under a row lock, so only one request resumes it) and `CompletionService.resumeCompletionSearch` continues through the same loop, answering as JSON or SSE like any message: the overrides add `turnMessages` (the assistant and tool messages already saved after the question) and `turnIterations`. Repeating a saved result is a no-op; a different one is rejected. Several waiting calls take one request each.
 
-- Calls unanswered by the deadline are answered with `CLIENT_TOOL_TIMEOUT` and the turn continues (`@Scheduled`, `@SchedulerLock`).
+- The backend sets no deadline. A tool that should not wait forever is timed out by the client, which posts an error result for it.
 - A new user message answers a waiting turn's calls with `CLIENT_TOOL_CANCELLED`, so the history stays valid.
 - Who may answer: the signed-in user who sent the question, or an anonymous session holding the resume token. The token is issued once, when the turn first waits (`waiting_for_tools` event and the JSON `resumeToken`); only its SHA-256 is stored. It is sent as `X-Gendox-Completion-Token`.
 
@@ -81,4 +82,4 @@ Apply the migrations and backend before the frontend and widget. Existing agents
 
 ## Validation
 
-Unit tests cover the provider stream framing and assembly, the controller (JSON and SSE through the same completion, tool results, deep thinking unchanged), the chat path (search modes, history rendering, suspending and resuming a turn) and the turn service (partial, repeated and conflicting results, sessions, cancel, timeout, status). Browser regressions run against a deterministic local streaming API (`playwright test --config chat-streaming.config.cjs`, after building the frontend). Not yet run end to end against a real stack and provider.
+Unit tests cover the provider stream framing and assembly, the controller (JSON and SSE through the same completion, tool results, deep thinking unchanged), the chat path (search modes, history rendering, suspending and resuming a turn) and the turn service (partial, repeated and conflicting results, sessions, cancel, status). Browser regressions run against a deterministic local streaming API (`playwright test --config chat-streaming.config.cjs`, after building the frontend). Not yet run end to end against a real stack and provider.

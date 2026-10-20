@@ -2,7 +2,6 @@ package dev.ctrlspace.gendox.gendoxcoreapi.model.dtos;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.CompletionTurn;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -14,11 +13,10 @@ public record CompletionStatusDTO(UUID threadId,
                                   UUID turnId,
                                   String status,
                                   List<CompletionTurn.PendingCall> pendingCalls,
-                                  Instant deadline,
                                   String resumeToken) {
 
     public static CompletionStatusDTO of(UUID threadId, String status) {
-        return new CompletionStatusDTO(threadId, null, status, List.of(), null, null);
+        return new CompletionStatusDTO(threadId, null, status, List.of(), null);
     }
 
     public static CompletionStatusDTO waiting(CompletionTurn turn, boolean withCalls) {
@@ -27,6 +25,6 @@ public record CompletionStatusDTO(UUID threadId,
             calls = turn.getPendingCalls();
         }
         return new CompletionStatusDTO(turn.getThreadId(), turn.getUserMessageId(), turn.getStatus(), calls,
-                turn.getDeadline(), turn.getResumeToken());
+                turn.getResumeToken());
     }
 }

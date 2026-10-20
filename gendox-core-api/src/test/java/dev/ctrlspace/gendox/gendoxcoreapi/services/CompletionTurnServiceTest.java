@@ -13,9 +13,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.MessageRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.transaction.TransactionStatus;
-import org.springframework.transaction.support.TransactionCallback;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -41,8 +38,6 @@ class CompletionTurnServiceTest {
     final ProjectService projectService = mock(ProjectService.class);
     final CompletionService completionService = mock(CompletionService.class);
     final SecurityUtils securityUtils = mock(SecurityUtils.class);
-    final TransactionTemplate transactionTemplate = mock(TransactionTemplate.class);
-    final List<Runnable> background = new ArrayList<>();
     // What the fake tables hold
     final Map<UUID, CompletionTurn> turns = new HashMap<>();
     final List<Message> savedMessages = new ArrayList<>();
@@ -56,8 +51,6 @@ class CompletionTurnServiceTest {
         Project project = new Project();
         project.setProjectAgent(new ProjectAgent());
         when(projectService.getProjectById(projectId)).thenReturn(project);
-        when(transactionTemplate.execute(any())).thenAnswer(invocation ->
-                ((TransactionCallback<?>) invocation.getArgument(0)).doInTransaction(mock(TransactionStatus.class)));
         when(turnRepository.save(any())).thenAnswer(invocation -> {
             CompletionTurn turn = invocation.getArgument(0);
             turns.put(turn.getId(), turn);
@@ -66,8 +59,6 @@ class CompletionTurnServiceTest {
         when(turnRepository.findById(any())).thenAnswer(invocation -> Optional.ofNullable(turns.get(invocation.getArgument(0))));
         when(turnRepository.lockWaitingTurn(threadId)).thenAnswer(invocation -> waitingTurn());
         when(turnRepository.findByThreadIdAndStatus(threadId, CompletionTurn.WAITING_FOR_TOOLS)).thenAnswer(invocation -> waitingTurn());
-        when(turnRepository.findByStatusAndDeadlineBefore(eq(CompletionTurn.WAITING_FOR_TOOLS), any())).thenAnswer(invocation ->
-                waitingTurn().filter(turn -> turn.getDeadline().isBefore(invocation.getArgument(1))).stream().toList());
         when(messageService.createMessage(any())).thenAnswer(invocation -> {
             Message message = invocation.getArgument(0);
             savedMessages.add(message);
@@ -79,7 +70,7 @@ class CompletionTurnServiceTest {
                         .findFirst());
 
         service = new CompletionTurnService(turnRepository, messageRepository, messageService, projectService,
-                completionService, securityUtils, transactionTemplate, background::add);
+                completionService, securityUtils);
 
         question = new Message();
         question.setId(UUID.randomUUID());
@@ -183,20 +174,6 @@ class CompletionTurnServiceTest {
 
         assertEquals(2, savedMessages.stream().filter(message -> message.getValue().contains("CLIENT_TOOL_CANCELLED")).count());
         assertTrue(waitingTurn().isEmpty());
-    }
-
-    @Test
-    void expiredTurnsContinueWithTheMissingResultsAnsweredAsFailed() throws Exception {
-        CompletionTurn turn = suspendWithTwoCalls();
-        answer("a", "1", turn.getResumeToken());
-        turn.setDeadline(Instant.now().minusSeconds(1));
-
-        service.resumeExpiredTurns();
-        background.forEach(Runnable::run);
-
-        assertEquals(1, savedMessages.stream().filter(message -> message.getValue().contains("CLIENT_TOOL_TIMEOUT")).count());
-        assertEquals(CompletionTurn.RESUMED, turn.getStatus());
-        verify(completionService).resumeCompletionSearch(eq(turn), any());
     }
 
     @Test

@@ -9,17 +9,10 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionStatusDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.CompletionTurnRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.MessageRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
-import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.core.task.TaskExecutor;
 import org.springframework.http.HttpStatus;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -34,18 +27,15 @@ import java.util.UUID;
 
 /**
  * Chat turns that wait for CLIENT tool results (#518): the page or app runs the tool and posts the
- * result back, and the turn continues once every waiting call has one.
+ * result back, and the turn continues once every waiting call has one. The backend sets no time limit:
+ * a call waits until its result arrives or a new user message cancels it.
  */
 @Service
 public class CompletionTurnService {
 
-    private static final Logger logger = LoggerFactory.getLogger(CompletionTurnService.class);
-
-    private static final Duration CLIENT_TOOL_TIMEOUT = Duration.ofMinutes(2);
     // A turn whose latest message is newer than this, and is not a final answer, is shown as generating
     private static final Duration GENERATING_WINDOW = Duration.ofMinutes(5);
 
-    private static final String TIMEOUT_RESULT = "{\"error\":\"CLIENT_TOOL_TIMEOUT\",\"message\":\"The page did not return a result within 2 minutes\"}";
     private static final String CANCELLED_RESULT = "{\"error\":\"CLIENT_TOOL_CANCELLED\",\"message\":\"The user sent a new message before the page returned a result\"}";
 
     private final CompletionTurnRepository turnRepository;
@@ -54,25 +44,19 @@ public class CompletionTurnService {
     private final ProjectService projectService;
     private final CompletionService completionService;
     private final SecurityUtils securityUtils;
-    private final TransactionTemplate transactionTemplate;
-    private final TaskExecutor taskExecutor;
 
     public CompletionTurnService(CompletionTurnRepository turnRepository,
                                  MessageRepository messageRepository,
                                  MessageService messageService,
                                  ProjectService projectService,
                                  @Lazy CompletionService completionService,
-                                 SecurityUtils securityUtils,
-                                 TransactionTemplate transactionTemplate,
-                                 @Qualifier("taskExecutor") TaskExecutor taskExecutor) {
+                                 SecurityUtils securityUtils) {
         this.turnRepository = turnRepository;
         this.messageRepository = messageRepository;
         this.messageService = messageService;
         this.projectService = projectService;
         this.completionService = completionService;
         this.securityUtils = securityUtils;
-        this.transactionTemplate = transactionTemplate;
-        this.taskExecutor = taskExecutor;
     }
 
     /**
@@ -86,7 +70,6 @@ public class CompletionTurnService {
         turn.setStatus(CompletionTurn.WAITING_FOR_TOOLS);
         turn.setPendingCalls(new ArrayList<>(calls));
         turn.setIteration(iteration);
-        turn.setDeadline(Instant.now().plus(CLIENT_TOOL_TIMEOUT));
         String resumeToken = turn.getResumeToken();
         turn = turnRepository.save(turn);
         turn.setResumeToken(resumeToken);
@@ -173,40 +156,6 @@ public class CompletionTurnService {
         answerPendingCalls(turn, CANCELLED_RESULT);
         turn.setStatus(CompletionTurn.CANCELLED);
         turnRepository.save(turn);
-    }
-
-    /** Turns whose page did not answer in time continue with the missing results answered as failed. */
-    @Scheduled(fixedDelay = 10_000)
-    @SchedulerLock(name = "CompletionTurnService.resumeExpiredTurns", lockAtMostFor = "PT1M", lockAtLeastFor = "PT1S")
-    public void resumeExpiredTurns() {
-        List<CompletionTurn> expired = turnRepository.findByStatusAndDeadlineBefore(CompletionTurn.WAITING_FOR_TOOLS, Instant.now());
-        for (CompletionTurn candidate : expired) {
-            Optional<CompletionTurn> resumed = transactionTemplate.execute(status -> expire(candidate.getThreadId()));
-            resumed.ifPresent(turn -> taskExecutor.execute(() -> resumeInBackground(turn)));
-        }
-    }
-
-    private Optional<CompletionTurn> expire(UUID threadId) {
-        Optional<CompletionTurn> waiting = turnRepository.lockWaitingTurn(threadId);
-        if (waiting.isEmpty() || waiting.get().getDeadline().isAfter(Instant.now())) {
-            return Optional.empty();
-        }
-        CompletionTurn turn = waiting.get();
-        try {
-            answerPendingCalls(turn, TIMEOUT_RESULT);
-        } catch (GendoxException e) {
-            throw new GendoxRuntimeException(HttpStatus.INTERNAL_SERVER_ERROR, "CLIENT_TOOL_TIMEOUT_FAILED", "Cannot answer the expired tool calls", e);
-        }
-        turn.setStatus(CompletionTurn.RESUMED);
-        return Optional.of(turnRepository.save(turn));
-    }
-
-    private void resumeInBackground(CompletionTurn turn) {
-        try {
-            completionService.resumeCompletionSearch(turn, CompletionListener.none());
-        } catch (Exception e) {
-            logger.error("Cannot continue chat turn {} after its client tools timed out", turn.getId(), e);
-        }
     }
 
     public CompletionStatusDTO getStatus(UUID threadId, String resumeToken) {

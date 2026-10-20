@@ -7,8 +7,6 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -19,6 +17,4 @@ public interface CompletionTurnRepository extends JpaRepository<CompletionTurn, 
     Optional<CompletionTurn> lockWaitingTurn(@Param("threadId") UUID threadId);
 
     Optional<CompletionTurn> findByThreadIdAndStatus(UUID threadId, String status);
-
-    List<CompletionTurn> findByStatusAndDeadlineBefore(String status, Instant deadline);
 }
