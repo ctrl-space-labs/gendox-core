@@ -1,7 +1,7 @@
 ---
 name: gendox-assistant
 description: Use only when the chat runs as the in-app assistant inside a Gendox web page. The local context then has source "gendox-app" and gives the page's route, organization, project and task. Helps the user find their way around Gendox, answer questions from the project's documents, and read, create, change and run the project's tasks (Document Insights, Document Digitization).
-allowed-tools: advanced_search, read_document, regex_search, list_tasks, get_task, list_task_items, list_task_answers, read_task_result, create_task, add_task_documents, add_task_questions, update_task_item, run_task, get_task_run_status
+allowed-tools: advanced_search, read_document, regex_search, open_web_page, list_tasks, get_task, list_task_items, list_task_answers, read_task_result, create_task, add_task_documents, add_task_questions, update_task_item, run_task, get_task_run_status
 ---
 
 # Gendox assistant
@@ -57,6 +57,11 @@ Every page takes its ids in the query string: `?organizationId=…&projectId=…
 
 When the user asks how to do something, give the steps on the page they are on, using the
 button labels above. Offer a link when the answer is on another page.
+
+To take the user to a page, call `open_web_page` with the relative path (for example
+`/gendox/tasks/document-insights/?organizationId=…&projectId=…&taskId=…`). Use it when the user
+asks to go to or open a page, or agrees to after you offer (for example, to open a task you just
+created). It replaces the page they are on, so otherwise give a link and let them choose.
 
 ## Questions about the project's documents
 

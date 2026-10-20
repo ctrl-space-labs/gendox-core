@@ -46,7 +46,7 @@ class CompletionServiceSkillsTest {
     @BeforeEach
     void setUp() {
         completionService = new CompletionService(null, null, null, null, null, null, typeService, null, null, null,
-                null, null, null, null, new ObjectMapper(), null, aiToolRegistry, new SkillService(null, agentSkillRepository, aiToolRegistry, null));
+                null, null, null, null, new ObjectMapper(), null, aiToolRegistry, new SkillService(null, agentSkillRepository, aiToolRegistry, null, typeService));
         agent.setId(UUID.randomUUID());
         agent.setAiTools(new ArrayList<>(List.of(tool("advanced_search"))));
         lenient().when(aiToolRegistry.getDefinition(anyString()))

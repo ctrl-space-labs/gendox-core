@@ -3,6 +3,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services.skills;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.AiToolRegistry;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AgentSkill;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.TypeService;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.MessageLocalContextRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.MessageLocalContext;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
@@ -42,6 +43,9 @@ class SkillServiceTest {
 
     @Mock
     private MessageLocalContextRepository messageLocalContextRepository;
+
+    @Mock
+    private TypeService typeService;
 
     private static String md(String name, String description, String body) {
         return "---\nname: " + name + "\ndescription: " + description + "\n---\n" + body;
@@ -173,6 +177,17 @@ class SkillServiceTest {
 
         assertEquals(List.of("list_tasks"),
                 skillService.parse("---\nname: tasks\ndescription: d\nallowed-tools: [list_tasks]\n---\n").tools());
+    }
+
+    @Test
+    void aBrowserToolWithAToolExampleCanBeNamed() throws Exception {
+        // open_web_page has no backend handler: the widget runs it
+        when(typeService.getToolExampleDefinitions()).thenReturn(Map.of("open_web_page",
+                new com.fasterxml.jackson.databind.ObjectMapper().readTree("{\"name\":\"open_web_page\",\"description\":\"Open a page\"}")));
+
+        assertEquals(List.of("open_web_page"),
+                skillService.parse("---\nname: nav\ndescription: d\nallowed-tools: open_web_page\n---\n").tools());
+        assertEquals("Open a page", skillService.getSkillTools().get("open_web_page"));
     }
 
     @Test

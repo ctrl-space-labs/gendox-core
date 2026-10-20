@@ -9,6 +9,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.Skill;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AgentSkillRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.MessageLocalContextRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.SkillRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.TypeService;
+import com.fasterxml.jackson.databind.JsonNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
@@ -41,23 +43,45 @@ public class SkillService {
     private final AgentSkillRepository agentSkillRepository;
     private final AiToolRegistry aiToolRegistry;
     private final MessageLocalContextRepository messageLocalContextRepository;
+    private final TypeService typeService;
 
     // lazy: the tools reach ProjectAgentService, which needs this service
     public SkillService(SkillRepository skillRepository,
                         AgentSkillRepository agentSkillRepository,
                         @Lazy AiToolRegistry aiToolRegistry,
-                        MessageLocalContextRepository messageLocalContextRepository) {
+                        MessageLocalContextRepository messageLocalContextRepository,
+                        TypeService typeService) {
         this.skillRepository = skillRepository;
         this.agentSkillRepository = agentSkillRepository;
         this.aiToolRegistry = aiToolRegistry;
         this.messageLocalContextRepository = messageLocalContextRepository;
+        this.typeService = typeService;
     }
 
-    /** Reads a SKILL.md and checks that every tool in {@code allowed-tools} is a built-in Gendox tool. */
+    /**
+     * The tools a skill may list in {@code allowed-tools}, by name, with their descriptions: every tool
+     * with an AI_TOOL_EXAMPLES row (including browser tools such as open_web_page, which the widget
+     * runs) and every built-in backend tool. read_skill is not one: completions add it themselves.
+     */
+    public Map<String, String> getSkillTools() {
+        Map<String, String> tools = new TreeMap<>();
+        typeService.getToolExampleDefinitions().forEach((name, definition) ->
+                tools.put(name, definition.path("description").asText(null)));
+        aiToolRegistry.getHandlers().forEach(handler -> {
+            if (!tools.containsKey(handler.getName())) {
+                tools.put(handler.getName(), handler.getDescription());
+            }
+        });
+        tools.remove(ReadSkillTool.NAME);
+        return tools;
+    }
+
+    /** Reads a SKILL.md and checks that every tool in {@code allowed-tools} is a Gendox tool (see {@link #getSkillTools}). */
     public SkillMarkdownParser.ParsedSkill parse(String content) throws GendoxException {
         SkillMarkdownParser.ParsedSkill parsed = SkillMarkdownParser.parse(content);
+        Map<String, JsonNode> examples = parsed.tools().isEmpty() ? Map.of() : typeService.getToolExampleDefinitions();
         for (String tool : parsed.tools()) {
-            if (ReadSkillTool.NAME.equals(tool) || !aiToolRegistry.supports(tool)) {
+            if (ReadSkillTool.NAME.equals(tool) || !(aiToolRegistry.supports(tool) || examples.containsKey(tool))) {
                 throw new GendoxException("SKILL_UNKNOWN_TOOL",
                         "allowed-tools: " + tool + " is not a Gendox tool", HttpStatus.BAD_REQUEST);
             }

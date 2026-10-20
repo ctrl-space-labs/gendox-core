@@ -1,7 +1,5 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.AiToolRegistry;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.skills.ReadSkillTool;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Skill;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.SkillContentDTO;
@@ -22,11 +20,9 @@ import java.util.List;
 public class SkillController {
 
     private final SkillService skillService;
-    private final AiToolRegistry aiToolRegistry;
 
-    public SkillController(SkillService skillService, AiToolRegistry aiToolRegistry) {
+    public SkillController(SkillService skillService) {
         this.skillService = skillService;
-        this.aiToolRegistry = aiToolRegistry;
     }
 
     @GetMapping("/skills")
@@ -38,11 +34,10 @@ public class SkillController {
 
     @GetMapping("/skills/tools")
     @Operation(summary = "List the tools a skill can bring",
-            description = "The built-in Gendox tools a SKILL.md may name in allowed-tools.")
+            description = "The Gendox tools a SKILL.md may name in allowed-tools: built-in tools and tool examples.")
     public List<SkillToolDTO> getSkillTools() {
-        return aiToolRegistry.getHandlers().stream()
-                .filter(handler -> !ReadSkillTool.NAME.equals(handler.getName()))
-                .map(handler -> new SkillToolDTO(handler.getName(), handler.getDescription()))
+        return skillService.getSkillTools().entrySet().stream()
+                .map(tool -> new SkillToolDTO(tool.getKey(), tool.getValue()))
                 .toList();
     }
 

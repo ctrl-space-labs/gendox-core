@@ -73,6 +73,7 @@ const GendoxAssistant = () => {
     script.setAttribute('data-gendox-container-id', CONTAINER_ID)
     script.setAttribute('data-gendox-iframe-id', IFRAME_ID)
     script.setAttribute('data-gendox-chat-initial-state', 'closed')
+    script.setAttribute('data-gendox-open-web-page-tool-enabled', 'true')
     script.setAttribute('data-gendox-local-context-max-responses', '4')
     script.setAttribute('data-gendox-local-context-max-wait-ms', '1000')
     script.src = `${window.location.origin}/gendox-sdk/gendox-widget-plugin.js`
