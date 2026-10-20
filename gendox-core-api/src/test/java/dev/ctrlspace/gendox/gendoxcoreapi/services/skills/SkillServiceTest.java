@@ -111,14 +111,16 @@ class SkillServiceTest {
     }
 
     @Test
-    void theHeaderIsSortedAndTheSameForTheSameSkills() {
-        AgentSkill b = AgentSkill.builder().name("b-skill").description("When B.\n  More  of B.").content("x").build();
-        AgentSkill a = AgentSkill.builder().name("a-skill").description("When A.").content("x").build();
+    void theHeaderIsEachSkillsFrontMatterSortedByName() {
+        String bFile = "---\r\nname: b-skill\r\ndescription: When B.\r\nallowed-tools: read_document\r\n---\r\nBody of B";
+        AgentSkill b = AgentSkill.builder().name("b-skill").description("When B.").content(bFile).build();
+        AgentSkill a = AgentSkill.builder().name("a-skill").description("When A.").content(md("a-skill", "When A.", "Body of A")).build();
 
         String header = skillService.buildSkillsHeader(List.of(b, a));
 
         assertEquals(header, skillService.buildSkillsHeader(List.of(a, b)));
-        assertTrue(header.indexOf("- a-skill: When A.") < header.indexOf("- b-skill: When B. More of B."));
+        assertTrue(header.contains("---\nname: a-skill\ndescription: When A.\n---\n\n---\nname: b-skill\ndescription: When B.\nallowed-tools: read_document\n---"));
+        assertFalse(header.contains("Body of"));
         assertTrue(header.endsWith("Read a skill with read_skill(name) before you follow it."));
         assertNull(skillService.buildSkillsHeader(List.of()));
     }

@@ -71,6 +71,21 @@ public final class SkillMarkdownParser {
         return new ParsedSkill(name, description.trim(), tools(frontMatter.get("allowed-tools")), content);
     }
 
+    /**
+     * The front matter of a skill exactly as written, between its {@code ---} lines (line endings
+     * normalized to {@code \n}). Null when the content has none.
+     */
+    public static String frontMatterOf(String content) {
+        if (content == null) {
+            return null;
+        }
+        var matcher = FRONT_MATTER.matcher(content);
+        if (!matcher.find()) {
+            return null;
+        }
+        return "---\n" + matcher.group(1).replace("\r\n", "\n").strip() + "\n---";
+    }
+
     /** The tools of an already-saved skill; an unreadable file brings none. */
     public static List<String> toolsOf(String content) {
         try {

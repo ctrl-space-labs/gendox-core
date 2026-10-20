@@ -108,7 +108,7 @@ class CompletionServiceSkillsTest {
         String prompt = completionService.appendSkillsHeader("You are helpful.", skills);
 
         assertTrue(prompt.startsWith("You are helpful.\n\n## Skills"));
-        assertTrue(prompt.contains("- gendox-assistant: When gendox-assistant."));
+        assertTrue(prompt.contains("---\nname: gendox-assistant\ndescription: When gendox-assistant.\n---"));
         assertEquals(prompt, completionService.appendSkillsHeader("You are helpful.", skills));
         assertEquals("You are helpful.", completionService.appendSkillsHeader("You are helpful.", List.of()));
     }

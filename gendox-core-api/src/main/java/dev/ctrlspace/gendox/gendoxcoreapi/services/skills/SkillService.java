@@ -222,26 +222,30 @@ public class SkillService {
     }
 
     /**
-     * The skills header, appended to the system prompt of the agent's completions (chats and task runs). Sorted by name and
-     * built from nothing but the agent's skills, so the same skills always give the same bytes and
-     * the prompt prefix stays cacheable across turns. Null when the agent has no skills.
+     * The skills header, appended to the system prompt of the agent's completions (chats and task
+     * runs): each skill's own front matter, as written in its SKILL.md, sorted by name. Built from
+     * nothing but the skills, so the same skills always give the same bytes and the prompt prefix
+     * stays cacheable across turns. Null when there are no skills.
      */
     public String buildSkillsHeader(List<AgentSkill> skills) {
         if (skills == null || skills.isEmpty()) {
             return null;
         }
         StringBuilder sb = new StringBuilder("## Skills\n\n");
-        sb.append("Skills are instructions for specific situations. Each line below is a skill's name and when to use it.\n\n");
+        sb.append("Skills are instructions for specific situations. Below is the front matter of each skill: its name, when to use it, and the tools it uses.\n\n");
         skills.stream()
                 .filter(Objects::nonNull)
                 .sorted(Comparator.comparing(AgentSkill::getName))
-                .forEach(s -> sb.append("- ")
-                        .append(s.getName())
-                        .append(": ")
-                        .append(s.getDescription().replaceAll("\\s+", " ").trim())
-                        .append('\n'));
-        sb.append("\nRead a skill with ").append(ReadSkillTool.NAME).append("(name) before you follow it.");
+                .forEach(s -> sb.append(frontMatter(s)).append("\n\n"));
+        sb.append("Read a skill with ").append(ReadSkillTool.NAME).append("(name) before you follow it.");
         return sb.toString();
+    }
+
+    // a saved skill always has front matter; the fallback only guards against a broken row
+    private static String frontMatter(AgentSkill skill) {
+        String frontMatter = SkillMarkdownParser.frontMatterOf(skill.getContent());
+        return frontMatter != null ? frontMatter
+                : "---\nname: " + skill.getName() + "\ndescription: " + skill.getDescription() + "\n---";
     }
 
     /**
