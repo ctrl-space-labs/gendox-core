@@ -144,9 +144,14 @@ public class AssistantToolSupport {
                     && (context.agent() == null || !startedBy.equals(context.agent().getUserId()));
             user = byAPerson ? userService.getUserProfileByUserId(startedBy) : null;
         }
-        if (user == null || !securityUtils.hasAuthority(user, UPDATE_PROJECT, projectCriteria)) {
+        if (user == null) {
             throw new GendoxException("FORBIDDEN_SIGN_IN_AS_PROJECT_MEMBER",
-                    "Only a signed-in member who can edit this project can use this tool. Ask the user to sign in, or a project admin for access.",
+                    "Only a signed-in member who can edit this project can use this tool. Ask the user to sign in.",
+                    HttpStatus.FORBIDDEN);
+        }
+        if (!securityUtils.hasAuthority(user, UPDATE_PROJECT, projectCriteria)) {
+            throw new GendoxException("FORBIDDEN_NO_EDIT_ACCESS",
+                    "The user is signed in but cannot edit this project. They need edit access from a project admin.",
                     HttpStatus.FORBIDDEN);
         }
     }

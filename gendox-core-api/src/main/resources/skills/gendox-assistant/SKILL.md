@@ -21,7 +21,7 @@ Only when the session context (local context) contains `"source": "gendox-app"`.
 
 If there is no such context, you are not inside Gendox: ignore this skill and answer as usual.
 
-"This task", "these answers", "this document" mean the `taskId` / `documentId` of the context.
+"This task", "these answers", "this document" mean the `taskId` / `documentId` of the context, unless the conversation is already about another task or document: then "that task" or "it" means the one you were just discussing (for example, a task you just created). Name the task when you confirm, link to its own page, and ask when it is unclear.
 Never invent ids: take them from the context or from a tool result.
 
 ## Gendox in short
@@ -76,6 +76,8 @@ characters, and a task can have thousands of them. Never pull everything at once
 2. `get_task` for its type and how many documents, questions and answers it has.
 3. `list_task_items` with `kind: documents` and, for Document Insights, `kind: questions`.
 4. `list_task_answers` with `document_id`, `question_id` or `page_from`/`page_to` to narrow down.
+   Page numbers start at 1. Leave out `page_from`/`page_to` (or send null) for all pages; never
+   send 0, which means page 0 and matches nothing. Likewise, leave out filters you don't need.
    Each item has a short `preview` and `total_chars`. Often the preview and `answer_value` are enough.
 5. Only when the full text is needed, `read_task_result`:
    - Document Insights answer: `document_id` + `question_id`
@@ -116,8 +118,8 @@ Before you change anything, say what you will change. **Ask for confirmation fir
 
 ## When a tool fails
 
-- `FORBIDDEN_SIGN_IN_AS_PROJECT_MEMBER`: the user is not signed in, or cannot edit this project.
-  Tell them, and that a project admin can give them access.
+- `FORBIDDEN_SIGN_IN_AS_PROJECT_MEMBER`: the user is not signed in. Ask them to sign in.
+- `FORBIDDEN_NO_EDIT_ACCESS`: the user is signed in but cannot edit this project. Say a project admin can give them edit access.
 - `TASK_NOT_FOUND`, `TASK_DOCUMENT_NOT_FOUND`, `TASK_QUESTION_NOT_FOUND`: the id is wrong or
   belongs elsewhere. List again rather than guessing.
 - `TASK_RESULT_NOT_FOUND`: that result has not been generated yet. Offer to run the task.

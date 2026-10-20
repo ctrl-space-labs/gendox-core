@@ -130,7 +130,7 @@ class AssistantToolSupportTest {
         when(securityUtils.hasAuthority(eq(user), eq("OP_UPDATE_PROJECT"), any())).thenReturn(false);
 
         GendoxException e = assertThrows(GendoxException.class, () -> support.requireProjectMember(context(List.of())));
-        assertEquals("FORBIDDEN_SIGN_IN_AS_PROJECT_MEMBER", e.getErrorCode());
+        assertEquals("FORBIDDEN_NO_EDIT_ACCESS", e.getErrorCode());
         assertEquals(HttpStatus.FORBIDDEN, e.getHttpStatus());
     }
 
@@ -140,7 +140,8 @@ class AssistantToolSupportTest {
         SecurityContextHolder.getContext().setAuthentication(new AnonymousAuthenticationToken("key", "anonymousUser",
                 AuthorityUtils.createAuthorityList("ROLE_ANONYMOUS")));
 
-        assertThrows(GendoxException.class, () -> support.requireProjectMember(context(List.of())));
+        GendoxException e = assertThrows(GendoxException.class, () -> support.requireProjectMember(context(List.of())));
+        assertEquals("FORBIDDEN_SIGN_IN_AS_PROJECT_MEMBER", e.getErrorCode());
         verifyNoInteractions(securityUtils, messageRepository);
     }
 
