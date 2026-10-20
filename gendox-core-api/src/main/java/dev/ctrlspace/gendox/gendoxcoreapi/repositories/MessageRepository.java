@@ -106,8 +106,8 @@ public interface MessageRepository extends JpaRepository<Message, UUID>, Queryds
 
 
 
-    @Query("select distinct m from Message m left join fetch m.localContexts c left join fetch c.document where m.id in :ids")
-    List<Message> findWithLocalContextsByIds(@Param("ids") List<UUID> ids);
+    @Query("select distinct m from Message m left join fetch m.localContexts c left join fetch c.document where m.id = :id")
+    Optional<Message> findWithLocalContextsById(@Param("id") UUID id);
 
     List<Message> findByThreadIdAndCreatedAtAfterOrderByCreatedAtAsc(UUID threadId, Instant createdAt);
 

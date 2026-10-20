@@ -155,7 +155,7 @@ public class AnthropicAiServiceAdapter implements AiModelApiAdapterService {
             anthropicRequestBuilder.tools(tools.stream()
                     .map(anthropicMessagesConverter::toAnthropicToolDefinition)
                     .toList());
-            anthropicRequestBuilder.toolChoice(anthropicMessagesConverter.mapToolChoice(toolChoice));
+            anthropicRequestBuilder.toolChoice(anthropicMessagesConverter.mapToolChoice(allowedToolChoice(toolChoice, aiModel)));
         }
 
         if (aiModel.getSupportsReasoning()) {
@@ -186,6 +186,14 @@ public class AnthropicAiServiceAdapter implements AiModelApiAdapterService {
         }
 
         return anthropicCompletionResponseConverter.toCompletionResponse(anthropicResponse);
+    }
+
+    /** With thinking on, Anthropic rejects a forced tool choice; the model is then left to its instructions. */
+    private static String allowedToolChoice(String toolChoice, AiModel aiModel) {
+        if (aiModel.getSupportsReasoning() && !"none".equalsIgnoreCase(toolChoice)) {
+            return "auto";
+        }
+        return toolChoice;
     }
 
     /** Replaying a foreign signature is rejected, so the token goes and the summary stays. */

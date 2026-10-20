@@ -43,6 +43,11 @@ public class CompletionRuntimeOverridesDTO {
     private List<AiModelMessage> turnMessages;
     private int turnIterations;
 
+    // Appended to the system prompt, e.g. chat's instructions for searching the documents
+    private String instructions;
+    // The tool_choice of a turn's first model call (e.g. "required"); later calls use "auto"
+    private String firstToolChoice;
+
     /**
      * Tool names that should be removed from the available tools list before sending the request to the LLM.
      * Use this to prevent a sub-agent from calling tools it should not have access to

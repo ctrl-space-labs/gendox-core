@@ -69,10 +69,8 @@ const AiAgentProjectSettings = () => {
     decisionModel: project.projectAgent.decisionModel?.name || '',
     moderationModel: project.projectAgent.moderationModel?.name || '',
     rerankModel: project.projectAgent.rerankModel?.name || '',
-    advancedSearchModel: project.projectAgent.advancedSearchModel?.name || '',
     moderationCheck: project.projectAgent.moderationCheck,
     rerankEnable: project.projectAgent.rerankEnable,
-    advancedSearchEnable: project.projectAgent.advancedSearchEnable,
     advancedSearchMode: project.projectAgent.advancedSearchMode || 'ALWAYS',
     autoDigitization: project.projectAgent.autoDigitization ?? false,
     documentSplitterType: project.projectAgent.documentSplitterType?.name || '',
@@ -254,7 +252,6 @@ const AiAgentProjectSettings = () => {
         decisionModel: { name: data.decisionModel },
         moderationModel: { name: data.moderationModel },
         rerankModel: { name: data.rerankModel },
-        advancedSearchModel: { name: data.advancedSearchModel },
         privateAgent: data.selected === 'private',
         maxToken: data.maxToken,
         // Send null rather than '' so the backend falls back to the model default.
@@ -266,7 +263,6 @@ const AiAgentProjectSettings = () => {
         agentBehavior: data.agentBehavior,
         moderationCheck: data.moderationCheck,
         advancedSearchMode: data.advancedSearchMode,
-        advancedSearchEnable: data.advancedSearchEnable,
         rerankEnable: data.rerankEnable,
         autoDigitization: data.autoDigitization,
         aiTools: data.aiTools,
@@ -526,6 +522,24 @@ const AiAgentProjectSettings = () => {
                     </Grid>
                     <Grid item xs={12}>
                       <Grid container spacing={4}>
+                      {/* Knowledge search: how the agent retrieves project documents in chat */}
+                      <Grid item xs={12} sx={{ mb: 2 }}>
+                        <FormControl fullWidth>
+                          <InputLabel id='advanced-search-mode'>Knowledge Search</InputLabel>
+                          <Controller
+                            name='advancedSearchMode'
+                            control={control}
+                            render={({ field }) => (
+                              <Select {...field} labelId='advanced-search-mode' label='Knowledge Search'>
+                                <MenuItem value='ALWAYS'>Always: the agent searches the documents before every answer</MenuItem>
+                                <MenuItem value='AUTO'>Auto: the agent searches the documents when a question needs them</MenuItem>
+                                <MenuItem value='OFF'>Off: answer without searching the documents</MenuItem>
+                              </Select>
+                            )}
+                          />
+                        </FormControl>
+                      </Grid>
+
                       {/* Moderation Check */}
                       <Grid item xs={12} sm={6} sx={{ mb: 2 }}>
                         <FormControlLabel
@@ -557,75 +571,6 @@ const AiAgentProjectSettings = () => {
                           </FormControl>
                         )}
                       </Grid>
-
-                      {/* Knowledge search: how the agent retrieves project documents in chat */}
-                      <Grid item xs={12} sx={{ mb: 2 }}>
-                        <FormControl fullWidth>
-                          <InputLabel id='advanced-search-mode'>Knowledge Search</InputLabel>
-                          <Controller
-                            name='advancedSearchMode'
-                            control={control}
-                            render={({ field }) => (
-                              <Select {...field} labelId='advanced-search-mode' label='Knowledge Search'>
-                                <MenuItem value='ALWAYS'>Always: search the documents before every answer</MenuItem>
-                                <MenuItem value='AUTO'>Auto: the agent decides when to search</MenuItem>
-                                <MenuItem value='OFF'>Off: answer without searching the documents</MenuItem>
-                              </Select>
-                            )}
-                          />
-                        </FormControl>
-                      </Grid>
-
-                      {/* Advanced Search */}
-                      <Grid item xs={12} sm={6} sx={{ mb: 2 }}>
-                        <FormControlLabel
-                          label="Advanced Search"
-                          control={
-                            <Checkbox
-                              {...register('advancedSearchEnable')}
-                              checked={watch('advancedSearchEnable')}
-                            />
-                          }
-                        />
-                      </Grid>
-
-                      <Grid item xs={12} sm={6} sx={{ mb: 2 }}>
-                        {watch('advancedSearchEnable') && (
-                          <FormControl fullWidth>
-                            <InputLabel id="advanced-search-model-label" />
-                            <Controller
-                              name="advancedSearchModel"
-                              control={control}
-                              render={({ field }) => (
-                                <Autocomplete
-                                  {...field}
-                                  options={sortModels(completionModels)}
-                                  getOptionLabel={option => option.name}
-                                  onChange={(_, value) =>
-                                    setValue('advancedSearchModel', value?.name)
-                                }
-                                  value={
-                                  completionModels.find(
-                                    model => model.name === watch('advancedSearchModel')
-                                  ) || null
-                                }
-                                  disableClearable
-                                  renderInput={params => (
-                                    <TextField
-                                      {...params}
-                                      label="Advanced Search Model"
-                                      id="advanced-search-model-label"
-                                    />
-                                  )}
-                                  renderOption={(props, option) => <AiModelOption props={props} option={option} />}
-                                />
-                              )}
-                            />
-                          </FormControl>
-                        )}
-                      </Grid>
-
-
 
                       {/* Rerank Search Results */}
                       <Grid item xs={12} sm={6} sx={{ mb: 2 }}>

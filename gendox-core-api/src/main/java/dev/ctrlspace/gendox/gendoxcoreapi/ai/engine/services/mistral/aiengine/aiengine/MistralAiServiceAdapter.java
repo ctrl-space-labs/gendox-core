@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.MistralCompletionResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.MistralEmbeddingResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.MistralModerationResponseConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.ToolDtoConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.mistral.request.MistralCompletionRequest;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.mistral.request.MistralEmbedRequest;
@@ -32,6 +33,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 @Service
@@ -41,6 +43,7 @@ public class MistralAiServiceAdapter implements AiModelApiAdapterService {
     private RestTemplate restTemplate;
     // Reads the streamed frames; the non-streaming path keeps using the RestTemplate's converters
     @Autowired
+    private ToolDtoConverter toolDtoConverter;
     private ObjectMapper objectMapper;
     private MistralEmbeddingResponseConverter mistralEmbeddingResponseConverter;
     private MistralCompletionResponseConverter mistralCompletionResponseConverter;
@@ -50,11 +53,13 @@ public class MistralAiServiceAdapter implements AiModelApiAdapterService {
     public MistralAiServiceAdapter(RestTemplate restTemplate,
                                    MistralEmbeddingResponseConverter mistralEmbeddingResponseConverter,
                                    MistralCompletionResponseConverter mistralCompletionResponseConverter,
-                                   MistralModerationResponseConverter mistralModerationResponseConverter) {
+                                   MistralModerationResponseConverter mistralModerationResponseConverter,
+                                   ToolDtoConverter toolDtoConverter) {
         this.restTemplate = restTemplate;
         this.mistralEmbeddingResponseConverter = mistralEmbeddingResponseConverter;
         this.mistralCompletionResponseConverter = mistralCompletionResponseConverter;
         this.mistralModerationResponseConverter = mistralModerationResponseConverter;
+        this.toolDtoConverter = toolDtoConverter;
     }
 
     private HttpHeaders buildHeader(String apiKey) {
@@ -140,12 +145,21 @@ public class MistralAiServiceAdapter implements AiModelApiAdapterService {
                         .role(m.getRole())
                         .content(m.getContent())
                         .thinking(aiModel.getId().equals(m.getAiModelId()) ? m.getReasoningContent() : null)
+                        .tool_calls(m.getToolCalls())
+                        .tool_call_id(m.getToolCallId())
+                        .name(toolName(m))
                         .build())
                 .toList();
 
         MistralCompletionRequest.MistralCompletionRequestBuilder completionRequestBuilder = MistralCompletionRequest.builder()
                 .model(aiModel.getModel())
                 .messages(mistralMessages);
+
+        if (tools != null && !tools.isEmpty()) {
+            completionRequestBuilder
+                    .tools(tools.stream().map(toolDtoConverter::toToolDto).toList())
+                    .tool_choice(Optional.ofNullable(toolChoice).orElse("auto"));
+        }
 
         if (aiModel.getSupportsReasoning()) {
             String effort = aiModelRequestParams.getReasoningEffort() != null
@@ -172,6 +186,14 @@ public class MistralAiServiceAdapter implements AiModelApiAdapterService {
     }
 
 
+
+    // Mistral takes a name only on tool results
+    private static String toolName(AiModelMessage message) {
+        if (!"tool".equals(message.getRole())) {
+            return null;
+        }
+        return message.getName();
+    }
 
     @Override
     public Set<String> getSupportedApiTypeNames() {

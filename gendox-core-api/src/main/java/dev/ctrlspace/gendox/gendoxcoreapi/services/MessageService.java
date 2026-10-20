@@ -5,11 +5,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,18 +16,15 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMessage;
-import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentOnlyConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ChatThread;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ChatThreadMember;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.MessageSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.MessageMetadataDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.MessageCriteria;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceSectionRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.MessageRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.MessageSectionRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.MessagePredicates;
@@ -46,24 +41,18 @@ public class MessageService {
     private SecurityUtils securityUtils;
     private ChatThreadService chatThreadService;
     private ProjectAgentService projectAgentService;
-    private DocumentInstanceSectionRepository documentInstanceSectionRepository;
-    private DocumentOnlyConverter documentOnlyConverter;
 
     @Autowired
     public MessageService(MessageRepository messageRepository,
                           MessageSectionRepository messageSectionRepository,
                           SecurityUtils securityUtils,
                           ChatThreadService chatThreadService,
-                          ProjectAgentService projectAgentService,
-                          DocumentInstanceSectionRepository documentInstanceSectionRepository,
-                          DocumentOnlyConverter documentOnlyConverter) {
+                          ProjectAgentService projectAgentService) {
         this.messageRepository = messageRepository;
         this.messageSectionRepository = messageSectionRepository;
         this.securityUtils = securityUtils;
         this.chatThreadService = chatThreadService;
         this.projectAgentService = projectAgentService;
-        this.documentInstanceSectionRepository = documentInstanceSectionRepository;
-        this.documentOnlyConverter = documentOnlyConverter;
     }
 
 
@@ -78,13 +67,12 @@ public class MessageService {
                         org.springframework.http.HttpStatus.NOT_FOUND));
     }
 
-    /** The messages with their local contexts (and the contexts' documents) loaded, by id. */
-    public Map<UUID, Message> getMessagesWithLocalContexts(List<UUID> messageIds) {
-        if (messageIds.isEmpty()) {
-            return Map.of();
-        }
-        return messageRepository.findWithLocalContextsByIds(messageIds).stream()
-                .collect(Collectors.toMap(Message::getId, Function.identity()));
+    /** The message with its local contexts (and the contexts' documents) loaded. */
+    public Message getMessageWithLocalContexts(UUID messageId) throws GendoxException {
+        return messageRepository.findWithLocalContextsById(messageId)
+                .orElseThrow(() -> new GendoxException("MESSAGE_NOT_FOUND",
+                        "Message not found: " + messageId,
+                        org.springframework.http.HttpStatus.NOT_FOUND));
     }
 
     /** The messages saved in the thread after the given one, oldest first. */
@@ -92,55 +80,12 @@ public class MessageService {
         return messageRepository.findByThreadIdAndCreatedAtAfterOrderByCreatedAtAsc(message.getThreadId(), message.getCreatedAt());
     }
 
-    public List<MessageSection> getMessageSections(UUID messageId) {
-        return messageSectionRepository.findByMessageIdOrderByCreatedAtAsc(messageId);
-    }
-
-    /**
-     * The sections each message was answered with (its completion participants), in the order they
-     * were linked, ready for the agent's section template.
-     */
-    public Map<UUID, List<DocumentInstanceSectionDTO>> getCompletionSections(List<UUID> messageIds) {
-        if (messageIds.isEmpty()) {
-            return Map.of();
+    /** Links the sections to the message, e.g. the sections an answer was based on. */
+    public Message linkSections(Message message, List<MessageSection> sections) {
+        for (MessageSection section : sections) {
+            section.setMessage(message);
         }
-        List<MessageSection> links = messageSectionRepository.findCompletionParticipants(messageIds);
-        Set<UUID> sectionIds = links.stream().map(MessageSection::getSectionId).collect(Collectors.toSet());
-        Map<UUID, DocumentInstanceSection> sections = documentInstanceSectionRepository.findAllById(sectionIds).stream()
-                .collect(Collectors.toMap(DocumentInstanceSection::getId, Function.identity()));
-
-        return links.stream()
-                .filter(link -> sections.containsKey(link.getSectionId()))
-                .collect(Collectors.groupingBy(link -> link.getMessage().getId(),
-                        Collectors.mapping(link -> toTemplateSection(sections.get(link.getSectionId())), Collectors.toList())));
-    }
-
-    // Only what the section template reads: the text and its document
-    private DocumentInstanceSectionDTO toTemplateSection(DocumentInstanceSection section) {
-        DocumentInstanceSectionDTO dto = new DocumentInstanceSectionDTO();
-        dto.setId(section.getId());
-        dto.setSectionValue(section.getSectionValue());
-        dto.setDocumentInstanceDTO(documentOnlyConverter.toDTO(section.getDocumentInstance()));
-        return dto;
-    }
-
-    /** Links the same sections to another message, e.g. a question's sources to its answer. */
-    public List<MessageSection> copyMessageSections(List<MessageSection> sources, Message message) {
-        List<MessageSection> copies = new ArrayList<>();
-        Set<UUID> copied = new HashSet<>();
-        for (MessageSection source : sources) {
-            if (!copied.add(source.getSectionId())) {
-                continue;
-            }
-            MessageSection copy = new MessageSection();
-            copy.setMessage(message);
-            copy.setSectionId(source.getSectionId());
-            copy.setDocumentId(source.getDocumentId());
-            copy.setSectionUrl(source.getSectionUrl());
-            copy.setCompletionParticipant(source.getCompletionParticipant());
-            copies.add(copy);
-        }
-        return messageSectionRepository.saveAll(copies);
+        return updateMessageWithSections(message, messageSectionRepository.saveAll(sections));
     }
 
     public List<MessageSection> getMessageSectionsBySectionId(UUID sectionId) {

@@ -198,17 +198,11 @@ public class ProjectAgentService {
         if (projectAgent.getRerankModel() == null) {
             projectAgent.setRerankModel(aiModelService.getByName(AiModelConstants.VOYAGE_RERANK_3_LITE));
         }
-        if (projectAgent.getAdvancedSearchModel() == null) {
-            projectAgent.setAdvancedSearchModel(aiModelService.getByName(AiModelConstants.GPT_6_LUNA));
-        }
         if (projectAgent.getModerationCheck() == null) {
             projectAgent.setModerationCheck(false);
         }
         if (projectAgent.getRerankEnable() == null) {
             projectAgent.setRerankEnable(false);
-        }
-        if (projectAgent.getAdvancedSearchEnable() == null) {
-            projectAgent.setAdvancedSearchEnable(false);
         }
         if (projectAgent.getAdvancedSearchMode() == null) {
             projectAgent.setAdvancedSearchMode("ALWAYS");
@@ -258,7 +252,6 @@ public class ProjectAgentService {
         AiModel semanticSearchModel = aiModelService.getByName(projectAgent.getSemanticSearchModel().getName());
         AiModel moderationModel = aiModelService.getByName(projectAgent.getModerationModel().getName());
         AiModel rerankModel = aiModelService.getByName(projectAgent.getRerankModel().getName());
-        AiModel advancedSearchModel = aiModelService.getByName(projectAgent.getAdvancedSearchModel().getName());
 
         UUID subscriptionPlanId = organizationPlanService
                 .getActiveOrganizationPlan(existingProjectAgent.getProject().getOrganizationId())
@@ -307,12 +300,6 @@ public class ProjectAgentService {
                     HttpStatus.FORBIDDEN);
         }
 
-        if (projectAgent.getAdvancedSearchEnable() && !subscriptionAiModelTierService.hasAccessToModelTier(subscriptionPlanId, advancedSearchModel.getModelTierType().getId())) {
-            throw new GendoxException("NO_ACCESS_TO_ADVANCED_SEARCH_MODEL",
-                    "No access to the advanced search model. Basic or Pro subscription is required",
-                    HttpStatus.FORBIDDEN);
-        }
-
         if (Boolean.TRUE.equals(projectAgent.getAutoDigitization())) {
             Type standardTier = typeService.getByCategoryAndName("MODEL_TIER", "STANDARD_MODEL");
             if (!subscriptionAiModelTierService.hasAccessToModelTier(subscriptionPlanId, standardTier.getId())) {
@@ -345,10 +332,6 @@ public class ProjectAgentService {
         existingProjectAgent.setRerankEnable(projectAgent.getRerankEnable());
         if (projectAgent.getRerankModel() != null && projectAgent.getRerankEnable()) {
             existingProjectAgent.setRerankModel(aiModelService.getByName(projectAgent.getRerankModel().getName()));
-        }
-        existingProjectAgent.setAdvancedSearchEnable(projectAgent.getAdvancedSearchEnable());
-        if (projectAgent.getAdvancedSearchModel() != null && projectAgent.getAdvancedSearchEnable()) {
-            existingProjectAgent.setAdvancedSearchModel(aiModelService.getByName(projectAgent.getAdvancedSearchModel().getName()));
         }
         if (projectAgent.getAdvancedSearchMode() != null) {
             validateAdvancedSearchMode(projectAgent.getAdvancedSearchMode());

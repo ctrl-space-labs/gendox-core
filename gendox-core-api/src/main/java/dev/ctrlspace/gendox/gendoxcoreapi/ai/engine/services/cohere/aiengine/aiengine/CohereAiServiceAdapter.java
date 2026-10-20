@@ -17,6 +17,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterSe
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.CohereConfig;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.CohereCompletionResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.CohereEmbeddingResponseConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.ToolDtoConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiTools;
 import org.apache.logging.log4j.util.Strings;
@@ -47,17 +48,20 @@ public class CohereAiServiceAdapter implements AiModelApiAdapterService {
     private CohereCompletionResponseConverter cohereCompletionResponseConverter;
     private CohereEmbeddingResponseConverter cohereEmbeddingResponseConverter;
     private CohereRerankResponseConverter cohereRerankResponseConverter;
+    private ToolDtoConverter toolDtoConverter;
 
 
     @Autowired
     public CohereAiServiceAdapter(CohereCompletionResponseConverter cohereCompletionResponseConverter,
                                   CohereEmbeddingResponseConverter cohereEmbeddingResponseConverter,
                                     CohereRerankResponseConverter cohereRerankResponseConverter,
-                                  RestTemplate restTemplate) {
+                                  RestTemplate restTemplate,
+                                  ToolDtoConverter toolDtoConverter) {
         this.cohereEmbeddingResponseConverter = cohereEmbeddingResponseConverter;
         this.cohereCompletionResponseConverter = cohereCompletionResponseConverter;
         this.cohereRerankResponseConverter = cohereRerankResponseConverter;
         this.restTemplate = restTemplate;
+        this.toolDtoConverter = toolDtoConverter;
     }
 
     private HttpHeaders buildHeader(String apiKey) {
@@ -146,15 +150,15 @@ public class CohereAiServiceAdapter implements AiModelApiAdapterService {
                 .model(aiModel.getModel())
                 .messages(
                         messages.stream()
-                                .map(message -> CohereCompletionRequest.Message.builder()
-                                        .role(message.getRole())
-                                        .content(List.of(CohereCompletionRequest.Message.Content.builder()
-                                                .type("text")
-                                                .text(message.getContent())
-                                                .build()))
-                                        .build())
+                                .map(CohereAiServiceAdapter::toCohereMessage)
                                 .toList()
                 );
+
+        if (tools != null && !tools.isEmpty()) {
+            cohereCommandRequestBuilder
+                    .tools(tools.stream().map(toolDtoConverter::toToolDto).toList())
+                    .tool_choice(cohereToolChoice(toolChoice));
+        }
 
 
 
@@ -168,6 +172,33 @@ public class CohereAiServiceAdapter implements AiModelApiAdapterService {
         }
 
         return cohereCompletionResponseConverter.toCompletionResponse(cohereCompletionResponse);
+    }
+
+    private static CohereCompletionRequest.Message toCohereMessage(AiModelMessage message) {
+        CohereCompletionRequest.Message.MessageBuilder cohereMessage = CohereCompletionRequest.Message.builder()
+                .role(message.getRole())
+                .tool_call_id(message.getToolCallId());
+        if (Strings.isNotEmpty(message.getContent())) {
+            cohereMessage.content(List.of(CohereCompletionRequest.Message.Content.builder()
+                    .type("text")
+                    .text(message.getContent())
+                    .build()));
+        }
+        if (message.getToolCalls() != null && !message.getToolCalls().isEmpty()) {
+            cohereMessage.tool_calls(message.getToolCalls()).tool_plan(message.getReasoningContent());
+        }
+        return cohereMessage.build();
+    }
+
+    // Cohere has no "auto": the model decides when tool_choice is left out
+    private static String cohereToolChoice(String toolChoice) {
+        if ("required".equalsIgnoreCase(toolChoice)) {
+            return "REQUIRED";
+        }
+        if ("none".equalsIgnoreCase(toolChoice)) {
+            return "NONE";
+        }
+        return null;
     }
 
     @Override

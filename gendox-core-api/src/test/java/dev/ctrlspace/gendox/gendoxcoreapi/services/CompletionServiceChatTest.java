@@ -11,9 +11,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.AiToolRegistry;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.MessageAiMessageConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionMessageDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentSectionMetadataDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectAgentRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TemplateRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.skills.SkillService;
@@ -27,7 +24,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Queue;
 import java.util.UUID;
 
@@ -35,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-/** The chat path of CompletionService: search mode, the history it sends, and turns that wait for client tools. */
+/** The chat path of CompletionService: search mode, the answer's sources, and turns that wait for client tools. */
 class CompletionServiceChatTest {
 
     final ObjectMapper mapper = new ObjectMapper();
@@ -50,9 +46,11 @@ class CompletionServiceChatTest {
     final AiToolRegistry aiToolRegistry = mock(AiToolRegistry.class);
     final CompletionTurnService completionTurnService = mock(CompletionTurnService.class);
     final AiModelApiAdapterService adapter = mock(AiModelApiAdapterService.class);
-    // Each model call: the messages and tools it was sent, and the responses it returns in turn
+    // Each model call: what it was sent, and the responses it returns in turn
     final List<List<AiModelMessage>> sentMessages = new ArrayList<>();
+    final List<String> sentSystemPrompts = new ArrayList<>();
     final List<List<AiTools>> sentTools = new ArrayList<>();
+    final List<String> sentToolChoices = new ArrayList<>();
     final Queue<CompletionResponse> responses = new LinkedList<>();
 
     final Project project = new Project();
@@ -93,7 +91,9 @@ class CompletionServiceChatTest {
         when(aiToolRegistry.execute(anyString(), any(), any())).thenReturn(mapper.readTree("{\"status\":\"executed\"}"));
         when(adapter.askCompletion(anyList(), any(), any(), any(), any(), anyList(), any(), any(), any())).thenAnswer(invocation -> {
             sentMessages.add(new ArrayList<>(invocation.<List<AiModelMessage>>getArgument(0)));
+            sentSystemPrompts.add(invocation.getArgument(1));
             sentTools.add(new ArrayList<>(invocation.<List<AiTools>>getArgument(5)));
+            sentToolChoices.add(invocation.getArgument(6));
             return responses.remove();
         });
         when(messageService.createMessage(any())).thenAnswer(invocation -> {
@@ -125,18 +125,6 @@ class CompletionServiceChatTest {
         return template;
     }
 
-    private static DocumentInstanceSectionDTO section(String text) {
-        DocumentInstanceDTO document = new DocumentInstanceDTO();
-        document.setId(UUID.randomUUID());
-        document.setTitle("Doc");
-        DocumentInstanceSectionDTO section = new DocumentInstanceSectionDTO();
-        section.setId(UUID.randomUUID());
-        section.setSectionValue(text);
-        section.setDocumentInstanceDTO(document);
-        section.setDocumentSectionMetadata(new DocumentSectionMetadataDTO());
-        return section;
-    }
-
     private void respond(String finishReason, AiModelMessage message) {
         responses.add(CompletionResponse.builder()
                 .usage(Usage.builder().promptTokens(1).completionTokens(1).totalTokens(2).build())
@@ -164,23 +152,27 @@ class CompletionServiceChatTest {
         }).toList();
     }
 
+    private Message saved(String role, String name, String value) {
+        Message message = new Message();
+        message.setId(UUID.randomUUID());
+        message.setRole(role);
+        message.setName(name);
+        message.setValue(value);
+        return message;
+    }
+
     @Test
-    void alwaysSearchesBeforeAnsweringAndKeepsTheSectionsWithTheQuestion() throws Exception {
-        DocumentInstanceSectionDTO used = section("used text");
-        DocumentInstanceSectionDTO searched = section("searched text");
-        when(embeddingService.findClosestSections(eq(question), eq(project), any())).thenReturn(List.of(used, searched));
+    void alwaysIsTheDefault() throws Exception {
+        respondWithToolCall("advanced_search");
         respondWithAnswer();
 
         service.getCompletionSearch(question, project);
 
-        assertEquals("Q:What is new? C:S:used text", sentMessages.get(0).getLast().getContent());
-        verify(messageService).createMessageSections(List.of(used), question, true);
-        verify(messageService).createMessageSections(List.of(searched), question, false);
-        assertEquals(List.of("advanced_search"), toolNames(sentTools.get(0)));
+        assertEquals(List.of("required", "auto"), sentToolChoices);
     }
 
     @Test
-    void autoLeavesTheSearchToTheAgent() throws Exception {
+    void autoTellsTheAgentToSearch() throws Exception {
         agent.setAdvancedSearchMode("AUTO");
         respondWithAnswer();
 
@@ -189,6 +181,20 @@ class CompletionServiceChatTest {
         verify(embeddingService, never()).findClosestSections(any(), any(), any());
         assertEquals("Q:What is new? C:", sentMessages.get(0).getLast().getContent());
         assertEquals(List.of("advanced_search"), toolNames(sentTools.get(0)));
+        assertEquals("auto", sentToolChoices.get(0));
+        assertTrue(sentSystemPrompts.get(0).contains("call advanced_search unless"));
+    }
+
+    @Test
+    void alwaysRequiresAToolCallOnlyOnTheFirstModelCall() throws Exception {
+        agent.setAdvancedSearchMode("ALWAYS");
+        respondWithToolCall("advanced_search");
+        respondWithAnswer();
+
+        service.getCompletionSearch(question, project);
+
+        assertEquals(List.of("required", "auto"), sentToolChoices);
+        assertTrue(sentSystemPrompts.get(0).contains("Always call advanced_search"));
     }
 
     @Test
@@ -198,29 +204,37 @@ class CompletionServiceChatTest {
 
         service.getCompletionSearch(question, project);
 
-        verify(embeddingService, never()).findClosestSections(any(), any(), any());
         assertTrue(sentTools.get(0).isEmpty());
+        assertFalse(sentSystemPrompts.get(0).contains("advanced_search"));
     }
 
     @Test
-    void earlierQuestionsAreSentAsTheyWereSentThen() throws Exception {
-        agent.setAdvancedSearchMode("AUTO");
-        UUID earlierId = UUID.randomUUID();
-        AiModelMessage earlier = AiModelMessage.builder().id(earlierId).role("user").content("Old question").build();
-        AiModelMessage earlierAnswer = AiModelMessage.builder().role("assistant").content("Old answer").build();
-        when(messageService.getPreviousMessages(any(), anyInt())).thenReturn(new ArrayList<>(List.of(earlier, earlierAnswer)));
-        Message earlierQuestion = new Message();
-        earlierQuestion.setId(earlierId);
-        earlierQuestion.setValue("Old question");
-        when(messageService.getMessagesWithLocalContexts(List.of(earlierId))).thenReturn(Map.of(earlierId, earlierQuestion));
-        when(messageService.getCompletionSections(List.of(earlierId))).thenReturn(Map.of(earlierId, List.of(section("old text"))));
+    void theAnswersSourcesAreTheSectionsItsSearchesFound() throws Exception {
+        UUID sectionId = UUID.randomUUID();
+        Message answer = saved("assistant", null, "Answer");
+        when(messageService.getMessagesAfter(question)).thenReturn(List.of(
+                saved("assistant", null, ""),
+                saved("tool", "advanced_search", "{\"sections\":[{\"section_id\":\"" + sectionId + "\",\"document_id\":\"" + UUID.randomUUID() + "\"}]}"),
+                saved("tool", "lookup", "{\"sections\":[{\"section_id\":\"" + UUID.randomUUID() + "\"}]}"),
+                answer));
         respondWithAnswer();
 
         service.getCompletionSearch(question, project);
 
-        List<AiModelMessage> sent = sentMessages.get(0);
-        assertEquals("Q:Old question C:S:old text", sent.get(0).getContent());
-        assertEquals("Old answer", sent.get(1).getContent());
+        verify(messageService).linkSections(eq(answer), argThat(links ->
+                links.size() == 1 && links.get(0).getSectionId().equals(sectionId) && links.get(0).getCompletionParticipant()));
+    }
+
+    @Test
+    void aTurnThatStillWaitsGetsNoSourcesYet() throws Exception {
+        Message waiting = saved("assistant", null, "");
+        waiting.setToolCalls(mapper.readTree("[{\"id\":\"call\"}]"));
+        when(messageService.getMessagesAfter(question)).thenReturn(List.of(waiting));
+        respondWithAnswer();
+
+        service.getCompletionSearch(question, project);
+
+        verify(messageService, never()).linkSections(any(), any());
     }
 
     @Test
@@ -261,7 +275,7 @@ class CompletionServiceChatTest {
         agent.setAdvancedSearchMode("OFF");
         ProjectService projectService = (ProjectService) ReflectionTestUtils.getField(service, "projectService");
         when(projectService.getProjectById(project.getId())).thenReturn(project);
-        when(messageService.getMessagesWithLocalContexts(List.of(question.getId()))).thenReturn(Map.of(question.getId(), question));
+        when(messageService.getMessageWithLocalContexts(question.getId())).thenReturn(question);
         Message call = new Message();
         call.setRole("assistant");
         call.setToolCalls(mapper.readTree("[{\"id\":\"call\",\"function\":{\"name\":\"lookup\",\"arguments\":\"{}\"}}]"));

@@ -3,6 +3,8 @@ package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.mistral.request;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.JsonNode;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.OpenAiCompletionRequest;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -28,7 +30,8 @@ public class MistralCompletionRequest {
     private Integer random_seed;
     private List<MistralMessage> messages;
     private ResponseFormat response_format;
-    private List<Tool> tools;
+    // Mistral takes OpenAI's tool definitions
+    private List<OpenAiCompletionRequest.ToolDto> tools;
     private String tool_choice;
     private Double presence_penalty;
     private Double frequency_penalty;
@@ -63,26 +66,6 @@ public class MistralCompletionRequest {
     @Builder(toBuilder = true)
     @AllArgsConstructor
     @NoArgsConstructor
-    public static class Tool {
-        private String type;
-        private ToolFunction function;
-
-        @Data
-        @Builder(toBuilder = true)
-        @AllArgsConstructor
-        @NoArgsConstructor
-        public static class ToolFunction {
-            private String name;
-            private String description;
-            private Boolean strict;
-            private Map<String, Object> parameters;
-        }
-    }
-
-    @Data
-    @Builder(toBuilder = true)
-    @AllArgsConstructor
-    @NoArgsConstructor
     public static class Prediction {
         private String type;
         private String content;
@@ -92,8 +75,14 @@ public class MistralCompletionRequest {
     @Builder(toBuilder = true)
     @AllArgsConstructor
     @NoArgsConstructor
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class MistralMessage {
         private String role;
+
+        // An assistant's tool calls, and a tool result's call id and tool name (OpenAI shape)
+        private JsonNode tool_calls;
+        private String tool_call_id;
+        private String name;
 
         @JsonIgnore
         private String content;
