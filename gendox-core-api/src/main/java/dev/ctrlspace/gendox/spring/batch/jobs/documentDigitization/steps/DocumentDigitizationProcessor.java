@@ -209,7 +209,7 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
             List<String> images = new ArrayList<>();
             if (loadImages) {
                 DocPageToImageOptions printOptions = DocPageToImageOptions.builder()
-                        .minSide(1024)
+                        .minSide(1792)
                         .pageFrom(Collections.min(pagesToProcess))
                         .pageTo(Collections.max(pagesToProcess))
                         .build();
