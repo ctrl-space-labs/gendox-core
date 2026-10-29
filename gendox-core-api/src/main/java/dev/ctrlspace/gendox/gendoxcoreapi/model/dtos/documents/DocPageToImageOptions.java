@@ -29,6 +29,9 @@ public class DocPageToImageOptions {
     private float imageBrightness = -10f;
 
     @Builder.Default
+    private float imageSharpen = 0f;   // 0 => no sharpening, 1 => strong
+
+    @Builder.Default
     private float jpegQ = 0.90f;
 
     public DocPageToImageOptions applyDefaults(int totalPages) {

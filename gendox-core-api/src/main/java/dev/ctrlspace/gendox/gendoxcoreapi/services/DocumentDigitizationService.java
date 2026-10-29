@@ -201,6 +201,7 @@ public class DocumentDigitizationService {
             Path tempFile = downloadService.downloadToTemp(documentInstance.getRemoteUrl(), null);
             DocPageToImageOptions printOptions = DocPageToImageOptions.builder()
                     .minSide(1024)
+                    .imageSharpen(1f)
                     .pageFrom(0)
                     .pageTo(totalPages - 1)
                     .build();

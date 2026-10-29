@@ -398,7 +398,7 @@ public class DownloadService {
                     }
                 }
 
-                BufferedImage enhanced = imageUtils.enhanceForOCR(img, options.getImageContrast(), options.getImageBrightness());
+                BufferedImage enhanced = imageUtils.enhanceForOCR(img, options.getImageContrast(), options.getImageBrightness(), options.getImageSharpen());
                 String dataUri = imageUtils.toBase64Jpeg(enhanced, options.getJpegQ());
                 img.flush();
                 enhanced.flush();
@@ -551,7 +551,7 @@ public class DownloadService {
                 slide.draw(g);
                 g.dispose();
 
-                BufferedImage enhanced = imageUtils.enhanceForOCR(img, options.getImageContrast(), options.getImageBrightness());
+                BufferedImage enhanced = imageUtils.enhanceForOCR(img, options.getImageContrast(), options.getImageBrightness(), options.getImageSharpen());
                 pages.add(imageUtils.toBase64Jpeg(enhanced, options.getJpegQ()));
                 img.flush();
                 enhanced.flush();

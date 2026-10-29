@@ -123,20 +123,27 @@ public class ImageUtils {
         return (float) minSidePx / shortestPt;
     }
 
-    public BufferedImage enhanceForOCR(BufferedImage src, float contrast, float brightness) {
+    /**
+     * Sets each pixel to {@code pixel * contrast + brightness}, then sharpens: {@code pixel * (1 + 4 * sharpen) - sharpen * (up + down + left + right)}.
+     * {@code sharpen = 0} skips sharpening and {@code 1} is strong; stronger sharpening also amplifies scan noise and JPEG artifacts.
+     */
+    public BufferedImage enhanceForOCR(BufferedImage src, float contrast, float brightness, float sharpen) {
         // contrast > 1.0 increases contrast, brightness shifts (negative to darken)
         // Example: contrast = 1.15f, brightness = -10f
         RescaleOp rescale = new RescaleOp(contrast, brightness, null);
         BufferedImage contrasted = rescale.filter(src, null);
+        if (sharpen <= 0f) {
+            return contrasted;
+        }
 
-        // Simple sharpen kernel (unsharp-mask-ish)
+        // Simple sharpen kernel (unsharp-mask-ish); sharpen = 1 gives {0,-1,0,-1,5,-1,0,-1,0}
         float[] sharpKernel = {
-                0,  -1,  0,
-                -1,   5, -1,
-                0,  -1,  0
+                0,        -sharpen,          0,
+                -sharpen, 1 + 4 * sharpen,   -sharpen,
+                0,        -sharpen,          0
         };
-        ConvolveOp sharpen = new ConvolveOp(new Kernel(3, 3, sharpKernel), ConvolveOp.EDGE_NO_OP, null);
-        return sharpen.filter(contrasted, null);
+        ConvolveOp sharpenOp = new ConvolveOp(new Kernel(3, 3, sharpKernel), ConvolveOp.EDGE_NO_OP, null);
+        return sharpenOp.filter(contrasted, null);
     }
 
 
