@@ -4,6 +4,7 @@ import com.fasterxml.uuid.Generators;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.documents.DocPageToImageOptions;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.ImageUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.ScannedPageImageFinder;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.document.WordToPdfConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.document.readers.DocFileReader;
@@ -16,6 +17,8 @@ import jakarta.annotation.Nullable;
 import jakarta.annotation.PostConstruct;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.apache.pdfbox.rendering.ImageType;
 import org.apache.pdfbox.rendering.PDFRenderer;
 import org.apache.pdfbox.text.PDFTextStripper;
@@ -375,6 +378,17 @@ public class DownloadService {
 
             for (int i = options.getPageFrom(); i <= options.getPageTo() ; i++) {
 
+                PDImageXObject scan = findScanToSendAsOriginal(doc.getPage(i), options);
+                if (scan != null) {
+                    String original = imageUtils.toBase64Original(scan);
+                    // null when the image cannot be sent as stored (e.g. JPEG 2000, CMYK); it is rendered instead
+                    if (original != null) {
+                        logger.debug("Page {}: original scan, {} bytes", i + 1, original.length());
+                        allPagesContent.add(original);
+                        continue;
+                    }
+                }
+
                 BufferedImage img;
 
                 if (options.getRenderDPI() != null) {
@@ -413,6 +427,32 @@ public class DownloadService {
     }
 
 
+
+    /**
+     * Returns the scanned image to send instead of rendering the page, or {@code null} if the page is to be
+     * rendered. A page is sent as its original scan when both hold:
+     * <ol>
+     *     <li>The page is nothing but one scanned image: one upright image covers at least 90% of the page,
+     *     its text is invisible (an OCR layer), nothing visible is drawn over the image, and it has no
+     *     rotation or annotations other than links (see {@link ScannedPageImageFinder}).</li>
+     *     <li>The scan's shortest side is at most {@code minSide}: rendering at {@code minSide} would only
+     *     enlarge it, which adds no detail.</li>
+     * </ol>
+     * No enhancement (contrast, brightness, sharpen) is applied to an original scan.
+     */
+    private PDImageXObject findScanToSendAsOriginal(PDPage page, DocPageToImageOptions options) throws IOException {
+        // The page must be nothing but one scanned image (see ScannedPageImageFinder)
+        PDImageXObject scan = ScannedPageImageFinder.find(page);
+        if (scan == null) {
+            return null;
+        }
+        // Rendering at minSide would only enlarge a scan that is no bigger, which adds no detail
+        int scanShortSide = Math.min(scan.getWidth(), scan.getHeight());
+        if (scanShortSide > options.getMinSide()) {
+            return null;
+        }
+        return scan;
+    }
 
     public List<String> readDocumentAdvancedOCR(List<String> docBase64Pages) throws GendoxException{
 

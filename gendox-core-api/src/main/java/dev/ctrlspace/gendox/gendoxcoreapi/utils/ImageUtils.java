@@ -3,7 +3,13 @@ package dev.ctrlspace.gendox.gendoxcoreapi.utils;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.DownloadService;
+import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.graphics.color.PDColorSpace;
+import org.apache.pdfbox.pdmodel.graphics.color.PDDeviceGray;
+import org.apache.pdfbox.pdmodel.graphics.color.PDDeviceRGB;
+import org.apache.pdfbox.pdmodel.graphics.color.PDICCBased;
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
@@ -23,10 +29,16 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Base64;
+import java.util.List;
+import java.util.Set;
 
 @Component
 public class ImageUtils {
 
+
+    private static final Set<COSName> LOSSLESS_FILTERS = Set.of(
+            COSName.FLATE_DECODE, COSName.LZW_DECODE, COSName.RUN_LENGTH_DECODE,
+            COSName.CCITTFAX_DECODE, COSName.JBIG2_DECODE);
 
     private final DownloadService downloadService;
 
@@ -146,6 +158,48 @@ public class ImageUtils {
         return sharpenOp.filter(contrasted, null);
     }
 
+
+    /**
+     * Returns an image embedded in a PDF as a data URI, without re-compressing it: a JPEG keeps its own bytes,
+     * and a losslessly stored image is decoded and saved as PNG. Returns {@code null} when the image cannot be
+     * sent as it is (JPEG 2000, CMYK, masks, mixed filters, or a decoder that is not installed).
+     */
+    public String toBase64Original(PDImageXObject image) throws IOException {
+        if (image.getSoftMask() != null || image.getMask() != null || image.getDecode() != null) {
+            return null;
+        }
+        List<COSName> filters = image.getStream().getFilters();
+
+        // a JPEG, possibly wrapped in a lossless filter (e.g. [/FlateDecode /DCTDecode]), which is undone
+        boolean jpeg = !filters.isEmpty() && filters.getLast().equals(COSName.DCT_DECODE)
+                && LOSSLESS_FILTERS.containsAll(filters.subList(0, filters.size() - 1));
+        if (jpeg) {
+            PDColorSpace colorSpace = image.getColorSpace();
+            boolean grayOrRgb = colorSpace instanceof PDDeviceRGB || colorSpace instanceof PDDeviceGray
+                    || (colorSpace instanceof PDICCBased && colorSpace.getNumberOfComponents() != 4);
+            if (!grayOrRgb) {
+                return null;
+            }
+            try (InputStream in = image.getStream().createInputStream(List.of(COSName.DCT_DECODE.getName()))) {
+                return "data:image/jpeg;base64," + Base64.getEncoder().encodeToString(in.readAllBytes());
+            }
+        }
+
+        if (!filters.isEmpty() && LOSSLESS_FILTERS.containsAll(filters)) {
+            BufferedImage decoded;
+            try {
+                decoded = image.getImage();
+            } catch (IOException e) {
+                return null;    // e.g. no JBIG2 decoder on the classpath
+            }
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ImageIO.write(decoded, "png", baos);
+            decoded.flush();
+            return "data:image/png;base64," + Base64.getEncoder().encodeToString(baos.toByteArray());
+        }
+
+        return null;
+    }
 
     private String getImageMimeType(String extension) throws GendoxException {
         return switch (extension.toLowerCase()) {
