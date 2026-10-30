@@ -382,7 +382,8 @@ const initialState = {
   isLoading: false,
   isLoadingDocumentPages: false,
   error: null,
-  _prevQuestionsSnapshot: null // for optimistic reorder rollback
+  _prevQuestionsSnapshot: null, // for optimistic reorder rollback
+  pendingQuestions: [] // questions being saved (Auto ones are resolved by the LLM first), shown as placeholder columns
 }
 
 const taskNodeSlice = createSlice({
@@ -414,6 +415,14 @@ const taskNodeSlice = createSlice({
     // rollback: restore previous content snapshot
     rollbackQuestionOrder(state, action) {
       state.taskNodesQuestionList.content = action.payload
+    },
+
+    addPendingQuestions(state, action) {
+      state.pendingQuestions = [...state.pendingQuestions, ...action.payload]
+    },
+    removePendingQuestions(state, action) {
+      const ids = new Set(action.payload)
+      state.pendingQuestions = state.pendingQuestions.filter(q => !ids.has(q.id))
     }
   },
   extraReducers: builder => {
@@ -527,5 +536,6 @@ const taskNodeSlice = createSlice({
       })
   }
 })
-export const { applyQuestionOrder, rollbackQuestionOrder } = taskNodeSlice.actions
+export const { applyQuestionOrder, rollbackQuestionOrder, addPendingQuestions, removePendingQuestions } =
+  taskNodeSlice.actions
 export default taskNodeSlice.reducer

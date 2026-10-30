@@ -18,12 +18,18 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskTypeConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.util.json.schema.JsonSchemaGenerator;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.concurrent.DelegatingSecurityContextExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.Executor;
 
 @Service
 public class InsightQuestionService {
@@ -37,19 +43,23 @@ public class InsightQuestionService {
     private final ProjectService projectService;
     private final TaskService taskService;
     private final ObjectMapper objectMapper;
+    private final TaskExecutor asyncInsightsLlmCompletionsExecutor;
 
     public InsightQuestionService(DecisionService decisionService,
                                   CompletionService completionService,
                                   MessageService messageService,
                                   ProjectService projectService,
                                   TaskService taskService,
-                                  ObjectMapper objectMapper) {
+                                  ObjectMapper objectMapper,
+                                  @Qualifier("asyncInsightsLlmCompletionsExecutor")
+                                  TaskExecutor asyncInsightsLlmCompletionsExecutor) {
         this.decisionService = decisionService;
         this.completionService = completionService;
         this.messageService = messageService;
         this.projectService = projectService;
         this.taskService = taskService;
         this.objectMapper = objectMapper;
+        this.asyncInsightsLlmCompletionsExecutor = asyncInsightsLlmCompletionsExecutor;
     }
 
     /** Expands Auto questions before the existing batch save flow. */
@@ -78,15 +88,23 @@ public class InsightQuestionService {
 
         try {
             Project project = projectService.getProjectById(task.getProjectId());
-            List<TaskNodeDTO> resolved = new ArrayList<>();
-            for (TaskNodeDTO request : requests) {
-                if (isAutoQuestion(request)) {
-                    resolved.addAll(resolveAutoQuestion(request, task, project));
-                } else {
-                    resolved.add(request);
-                }
+            // Each Auto question waits on its own LLM calls, so resolve them all at once.
+            // The security context goes along, as the auditing reads the user from it.
+            Executor executor = new DelegatingSecurityContextExecutor(asyncInsightsLlmCompletionsExecutor);
+            List<CompletableFuture<List<TaskNodeDTO>>> futures = requests.stream()
+                    .map(request -> isAutoQuestion(request)
+                            ? CompletableFuture.supplyAsync(() -> resolveAutoQuestionUnchecked(request, task, project), executor)
+                            : CompletableFuture.completedFuture(List.of(request)))
+                    .toList();
+            // Joined in request order, so the columns keep the order the user gave them
+            return futures.stream().flatMap(future -> future.join().stream()).toList();
+        } catch (CompletionException exception) {
+            if (exception.getCause() instanceof GendoxException gendoxException) {
+                throw gendoxException;
             }
-            return resolved;
+            logger.error("Failed to resolve Auto insight questions for task {}", task.getId(), exception.getCause());
+            throw new GendoxException("AUTO_QUESTION_RESOLUTION_FAILED",
+                    "Failed to resolve Auto insight question", HttpStatus.BAD_GATEWAY);
         } catch (GendoxException exception) {
             throw exception;
         } catch (Exception exception) {
@@ -103,6 +121,14 @@ public class InsightQuestionService {
                 .map(InsightConfigDTO::getAnswerMode)
                 .filter(InsightAnswerMode.AUTO::equals)
                 .isPresent();
+    }
+
+    private List<TaskNodeDTO> resolveAutoQuestionUnchecked(TaskNodeDTO source, Task task, Project project) {
+        try {
+            return resolveAutoQuestion(source, task, project);
+        } catch (Exception exception) {
+            throw new CompletionException(exception);
+        }
     }
 
     private List<TaskNodeDTO> resolveAutoQuestion(TaskNodeDTO source, Task task, Project project) throws Exception {
