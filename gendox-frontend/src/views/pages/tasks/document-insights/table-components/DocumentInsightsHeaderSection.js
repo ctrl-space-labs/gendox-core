@@ -13,6 +13,7 @@ import DownloadIcon from '@mui/icons-material/Download'
 import GenerateConfirmDialog from 'src/utils/dialogs/GenerateConfirmDialog'
 import taskService from 'src/gendox-sdk/taskService'
 import { getErrorMessage } from 'src/utils/errorHandler'
+import { textShimmerSx } from 'src/utils/shimmerSx'
 import RequireOrgRoles from 'src/authentication/components/RequireOrgRoles'
 import useHasOrgRole from 'src/authentication/hooks/useHasOrgRole'
 
@@ -21,6 +22,7 @@ const HeaderSection = ({
   description,
   openAddDocument,
   onAddQuestion,
+  isAddingQuestions = false,
   handleGenerate,
   isPageLoading,
   onExportCsv,
@@ -214,17 +216,31 @@ const HeaderSection = ({
               </Button>
             </span>
           </Tooltip>
-          <Tooltip title={isPageLoading ? 'Loading data, please wait...' : 'Add a new question to the list'}>
+          <Tooltip
+            title={
+              isPageLoading
+                ? 'Loading data, please wait...'
+                : isAddingQuestions
+                ? 'Your new questions are being set up, please wait...'
+                : 'Add a new question to the list'
+            }
+          >
             <span>
               <Button
                 variant='outlined'
                 startIcon={<DescriptionIcon />}
                 onClick={onAddQuestion}
-                disabled={isPageLoading}
+                disabled={isPageLoading || isAddingQuestions}
                 size='medium'
                 fullWidth
               >
-                Add Questions
+                {isAddingQuestions ? (
+                  <Box component='span' sx={textShimmerSx}>
+                    Adding Questions...
+                  </Box>
+                ) : (
+                  'Add Questions'
+                )}
               </Button>
             </span>
           </Tooltip>

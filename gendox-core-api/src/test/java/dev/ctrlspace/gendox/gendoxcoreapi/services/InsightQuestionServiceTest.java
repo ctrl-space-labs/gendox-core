@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
 
 import java.util.List;
 import java.util.Map;
@@ -34,7 +35,7 @@ class InsightQuestionServiceTest {
     @BeforeEach
     void setUp() {
         service = new InsightQuestionService(decisionService, completionService, messageService,
-                projectService, taskService, new ObjectMapper());
+                projectService, taskService, new ObjectMapper(), new SimpleAsyncTaskExecutor());
     }
 
     @Test

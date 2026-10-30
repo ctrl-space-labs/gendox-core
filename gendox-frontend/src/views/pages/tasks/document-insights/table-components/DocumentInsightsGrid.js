@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import { DataGrid } from '@mui/x-data-grid'
-import { Box, Tooltip, IconButton, Menu, MenuItem, Chip } from '@mui/material'
+import { Box, Tooltip, IconButton, Menu, MenuItem, Chip, Skeleton } from '@mui/material'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 import DescriptionIcon from '@mui/icons-material/Description'
@@ -11,6 +11,7 @@ import Checkbox from '@mui/material/Checkbox'
 import ReplayIcon from '@mui/icons-material/Replay'
 import { useTheme } from '@mui/material/styles'
 import TruncatedText from 'src/views/custom-components/truncated-text/TrancatedText'
+import { textShimmerSx } from 'src/utils/shimmerSx'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 
@@ -44,6 +45,7 @@ const DocumentInsightsGrid = ({
   openDialog,
   documents,
   questions,
+  pendingQuestions = [],
   answers,
   isPageLoading,
   page,
@@ -489,10 +491,41 @@ const DocumentInsightsGrid = ({
             </Box>
           )
         }
+      })),
+
+      // Placeholder columns for questions that are still being saved
+      ...pendingQuestions.map(q => ({
+        field: q.id,
+        headerName: q.title || q.text,
+        width: 240,
+        editable: false,
+        sortable: false,
+        filterable: false,
+        disableColumnMenu: true,
+        renderHeader: () => (
+          <Tooltip
+            title={
+              q.answerMode === 'AUTO'
+                ? 'Jev is setting up this question as a written answer or decision columns...'
+                : 'Saving question...'
+            }
+            arrow
+          >
+            <Box component='span' sx={{ minWidth: 0, overflow: 'hidden', fontWeight: 600, ...textShimmerSx(theme) }}>
+              <TruncatedText text={q.title || q.text} disableTooltip />
+            </Box>
+          </Tooltip>
+        ),
+        renderCell: () => (
+          <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', px: 1 }}>
+            <Skeleton variant='text' animation='wave' width='80%' />
+          </Box>
+        )
       }))
     ]
   }, [
     sortedQuestions,
+    pendingQuestions,
     answers,
     isPageLoading,
     documents,
@@ -523,7 +556,7 @@ const DocumentInsightsGrid = ({
     })
   }, [documents, sortedQuestions, answers])
 
-  if (!documents.length && !questions.length) {
+  if (!documents.length && !questions.length && !pendingQuestions.length) {
     return (
       <Box sx={{ textAlign: 'center', py: 6, color: 'text.secondary' }}>
         No documents or questions to display. Please add some above.

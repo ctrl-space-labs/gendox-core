@@ -3,12 +3,15 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import com.fasterxml.uuid.Generators;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.documents.DocPageToImageOptions;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.documents.PageText;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.ImageUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.ScannedPageImageFinder;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.document.WordToPdfConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.document.readers.DocFileReader;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.document.readers.DocxFileReader;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.document.readers.ExcelFileReader;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.document.readers.PdfPageTextReader;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.document.readers.PptxFileReader;
 import org.springframework.core.io.FileSystemResource;
 import io.micrometer.observation.annotation.Observed;
@@ -16,6 +19,8 @@ import jakarta.annotation.Nullable;
 import jakarta.annotation.PostConstruct;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.apache.pdfbox.rendering.ImageType;
 import org.apache.pdfbox.rendering.PDFRenderer;
 import org.apache.pdfbox.text.PDFTextStripper;
@@ -40,6 +45,7 @@ import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -122,6 +128,18 @@ public class DownloadService {
         }
     }
 
+    /**
+     * Deletes the temp files whose names start with {@code prefix}: a {@link #downloadToTemp} download
+     * and the files made next to it, such as a DOCX's PDF.
+     */
+    public void deleteTempFiles(String prefix) throws IOException {
+        try (DirectoryStream<Path> files = Files.newDirectoryStream(getTempDir(), prefix + "*")) {
+            for (Path file : files) {
+                Files.deleteIfExists(file);
+            }
+        }
+    }
+
     public Path getTempDir() throws IOException {
         Path tempDir = Paths.get(System.getProperty("java.io.tmpdir"), "gendox-docs");
         Files.createDirectories(tempDir);
@@ -171,10 +189,18 @@ public class DownloadService {
     }
 
     public String readDocumentContent(String documentUrl) throws GendoxException, IOException {
+        return readDocumentContent(documentUrl, null);
+    }
+
+    /**
+     * @param filePath optional local copy from {@link #downloadToTemp}
+     */
+    public String readDocumentContent(String documentUrl, @Nullable Path filePath) throws GendoxException, IOException {
         // Get the Resource from openResource
         Resource resource = openResource(documentUrl);
 
         String fileExtension = getFileExtension(documentUrl, resource);
+        resource = resolveResource(resource, filePath);
 
         // TODO @Giannis check if the API Integrations remote url, breaks the logic of file extentions
         if (isTextFile(fileExtension)) {
@@ -196,9 +222,17 @@ public class DownloadService {
     }
 
     public String readDocumentImageToBase64(String documentUrl) throws GendoxException, IOException {
+        return readDocumentImageToBase64(documentUrl, null);
+    }
+
+    /**
+     * @param filePath optional local copy from {@link #downloadToTemp}
+     */
+    public String readDocumentImageToBase64(String documentUrl, @Nullable Path filePath) throws GendoxException, IOException {
         Resource resource = openResource(documentUrl);
 
         String fileExtension = getFileExtension(documentUrl, resource);
+        resource = resolveResource(resource, filePath);
 
         if (!isImageFile(fileExtension)) {
             throw new GendoxException(
@@ -253,9 +287,15 @@ public class DownloadService {
                 return doc.getNumberOfPages();
             }
         } else if (isDocxFile(fileExtension)) {
-            Path pdfPath = resolveDocxAsPdf(documentUrl, null);
-            try (PDDocument doc = Loader.loadPDF(pdfPath.toFile())) {
-                return doc.getNumberOfPages();
+            // a copy just for counting, deleted with its PDF once the pages are counted
+            String prefix = "page-count-" + UUID.randomUUID();
+            try {
+                Path pdfPath = wordToPdfConverter.convertDocxToPdf(downloadToTemp(documentUrl, prefix));
+                try (PDDocument doc = Loader.loadPDF(pdfPath.toFile())) {
+                    return doc.getNumberOfPages();
+                }
+            } finally {
+                deleteTempFiles(prefix);
             }
         } else if (isDocFile(fileExtension)) {
             return 1;
@@ -375,6 +415,17 @@ public class DownloadService {
 
             for (int i = options.getPageFrom(); i <= options.getPageTo() ; i++) {
 
+                PDImageXObject scan = findScanToSendAsOriginal(doc.getPage(i), options);
+                if (scan != null) {
+                    String original = imageUtils.toBase64Original(scan);
+                    // null when the image cannot be sent as stored (e.g. JPEG 2000, CMYK); it is rendered instead
+                    if (original != null) {
+                        logger.debug("Page {}: original scan, {} bytes", i + 1, original.length());
+                        allPagesContent.add(original);
+                        continue;
+                    }
+                }
+
                 BufferedImage img;
 
                 if (options.getRenderDPI() != null) {
@@ -398,7 +449,7 @@ public class DownloadService {
                     }
                 }
 
-                BufferedImage enhanced = imageUtils.enhanceForOCR(img, options.getImageContrast(), options.getImageBrightness());
+                BufferedImage enhanced = imageUtils.enhanceForOCR(img, options.getImageContrast(), options.getImageBrightness(), options.getImageSharpen());
                 String dataUri = imageUtils.toBase64Jpeg(enhanced, options.getJpegQ());
                 img.flush();
                 enhanced.flush();
@@ -413,6 +464,32 @@ public class DownloadService {
     }
 
 
+
+    /**
+     * Returns the scanned image to send instead of rendering the page, or {@code null} if the page is to be
+     * rendered. A page is sent as its original scan when both hold:
+     * <ol>
+     *     <li>The page is nothing but one scanned image: one upright image covers at least 90% of the page,
+     *     its text is invisible (an OCR layer), nothing visible is drawn over the image, and it has no
+     *     rotation or annotations other than links (see {@link ScannedPageImageFinder}).</li>
+     *     <li>The scan's shortest side is at most {@code minSide}: rendering at {@code minSide} would only
+     *     enlarge it, which adds no detail.</li>
+     * </ol>
+     * No enhancement (contrast, brightness, sharpen) is applied to an original scan.
+     */
+    private PDImageXObject findScanToSendAsOriginal(PDPage page, DocPageToImageOptions options) throws IOException {
+        // The page must be nothing but one scanned image (see ScannedPageImageFinder)
+        PDImageXObject scan = ScannedPageImageFinder.find(page);
+        if (scan == null) {
+            return null;
+        }
+        // Rendering at minSide would only enlarge a scan that is no bigger, which adds no detail
+        int scanShortSide = Math.min(scan.getWidth(), scan.getHeight());
+        if (scanShortSide > options.getMinSide()) {
+            return null;
+        }
+        return scan;
+    }
 
     public List<String> readDocumentAdvancedOCR(List<String> docBase64Pages) throws GendoxException{
 
@@ -462,6 +539,31 @@ public class DownloadService {
     }
 
     /**
+     * The text of each page of a format {@link #printDocumentPages} can print (.pdf, .docx, .pptx), aligned with
+     * its images, with how much of that text is visible on the page.
+     *
+     * @param filePath optional local copy from {@link #downloadToTemp}
+     */
+    public List<PageText> readDocumentPageTexts(String documentUrl, @Nullable Path filePath) throws GendoxException, IOException {
+        Resource resource = openResource(documentUrl);
+        String ext = getFileExtension(documentUrl, resource);
+
+        if (isPdfFile(ext)) {
+            return PdfPageTextReader.read(resolvePdfPath(documentUrl, resource, filePath));
+        } else if (isDocxFile(ext)) {
+            // .docx doesn't have native pages. So we print them to PDF so we can get consistent pages for the document
+            return PdfPageTextReader.read(resolveDocxAsPdf(documentUrl, filePath));
+        } else if (isPptxFile(ext)) {
+            // slide text from POI is the text drawn on the slide
+            return pptxFileReader.readPptxPages(resolveResource(resource, filePath)).stream()
+                    .map(text -> new PageText(text, text.replaceAll("\\s", "").length()))
+                    .toList();
+        } else {
+            throw new GendoxException("ERROR_UNSUPPORTED_FILE_TYPE", "readDocumentPageTexts not supported for file type: " + ext, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    /**
      * Resolves a local PDF path. Uses {@code pdfPath} when it already points to an existing file
      * (e.g. digitization batch temp file); otherwise downloads from {@code documentUrl}.
      */
@@ -489,14 +591,15 @@ public class DownloadService {
     }
 
     /**
-     * Converts a DOCX to a cached PDF. Uses {@code docxPath} when it already points to a local file
-     * (e.g. digitization batch temp file); otherwise downloads from {@code documentUrl}.
+     * Converts a DOCX to a PDF next to it. Uses {@code docxPath} when it already points to a local file
+     * (e.g. digitization batch temp file), so the PDF is deleted with that file's prefix; otherwise downloads
+     * a copy of its own, which stays in the temp dir until it is cleaned on startup.
      */
     private Path resolveDocxAsPdf(String documentUrl, @Nullable Path docxPath) throws GendoxException, IOException {
         Path localDocx = (docxPath != null && Files.exists(docxPath))
                 ? docxPath
-                : downloadToTemp(documentUrl, null);
-        return wordToPdfConverter.convertDocxToPdf(localDocx, documentUrl, getTempDir());
+                : downloadToTemp(documentUrl, "docx-" + UUID.randomUUID());
+        return wordToPdfConverter.convertDocxToPdf(localDocx);
     }
 
     /**
@@ -551,7 +654,7 @@ public class DownloadService {
                 slide.draw(g);
                 g.dispose();
 
-                BufferedImage enhanced = imageUtils.enhanceForOCR(img, options.getImageContrast(), options.getImageBrightness());
+                BufferedImage enhanced = imageUtils.enhanceForOCR(img, options.getImageContrast(), options.getImageBrightness(), options.getImageSharpen());
                 pages.add(imageUtils.toBase64Jpeg(enhanced, options.getJpegQ()));
                 img.flush();
                 enhanced.flush();

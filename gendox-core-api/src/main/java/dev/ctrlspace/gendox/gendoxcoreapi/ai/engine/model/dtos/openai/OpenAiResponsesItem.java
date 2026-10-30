@@ -32,14 +32,27 @@ public sealed interface OpenAiResponsesItem {
         }
     }
 
-    /** {@code input_text} on the way in, {@code output_text} on the way back. */
-    record Content(String type, String text) {
+    /**
+     * {@code input_text} on the way in, {@code output_text} on the way back. {@code input_image}
+     * carries {@code imageUrl} - a public URL or a base64 data URI - flat, not nested as in Chat Completions.
+     * Its {@code detail} is required here, so it is sent as "auto", the provider's default.
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    record Content(String type, String text, @JsonProperty("image_url") String imageUrl, String detail) {
+        public Content(String type, String text) {
+            this(type, text, null, null);
+        }
+
         public static Content inputText(String text) {
             return new Content("input_text", text);
         }
 
         public static Content outputText(String text) {
             return new Content("output_text", text);
+        }
+
+        public static Content inputImage(String imageUrl) {
+            return new Content("input_image", null, imageUrl, "auto");
         }
     }
 

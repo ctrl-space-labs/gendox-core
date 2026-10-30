@@ -1,5 +1,5 @@
 import React from 'react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/router'
 import { useDispatch, useSelector } from 'react-redux'
 import {
@@ -33,7 +33,13 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import ExpandableMarkdownSection from '../../helping-components/ExpandableMarkodownSection'
 import { localStorageConstants } from 'src/utils/generalConstants'
 import { fetchDocuments, resetSupportingDocuments } from 'src/store/activeDocument/activeDocument'
-import { updateTaskNode, createTaskNodesBatch, deleteTaskNode } from 'src/store/activeTaskNode/activeTaskNode'
+import {
+  updateTaskNode,
+  createTaskNodesBatch,
+  deleteTaskNode,
+  addPendingQuestions,
+  removePendingQuestions
+} from 'src/store/activeTaskNode/activeTaskNode'
 import { toast } from 'react-hot-toast'
 import AddNewDocumentDialog from '../../helping-components/AddNewDocumentDialog'
 import CleanCollapse from 'src/views/custom-components/mui/collapse'
@@ -166,6 +172,8 @@ const QuestionsDialog = ({
   const [hasBreakingChanges, setHasBreakingChanges] = useState(false)
   const [openDeleteQuestionConfirm, setOpenDeleteQuestionConfirm] = useState(false)
   const [openConfirmAnswersDelete, setOpenConfirmAnswersDelete] = useState(false)
+  const [isSavingQuestions, setIsSavingQuestions] = useState(false)
+  const isSavingQuestionsRef = useRef(false)
   const { supportingDocuments, isLoading } = useSelector(state => state.activeDocument)
 
   const isViewMode = !addQuestionMode && !editMode
@@ -319,34 +327,70 @@ const QuestionsDialog = ({
       return
     }
 
-    try {
-      const payloads = validQuestions.map((q, idx) => ({
-        taskId,
-        nodeType: 'QUESTION',
-        nodeValue: {
-          message: q.text,
-          questionTitle: q.title,
-          order: idx,
-          insightConfig: buildInsightConfig({
-            answerMode: q.answerMode,
-            decisionKind: q.decisionKind,
-            questionText: q.text,
-            decisionDetails: q.decisionDetails
-          })
-        }
-      }))
+    // A ref, not state: a second click can land before the re-render that disables the button
+    if (isSavingQuestionsRef.current) return
+    isSavingQuestionsRef.current = true
+    setIsSavingQuestions(true)
 
+    // Auto questions are resolved by the LLM on save, which takes a while, so close the dialog
+    // and show the questions as placeholder columns until they are saved
+    const savingId = Date.now()
+    const pendingQuestions = validQuestions.map((q, idx) => ({
+      id: `pending_${savingId}_${idx}`,
+      taskId,
+      title: q.title,
+      text: q.text,
+      answerMode: q.answerMode
+    }))
+    dispatch(addPendingQuestions(pendingQuestions))
+    onClose()
+
+    const payloads = validQuestions.map((q, idx) => ({
+      taskId,
+      nodeType: 'QUESTION',
+      nodeValue: {
+        message: q.text,
+        questionTitle: q.title,
+        order: idx,
+        insightConfig: buildInsightConfig({
+          answerMode: q.answerMode,
+          decisionKind: q.decisionKind,
+          questionText: q.text,
+          decisionDetails: q.decisionDetails
+        })
+      }
+    }))
+
+    let savedCount = 0
+    try {
       for (const batch of chunk(payloads, 10)) {
         await dispatch(createTaskNodesBatch({ organizationId, projectId, taskNodesPayload: batch, token })).unwrap()
+        savedCount += batch.length
       }
-
-      toast.success('Questions added!')
-      reloadAll()
-      onClose()
-      setAddNewQuestions([newQuestion()])
     } catch (error) {
       console.error(error)
-      toast.error('Failed to save questions')
+    }
+
+    const allSaved = savedCount === payloads.length
+    if (allSaved) {
+      setAddNewQuestions([newQuestion()])
+    } else {
+      toast.error('Failed to save questions. The unsaved ones are kept in Add Questions.')
+
+      // Keep only what was not saved, so trying again does not add the saved questions twice
+      setAddNewQuestions(validQuestions.slice(savedCount))
+    }
+
+    try {
+      // Reload before removing the placeholders, so the new columns replace them without a gap
+      if (savedCount > 0) await reloadAll()
+      if (allSaved) toast.success('Questions added!')
+    } catch (error) {
+      console.error(error)
+    } finally {
+      dispatch(removePendingQuestions(pendingQuestions.map(q => q.id)))
+      isSavingQuestionsRef.current = false
+      setIsSavingQuestions(false)
     }
   }
 
@@ -915,8 +959,8 @@ const QuestionsDialog = ({
             >
               {dialogLoading ? 'Saving...' : 'Close'}
             </Button>
-            <Button variant='contained' onClick={handleAddQuestions} disabled={dialogLoading}>
-              {dialogLoading ? 'Saving...' : 'Save Questions'}
+            <Button variant='contained' onClick={handleAddQuestions} disabled={dialogLoading || isSavingQuestions}>
+              {dialogLoading || isSavingQuestions ? 'Saving...' : 'Save Questions'}
             </Button>
           </Box>
         ) : isEditMode ? (
