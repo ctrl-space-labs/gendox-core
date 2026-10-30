@@ -14,6 +14,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.O
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Usage;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxRuntimeException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiTools;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ContentPart;
 import org.springframework.http.HttpStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -95,10 +96,22 @@ public class OpenAiResponsesConverter {
 
     private OpenAiResponsesItem.Message toMessageItem(String role, AiModelMessage message) {
         String text = message.getContent() == null ? "" : message.getContent();
-        OpenAiResponsesItem.Content content = "assistant".equals(role)
-                ? OpenAiResponsesItem.Content.outputText(text)
-                : OpenAiResponsesItem.Content.inputText(text);
-        return new OpenAiResponsesItem.Message(role, List.of(content));
+        if ("assistant".equals(role)) {
+            return new OpenAiResponsesItem.Message(role, List.of(OpenAiResponsesItem.Content.outputText(text)));
+        }
+
+        List<OpenAiResponsesItem.Content> content = new ArrayList<>();
+        content.add(OpenAiResponsesItem.Content.inputText(text));
+        if (message.getContentParts() != null) {
+            for (ContentPart part : message.getContentParts()) {
+                if ("image_url".equals(part.getType()) && part.getImageUrl() != null && part.getImageUrl().getUrl() != null) {
+                    content.add(OpenAiResponsesItem.Content.inputImage(part.getImageUrl().getUrl()));
+                } else if (!"text".equals(part.getType())) {
+                    logger.warn("Content part of type '{}' is not supported by the Responses API adapter; dropping it.", part.getType());
+                }
+            }
+        }
+        return new OpenAiResponsesItem.Message(role, content);
     }
 
     private OpenAiResponsesItem.FunctionCall toFunctionCall(JsonNode openAiToolCall) {

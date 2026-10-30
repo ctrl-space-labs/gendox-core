@@ -13,6 +13,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.CryptographyUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.ServiceSelector;
 import dev.ctrlspace.gendox.integrations.gendox.api.model.dto.ContentDTO;
 import dev.ctrlspace.gendox.integrations.gendox.api.services.GendoxAPIIntegrationService;
+import jakarta.annotation.Nullable;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.slf4j.Logger;
@@ -25,6 +26,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 
+import java.nio.file.Path;
 import java.util.List;
 import java.util.UUID;
 
@@ -85,17 +87,35 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
     @Override
     public DocumentSectionDTO process(DocumentInstance instance) throws Exception {
         logger.trace("Start processing document: {}", instance.getId());
+        String tempFilePrefix = "splitter-" + UUID.randomUUID();
+        Path file = null;
 
         try {
             // TODO DocumentSectionService#splitDocumentAndCreateSections also is splitting the document,
             //   merge those methods somehow. The challenge is that this job is performant for 1000s of documents,
             //   by separating the splitting and the writing. While the service method is performant for single documents
 
+            // A stored document is read from one local copy, downloaded fresh under a name of its own,
+            // since downloadToTemp reuses any file already there with the same name
+            boolean apiIntegration = isApiIntegration(instance);
+            boolean digitize = !apiIntegration && isAutoDigitized();
+            if (!apiIntegration) {
+                file = downloadService.downloadToTemp(instance.getRemoteUrl(), tempFilePrefix);
+            }
+
+            // Digitized text differs on every run, so a digitized document is compared by its original file,
+            // before its pages are sent to the LLM
+            String fileHash = digitize ? cryptographyUtils.calculateSHA256(file) : null;
+            if (fileHash != null && Boolean.TRUE.equals(skipUnchangedDocs) && fileHash.equals(instance.getDocumentSha256Hash())) {
+                logger.trace("No changes detected for document {}. Skipping digitization.", instance.getId());
+                return null;
+            }
+
             // Step 1: Fetch content
-            String fileContent = fetchContent(instance);
+            String fileContent = fetchContent(instance, digitize, file);
 
             // Step 2: Skip unchanged documents if applicable
-            if (!hasDocumentChanged(instance, fileContent)) {
+            if (!hasDocumentChanged(instance, fileContent, fileHash)) {
                 logger.trace("No changes detected for document {}. Skipping processing.", instance.getId());
                 return null;
             }
@@ -115,11 +135,20 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
         } catch (Exception e) {
             logger.warn("Error processing document {}: {}", instance.getId(), e.getMessage());
             return null; // Skip processing on errors
+        } finally {
+            if (file != null) {
+                // the download and the files made from it, such as a DOCX's PDF
+                downloadService.deleteTempFiles(tempFilePrefix);
+            }
         }
     }
 
-    private String fetchContent(DocumentInstance instance) throws GendoxException, Exception {
-        if ("API_INTEGRATION_FILE".equals(instance.getFileType().getName())) {
+    /**
+     * @param digitize whether the content comes from the LLM, page by page
+     * @param file     the local copy of a stored document; null for API integration content
+     */
+    private String fetchContent(DocumentInstance instance, boolean digitize, @Nullable Path file) throws GendoxException, Exception {
+        if (isApiIntegration(instance)) {
             UUID organizationId = instance.getOrganizationId();
             String domain = instance.getRemoteUrl();
             OrganizationWebSite organizationWebSite = organizationWebSiteService.getOrganizationWebSite(organizationId, domain);
@@ -140,22 +169,35 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
         }
 
         // Pass it from LLM if the AutoDigitization is enabled for the project, basically the same code as the Digitization Task
-        if (projectIdParam != null) {
-            ProjectAgent agent = projectAgentService.getAgentByProjectId(UUID.fromString(projectIdParam));
-            if (agent != null && Boolean.TRUE.equals(agent.getAutoDigitization())) {
-                return documentDigitizationService.digitizeDocumentToText(
-                        instance,
-                        projectService.getProjectById(UUID.fromString(projectIdParam)),
-                        DocumentDigitizationService.DEFAULT_DIGITIZATION_PROMPT);
-            }
+        if (digitize) {
+            return documentDigitizationService.digitizeDocumentToText(
+                    instance,
+                    projectService.getProjectById(UUID.fromString(projectIdParam)),
+                    DocumentDigitizationService.DEFAULT_DIGITIZATION_PROMPT,
+                    file);
         }
 
-        return downloadService.readDocumentContent(instance.getRemoteUrl());
+        return downloadService.readDocumentContent(instance.getRemoteUrl(), file);
     }
 
-    private boolean hasDocumentChanged(DocumentInstance instance, String fileContent) throws GendoxException, Exception {
+    private static boolean isApiIntegration(DocumentInstance instance) {
+        return "API_INTEGRATION_FILE".equals(instance.getFileType().getName());
+    }
+
+    private boolean isAutoDigitized() {
+        if (projectIdParam == null) {
+            return false;
+        }
+        ProjectAgent agent = projectAgentService.getAgentByProjectId(UUID.fromString(projectIdParam));
+        return agent != null && Boolean.TRUE.equals(agent.getAutoDigitization());
+    }
+
+    /**
+     * @param fileHash the original file's hash, used instead of the content's when given
+     */
+    private boolean hasDocumentChanged(DocumentInstance instance, String fileContent, @Nullable String fileHash) throws GendoxException, Exception {
         if (Boolean.TRUE.equals(skipUnchangedDocs)) {
-            String newHash = cryptographyUtils.calculateSHA256(fileContent);
+            String newHash = fileHash != null ? fileHash : cryptographyUtils.calculateSHA256(fileContent);
             if (newHash.equals(instance.getDocumentSha256Hash())) {
                 return false; // No changes detected
             }
