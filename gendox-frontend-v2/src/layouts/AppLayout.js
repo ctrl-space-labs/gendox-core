@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import Head from 'next/head'
 import Sidebar from 'src/layouts/components/Sidebar'
 import Topbar from 'src/layouts/components/Topbar'
+import GendoxAssistant from 'src/components/assistant/GendoxAssistant'
 import CommandPalette from 'src/layouts/components/CommandPalette'
 
 // lets a page change the top bar's title while it is open, e.g. the agent home shows its focused tab
@@ -63,6 +64,7 @@ const AppLayout = ({ page, title, crumb, children }) => {
         <TitleContext.Provider value={setLiveTitle}>{children}</TitleContext.Provider>
       </div>
       <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
+      <GendoxAssistant />
     </div>
   )
 }

@@ -4,7 +4,16 @@ import { shallowEqual, useDispatch, useSelector } from 'react-redux'
 import { ArrowLeft, ChevronDown, FileUp, History, Plus, SquarePen, X } from 'lucide-react'
 import { useAuth } from 'src/authentication/useAuth'
 import { useIFrameMessageManager } from 'src/authentication/context/IFrameMessageManagerContext'
-import { MAIN_CHAT, chatActions, fetchMessageMetadata, selectChatSession, sendMessage } from 'src/store/chat/gendoxChat'
+import {
+  ACTIVE_COMPLETION_STATUSES,
+  MAIN_CHAT,
+  chatActions,
+  fetchMessageMetadata,
+  recoverCompletion,
+  selectChatSession,
+  sendMessage,
+  submitClientToolResult
+} from 'src/store/chat/gendoxChat'
 import {
   enqueueFiles,
   uploadQueuedAttachments,
@@ -27,6 +36,8 @@ import ChatTurn from 'src/components/chat/ChatTurn'
 import ChatComposer from 'src/components/chat/ChatComposer'
 import ChatSources from 'src/components/chat/ChatSources'
 import ChatDeepThinking from 'src/components/chat/ChatDeepThinking'
+
+const COMPLETION_POLL_MS = 2000
 
 const greetingTime = () => {
   const hour = new Date().getHours()
@@ -80,8 +91,16 @@ const Chat = ({
   const { organizationId, projectId } = router.query
 
   const threads = useSelector(state => state.gendoxChat.threads)
-  const { currentThread, isSendingMessage, isLoadingMessages, isDeepThinking, currentMessageMetadata, isLoadingMetadata } =
-    useSelector(state => selectChatSession(state, chatKey), shallowEqual)
+  const {
+    currentThread,
+    isSendingMessage,
+    isLoadingMessages,
+    isDeepThinking,
+    currentMessageMetadata,
+    isLoadingMetadata,
+    completionStatus,
+    isStreaming
+  } = useSelector(state => selectChatSession(state, chatKey), shallowEqual)
   const { items: attachments, isUploading, isDeleting } = useSelector(
     state => selectChatAttachments(state, chatKey),
     shallowEqual
@@ -142,6 +161,72 @@ const Chat = ({
       })
     }
   }, [])
+
+  // A turn that runs without a stream on this page (after a reload, or while it waits for tools) is followed by polling
+  const followsTurnByPolling = !isStreaming && ACTIVE_COMPLETION_STATUSES.includes(completionStatus)
+
+  const checkCompletion = () => {
+    if (!currentThread?.threadId) return
+    dispatch(
+      recoverCompletion({
+        threadId: currentThread.threadId,
+        projectId: currentThread.projectId,
+        organizationId: currentThread.organizationId,
+        token,
+        iFrameMessageManager,
+        chatKey
+      })
+    )
+  }
+
+  // once per opened thread: a turn may still be running from before the page loaded
+  useEffect(() => {
+    checkCompletion()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [threadId, chatKey])
+
+  useEffect(() => {
+    if (!threadId || !followsTurnByPolling) return
+    const timer = setInterval(checkCompletion, COMPLETION_POLL_MS)
+
+    return () => clearInterval(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [threadId, followsTurnByPolling, chatKey])
+
+  // the host page answers the client tools it ran; their results continue the turn
+  useEffect(() => {
+    const manager = iFrameMessageManager?.messageManager
+    if (!manager || !currentThread?.projectId) return
+    const handler = event => {
+      if (event.type !== 'gendox.events.chat.message.tool_calls.response') return
+      for (const result of event.payload || []) {
+        if (result.threadId !== currentThread.threadId) continue
+        dispatch(
+          submitClientToolResult({
+            result,
+            token,
+            projectId: currentThread.projectId,
+            organizationId: currentThread.organizationId,
+            iFrameMessageManager,
+            chatKey
+          })
+        )
+      }
+    }
+    manager.addHandler(handler)
+    manager.sendMessage({ type: 'gendox.events.chat.message.tool_calls.ready', payload: { threadId: currentThread.threadId } })
+
+    return () => manager.removeHandler(handler)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentThread?.threadId, currentThread?.projectId, token, dispatch, iFrameMessageManager, chatKey])
+
+  // while an answer streams in, stay at the bottom unless the reader scrolled up
+  useEffect(() => {
+    const scroller = scrollRef.current
+    if (scroller && scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 240) {
+      scroller.scrollTo({ top: scroller.scrollHeight, behavior: 'auto' })
+    }
+  }, [messages])
 
   // keep the newest message in view
   useEffect(() => {
@@ -277,12 +362,19 @@ const Chat = ({
   const groupedThreads = useMemo(() => groupThreadsByDate(threads || []), [threads])
   const lastTurnIndex = turns.length - 1
 
+  // the answer being written: it shows itself, so no "Searching" under it
+  const streamingAnswer = isStreaming && messages?.some(m => m.isStreaming && m.message?.trim())
+
   // what is still happening, shown at the end of the last turn
   const progress = isDeepThinking ? (
     <ChatDeepThinking />
-  ) : isSendingMessage ? (
+  ) : isSendingMessage && !streamingAnswer ? (
     <div className='row faint sm'>
-      {agentName ? `Searching ${agentName}’s knowledge` : 'Searching'}
+      {completionStatus === 'WAITING_FOR_TOOLS'
+        ? 'Waiting for your page'
+        : agentName
+          ? `Searching ${agentName}’s knowledge`
+          : 'Searching'}
       <span className='typing'>
         <i />
         <i />

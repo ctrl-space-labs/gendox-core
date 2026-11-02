@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useDispatch, useSelector } from 'react-redux'
 import toast from 'react-hot-toast'
-import { AppWindow, FlaskConical, Pencil, Plus, Send, Server, Trash2, Wrench, X } from 'lucide-react'
+import { AppWindow, BookOpenText, FlaskConical, Pencil, Plus, Send, Server, Trash2, Wrench, X } from 'lucide-react'
 import useHasOrgRole from 'src/authentication/hooks/useHasOrgRole'
-import { fetchExampleTools } from 'src/store/activeProjectAgent/activeProjectAgent'
+import { fetchExampleTools, fetchSkillTools } from 'src/store/activeProjectAgent/activeProjectAgent'
+import { parseSkill } from 'src/utils/skillMarkdown'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import useAgent, { getToken } from 'src/components/agent/useAgent'
 import AgentScope from 'src/components/agent/AgentScope'
@@ -79,7 +80,13 @@ const fromForm = (form, base = {}) => {
 
 const runsInGendox = name => GENDOX_TOOLS.includes(name)
 
-const RunsBadge = ({ name }) =>
+// a tool that runs on your side: the agent carries on (ACTION), or waits for your page's result (CLIENT)
+const EXECUTIONS = [
+  ['ACTION', 'Carry on', 'The agent is told the call was sent and carries on, e.g. opening a page.'],
+  ['CLIENT', 'Wait for the result', 'The agent waits until your website or app sends back the result, then answers with it.']
+]
+
+const RunsBadge = ({ name, execution }) =>
   runsInGendox(name) ? (
     <span className='badge accent'>
       <Server className='lucide' />
@@ -88,7 +95,7 @@ const RunsBadge = ({ name }) =>
   ) : (
     <span className='badge'>
       <Send className='lucide' />
-      Runs on your side
+      Runs on your side{execution === 'CLIENT' ? ' · waits for the result' : ''}
     </span>
   )
 
@@ -97,6 +104,7 @@ const ToolDialog = ({ open, tool, examples, onClose, onSave }) => {
   const [mode, setMode] = useState('form')
   const [base, setBase] = useState({})
   const [form, setForm] = useState({ name: '', description: '', params: [] })
+  const [execution, setExecution] = useState('ACTION')
   const [json, setJson] = useState('')
   const [jsonError, setJsonError] = useState('')
   const [isSaving, setIsSaving] = useState(false)
@@ -106,6 +114,7 @@ const ToolDialog = ({ open, tool, examples, onClose, onSave }) => {
     const schema = tool ? parseSchema(tool.jsonSchema) : {}
     setBase(schema)
     setForm(tool ? toForm(schema) : { name: '', description: '', params: [{ name: '', type: 'string', description: '', required: true }] })
+    setExecution(tool?.execution || 'ACTION')
     setMode('form')
     setJsonError('')
   }, [open, tool])
@@ -156,7 +165,7 @@ const ToolDialog = ({ open, tool, examples, onClose, onSave }) => {
       return toast.error('Give the tool a name with letters, numbers and underscores.')
     }
     setIsSaving(true)
-    await onSave(JSON.stringify(schema, null, 2))
+    await onSave(JSON.stringify(schema, null, 2), runsInGendox(name) ? 'ACTION' : execution)
     setIsSaving(false)
   }
 
@@ -340,9 +349,17 @@ const ToolDialog = ({ open, tool, examples, onClose, onSave }) => {
                 <Send className='lucide' />
                 Runs on your side
               </b>
-              <span className='muted'>
-                Your website or app acts on the call. The agent is told it was done and carries on.
-              </span>
+              <span className='muted'>Your website or app acts on the call.</span>
+              <div style={{ margin: '10px 0 6px' }}>
+                <div className='pill-tabs'>
+                  {EXECUTIONS.map(([value, label]) => (
+                    <button key={value} className={execution === value ? 'on' : ''} onClick={() => setExecution(value)}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className='muted sm'>{EXECUTIONS.find(([value]) => value === execution)?.[2]}</div>
             </div>
           )}
         </div>
@@ -355,7 +372,7 @@ const ToolDialog = ({ open, tool, examples, onClose, onSave }) => {
 const AgentToolsPage = () => {
   const dispatch = useDispatch()
   const { project, organizationId, href, save } = useAgent()
-  const { exampleTools } = useSelector(state => state.activeProjectAgent)
+  const { exampleTools, skillTools } = useSelector(state => state.activeProjectAgent)
   const canEdit = useHasOrgRole({ organizationId, roles: ['OP_UPDATE_PROJECT'] })
 
   const [editing, setEditing] = useState(null) // null closed, { index } — index null for a new tool
@@ -363,9 +380,24 @@ const AgentToolsPage = () => {
 
   useEffect(() => {
     dispatch(fetchExampleTools({ token: getToken() }))
+    dispatch(fetchSkillTools({ token: getToken() }))
   }, [dispatch])
 
   const tools = useMemo(() => project?.projectAgent?.aiTools ?? [], [project])
+
+  // tools the agent's skills bring: not saved on the agent, so they go with the skill
+  const skillBrought = useMemo(() => {
+    const own = new Set(tools.map(tool => parseSchema(tool.jsonSchema).name))
+    const bySkill = new Map()
+    ;(project?.projectAgent?.agentSkills ?? []).forEach(skill =>
+      parseSkill(skill.content)
+        .tools.filter(name => !own.has(name))
+        .forEach(name => bySkill.set(name, [...(bySkill.get(name) || []), skill.name]))
+    )
+    const descriptions = new Map((skillTools || []).map(tool => [tool.name, tool.description]))
+
+    return [...bySkill.keys()].sort().map(name => ({ name, skills: bySkill.get(name), description: descriptions.get(name) }))
+  }, [project, tools, skillTools])
 
   if (!project) {
     return (
@@ -390,12 +422,12 @@ const AgentToolsPage = () => {
     }
   }
 
-  const saveTool = async jsonSchema => {
+  const saveTool = async (jsonSchema, execution) => {
     const index = editing.index
     const next =
       index == null
-        ? [...tools, { type: 'function', jsonSchema }]
-        : tools.map((t, i) => (i === index ? { ...t, type: 'function', jsonSchema } : t))
+        ? [...tools, { type: 'function', execution, jsonSchema }]
+        : tools.map((t, i) => (i === index ? { ...t, type: 'function', execution, jsonSchema } : t))
     if (await saveTools(next, index == null ? 'Tool added' : 'Tool saved')) setEditing(null)
   }
 
@@ -444,7 +476,7 @@ const AgentToolsPage = () => {
                       </p>
                     )}
                     <div className='runs'>
-                      <RunsBadge name={name} />
+                      <RunsBadge name={name} execution={tool.execution} />
                     </div>
                   </div>
                   {canEdit && (
@@ -500,6 +532,31 @@ const AgentToolsPage = () => {
         )}
       </div>
 
+      {skillBrought.length > 0 && (
+        <div className='card'>
+          <div className='card-h'>
+            <h3>From skills</h3>
+            <span className='faint sm'>Come and go with the skill that brings them.</span>
+            <span className='sp' />
+            <Link className='btn ghost s' href={href('/gendox/agent-skills')}>
+              Skills
+            </Link>
+          </div>
+          {skillBrought.map(tool => (
+            <div className='item' key={tool.name}>
+              <span className='ftype' style={{ '--h': 265 }}>
+                <BookOpenText className='lucide' />
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <b className='mono'>{tool.name}</b>
+                {tool.description && <div className='muted sm clamp2'>{tool.description}</div>}
+                <div className='faint sm trunc'>From {tool.skills.join(', ')}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className='card card-b row' style={{ gap: 14, flexWrap: 'wrap' }}>
         <span className='ftype' style={{ '--h': 190 }}>
           <AppWindow className='lucide' />
@@ -537,7 +594,7 @@ const AgentToolsPage = () => {
                 <Send className='lucide' />
                 Runs on your side
               </b>
-              <p>Your website or app acts on the call. The agent is told it was done and carries on.</p>
+              <p>Your website or app acts on the call. The agent carries on, or waits for the result you send back.</p>
               <p className='faint sm'>open_web_page, fill_fields, and any tool you add</p>
             </div>
           </div>

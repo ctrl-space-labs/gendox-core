@@ -11,11 +11,13 @@ import {
   Monitor,
   Moon,
   Plus,
+  Sparkles,
   Sun,
   User,
   Users
 } from 'lucide-react'
 import { useAuth } from 'src/authentication/useAuth'
+import RequireSuperAdmin from 'src/authentication/components/RequireSuperAdmin'
 import useActiveScope from 'src/hooks/useActiveScope'
 import useThemePreference from 'src/hooks/useThemePreference'
 import commonConfig from 'src/configs/common.config'
@@ -93,6 +95,12 @@ const AccountMenu = () => {
           </span>
         )
       )}
+      <RequireSuperAdmin>
+        <Link className='mi' href={href('/gendox/admin/skills')}>
+          <Sparkles className='lucide' />
+          System skills
+        </Link>
+      </RequireSuperAdmin>
       <hr />
       <div className='row' style={{ padding: '4px 10px' }}>
         <span className='muted sm' style={{ flex: 1 }}>

@@ -9,6 +9,7 @@ import Menu from 'src/components/ui/Menu'
 export const AGENT_TABS = [
   { id: 'behavior', title: 'Behavior', path: '/gendox/agent-behavior' },
   { id: 'tools', title: 'Tools', path: '/gendox/agent-tools' },
+  { id: 'skills', title: 'Skills', path: '/gendox/agent-skills' },
   { id: 'deploy', title: 'Deploy', path: '/gendox/agent-deploy' },
   { id: 'members', title: 'Members', path: '/gendox/agent-members' },
   { id: 'general', title: 'General', path: '/gendox/agent-settings' }

@@ -5,10 +5,14 @@ import { generalConstants } from 'src/utils/generalConstants'
 import chatConverter from '../../converters/chat.converter'
 import chatThreadService from '../../gendox-sdk/chatThreadService'
 import completionService from '../../gendox-sdk/completionService'
+import { readCompletionSession, saveCompletionSession } from 'src/utils/chatCompletionSession'
 import documentService from '../../gendox-sdk/documentService'
 import { updateSessionThreadId } from 'src/utils/embeddedChatSession'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import toast from 'react-hot-toast'
+
+// a turn still running on the server: the chat follows it until it ends
+export const ACTIVE_COMPLETION_STATUSES = ['GENERATING', 'WAITING_FOR_TOOLS']
 
 const DEFAULT_LOCAL_CONTEXT_MAX_RESPONSES = 0 // basically dont wait
 const DEFAULT_LOCAL_CONTEXT_MAX_WAIT_MS = 10
@@ -28,6 +32,9 @@ export const MAIN_CHAT = 'main'
 const emptySession = () => ({
   currentThread: null,
   isSendingMessage: false,
+  completionStatus: null,
+  isStreaming: false,
+  streamRequestId: null,
   currentMessageMetadata: null,
   isLoadingMessages: null,
   isLoadingMetadata: null,
@@ -235,15 +242,11 @@ export const sendMessage = createAsyncThunk(
     // Send the message to the server
     let response
     try {
-      response = await completionService.postCompletionMessage(
-        projectId,
-        threadId,
-        message,
-        chatLocalContextResponses,
-        documentInstanceIds,
-        token,
-        deepThinking
-      )
+      response = deepThinking
+        ? await completionService.postCompletionMessage(projectId, threadId, message, chatLocalContextResponses, documentInstanceIds, token, true)
+        : await _streamCompletion({ projectId, organizationId, token, dispatch, chatKey, iFrameMessageManager,
+            payload: { threadId, value: message, localContexts: chatLocalContextResponses, documentInstanceIds,
+              stream: true, clientToolResults: true } })
     } catch (error) {
       toast.error(getErrorMessage(error))
       return rejectWithValue(error.response?.data || error.message)
@@ -266,21 +269,9 @@ export const sendMessage = createAsyncThunk(
       return { deepThinking: true, jobExecutionId, threadId: finalThreadId, isNewThread: !threadId }
     }
 
-    const { messages: apiMessages = [], threadId: responseThreadId } = response.data
-    _dispatchIncomingMessagesAndToolCalls({
-      apiMessages,
-      responseThreadId,
-      dispatch,
-      chatKey,
-      iFrameMessageManager,
-      sessionContext: {
-        isEmbedded: iFrameMessageManager?.isEmbedded,
-        originUrl: iFrameMessageManager?.originUrl,
-        organizationId,
-        projectId
-      }
-    })
+    const { threadId: responseThreadId } = response.data
 
+    // the stream already put the thread's messages in the store
     const { finalThreadId } = await _handleThreadPostSend({
       threadId,
       responseThreadId,
@@ -288,7 +279,8 @@ export const sendMessage = createAsyncThunk(
       organizationId,
       token,
       dispatch,
-      chatKey
+      chatKey,
+      skipLoad: true
     })
 
     return { deepThinking: false, threadId: finalThreadId, isNewThread: !threadId }
@@ -488,6 +480,68 @@ const gendoxChatSlice = createSlice({
   name: 'gendoxChat',
   initialState: initialChatState,
   reducers: {
+    // one event of a streamed completion; payload: { chatKey, projectId, event, data }
+    completionEvent: (state, { payload }) => {
+      const { chatKey = MAIN_CHAT, event, data, projectId } = payload
+      const session = state.sessions[chatKey]
+      const thread = session?.currentThread
+      if (!thread || thread.projectId !== projectId) return
+      if (data.threadId && thread.threadId && data.threadId !== thread.threadId) return
+      if (event === 'connect') {
+        session.streamRequestId = data.requestId
+        session.isStreaming = true
+      }
+      if (data.requestId && data.requestId !== session.streamRequestId) return
+      if (event === 'start') {
+        thread.threadId = data.threadId
+        thread.id = data.threadId
+        session.completionStatus = 'GENERATING'
+        session.isStreaming = true
+        session.isSendingMessage = true
+      }
+      if (event === 'delta') {
+        const key = `stream:${data.turnId}:${data.messageIndex}`
+        let message = thread.messages.find(m => m.streamKey === key)
+        if (!message) {
+          thread.messages.push({
+            streamKey: key,
+            role: 'assistant',
+            createdBy: thread.agent?.userId || thread.agent?.id,
+            createdAt: new Date().toISOString(),
+            message: '',
+            reasoningContent: '',
+            isStreaming: true
+          })
+          message = thread.messages[thread.messages.length - 1]
+        }
+        message[data.field === 'reasoningContent' ? 'reasoningContent' : 'message'] += data.text
+      }
+      if (event === 'message') {
+        const message = data.message
+        if (message.name === 'completion_limit_warning') return
+        const converted = chatConverter.gendoxMessageToThreadMessage(message)
+        const key = `stream:${data.turnId}:${data.messageIndex}`
+        const index = thread.messages.findIndex(m => m.messageId === message.id || m.streamKey === key)
+        if (index >= 0) thread.messages[index] = converted
+        else thread.messages.push(converted)
+      }
+      if (event === 'waiting_for_tools' || event === 'status') {
+        session.completionStatus = data.status
+        session.isSendingMessage = ACTIVE_COMPLETION_STATUSES.includes(data.status)
+        session.isStreaming = false
+      }
+      if (event === 'done' || event === 'error' || event === 'detached') {
+        session.isStreaming = false
+        if (event !== 'detached') {
+          session.completionStatus = event === 'done' ? 'COMPLETED' : 'FAILED'
+          session.isSendingMessage = false
+        }
+        if (event === 'done') thread.messages = thread.messages.filter(m => !m.isStreaming)
+      }
+      if (event === 'reconcile') {
+        session.currentThread = { ...thread, messages: data.messages }
+      }
+    },
     resetChatState: state => {
       Object.values(state.sessions).forEach(session => revokeThreadPreviewUrls(session.currentThread))
       Object.assign(state, { ...initialChatState, sessions: {} })
@@ -562,6 +616,10 @@ const gendoxChatSlice = createSlice({
     builder.addCase(loadThread.pending, (state, action) => {
       const session = sessionOf(state, keyOf(action))
       session.currentThread = null
+      session.streamRequestId = null
+      session.isStreaming = false
+      session.completionStatus = null
+      session.isSendingMessage = false
       session.isLoadingMessages = true
     })
     builder.addCase(loadThread.fulfilled, (state, action) => {
@@ -597,7 +655,7 @@ const gendoxChatSlice = createSlice({
     builder.addCase(sendMessage.fulfilled, (state, action) => {
       const session = sessionOf(state, keyOf(action))
       session.newlyCreatedThreadId = action.payload?.isNewThread ? action.payload.threadId : null
-      session.isSendingMessage = false
+      session.isSendingMessage = ACTIVE_COMPLETION_STATUSES.includes(session.completionStatus)
       if (action.payload?.deepThinking) {
         session.isDeepThinking = true
         session.deepThinkingJobId = action.payload.jobExecutionId
@@ -609,7 +667,8 @@ const gendoxChatSlice = createSlice({
       }
     })
     builder.addCase(sendMessage.rejected, (state, action) => {
-      sessionOf(state, keyOf(action)).isSendingMessage = false
+      const session = sessionOf(state, keyOf(action))
+      session.isSendingMessage = ACTIVE_COMPLETION_STATUSES.includes(session.completionStatus)
     })
     builder.addCase(pollDeepThinkingStatus.fulfilled, (state, action) => {
       const { status, steps } = action.payload
@@ -653,7 +712,9 @@ function _createNewThread(state, projectId, organizationId) {
 async function _fetchExistingThreadWithMessages(threadId, projectId, organizationId, dispatch, token, state) {
   const messagesResponse = await chatThreadService.getThreadMessagesByCriteria(threadId, token)
 
-  let chatMessages = messagesResponse.data.content.map(message => chatConverter.gendoxMessageToThreadMessage(message))
+  let chatMessages = messagesResponse.data.content
+    .filter(message => message.name !== 'completion_limit_warning')
+    .map(message => chatConverter.gendoxMessageToThreadMessage(message))
 
   // sort messages by time ascending
   chatMessages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
@@ -725,7 +786,7 @@ function _updateThreadsToLocalStorage(newThreadId) {
   localStorage.setItem(generalConstants.LOCAL_STORAGE_THREAD_IDS_NAME, JSON.stringify(threads))
 }
 
-async function _handleThreadPostSend({ threadId, responseThreadId, projectId, organizationId, token, dispatch, chatKey }) {
+async function _handleThreadPostSend({ threadId, responseThreadId, projectId, organizationId, token, dispatch, chatKey, skipLoad = false }) {
   const isNewThread = !threadId
   const finalThreadId = isNewThread ? responseThreadId : threadId
 
@@ -737,7 +798,7 @@ async function _handleThreadPostSend({ threadId, responseThreadId, projectId, or
   // TODO requires performance improvement
   dispatch(fetchThreads({ organizationId, token }))
 
-  if (isNewThread && finalThreadId) {
+  if (isNewThread && finalThreadId && !skipLoad) {
     await dispatch(loadThread({ threadId: finalThreadId, projectId, organizationId, token, chatKey }))
   }
 
@@ -793,3 +854,186 @@ function _dispatchIncomingMessagesAndToolCalls({ apiMessages = [], responseThrea
   }
 }
 
+const DELTA_FLUSH_MS = 50
+
+const completionEvent = (dispatch, chatKey, projectId, event, data) =>
+  dispatch(chatActions.completionEvent({ chatKey, projectId, event, data }))
+
+// Sends the tool calls the host page runs (client tools) to it, each once per turn
+function dispatchHostCalls(data, context) {
+  const { projectId, organizationId, iFrameMessageManager } = context
+  if (iFrameMessageManager?.isEmbedded)
+    updateSessionThreadId(iFrameMessageManager.originUrl, organizationId, projectId, data.threadId)
+  const calls =
+    data.toolCalls ||
+    (data.pendingCalls || []).map(call => ({
+      id: call.id,
+      type: 'function',
+      messageId: call.messageId,
+      function: { name: call.name, arguments: call.arguments },
+      execution: 'CLIENT'
+    }))
+  const session = readCompletionSession(data.threadId)
+  const sent = new Set(session.dispatchedCalls || [])
+  const pending = calls.filter(call => !sent.has(call.id))
+  if (!pending.length) return
+  pending.forEach(call => sent.add(call.id))
+  saveCompletionSession(data.threadId, { dispatchedCalls: [...sent] })
+  iFrameMessageManager?.messageManager?.sendMessage({
+    type: 'gendox.events.chat.message.tool_calls.request',
+    payload: pending.map(call => ({
+      threadId: data.threadId,
+      turnId: data.turnId,
+      messageId: data.messageId,
+      execution: data.execution || 'CLIENT',
+      ...call
+    }))
+  })
+}
+
+async function _streamCompletion(context) {
+  const { projectId, organizationId, dispatch, chatKey, token, payload, iFrameMessageManager } = context
+  const requestId = globalThis.crypto.randomUUID()
+  let threadId = payload.threadId
+  completionEvent(dispatch, chatKey, projectId, 'connect', { threadId, requestId })
+  let turnId = readCompletionSession(threadId).turnId
+
+  // A fast model sends many tokens per network chunk. Rendering each one at once starves React's
+  // other updates (minified React error #185), so tokens are drawn in batches.
+  let deltas = []
+  let flushTimer = null
+  const flushDeltas = () => {
+    clearTimeout(flushTimer)
+    flushTimer = null
+    const batch = deltas
+    deltas = []
+    batch.forEach(delta => completionEvent(dispatch, chatKey, projectId, 'delta', delta))
+  }
+
+  try {
+    const response = await completionService.postChatMessage(
+      projectId,
+      payload,
+      token,
+      readCompletionSession(threadId).resumeToken,
+      async (event, data) => {
+        if (event === 'delta') {
+          deltas.push({ ...data, threadId, requestId })
+          if (!flushTimer) flushTimer = setTimeout(flushDeltas, DELTA_FLUSH_MS)
+
+          return
+        }
+        flushDeltas()
+        if (event === 'start') {
+          threadId = data.threadId
+          turnId = data.turnId
+          const previousSession = readCompletionSession(threadId)
+          saveCompletionSession(threadId, { turnId, ...(previousSession.turnId !== turnId ? { dispatchedCalls: [] } : {}) })
+          if (iFrameMessageManager?.isEmbedded)
+            updateSessionThreadId(iFrameMessageManager.originUrl, organizationId, projectId, threadId)
+        }
+        // A turn gets a resume token when it first waits for tools; an anonymous session sends it with the results
+        if (event === 'waiting_for_tools' && data.resumeToken) {
+          saveCompletionSession(threadId, { resumeToken: data.resumeToken })
+        }
+        if (event === 'message') data = { ...data, turnId, threadId }
+        data = { ...data, requestId }
+        completionEvent(dispatch, chatKey, projectId, event, data)
+        if (event === 'tool_calls' || event === 'waiting_for_tools') dispatchHostCalls(data, context)
+        if (event === 'done') {
+          for (const message of data.messages || [])
+            completionEvent(dispatch, chatKey, projectId, 'message', { threadId, turnId, message, requestId })
+          iFrameMessageManager?.messageManager?.sendMessage({
+            type: 'gendox.events.chat.message.new.response.received',
+            payload: data.messages || []
+          })
+        }
+      }
+    )
+    if (response.status === 202) {
+      completionEvent(dispatch, chatKey, projectId, 'status', { ...response.data, requestId })
+    }
+
+    return response
+  } catch (error) {
+    flushDeltas()
+    completionEvent(dispatch, chatKey, projectId, 'detached', { threadId, requestId })
+    throw error
+  }
+}
+
+let clientResultQueue = Promise.resolve()
+const pendingClientResults = new Set()
+
+/** Sends the result of a client tool the host page ran, and streams the rest of the turn */
+export const submitClientToolResult = createAsyncThunk(
+  'gendoxChat/submitClientToolResult',
+  async ({ result, token, organizationId, projectId, iFrameMessageManager, chatKey = MAIN_CHAT }, { dispatch, rejectWithValue }) => {
+    const key = `${result.threadId}|${result.turnId || result.messageId || ''}|${result.toolCallId}`
+    if (pendingClientResults.has(key)) return
+    pendingClientResults.add(key)
+    const ack = extra =>
+      iFrameMessageManager?.messageManager?.sendMessage({
+        type: 'gendox.events.chat.message.tool_calls.ack',
+        payload: { threadId: result.threadId, turnId: result.turnId, messageId: result.messageId, toolCallId: result.toolCallId, ...extra }
+      })
+    try {
+      const submission = clientResultQueue.then(() =>
+        _streamCompletion({
+          projectId,
+          organizationId,
+          token,
+          dispatch,
+          chatKey,
+          iFrameMessageManager,
+          payload: {
+            threadId: result.threadId,
+            role: 'tool',
+            toolCallId: result.toolCallId,
+            value: result.value ?? JSON.stringify(result.result ?? null),
+            stream: true
+          }
+        })
+      )
+      clientResultQueue = submission.catch(() => {})
+      await submission
+      ack()
+    } catch (error) {
+      if ([400, 403, 404, 409].includes(error.response?.status)) {
+        ack({ error: error.message })
+        toast.error(error.message)
+      }
+
+      return rejectWithValue(error.message)
+    } finally {
+      pendingClientResults.delete(key)
+    }
+  }
+)
+
+const canRecoverCompletion = session =>
+  !session.isStreaming &&
+  !session.isDeepThinking &&
+  (!session.isSendingMessage || ACTIVE_COMPLETION_STATUSES.includes(session.completionStatus))
+
+/** Asks whether a turn is still running on the server (after a reload, or while it waits for tools) and shows where it is */
+export const recoverCompletion = createAsyncThunk(
+  'gendoxChat/recoverCompletion',
+  async ({ threadId, projectId, organizationId, token, iFrameMessageManager, chatKey = MAIN_CHAT }, { dispatch, getState }) => {
+    const session = () => selectChatSession(getState(), chatKey)
+    if (!threadId || !canRecoverCompletion(session())) return
+    try {
+      const { data } = await completionService.getCompletionStatus(threadId, token, readCompletionSession(threadId).resumeToken)
+      if (!canRecoverCompletion(session())) return
+      const previous = session().completionStatus
+      completionEvent(dispatch, chatKey, projectId, 'status', data)
+      if (data.status === 'WAITING_FOR_TOOLS') dispatchHostCalls(data, { projectId, organizationId, iFrameMessageManager })
+      if (data.status !== 'IDLE' && (previous !== data.status || ACTIVE_COMPLETION_STATUSES.includes(data.status))) {
+        const thread = await _fetchExistingThreadWithMessages(threadId, projectId, organizationId, dispatch, token)
+        if (!session().isStreaming) completionEvent(dispatch, chatKey, projectId, 'reconcile', { threadId, messages: thread.messages })
+      }
+    } catch (_) {
+      // a later poll recovers transient transport errors without repeating the user's request
+    }
+  }
+)
