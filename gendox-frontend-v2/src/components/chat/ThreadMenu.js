@@ -116,7 +116,7 @@ const ThreadMenu = ({ thread, openHref, onDeleted, className = 'menu-x' }) => {
             <button className='btn' onClick={() => setRenameOpen(false)}>
               Cancel
             </button>
-            <button className='btn primary' onClick={handleRename} disabled={isSaving}>
+            <button aria-busy={isSaving} className='btn primary' onClick={handleRename} disabled={isSaving}>
               Save
             </button>
           </>

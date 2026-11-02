@@ -28,7 +28,10 @@ const FAILURES = {
 }
 
 const Failure = ({ failed, onAskAgain }) => {
-  const [title, text] = FAILURES[failed.code] || ['Something went wrong', failed.message || 'Try again in a moment.']
+  const [title, text] = FAILURES[failed.code] ||
+    (failed.message
+      ? ['Something went wrong', failed.message]
+      : ['The answer didn’t finish', 'The agent stopped before it answered. Try again in a moment.'])
 
   return (
     <div className='alert' style={{ '--c': 'var(--warn)' }}>
@@ -169,11 +172,14 @@ const ChatTurn = ({
   activeSourcesMessageId,
   onSources,
   onAskAgain,
+  unfinished = false,
   children
 }) => {
   const { question, items } = turn
   const sentAt = question?.createdAt ? new Date(question.createdAt).toLocaleString() : undefined
-  const failed = question?.failed && items.length === 0 && !children ? question.failed : null
+  // A turn that ended without an answer: it failed now, or it stopped before (seen after a reload)
+  const hasAnswer = items.some(item => item.type === 'answer' && !item.beforeTools)
+  const failed = !hasAnswer && !children && question ? question.failed || (unfinished && {}) : null
 
   return (
     <div className='gc-turn'>

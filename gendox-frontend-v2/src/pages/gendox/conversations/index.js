@@ -11,7 +11,7 @@ import { isValidOrganization } from 'src/utils/validators'
 import AppLayout from 'src/layouts/AppLayout'
 import Avatar from 'src/components/ui/Avatar'
 import Empty from 'src/components/ui/Empty'
-import Spinner from 'src/components/ui/Spinner'
+import { SkeletonRows } from 'src/components/ui/Skeleton'
 import ThreadMenu from 'src/components/chat/ThreadMenu'
 import { toPlainPreview } from 'src/components/chat/chatUtils'
 
@@ -56,6 +56,7 @@ const ConversationsPage = () => {
     `${href('/gendox/agent-home', { projectId: thread.agent?.projectId })}#/chat/${thread.threadId}`
 
   const isFiltering = Boolean(filter.trim() || agentFilter)
+  const isLoading = !threads && isLoadingAgentsAndThreads !== false
 
   return (
     <main className='content'>
@@ -97,9 +98,21 @@ const ConversationsPage = () => {
           </select>
         </div>
 
-        {!threads && isLoadingAgentsAndThreads !== false ? (
-          <div className='empty'>
-            <Spinner />
+        {isLoading ? (
+          <div className='scroll'>
+            <table className='table' aria-busy='true'>
+              <thead>
+                <tr>
+                  <th>Conversation</th>
+                  <th>Agent</th>
+                  <th>Last message</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                <SkeletonRows rows={5} columns={[null, 120, 90, null]} />
+              </tbody>
+            </table>
           </div>
         ) : rows.length === 0 ? (
           <Empty

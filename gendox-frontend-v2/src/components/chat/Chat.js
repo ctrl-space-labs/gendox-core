@@ -128,7 +128,12 @@ const Chat = ({
     [attachments]
   )
 
-  const isBusy = isSendingMessage || isDeepThinking
+  // A turn that runs without a stream on this page (after a reload, or while it waits for tools) is followed by polling
+  const followsTurnByPolling = !isStreaming && ACTIVE_COMPLETION_STATUSES.includes(completionStatus)
+
+  // Only this page's own request blocks a new question. A turn followed by polling may have stopped on the server
+  // (its status is guessed from the last message for 5 minutes), and a new question ends a turn that waits for tools.
+  const isBusy = (isSendingMessage && !followsTurnByPolling) || isDeepThinking
   const isChatting = turns.length > 0 || isBusy
   const canSend =
     Boolean(agent) && !isBusy && !isUploading && !isDeleting && (message.trim() !== '' || uploadedDocs.length > 0)
@@ -161,9 +166,6 @@ const Chat = ({
       })
     }
   }, [])
-
-  // A turn that runs without a stream on this page (after a reload, or while it waits for tools) is followed by polling
-  const followsTurnByPolling = !isStreaming && ACTIVE_COMPLETION_STATUSES.includes(completionStatus)
 
   const checkCompletion = () => {
     if (!currentThread?.threadId) return
@@ -459,6 +461,7 @@ const Chat = ({
                 activeSourcesMessageId={sourcesMessageId}
                 onSources={sources ? openSources : null}
                 onAskAgain={isBusy ? null : text => send(text, [])}
+                unfinished={index === lastTurnIndex && !isBusy && !ACTIVE_COMPLETION_STATUSES.includes(completionStatus)}
               >
                 {index === lastTurnIndex ? progress : null}
               </ChatTurn>
