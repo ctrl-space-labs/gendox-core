@@ -27,6 +27,8 @@ import java.util.UUID;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import org.mockito.InOrder;
+
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
@@ -99,6 +101,18 @@ class EmbeddingsControllerStreamingTest {
         verify(completions).getCompletionSearch(eq(saved), eq(project),
                 argThat(listener -> !(listener instanceof SseCompletionListener) && !listener.waitsForClientTools()));
         assertFalse(background.iterator().hasNext());
+    }
+
+    @Test
+    void aNewMessageCancelsTheWaitingTurnBeforeItIsSaved() throws Exception {
+        mvc.perform(post("/messages/completions").param("projectId", projectId.toString())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"threadId\":\"" + threadId + "\",\"value\":\"question\"}"))
+                .andExpect(status().isOk());
+
+        // The cancelled calls' results must come before the new question in the history
+        InOrder order = inOrder(turns, messages);
+        order.verify(turns).cancelWaitingTurn(threadId);
+        order.verify(messages).createMessage(any());
     }
 
     @Test

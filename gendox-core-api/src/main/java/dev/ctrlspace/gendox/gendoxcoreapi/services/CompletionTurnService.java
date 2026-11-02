@@ -1,7 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxRuntimeException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.CompletionTurn;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.CompletionTurn.PendingCall;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
@@ -102,7 +101,7 @@ public class CompletionTurnService {
     public Optional<CompletionTurn> saveResult(UUID threadId, String toolCallId, String value,
                                                UUID projectId, String resumeToken) throws GendoxException {
         if (threadId == null || toolCallId == null || value == null) {
-            throw new GendoxRuntimeException(HttpStatus.BAD_REQUEST, "INVALID_TOOL_RESULT", "A tool result needs a threadId, a toolCallId and a value");
+            throw new GendoxException("INVALID_TOOL_RESULT", "A tool result needs a threadId, a toolCallId and a value", HttpStatus.BAD_REQUEST);
         }
         Optional<CompletionTurn> waiting = turnRepository.lockWaitingTurn(threadId);
         Optional<PendingCall> call = waiting.flatMap(turn -> pendingCall(turn, toolCallId));
@@ -134,14 +133,14 @@ public class CompletionTurnService {
     }
 
     /** A call that is no longer waiting is fine only when the very same result was saved for it. */
-    private void requireSaved(UUID threadId, String toolCallId, String value) {
+    private void requireSaved(UUID threadId, String toolCallId, String value) throws GendoxException {
         Optional<Message> saved = messageRepository
                 .findFirstByThreadIdAndRoleAndToolCallIdOrderByCreatedAtDesc(threadId, "tool", toolCallId);
         if (saved.isEmpty()) {
-            throw new GendoxRuntimeException(HttpStatus.CONFLICT, "TOOL_CALL_NOT_WAITING", "This tool call is not waiting for a result");
+            throw new GendoxException("TOOL_CALL_NOT_WAITING", "This tool call is not waiting for a result", HttpStatus.CONFLICT);
         }
         if (!saved.get().getValue().equals(value)) {
-            throw new GendoxRuntimeException(HttpStatus.CONFLICT, "TOOL_RESULT_CONFLICT", "A different result is already saved for this tool call");
+            throw new GendoxException("TOOL_RESULT_CONFLICT", "A different result is already saved for this tool call", HttpStatus.CONFLICT);
         }
     }
 
@@ -213,8 +212,8 @@ public class CompletionTurnService {
                 sha256(resumeToken).getBytes(StandardCharsets.UTF_8));
     }
 
-    private static GendoxRuntimeException forbidden() {
-        return new GendoxRuntimeException(HttpStatus.FORBIDDEN, "FORBIDDEN_COMPLETION_TURN", "This session cannot answer these tool calls");
+    private static GendoxException forbidden() {
+        return new GendoxException("FORBIDDEN_COMPLETION_TURN", "This session cannot answer these tool calls", HttpStatus.FORBIDDEN);
     }
 
     private static String sha256(String value) {

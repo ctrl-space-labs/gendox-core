@@ -183,9 +183,6 @@ public class CompletionService {
             })
     public CompletionMessageDTO getCompletionSearch(Message message, Project project, CompletionListener listener) throws GendoxException, IOException, NoSuchAlgorithmException {
 
-        // A new message ends a turn that still waits for the page's tool results
-        completionTurnService.cancelWaitingTurn(message.getThreadId());
-
         // The agent searches the documents itself, with advanced_search
         List<Message> completions = self.getCompletion(message, List.of(), project, null,
                 chatOverrides(message, project), listener);
