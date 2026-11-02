@@ -17,6 +17,7 @@ import { useSettings } from 'src/@core/hooks/useSettings'
 import GendoxAppBrand from "./components/shared-components/GendoxAppBrand";
 import VerticalNavButtons from "src/layouts/components/VerticalNavButton";
 import GendoxFooterContent from "./components/shared-components/GendoxFooterContent";
+import GendoxAssistant from 'src/views/custom-components/assistant/GendoxAssistant'
 
 
 const UserLayout = ({ children }) => {
@@ -68,6 +69,7 @@ const UserLayout = ({ children }) => {
       )}
     >
       {children}
+      <GendoxAssistant />
     </VerticalLayout>
   )
 }

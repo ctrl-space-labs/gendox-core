@@ -67,6 +67,27 @@ public class MessageService {
                         org.springframework.http.HttpStatus.NOT_FOUND));
     }
 
+    /** The message with its local contexts (and the contexts' documents) loaded. */
+    public Message getMessageWithLocalContexts(UUID messageId) throws GendoxException {
+        return messageRepository.findWithLocalContextsById(messageId)
+                .orElseThrow(() -> new GendoxException("MESSAGE_NOT_FOUND",
+                        "Message not found: " + messageId,
+                        org.springframework.http.HttpStatus.NOT_FOUND));
+    }
+
+    /** The messages saved in the thread after the given one, oldest first. */
+    public List<Message> getMessagesAfter(Message message) {
+        return messageRepository.findByThreadIdAndCreatedAtAfterOrderByCreatedAtAsc(message.getThreadId(), message.getCreatedAt());
+    }
+
+    /** Links the sections to the message, e.g. the sections an answer was based on. */
+    public Message linkSections(Message message, List<MessageSection> sections) {
+        for (MessageSection section : sections) {
+            section.setMessage(message);
+        }
+        return updateMessageWithSections(message, messageSectionRepository.saveAll(sections));
+    }
+
     public List<MessageSection> getMessageSectionsBySectionId(UUID sectionId) {
         return messageSectionRepository.findAllBySectionId(sectionId);
     }

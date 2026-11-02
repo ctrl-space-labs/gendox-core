@@ -14,3 +14,17 @@ export const shimmerSx = {
     '100%': { transform: 'translateX(120%)' }
   }
 }
+
+// Text with a highlight sweeping across it, for content that is still being generated
+export const textShimmerSx = theme => ({
+  color: 'transparent',
+  backgroundImage: `linear-gradient(90deg, ${theme.palette.text.disabled} 35%, ${theme.palette.text.primary} 50%, ${theme.palette.text.disabled} 65%)`,
+  backgroundSize: '200% 100%',
+  backgroundClip: 'text',
+  WebkitBackgroundClip: 'text',
+  animation: 'textShimmer 1.8s linear infinite',
+  '@keyframes textShimmer': {
+    '0%': { backgroundPosition: '100% 0' },
+    '100%': { backgroundPosition: '-100% 0' }
+  }
+})

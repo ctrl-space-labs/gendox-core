@@ -28,7 +28,7 @@ import Radio from '@mui/material/Radio'
 import { localStorageConstants } from 'src/utils/generalConstants'
 import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
-import {fetchAiModels, fetchExampleTools, updateProjectAgent} from 'src/store/activeProjectAgent/activeProjectAgent'
+import {fetchAiModels, fetchExampleTools, fetchSkillLibrary, fetchSkillTools, updateProjectAgent} from 'src/store/activeProjectAgent/activeProjectAgent'
 import { fetchProject } from 'src/store/activeProject/activeProject'
 import commonConfig from 'src/configs/common.config.js'
 import Dialog from "@mui/material/Dialog";
@@ -38,6 +38,8 @@ import { useRouter } from 'next/router'
 import RequireOrgRoles from 'src/authentication/components/RequireOrgRoles'
 import AgentEmbedSnippet from 'src/views/pages/project-settings-components/AgentEmbedSnippet'
 import AiModelOption from 'src/views/custom-components/ai-model/AiModelOption'
+import { parseSkill } from 'src/utils/skillMarkdown'
+import AgentSkillsSection from 'src/views/pages/project-settings-components/AgentSkillsSection'
 
 
 const AiAgentProjectSettings = () => {
@@ -48,13 +50,14 @@ const AiAgentProjectSettings = () => {
 
   const { projectDetails: project, isBlurring: isUpdatingProject } = useSelector(state => state.activeProject)
 
-  const { isFetchingAiModels, isUpdatingProjectAgent, aiModels, exampleTools, isFetchingExampleTools } = useSelector(state => state.activeProjectAgent)
+  const { isFetchingAiModels, isUpdatingProjectAgent, aiModels, exampleTools, isFetchingExampleTools, skillLibrary, isFetchingSkillLibrary, skillTools } = useSelector(state => state.activeProjectAgent)
   const { semanticModels, completionModels, decisionModels, moderationModels, rerankModels } = aiModels
   const isLoading = isUpdatingProjectAgent || isFetchingAiModels || isUpdatingProject || isFetchingExampleTools
 
   /* ----------  Add these state hooks (place near the other hooks, before the return)  ---------- */
   const [toolModalOpen, setToolModalOpen] = useState(false)                     // add / edit modal
   const [editingIndex, setEditingIndex] = useState(null)         // index of tool under edit
+  const [toolExecution, setToolExecution] = useState('ACTION')
   const [toolSchema, setToolSchema] = useState('')                              // JSON string in modal textarea
 
   const { id: projectId, organizationId } = project
@@ -66,10 +69,9 @@ const AiAgentProjectSettings = () => {
     decisionModel: project.projectAgent.decisionModel?.name || '',
     moderationModel: project.projectAgent.moderationModel?.name || '',
     rerankModel: project.projectAgent.rerankModel?.name || '',
-    advancedSearchModel: project.projectAgent.advancedSearchModel?.name || '',
     moderationCheck: project.projectAgent.moderationCheck,
     rerankEnable: project.projectAgent.rerankEnable,
-    advancedSearchEnable: project.projectAgent.advancedSearchEnable,
+    advancedSearchMode: project.projectAgent.advancedSearchMode || 'ALWAYS',
     autoDigitization: project.projectAgent.autoDigitization ?? false,
     documentSplitterType: project.projectAgent.documentSplitterType?.name || '',
     maxToken: project.projectAgent.maxToken,
@@ -81,6 +83,7 @@ const AiAgentProjectSettings = () => {
     topP: project.projectAgent.topP,
     agentBehavior: project.projectAgent.agentBehavior,
     aiTools: project.projectAgent.aiTools,
+    agentSkills: project.projectAgent.agentSkills || [],
     selected: project.projectAgent.privateAgent ? 'private' : 'public'
   }
 
@@ -95,10 +98,18 @@ const AiAgentProjectSettings = () => {
   } = useForm({ defaultValues })
 
   const aiTools = watch('aiTools');
+  const agentSkills = watch('agentSkills');
+
+  // After a save the project is fetched again: take the saved skills, so a new skill gets its id
+  // and is not added a second time by the next save.
+  useEffect(() => {
+    setValue('agentSkills', project.projectAgent.agentSkills || [])
+  }, [project.projectAgent.agentSkills, setValue])
 
   const handleAddTool = () => {
     setEditingIndex(null)
     setToolSchema('')
+    setToolExecution('ACTION')
     setToolModalOpen(true)
   }
 
@@ -109,6 +120,7 @@ const AiAgentProjectSettings = () => {
 
   const handleEditTool = (idx) => {
     setEditingIndex(idx)
+    setToolExecution(aiTools[idx].execution || 'ACTION')
     setToolSchema(JSON.stringify(JSON.parse(aiTools[idx].jsonSchema), null, 2))
     setToolModalOpen(true)
   }
@@ -127,6 +139,7 @@ const AiAgentProjectSettings = () => {
       let updatedTools;
       const newTool = {
         type: "function",
+        execution: toolExecution,
         jsonSchema: toolSchemaStr,
       };
 
@@ -223,6 +236,8 @@ const AiAgentProjectSettings = () => {
     }
     if (token) {
       dispatch(fetchExampleTools({ token }))
+      dispatch(fetchSkillLibrary({ token }))
+      dispatch(fetchSkillTools({ token }))
     }
   }, [organizationId, projectId, token, dispatch])
 
@@ -237,7 +252,6 @@ const AiAgentProjectSettings = () => {
         decisionModel: { name: data.decisionModel },
         moderationModel: { name: data.moderationModel },
         rerankModel: { name: data.rerankModel },
-        advancedSearchModel: { name: data.advancedSearchModel },
         privateAgent: data.selected === 'private',
         maxToken: data.maxToken,
         // Send null rather than '' so the backend falls back to the model default.
@@ -248,10 +262,11 @@ const AiAgentProjectSettings = () => {
         maxCompletionLimit: data.maxCompletionLimit,
         agentBehavior: data.agentBehavior,
         moderationCheck: data.moderationCheck,
-        advancedSearchEnable: data.advancedSearchEnable,
+        advancedSearchMode: data.advancedSearchMode,
         rerankEnable: data.rerankEnable,
         autoDigitization: data.autoDigitization,
-        aiTools: data.aiTools
+        aiTools: data.aiTools,
+        agentSkills: data.agentSkills
       }
     }
     dispatch(updateProjectAgent({ organizationId, projectId, payload: updatedProjectPayload, token }))
@@ -507,6 +522,24 @@ const AiAgentProjectSettings = () => {
                     </Grid>
                     <Grid item xs={12}>
                       <Grid container spacing={4}>
+                      {/* Knowledge search: how the agent retrieves project documents in chat */}
+                      <Grid item xs={12} sx={{ mb: 2 }}>
+                        <FormControl fullWidth>
+                          <InputLabel id='advanced-search-mode'>Knowledge Search</InputLabel>
+                          <Controller
+                            name='advancedSearchMode'
+                            control={control}
+                            render={({ field }) => (
+                              <Select {...field} labelId='advanced-search-mode' label='Knowledge Search'>
+                                <MenuItem value='ALWAYS'>Always: the agent searches the documents before every answer</MenuItem>
+                                <MenuItem value='AUTO'>Auto: the agent searches the documents when a question needs them</MenuItem>
+                                <MenuItem value='OFF'>Off: answer without searching the documents</MenuItem>
+                              </Select>
+                            )}
+                          />
+                        </FormControl>
+                      </Grid>
+
                       {/* Moderation Check */}
                       <Grid item xs={12} sm={6} sx={{ mb: 2 }}>
                         <FormControlLabel
@@ -538,57 +571,6 @@ const AiAgentProjectSettings = () => {
                           </FormControl>
                         )}
                       </Grid>
-
-                      {/* Advanced Search */}
-                      <Grid item xs={12} sm={6} sx={{ mb: 2 }}>
-                        <FormControlLabel
-                          label="Advanced Search"
-                          control={
-                            <Checkbox
-                              {...register('advancedSearchEnable')}
-                              checked={watch('advancedSearchEnable')}
-                            />
-                          }
-                        />
-                      </Grid>
-
-                      <Grid item xs={12} sm={6} sx={{ mb: 2 }}>
-                        {watch('advancedSearchEnable') && (
-                          <FormControl fullWidth>
-                            <InputLabel id="advanced-search-model-label" />
-                            <Controller
-                              name="advancedSearchModel"
-                              control={control}
-                              render={({ field }) => (
-                                <Autocomplete
-                                  {...field}
-                                  options={sortModels(completionModels)}
-                                  getOptionLabel={option => option.name}
-                                  onChange={(_, value) =>
-                                    setValue('advancedSearchModel', value?.name)
-                                }
-                                  value={
-                                  completionModels.find(
-                                    model => model.name === watch('advancedSearchModel')
-                                  ) || null
-                                }
-                                  disableClearable
-                                  renderInput={params => (
-                                    <TextField
-                                      {...params}
-                                      label="Advanced Search Model"
-                                      id="advanced-search-model-label"
-                                    />
-                                  )}
-                                  renderOption={(props, option) => <AiModelOption props={props} option={option} />}
-                                />
-                              )}
-                            />
-                          </FormControl>
-                        )}
-                      </Grid>
-
-
 
                       {/* Rerank Search Results */}
                       <Grid item xs={12} sm={6} sx={{ mb: 2 }}>
@@ -671,7 +653,7 @@ const AiAgentProjectSettings = () => {
 
                   {/* list of existing tools */}
                   <Grid item xs={12}>
-                    <Stack direction='row' spacing={2} flexWrap='wrap'>
+                    <Stack direction='row' spacing={2} useFlexGap flexWrap='wrap'>
                       {aiTools.map((tool, idx) => {
                         console.log(`Tool #${idx + 1} :`, tool);
                         const toolSchemaObj = JSON.parse(tool.jsonSchema)
@@ -696,13 +678,40 @@ const AiAgentProjectSettings = () => {
                               deleteIcon={<Icon icon='mdi:close'/>}
                               icon={<Icon icon='mdi:curly-braces'/>}
                               label={toolSchemaObj.name}
-                              sx={{mb: 1}}
+                              size='small'
                             />
                           </Tooltip>
                         )
                         }
                       )}
 
+                      {/* tools the agent's skills bring: not stored on the agent, so they are removed with the skill */}
+                      {(() => {
+                        const ownToolNames = new Set(aiTools.map(tool => JSON.parse(tool.jsonSchema).name))
+                        const fromSkills = new Map()
+                        ;(agentSkills || []).forEach(skill =>
+                          parseSkill(skill.content).tools
+                            .filter(name => !ownToolNames.has(name))
+                            .forEach(name => fromSkills.set(name, [...(fromSkills.get(name) || []), skill.name]))
+                        )
+                        const descriptions = new Map(skillTools.map(tool => [tool.name, tool.description]))
+
+                        return [...fromSkills.keys()].sort().map(name => (
+                          <Tooltip
+                            key={`skill-tool-${name}`}
+                            title={`${descriptions.get(name) || ''}\n\nFrom the skill ${fromSkills.get(name).join(', ')}`.trim()}
+                            arrow
+                            placement='top'
+                            componentsProps={{
+                              tooltip: {
+                                sx: {whiteSpace: 'pre-line', maxWidth: 300}
+                              }
+                            }}
+                          >
+                            <Chip variant='filled' icon={<Icon icon='mdi:curly-braces'/>} label={name} size='small' />
+                          </Tooltip>
+                        ))
+                      })()}
                     </Stack>
                   </Grid>
                   {/* add tool button */}
@@ -783,6 +792,12 @@ const AiAgentProjectSettings = () => {
                       </FormControl>
 
                       {/* JSON editor */}
+                      <TextField select fullWidth label='Client tool execution' value={toolExecution}
+                        onChange={event => setToolExecution(event.target.value)} sx={{ mb: 2 }}
+                        helperText='Built-in Gendox tools always run on the server.'>
+                        <MenuItem value='ACTION'>Async — continue without the result</MenuItem>
+                        <MenuItem value='CLIENT'>Sync — wait for the host result</MenuItem>
+                      </TextField>
                       <TextField
                         fullWidth
                         multiline
@@ -810,14 +825,25 @@ const AiAgentProjectSettings = () => {
                   </Dialog>
                 </>
 
-                {/* 4. Access */}
+                {/* 4. Skills */}
+                <AgentSkillsSection
+                  sectionNumber={4}
+                  skills={agentSkills}
+                  onChange={updated => setValue('agentSkills', updated, { shouldDirty: true })}
+                  library={skillLibrary}
+                  libraryLoading={isFetchingSkillLibrary}
+                  onOpenLibrary={() => token && dispatch(fetchSkillLibrary({ token }))}
+                  knownTools={skillTools.map(tool => tool.name)}
+                />
+
+                {/* 5. Access */}
                 <>
                   <Grid item xs={12}>
                     <Divider sx={{ mt: 5, mb: '0 !important' }} />
                   </Grid>
                   <Grid item xs={12} sx={{ display: 'flex', alignItems: 'center' }}>
                     <Typography variant='body2' sx={{ fontWeight: 600, color: 'primary.main' }}>
-                      4. Access
+                      5. Access
                     </Typography>
                     <Tooltip title='With a public Agent you can use the API without any authentication, use with caution.'>
                       <IconButton color='primary' sx={{ ml: 1 }}>

@@ -107,7 +107,7 @@ public class MistralCompletionResponse {
                 @NoArgsConstructor
                 public static class ToolFunction {
                     private String name;
-                    private Map<String, Object> arguments;
+                    private JsonNode arguments;
                 }
             }
         }

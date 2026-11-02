@@ -23,7 +23,7 @@ class WordToPdfConverterTest {
         Path docxPath = tempDir.resolve("sample.docx");
         Files.copy(docx.getInputStream(), docxPath);
 
-        Path pdfPath = converter.convertDocxToPdf(docxPath, "classpath:sample.docx", tempDir);
+        Path pdfPath = converter.convertDocxToPdf(docxPath);
 
         assertTrue(Files.exists(pdfPath), "PDF file should exist");
         assertTrue(Files.size(pdfPath) > 0, "PDF should not be empty");
@@ -33,7 +33,21 @@ class WordToPdfConverterTest {
         }
 
         // second call should reuse cache
-        Path cached = converter.convertDocxToPdf(docxPath, "classpath:sample.docx", tempDir);
+        Path cached = converter.convertDocxToPdf(docxPath);
         assertEquals(pdfPath, cached);
+    }
+
+    @Test
+    void convertDocxToPdf_writesThePdfNextToTheDocx(@TempDir Path tempDir) throws Exception {
+        Path docxPath = tempDir.resolve("run-1-sample.docx");
+        Files.copy(new ClassPathResource("/test-data/word-docs/file-sample_100kB.docx").getInputStream(), docxPath);
+
+        Path pdfPath = converter.convertDocxToPdf(docxPath);
+
+        // it shares the DOCX's prefix, so it is deleted with it
+        assertEquals(tempDir.resolve("run-1-sample.docx.pdf"), pdfPath);
+        try (var files = Files.list(tempDir)) {
+            assertEquals(2, files.count(), "no partial file is left behind");
+        }
     }
 }

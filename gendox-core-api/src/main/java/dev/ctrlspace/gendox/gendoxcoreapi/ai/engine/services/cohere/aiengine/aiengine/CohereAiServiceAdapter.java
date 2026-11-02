@@ -1,5 +1,9 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.cohere.aiengine.aiengine;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.CompletionDelta;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.ProviderStreamClient;
+import java.util.function.Consumer;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.CohereRerankResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.cohere.request.CohereCompletionRequest;
@@ -13,6 +17,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterSe
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.CohereConfig;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.CohereCompletionResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.CohereEmbeddingResponseConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.ToolDtoConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiTools;
 import org.apache.logging.log4j.util.Strings;
@@ -37,20 +42,26 @@ public class CohereAiServiceAdapter implements AiModelApiAdapterService {
 
     private Set<String> supportedApiTypeNames = Set.of("COHERE_API");
     private RestTemplate restTemplate;
+    // Reads the streamed frames; the non-streaming path keeps using the RestTemplate's converters
+    @Autowired
+    private ObjectMapper objectMapper;
     private CohereCompletionResponseConverter cohereCompletionResponseConverter;
     private CohereEmbeddingResponseConverter cohereEmbeddingResponseConverter;
     private CohereRerankResponseConverter cohereRerankResponseConverter;
+    private ToolDtoConverter toolDtoConverter;
 
 
     @Autowired
     public CohereAiServiceAdapter(CohereCompletionResponseConverter cohereCompletionResponseConverter,
                                   CohereEmbeddingResponseConverter cohereEmbeddingResponseConverter,
                                     CohereRerankResponseConverter cohereRerankResponseConverter,
-                                  RestTemplate restTemplate) {
+                                  RestTemplate restTemplate,
+                                  ToolDtoConverter toolDtoConverter) {
         this.cohereEmbeddingResponseConverter = cohereEmbeddingResponseConverter;
         this.cohereCompletionResponseConverter = cohereCompletionResponseConverter;
         this.cohereRerankResponseConverter = cohereRerankResponseConverter;
         this.restTemplate = restTemplate;
+        this.toolDtoConverter = toolDtoConverter;
     }
 
     private HttpHeaders buildHeader(String apiKey) {
@@ -122,6 +133,13 @@ public class CohereAiServiceAdapter implements AiModelApiAdapterService {
 
     @Override
     public CompletionResponse askCompletion(List<AiModelMessage> messages, String agentRole, AiModel aiModel, AiModelRequestParams aiModelRequestParams, String apiKey, List<AiTools> tools, String toolChoice, @Nullable ObjectNode responseJsonSchema) {
+        return askCompletion(messages, agentRole, aiModel, aiModelRequestParams, apiKey, tools, toolChoice, responseJsonSchema, null);
+    }
+
+    /** @param deltas receives the tokens as they arrive; null sends an ordinary (non-streaming) request */
+    @Override
+    public CompletionResponse askCompletion(List<AiModelMessage> messages, String agentRole, AiModel aiModel, AiModelRequestParams aiModelRequestParams, String apiKey, List<AiTools> tools, String toolChoice, @Nullable ObjectNode responseJsonSchema,
+                                            @Nullable Consumer<CompletionDelta> deltas) {
 
         if (Strings.isNotEmpty(agentRole)) {
             messages.add(0, AiModelMessage.builder().role("user").content(agentRole).build());
@@ -132,22 +150,55 @@ public class CohereAiServiceAdapter implements AiModelApiAdapterService {
                 .model(aiModel.getModel())
                 .messages(
                         messages.stream()
-                                .map(message -> CohereCompletionRequest.Message.builder()
-                                        .role(message.getRole())
-                                        .content(List.of(CohereCompletionRequest.Message.Content.builder()
-                                                .type("text")
-                                                .text(message.getContent())
-                                                .build()))
-                                        .build())
+                                .map(CohereAiServiceAdapter::toCohereMessage)
                                 .toList()
                 );
+
+        if (tools != null && !tools.isEmpty()) {
+            cohereCommandRequestBuilder
+                    .tools(tools.stream().map(toolDtoConverter::toToolDto).toList())
+                    .tool_choice(cohereToolChoice(toolChoice));
+        }
 
 
 
         CohereCompletionRequest cohereCompletionRequest = cohereCommandRequestBuilder.build();
-        CohereCompletionResponse cohereCompletionResponse = this.getCompletionResponse(cohereCompletionRequest, aiModel, apiKey);
+        CohereCompletionResponse cohereCompletionResponse;
+        if (deltas == null) {
+            cohereCompletionResponse = this.getCompletionResponse(cohereCompletionRequest, aiModel, apiKey);
+        } else {
+            cohereCompletionResponse = ProviderStreamClient.complete(restTemplate, objectMapper, aiModel.getUrl(), buildHeader(apiKey),
+                    cohereCompletionRequest, ProviderStreamClient.Protocol.COHERE, CohereCompletionResponse.class, deltas);
+        }
 
         return cohereCompletionResponseConverter.toCompletionResponse(cohereCompletionResponse);
+    }
+
+    private static CohereCompletionRequest.Message toCohereMessage(AiModelMessage message) {
+        CohereCompletionRequest.Message.MessageBuilder cohereMessage = CohereCompletionRequest.Message.builder()
+                .role(message.getRole())
+                .tool_call_id(message.getToolCallId());
+        if (Strings.isNotEmpty(message.getContent())) {
+            cohereMessage.content(List.of(CohereCompletionRequest.Message.Content.builder()
+                    .type("text")
+                    .text(message.getContent())
+                    .build()));
+        }
+        if (message.getToolCalls() != null && !message.getToolCalls().isEmpty()) {
+            cohereMessage.tool_calls(message.getToolCalls()).tool_plan(message.getReasoningContent());
+        }
+        return cohereMessage.build();
+    }
+
+    // Cohere has no "auto": the model decides when tool_choice is left out
+    private static String cohereToolChoice(String toolChoice) {
+        if ("required".equalsIgnoreCase(toolChoice)) {
+            return "REQUIRED";
+        }
+        if ("none".equalsIgnoreCase(toolChoice)) {
+            return "NONE";
+        }
+        return null;
     }
 
     @Override

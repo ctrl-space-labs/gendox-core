@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.cohere.response;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.JsonNode;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -25,6 +26,9 @@ public class CohereCompletionResponse {
     public static class Message {
         private String role; // "assistant"
         private List<Content> content;
+        // When the model calls tools: its plan, and the calls in the OpenAI shape
+        private String tool_plan;
+        private JsonNode tool_calls;
 
         @Data
         @Builder(toBuilder = true)

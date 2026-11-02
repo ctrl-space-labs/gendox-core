@@ -10,6 +10,9 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.anthropic.request
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxRuntimeException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiTools;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ContentPart;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
@@ -18,6 +21,8 @@ import java.util.List;
 
 @Component
 public class AnthropicMessagesConverter {
+
+    private static final Logger logger = LoggerFactory.getLogger(AnthropicMessagesConverter.class);
 
     private final ObjectMapper objectMapper;
 
@@ -102,9 +107,21 @@ public class AnthropicMessagesConverter {
                     .build();
         }
         String text = m.getContent() != null ? m.getContent() : "";
+        List<AnthropicContentBlock> blocks = new ArrayList<>();
+        // Images before the text, as Anthropic recommends; the text stays last, where the cache breakpoint goes
+        if ("user".equals(role) && m.getContentParts() != null) {
+            for (ContentPart part : m.getContentParts()) {
+                if ("image_url".equals(part.getType()) && part.getImageUrl() != null && part.getImageUrl().getUrl() != null) {
+                    blocks.add(new AnthropicContentBlock.Image(AnthropicContentBlock.ImageSource.of(part.getImageUrl().getUrl())));
+                } else if (!"text".equals(part.getType())) {
+                    logger.warn("Content part of type '{}' is not supported by the Anthropic adapter; dropping it.", part.getType());
+                }
+            }
+        }
+        blocks.add(new AnthropicContentBlock.Text(text));
         return AnthropicCompletionRequest.Message.builder()
                 .role(role)
-                .content(List.of(new AnthropicContentBlock.Text(text)))
+                .content(blocks)
                 .build();
     }
 

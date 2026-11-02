@@ -6,6 +6,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.anthropic.request
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.anthropic.request.AnthropicContentBlock;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiTools;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ContentPart;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -13,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -101,6 +103,38 @@ class AnthropicMessagesConverterTest {
         assertEquals("sig-abc", wire.get(0).get("signature").asText());
         assertEquals("redacted_thinking", wire.get(1).get("type").asText());
         assertEquals("enc-xyz", wire.get(1).get("data").asText());
+    }
+
+    @Test
+    void mapMessages_userImagePartsBecomeImageBlocksBeforeTheText() {
+        AiModelMessage message = AiModelMessage.builder()
+                .role("user")
+                .content("Transcribe this page")
+                .contentParts(List.of(
+                        ContentPart.builder()
+                                .type("image_url")
+                                .imageUrl(ContentPart.ImageInput.builder().url("data:image/jpeg;base64,AAAA").build())
+                                .build(),
+                        ContentPart.builder()
+                                .type("image_url")
+                                .imageUrl(ContentPart.ImageInput.builder().url("https://example.com/page.png").build())
+                                .build()))
+                .build();
+
+        List<AnthropicContentBlock> blocks = converter.mapMessages(List.of(message)).messages().getFirst().getContent();
+
+        assertEquals(List.of(
+                new AnthropicContentBlock.Image(new AnthropicContentBlock.ImageSource("base64", "image/jpeg", "AAAA", null)),
+                new AnthropicContentBlock.Image(new AnthropicContentBlock.ImageSource("url", null, null, "https://example.com/page.png")),
+                new AnthropicContentBlock.Text("Transcribe this page")
+        ), blocks);
+
+        JsonNode json = objectMapper.valueToTree(blocks.getFirst());
+        assertEquals("image", json.get("type").asText());
+        assertEquals("base64", json.get("source").get("type").asText());
+        assertEquals("image/jpeg", json.get("source").get("media_type").asText());
+        assertEquals("AAAA", json.get("source").get("data").asText());
+        assertFalse(json.get("source").has("url"));
     }
 
     @Test

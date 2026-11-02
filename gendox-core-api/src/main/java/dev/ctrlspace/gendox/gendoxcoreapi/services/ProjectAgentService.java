@@ -5,6 +5,7 @@ import dev.ctrlspace.gendox.authentication.AuthenticationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxRuntimeException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.AgentSkill;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiTools;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
@@ -13,6 +14,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectAgentCriter
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.CryptographyUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.ProjectAgentPredicates;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.skills.SkillMarkdownParser;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.skills.SkillService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.AiModelConstants;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
 import dev.ctrlspace.provenai.ssi.issuer.VerifiablePresentationBuilder;
@@ -61,6 +64,7 @@ public class ProjectAgentService {
     private OrganizationPlanService organizationPlanService;
 
     private AiToolsRepository aiToolsRepository;
+    private SkillService skillService;
 
 
     @Autowired
@@ -73,7 +77,8 @@ public class ProjectAgentService {
                                CryptographyUtils cryptographyUtils,
                                SubscriptionAiModelTierService subscriptionAiModelTierService,
                                OrganizationPlanService organizationPlanService,
-                               AiToolsRepository aiToolsRepository
+                               AiToolsRepository aiToolsRepository,
+                               SkillService skillService
 
     ) {
         this.authenticationService = authenticationService;
@@ -86,6 +91,7 @@ public class ProjectAgentService {
         this.subscriptionAiModelTierService = subscriptionAiModelTierService;
         this.organizationPlanService = organizationPlanService;
         this.aiToolsRepository = aiToolsRepository;
+        this.skillService = skillService;
     }
 
     public ProjectAgent getAgentByProjectId(UUID projectId) {
@@ -192,18 +198,16 @@ public class ProjectAgentService {
         if (projectAgent.getRerankModel() == null) {
             projectAgent.setRerankModel(aiModelService.getByName(AiModelConstants.VOYAGE_RERANK_3_LITE));
         }
-        if (projectAgent.getAdvancedSearchModel() == null) {
-            projectAgent.setAdvancedSearchModel(aiModelService.getByName(AiModelConstants.GPT_6_LUNA));
-        }
         if (projectAgent.getModerationCheck() == null) {
             projectAgent.setModerationCheck(false);
         }
         if (projectAgent.getRerankEnable() == null) {
             projectAgent.setRerankEnable(false);
         }
-        if (projectAgent.getAdvancedSearchEnable() == null) {
-            projectAgent.setAdvancedSearchEnable(false);
+        if (projectAgent.getAdvancedSearchMode() == null) {
+            projectAgent.setAdvancedSearchMode("ALWAYS");
         }
+        validateAdvancedSearchMode(projectAgent.getAdvancedSearchMode());
         if (projectAgent.getAutoDigitization() == null) {
             projectAgent.setAutoDigitization(false);
         }
@@ -248,7 +252,6 @@ public class ProjectAgentService {
         AiModel semanticSearchModel = aiModelService.getByName(projectAgent.getSemanticSearchModel().getName());
         AiModel moderationModel = aiModelService.getByName(projectAgent.getModerationModel().getName());
         AiModel rerankModel = aiModelService.getByName(projectAgent.getRerankModel().getName());
-        AiModel advancedSearchModel = aiModelService.getByName(projectAgent.getAdvancedSearchModel().getName());
 
         UUID subscriptionPlanId = organizationPlanService
                 .getActiveOrganizationPlan(existingProjectAgent.getProject().getOrganizationId())
@@ -297,12 +300,6 @@ public class ProjectAgentService {
                     HttpStatus.FORBIDDEN);
         }
 
-        if (projectAgent.getAdvancedSearchEnable() && !subscriptionAiModelTierService.hasAccessToModelTier(subscriptionPlanId, advancedSearchModel.getModelTierType().getId())) {
-            throw new GendoxException("NO_ACCESS_TO_ADVANCED_SEARCH_MODEL",
-                    "No access to the advanced search model. Basic or Pro subscription is required",
-                    HttpStatus.FORBIDDEN);
-        }
-
         if (Boolean.TRUE.equals(projectAgent.getAutoDigitization())) {
             Type standardTier = typeService.getByCategoryAndName("MODEL_TIER", "STANDARD_MODEL");
             if (!subscriptionAiModelTierService.hasAccessToModelTier(subscriptionPlanId, standardTier.getId())) {
@@ -336,9 +333,9 @@ public class ProjectAgentService {
         if (projectAgent.getRerankModel() != null && projectAgent.getRerankEnable()) {
             existingProjectAgent.setRerankModel(aiModelService.getByName(projectAgent.getRerankModel().getName()));
         }
-        existingProjectAgent.setAdvancedSearchEnable(projectAgent.getAdvancedSearchEnable());
-        if (projectAgent.getAdvancedSearchModel() != null && projectAgent.getAdvancedSearchEnable()) {
-            existingProjectAgent.setAdvancedSearchModel(aiModelService.getByName(projectAgent.getAdvancedSearchModel().getName()));
+        if (projectAgent.getAdvancedSearchMode() != null) {
+            validateAdvancedSearchMode(projectAgent.getAdvancedSearchMode());
+            existingProjectAgent.setAdvancedSearchMode(projectAgent.getAdvancedSearchMode());
         }
         if (projectAgent.getAutoDigitization() != null) {
             existingProjectAgent.setAutoDigitization(projectAgent.getAutoDigitization());
@@ -347,9 +344,16 @@ public class ProjectAgentService {
 
 
         syncAiTools(projectAgent, existingProjectAgent);
+        syncAgentSkills(projectAgent, existingProjectAgent);
 
         existingProjectAgent = projectAgentRepository.save(existingProjectAgent);
         return existingProjectAgent;
+    }
+
+    private void validateAdvancedSearchMode(String mode) {
+        if (!Set.of("ALWAYS", "AUTO", "OFF").contains(mode)) {
+            throw new GendoxRuntimeException(HttpStatus.BAD_REQUEST, "INVALID_ADVANCED_SEARCH_MODE", "Advanced search mode must be ALWAYS, AUTO or OFF");
+        }
     }
 
     /**
@@ -370,12 +374,19 @@ public class ProjectAgentService {
         Set<UUID> keepIds = new HashSet<>();
 
         for (AiTools incTool : incomingTools) {
+            if (incTool.getExecution() == null) {
+                incTool.setExecution("ACTION");
+            }
+            if (!Set.of("ACTION", "CLIENT").contains(incTool.getExecution())) {
+                throw new GendoxRuntimeException(HttpStatus.BAD_REQUEST, "INVALID_TOOL_EXECUTION", "Tool execution must be ACTION or CLIENT");
+            }
             UUID id = incTool.getId();
 
             if (id != null && currentToolsById.containsKey(id)) {
                 // update existing
                 AiTools managed = currentToolsById.get(id);
                 managed.setJsonSchema(incTool.getJsonSchema());
+                managed.setExecution(incTool.getExecution());
 
                 keepIds.add(id);
             } else {
@@ -389,6 +400,86 @@ public class ProjectAgentService {
             UUID id = t.getId();
             return id != null && !keepIds.contains(id);
         });
+    }
+
+
+    /**
+     * Sync the skills between the incoming ProjectAgent (source) and the persisted one (target),
+     * the same way {@link #syncAiTools} does for tools. A null list leaves the skills as they are.
+     *
+     * <ul>
+     *   <li>A copy of a Gendox skill ({@code skillId} set) is read-only; it changes only when Gendox
+     *       publishes a new version.</li>
+     *   <li>A new row with a {@code skillId} is copied from the catalog on the server; the content the
+     *       client sent is ignored.</li>
+     *   <li>A skill the user wrote is re-read from its SKILL.md, so name and description always
+     *       match the front matter.</li>
+     * </ul>
+     */
+    // package-private for tests
+    void syncAgentSkills(ProjectAgent source, ProjectAgent target) throws GendoxException {
+        List<AgentSkill> incomingSkills = source.getAgentSkills();
+        if (incomingSkills == null) {
+            return;
+        }
+
+        Map<UUID, AgentSkill> currentById = target.getAgentSkills().stream()
+                .collect(Collectors.toMap(AgentSkill::getId, Function.identity()));
+        Set<UUID> keepIds = new HashSet<>();
+        List<AgentSkill> added = new ArrayList<>();
+
+        for (AgentSkill incoming : incomingSkills) {
+            UUID id = incoming.getId();
+            AgentSkill managed = id != null ? currentById.get(id) : null;
+
+            if (managed != null) {
+                keepIds.add(id);
+                if (managed.getSkillId() != null) {
+                    if (incoming.getContent() != null && !incoming.getContent().equals(managed.getContent())) {
+                        throw new GendoxException("SKILL_READ_ONLY",
+                                "The Gendox skill " + managed.getName() + " can't be edited. Edit a copy instead.",
+                                HttpStatus.BAD_REQUEST);
+                    }
+                    continue;
+                }
+                SkillMarkdownParser.ParsedSkill parsed = skillService.parse(incoming.getContent());
+                managed.setName(parsed.name());
+                managed.setDescription(parsed.description());
+                managed.setContent(parsed.content());
+                continue;
+            }
+
+            AgentSkill created;
+            if (incoming.getSkillId() != null) {
+                var librarySkill = skillService.getLibrarySkillById(incoming.getSkillId());
+                created = AgentSkill.builder()
+                        .skillId(librarySkill.getId())
+                        .name(librarySkill.getName())
+                        .description(librarySkill.getDescription())
+                        .content(librarySkill.getContent())
+                        .build();
+            } else {
+                SkillMarkdownParser.ParsedSkill parsed = skillService.parse(incoming.getContent());
+                created = AgentSkill.builder()
+                        .name(parsed.name())
+                        .description(parsed.description())
+                        .content(parsed.content())
+                        .build();
+            }
+            created.setAgent(target);
+            added.add(created);
+        }
+
+        target.getAgentSkills().removeIf(s -> s.getId() != null && !keepIds.contains(s.getId()));
+        target.getAgentSkills().addAll(added);
+
+        Set<String> names = new HashSet<>();
+        for (AgentSkill skill : target.getAgentSkills()) {
+            if (!names.add(skill.getName())) {
+                throw new GendoxException("SKILL_NAME_DUPLICATE",
+                        "This agent already has a skill named " + skill.getName(), HttpStatus.BAD_REQUEST);
+            }
+        }
     }
 
 

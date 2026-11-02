@@ -14,11 +14,13 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
+import java.nio.file.StandardCopyOption;
+import java.util.UUID;
 
 /**
  * Converts {@code .docx} files to PDF using docx4j-export-fo (Apache FOP).
- * Output PDFs are cached under the gendox temp directory for reuse within a JVM run.
+ * The PDF is written next to its DOCX, as {@code <docx file name>.pdf}, and reused while it is there,
+ * so it shares the DOCX's temp-file prefix and is deleted with it.
  * Legacy {@code .doc} is not supported by docx4j — use LibreOffice or keep POI text extraction.
  */
 @Component
@@ -27,29 +29,29 @@ public class WordToPdfConverter {
     private static final Logger logger = LoggerFactory.getLogger(WordToPdfConverter.class);
 
     /**
-     * Converts the DOCX at {@code docxFile} to a cached PDF in {@code tempDir}.
+     * Converts the DOCX at {@code docxFile} to a PDF next to it.
      *
      * @param docxFile  path to a local {@code .docx} file
-     * @param cacheKey  stable key for the cache file (typically the document URL)
-     * @param tempDir   directory for cached PDFs (e.g. {@code DownloadService#getTempDir()})
-     * @return path to the generated (or cached) PDF
+     * @return path to the generated (or already generated) PDF
      */
-    public Path convertDocxToPdf(Path docxFile, String cacheKey, Path tempDir) throws GendoxException, IOException {
-        Files.createDirectories(tempDir);
-        Path pdfPath = tempDir.resolve(buildPdfCacheFileName(cacheKey));
+    public Path convertDocxToPdf(Path docxFile) throws GendoxException, IOException {
+        Path pdfPath = docxFile.resolveSibling(docxFile.getFileName() + ".pdf");
 
-        if (Files.exists(pdfPath) && Files.size(pdfPath) > 0) {
-            logger.debug("Reusing cached DOCX PDF: {}", pdfPath);
+        if (Files.exists(pdfPath)) {
+            logger.debug("Reusing converted DOCX PDF: {}", pdfPath);
             return pdfPath;
         }
 
         PhysicalFonts.setRegex(".*(calibri|cambria|arial|times|cour|symbol|wing).*");
 
+        // Written under a name of its own, then moved into place, so a concurrent caller never reads a partial PDF
+        Path partialPdf = pdfPath.resolveSibling(pdfPath.getFileName() + "." + UUID.randomUUID() + ".part");
         try {
             WordprocessingMLPackage pkg = WordprocessingMLPackage.load(docxFile.toFile());
-            try (OutputStream out = Files.newOutputStream(pdfPath, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
+            try (OutputStream out = Files.newOutputStream(partialPdf)) {
                 Docx4J.toPDF(pkg, out);
             }
+            Files.move(partialPdf, pdfPath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
             logger.debug("Converted DOCX to PDF: {} -> {}", docxFile, pdfPath);
             return pdfPath;
         } catch (Docx4JException e) {
@@ -58,11 +60,8 @@ public class WordToPdfConverter {
                     "Failed to convert DOCX to PDF: " + e.getMessage(),
                     HttpStatus.INTERNAL_SERVER_ERROR,
                     e);
+        } finally {
+            Files.deleteIfExists(partialPdf);
         }
-    }
-
-    private static String buildPdfCacheFileName(String cacheKey) {
-        int hash = cacheKey != null ? cacheKey.hashCode() : 0;
-        return "docx-pdf-" + Integer.toUnsignedString(hash) + ".pdf";
     }
 }

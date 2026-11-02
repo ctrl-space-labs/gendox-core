@@ -1,6 +1,8 @@
+import { useEffect } from 'react'
+import { useIFrameMessageManager } from 'src/authentication/context/IFrameMessageManagerContext'
 import { Box, useMediaQuery, useTheme } from '@mui/material'
 import { useDispatch, useSelector } from 'react-redux'
-import { fetchMessageMetadata } from 'src/store/chat/gendoxChat'
+import { fetchMessageMetadata, recoverCompletion, submitClientToolResult } from 'src/store/chat/gendoxChat'
 import { ResponsiveCardContent } from 'src/utils/responsiveCardContent'
 import { localStorageConstants } from '../../../utils/generalConstants'
 import { useRouter } from 'next/router'
@@ -11,11 +13,15 @@ import ChatConversationHeader from 'src/views/pages/chat/conversation-components
 import AiResponseLoader from 'src/views/pages/chat/conversation-components/AiResponseLoader'
 import ChatConversationThreadMessagesArea from 'src/views/pages/chat/conversation-components/ChatConversationThreadMessagesArea'
 
+const ACTIVE_COMPLETION_STATUSES = ['GENERATING', 'WAITING_FOR_TOOLS']
+const COMPLETION_POLL_MS = 2000
+
 // ─────────────────────────────────────────────────────────────────────────────
 // GendoxChat – Parent component containing the three sub‐components
 // ─────────────────────────────────────────────────────────────────────────────
 const ChatConversation = props => {
   const dispatch = useDispatch()
+  const iFrameMessageManager = useIFrameMessageManager()
   const theme = useTheme()
   /**
    *  The below variable will hide the current layout menu at given screen size.
@@ -31,9 +37,49 @@ const ChatConversation = props => {
   const { organizationId, projectId } = router.query
   const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
   // Grab state data from Redux
-  const { currentThread, isSendingMessage, isLoadingMessages } = useSelector(
+  const { currentThread, isSendingMessage, isLoadingMessages, completionStatus, isStreaming } = useSelector(
     state => state.gendoxChat
   )
+
+  // A turn that runs without a stream on this page (after a reload, or while it waits for tools) is followed by polling
+  const followsTurnByPolling = !isStreaming && ACTIVE_COMPLETION_STATUSES.includes(completionStatus)
+
+  const checkCompletion = () => {
+    dispatch(recoverCompletion({ threadId: currentThread.threadId, projectId: currentThread.projectId,
+      organizationId: currentThread.organizationId, token, iFrameMessageManager }))
+  }
+
+  // Once per opened thread: a turn may still be running from before the page loaded
+  useEffect(() => {
+    if (!currentThread?.threadId) {
+      return
+    }
+    checkCompletion()
+  }, [currentThread?.threadId])
+
+  useEffect(() => {
+    if (!currentThread?.threadId || !followsTurnByPolling) {
+      return
+    }
+    const timer = setInterval(checkCompletion, COMPLETION_POLL_MS)
+    return () => clearInterval(timer)
+  }, [currentThread?.threadId, followsTurnByPolling])
+
+  useEffect(() => {
+    const manager = iFrameMessageManager?.messageManager
+    if (!manager || !currentThread?.projectId) return
+    const handler = event => {
+      if (event.type !== 'gendox.events.chat.message.tool_calls.response') return
+      for (const result of event.payload || []) {
+        if (result.threadId !== currentThread.threadId) continue
+        dispatch(submitClientToolResult({ result, token, projectId: currentThread.projectId,
+          organizationId: currentThread.organizationId, iFrameMessageManager }))
+      }
+    }
+    manager.addHandler(handler)
+    manager.sendMessage({ type: 'gendox.events.chat.message.tool_calls.ready', payload: { threadId: currentThread.threadId } })
+    return () => manager.removeHandler(handler)
+  }, [currentThread?.threadId, currentThread?.projectId, token, dispatch, iFrameMessageManager])
 
   return (
     <ResponsiveCardContent
@@ -81,7 +127,7 @@ const ChatConversation = props => {
           />
         </Box>
 
-        <AiResponseLoader isSending={isSendingMessage} />
+        <AiResponseLoader isSending={isSendingMessage} completionStatus={completionStatus} />
 
         <Box sx={{ p: '0.5rem' }}>
           <ChatConversationInputSection

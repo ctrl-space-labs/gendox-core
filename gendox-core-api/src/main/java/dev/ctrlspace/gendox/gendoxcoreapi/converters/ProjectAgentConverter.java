@@ -42,12 +42,8 @@ public class ProjectAgentConverter implements GendoxConverter<ProjectAgent, Proj
             projectAgentDTO.setRerankModel(projectAgent.getRerankModel());
         }
 
-        if(projectAgent.getAdvancedSearchEnable() != null) {
-            projectAgentDTO.setAdvancedSearchEnable(projectAgent.getAdvancedSearchEnable());
-        }
-
-        if(projectAgent.getAdvancedSearchModel() != null) {
-            projectAgentDTO.setAdvancedSearchModel(projectAgent.getAdvancedSearchModel());
+        if (projectAgent.getAdvancedSearchMode() != null) {
+            projectAgentDTO.setAdvancedSearchMode(projectAgent.getAdvancedSearchMode());
         }
 
         if (projectAgent.getAutoDigitization() != null) {
@@ -55,6 +51,7 @@ public class ProjectAgentConverter implements GendoxConverter<ProjectAgent, Proj
         }
 
         projectAgentDTO.setAiTools(projectAgent.getAiTools());
+        projectAgentDTO.setAgentSkills(projectAgent.getAgentSkills());
 
 
         return projectAgentDTO;
@@ -96,12 +93,8 @@ public class ProjectAgentConverter implements GendoxConverter<ProjectAgent, Proj
             projectAgent.setRerankModel(projectAgentDTO.getRerankModel());
         }
 
-        if (projectAgentDTO.getAdvancedSearchEnable() != null) {
-            projectAgent.setAdvancedSearchEnable(projectAgentDTO.getAdvancedSearchEnable());
-        }
-
-        if (projectAgentDTO.getAdvancedSearchModel() != null) {
-            projectAgent.setAdvancedSearchModel(projectAgentDTO.getAdvancedSearchModel());
+        if (projectAgentDTO.getAdvancedSearchMode() != null) {
+            projectAgent.setAdvancedSearchMode(projectAgentDTO.getAdvancedSearchMode());
         }
 
         if (projectAgentDTO.getAutoDigitization() != null) {
@@ -109,6 +102,7 @@ public class ProjectAgentConverter implements GendoxConverter<ProjectAgent, Proj
         }
 
         projectAgent.setAiTools(projectAgentDTO.getAiTools());
+        projectAgent.setAgentSkills(projectAgentDTO.getAgentSkills());
 
         return projectAgent;
     }

@@ -77,6 +77,11 @@ const ThreadMessagesArea = ({
     }
   }, [currentThread?.messages?.length, isLoadingMessages])
 
+  useEffect(() => {
+    const el = getScrollEl()
+    if (el && el.scrollHeight - el.scrollTop - el.clientHeight < 240) scrollToBottom()
+  }, [currentThread?.messages])
+
   /**
    * Turn the raw message list that comes from the server into a list that
    * the UI can render directly.
@@ -249,7 +254,7 @@ const ThreadMessagesArea = ({
                       )}
                     </Box>
                   </Box>
-                  {!nextIsToolCall && (
+                  {!nextIsToolCall && !message.isStreaming && message.messageId && (
                     <MessageActions
                       message={message}
                       isMyMessage={isMyMessage}

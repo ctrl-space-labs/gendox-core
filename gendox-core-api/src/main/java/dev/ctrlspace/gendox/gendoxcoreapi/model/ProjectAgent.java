@@ -126,13 +126,10 @@ public class ProjectAgent {
     @JoinColumn(name= "rerank_model_id", referencedColumnName = "id", nullable = true)
     private AiModel rerankModel;
 
+    // ALWAYS, AUTO or OFF: how chat retrieves project knowledge
     @Basic
-    @Column(name= "advanced_search_enable")
-    private Boolean advancedSearchEnable;
-
-    @ManyToOne
-    @JoinColumn(name= "advanced_search_model_id", referencedColumnName = "id", nullable = true)
-    private AiModel advancedSearchModel;
+    @Column(name = "advanced_search_mode")
+    private String advancedSearchMode;
 
     @Basic
     @Column(name = "auto_digitization")
@@ -141,6 +138,11 @@ public class ProjectAgent {
     @JsonManagedReference(value = "aiTools")
     @OneToMany(mappedBy = "agent", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<AiTools> aiTools = new ArrayList<>();
+
+    @JsonManagedReference(value = "agentSkills")
+    @OneToMany(mappedBy = "agent", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("name ASC")
+    private List<AgentSkill> agentSkills = new ArrayList<>();
 
     public UUID getId() {
         return id;
@@ -368,20 +370,27 @@ public class ProjectAgent {
         this.aiTools = aiTools;
     }
 
-    public Boolean getAdvancedSearchEnable() {
-        return advancedSearchEnable;
+    public List<AgentSkill> getAgentSkills() {
+        return agentSkills;
     }
 
-    public void setAdvancedSearchEnable(Boolean advancedSearchEnable) {
-        this.advancedSearchEnable = advancedSearchEnable;
+    public void setAgentSkills(List<AgentSkill> agentSkills) {
+        this.agentSkills = agentSkills;
     }
 
-    public AiModel getAdvancedSearchModel() {
-        return advancedSearchModel;
+    @PrePersist
+    void defaultAdvancedSearchMode() {
+        if (advancedSearchMode == null) {
+            advancedSearchMode = "ALWAYS";
+        }
     }
 
-    public void setAdvancedSearchModel(AiModel advancedSearchModel) {
-        this.advancedSearchModel = advancedSearchModel;
+    public String getAdvancedSearchMode() {
+        return advancedSearchMode;
+    }
+
+    public void setAdvancedSearchMode(String advancedSearchMode) {
+        this.advancedSearchMode = advancedSearchMode;
     }
 
     public Boolean getAutoDigitization() {
@@ -396,11 +405,11 @@ public class ProjectAgent {
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
         ProjectAgent agent = (ProjectAgent) o;
-        return Objects.equals(id, agent.id) && Objects.equals(project, agent.project) && Objects.equals(userId, agent.userId) && Objects.equals(semanticSearchModel, agent.semanticSearchModel) && Objects.equals(completionModel, agent.completionModel) && Objects.equals(decisionModel, agent.decisionModel) && Objects.equals(agentName, agent.agentName) && Objects.equals(agentBehavior, agent.agentBehavior) && Objects.equals(privateAgent, agent.privateAgent) && Objects.equals(createdAt, agent.createdAt) && Objects.equals(updatedAt, agent.updatedAt) && Objects.equals(createdBy, agent.createdBy) && Objects.equals(updatedBy, agent.updatedBy) && Objects.equals(documentSplitterType, agent.documentSplitterType) && Objects.equals(chatTemplateId, agent.chatTemplateId) && Objects.equals(sectionTemplateId, agent.sectionTemplateId) && Objects.equals(maxToken, agent.maxToken) && Objects.equals(temperature, agent.temperature) && Objects.equals(topP, agent.topP) && Objects.equals(moderationCheck, agent.moderationCheck) && Objects.equals(moderationModel, agent.moderationModel) && Objects.equals(agentVcJwt, agent.agentVcJwt) && Objects.equals(organizationDid, agent.organizationDid) && Objects.equals(maxSearchLimit, agent.maxSearchLimit) && Objects.equals(maxCompletionLimit, agent.maxCompletionLimit) && Objects.equals(rerankEnable, agent.rerankEnable) && Objects.equals(rerankModel, agent.rerankModel) && Objects.equals(advancedSearchEnable, agent.advancedSearchEnable) && Objects.equals(advancedSearchModel, agent.advancedSearchModel) && Objects.equals(aiTools, agent.aiTools);
+        return Objects.equals(id, agent.id) && Objects.equals(project, agent.project) && Objects.equals(userId, agent.userId) && Objects.equals(semanticSearchModel, agent.semanticSearchModel) && Objects.equals(completionModel, agent.completionModel) && Objects.equals(decisionModel, agent.decisionModel) && Objects.equals(agentName, agent.agentName) && Objects.equals(agentBehavior, agent.agentBehavior) && Objects.equals(privateAgent, agent.privateAgent) && Objects.equals(createdAt, agent.createdAt) && Objects.equals(updatedAt, agent.updatedAt) && Objects.equals(createdBy, agent.createdBy) && Objects.equals(updatedBy, agent.updatedBy) && Objects.equals(documentSplitterType, agent.documentSplitterType) && Objects.equals(chatTemplateId, agent.chatTemplateId) && Objects.equals(sectionTemplateId, agent.sectionTemplateId) && Objects.equals(maxToken, agent.maxToken) && Objects.equals(temperature, agent.temperature) && Objects.equals(topP, agent.topP) && Objects.equals(moderationCheck, agent.moderationCheck) && Objects.equals(moderationModel, agent.moderationModel) && Objects.equals(agentVcJwt, agent.agentVcJwt) && Objects.equals(organizationDid, agent.organizationDid) && Objects.equals(maxSearchLimit, agent.maxSearchLimit) && Objects.equals(maxCompletionLimit, agent.maxCompletionLimit) && Objects.equals(rerankEnable, agent.rerankEnable) && Objects.equals(rerankModel, agent.rerankModel) && Objects.equals(advancedSearchMode, agent.advancedSearchMode) && Objects.equals(aiTools, agent.aiTools);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, project, userId, semanticSearchModel, completionModel, decisionModel, agentName, agentBehavior, privateAgent, createdAt, updatedAt, createdBy, updatedBy, documentSplitterType, chatTemplateId, sectionTemplateId, maxToken, temperature, topP, moderationCheck, moderationModel, agentVcJwt, organizationDid, maxSearchLimit, maxCompletionLimit, rerankEnable, rerankModel, advancedSearchEnable, advancedSearchModel, aiTools);
+        return Objects.hash(id, project, userId, semanticSearchModel, completionModel, decisionModel, agentName, agentBehavior, privateAgent, createdAt, updatedAt, createdBy, updatedBy, documentSplitterType, chatTemplateId, sectionTemplateId, maxToken, temperature, topP, moderationCheck, moderationModel, agentVcJwt, organizationDid, maxSearchLimit, maxCompletionLimit, rerankEnable, rerankModel, advancedSearchMode, aiTools);
     }
 }

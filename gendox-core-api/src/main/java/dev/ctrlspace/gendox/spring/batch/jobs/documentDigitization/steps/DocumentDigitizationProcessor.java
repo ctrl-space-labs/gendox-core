@@ -209,7 +209,8 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
             List<String> images = new ArrayList<>();
             if (loadImages) {
                 DocPageToImageOptions printOptions = DocPageToImageOptions.builder()
-                        .minSide(1024)
+                        .minSide(2560) // highest quality possible // TODO reevaluate how the digitization params are going to be passed, this is very expensive for some models
+                        .imageSharpen(0f)
                         .pageFrom(Collections.min(pagesToProcess))
                         .pageTo(Collections.max(pagesToProcess))
                         .build();

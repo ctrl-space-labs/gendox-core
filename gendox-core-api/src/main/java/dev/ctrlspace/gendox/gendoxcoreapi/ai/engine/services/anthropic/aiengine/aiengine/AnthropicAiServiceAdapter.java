@@ -1,5 +1,9 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.anthropic.aiengine.aiengine;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.CompletionDelta;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.ProviderStreamClient;
+import java.util.function.Consumer;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.AnthropicCompletionResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.AnthropicMessagesConverter;
@@ -35,6 +39,9 @@ public class AnthropicAiServiceAdapter implements AiModelApiAdapterService {
 
     private static final Set<String> ANTHROPIC_EFFORTS = Set.of("low", "medium", "high", "xhigh", "max");
     private RestTemplate restTemplate;
+    // Reads the streamed frames; the non-streaming path keeps using the RestTemplate's converters
+    @Autowired
+    private ObjectMapper objectMapper;
     private AnthropicCompletionResponseConverter anthropicCompletionResponseConverter;
     private AnthropicMessagesConverter anthropicMessagesConverter;
 
@@ -85,6 +92,13 @@ public class AnthropicAiServiceAdapter implements AiModelApiAdapterService {
 
     @Override
     public CompletionResponse askCompletion(List<AiModelMessage> messages, String agentRole, AiModel aiModel, AiModelRequestParams aiModelRequestParams, String apiKey, List<AiTools> tools, String toolChoice, @Nullable ObjectNode responseJsonSchema) {
+        return askCompletion(messages, agentRole, aiModel, aiModelRequestParams, apiKey, tools, toolChoice, responseJsonSchema, null);
+    }
+
+    /** @param deltas receives the tokens as they arrive; null sends an ordinary (non-streaming) request */
+    @Override
+    public CompletionResponse askCompletion(List<AiModelMessage> messages, String agentRole, AiModel aiModel, AiModelRequestParams aiModelRequestParams, String apiKey, List<AiTools> tools, String toolChoice, @Nullable ObjectNode responseJsonSchema,
+                                            @Nullable Consumer<CompletionDelta> deltas) {
         if (Strings.isNotEmpty(agentRole)) {
             upsertSystemPrompt(messages, agentRole);
         }
@@ -141,7 +155,7 @@ public class AnthropicAiServiceAdapter implements AiModelApiAdapterService {
             anthropicRequestBuilder.tools(tools.stream()
                     .map(anthropicMessagesConverter::toAnthropicToolDefinition)
                     .toList());
-            anthropicRequestBuilder.toolChoice(anthropicMessagesConverter.mapToolChoice(toolChoice));
+            anthropicRequestBuilder.toolChoice(anthropicMessagesConverter.mapToolChoice(allowedToolChoice(toolChoice, aiModel)));
         }
 
         if (aiModel.getSupportsReasoning()) {
@@ -163,9 +177,23 @@ public class AnthropicAiServiceAdapter implements AiModelApiAdapterService {
         anthropicRequestBuilder.outputConfig(outputConfig.build());
 
         AnthropicCompletionRequest anthropicRequest = anthropicRequestBuilder.build();
-        AnthropicCompletionResponse anthropicResponse = this.getCompletionResponse(anthropicRequest, aiModel, apiKey);
+        AnthropicCompletionResponse anthropicResponse;
+        if (deltas == null) {
+            anthropicResponse = this.getCompletionResponse(anthropicRequest, aiModel, apiKey);
+        } else {
+            anthropicResponse = ProviderStreamClient.complete(restTemplate, objectMapper, aiModel.getUrl(), buildHeader(apiKey),
+                    anthropicRequest, ProviderStreamClient.Protocol.ANTHROPIC, AnthropicCompletionResponse.class, deltas);
+        }
 
         return anthropicCompletionResponseConverter.toCompletionResponse(anthropicResponse);
+    }
+
+    /** With thinking on, Anthropic rejects a forced tool choice; the model is then left to its instructions. */
+    private static String allowedToolChoice(String toolChoice, AiModel aiModel) {
+        if (aiModel.getSupportsReasoning() && !"none".equalsIgnoreCase(toolChoice)) {
+            return "auto";
+        }
+        return toolChoice;
     }
 
     /** Replaying a foreign signature is rejected, so the token goes and the summary stays. */

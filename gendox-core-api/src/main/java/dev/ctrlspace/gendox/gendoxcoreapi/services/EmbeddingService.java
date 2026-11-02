@@ -17,7 +17,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.SectionDistanceDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.SearchResult;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.tools.AdvancedSearchArguments;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.tools.ToolFunctionCall;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.AiModelUtils;
@@ -47,7 +46,6 @@ import java.util.stream.Collectors;
 public class EmbeddingService {
 
     private static final Logger logger = LoggerFactory.getLogger(EmbeddingService.class);
-    private final CompletionService completionService;
 
     private EmbeddingRepository embeddingRepository;
     private AuditLogsRepository auditLogsRepository;
@@ -64,7 +62,6 @@ public class EmbeddingService {
     private OrganizationModelKeyService organizationModelKeyService;
     private AuditLogsService auditLogsService;
     private CryptographyUtils cryptographyUtils;
-    private AiToolUtils aiToolUtils;
     private EncodingRegistry encodingRegistry;
     private GCloudAuthenticationService gCloudAuthenticationService;
 
@@ -94,8 +91,6 @@ public class EmbeddingService {
             AuditLogsService auditLogsService,
             CryptographyUtils cryptographyUtils,
             RerankService rerankService,
-            @Lazy CompletionService completionService,
-            AiToolUtils aiToolUtils,
             EncodingRegistry encodingRegistry,
             GCloudAuthenticationService gCloudAuthenticationService) {
         this.embeddingRepository = embeddingRepository;
@@ -114,8 +109,6 @@ public class EmbeddingService {
         this.auditLogsService = auditLogsService;
         this.cryptographyUtils = cryptographyUtils;
         this.rerankService = rerankService;
-        this.completionService = completionService;
-        this.aiToolUtils = aiToolUtils;
         this.encodingRegistry = encodingRegistry;
         this.gCloudAuthenticationService = gCloudAuthenticationService;
     }
@@ -344,37 +337,14 @@ public class EmbeddingService {
             })
     public List<DocumentInstanceSectionDTO> findClosestSections(Message message, Project project, Pageable pageable) throws GendoxException, IOException, NoSuchAlgorithmException {
 
-        ProjectAgent agent = project.getProjectAgent();
-
-        String embeddingSearchMessage = message.getValue();
-        if (agent.getAdvancedSearchEnable()) {
-            AiModelMessage hyDE = completionService.getAdvancedSearchCompletion(message, project);
-
-            ObjectNode functionCallNode = getToolFunctionJsonNode(hyDE);
-
-            ToolFunctionCall<AdvancedSearchArguments> searchArgs = aiToolUtils.deserializeToolFunctionCall(
-                    functionCallNode,
-                    AdvancedSearchArguments.class
-            );
-
-            embeddingSearchMessage = searchArgs.getArguments().getSearchQuery();
-            logger.debug("Advanced search message: {}", embeddingSearchMessage);
-
-            if (embeddingSearchMessage == null || embeddingSearchMessage.isEmpty()) {
-                logger.debug("Advanced search message is empty, no search will be applied.");
-                embeddingSearchMessage = message.getValue();
-            }
-        }
-
-        return findClosestSectionsByQuery(embeddingSearchMessage, message.getId(), project, pageable);
+        return findClosestSectionsByQuery(message.getValue(), message.getId(), project, pageable);
     }
 
     /**
-     * Performs a full semantic search pipeline using the given query string directly, bypassing
-     * the {@code advancedSearchEnable} flag. Covers embedding → vector search → ProvenAI enrichment
+     * Performs a full semantic search pipeline using the given query string directly. Covers embedding → vector search → ProvenAI enrichment
      * → reranking. Used by {@link dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.AdvancedSearchTool}
      * so the LLM agent can trigger a targeted search at any point in its reasoning loop, and by
-     * {@link #findClosestSections} after it has optionally reformulated the query.
+     * {@link #findClosestSections} with the message's text.
      *
      * @param searchQuery the text to embed and search with
      * @param messageId   optional ID of the originating message (used for embedding caching); pass {@code null} when called outside a message context
@@ -456,27 +426,6 @@ public class EmbeddingService {
                 .peek(sectionDTO -> sectionDTO.setDistanceModelName(project.getProjectAgent().getSemanticSearchModel().getName()))
                 .sorted(Comparator.comparing(DocumentInstanceSectionDTO::getDistanceFromQuestion))
                 .collect(Collectors.toList());
-    }
-
-    /**
-     * Helper, just to not have this java crap in the main method :)
-     *
-     * @param hyDE
-     * @return
-     * @throws GendoxException
-     */
-    private static @NotNull ObjectNode getToolFunctionJsonNode(AiModelMessage hyDE) throws GendoxException {
-        ObjectNode functionCallNode;
-        try {
-            functionCallNode = (ObjectNode) hyDE.getToolCalls().get(0).get("function");
-            if (functionCallNode == null) {
-                throw new GendoxException("ADVANCED_SEARCH_FAILED", "Advanced search failed to generate a valid message.", HttpStatus.INTERNAL_SERVER_ERROR);
-            }
-            // continue processing...
-        } catch (ClassCastException | IndexOutOfBoundsException | NullPointerException e) {
-            throw new GendoxException("ADVANCED_SEARCH_FAILED", "Advanced search failed to generate a valid message.", HttpStatus.INTERNAL_SERVER_ERROR, e);
-        }
-        return functionCallNode;
     }
 
     public List<DocumentInstanceSectionDTO> findProvenAiClosestSections(String query, Project project) throws GendoxException, IOException {

@@ -28,6 +28,10 @@ public class AiTools {
     @Column(name = "type", nullable = false)
     private String type;  // "function"
 
+    @Builder.Default
+    @Column(name = "execution", nullable = false)
+    private String execution = "ACTION";
+
     @JdbcTypeCode(SqlTypes.JSON)        // transform it to jsonb in postgresql
     @Column(name = "json_schema", columnDefinition = "JSONB", nullable = false)
     private String jsonSchema;

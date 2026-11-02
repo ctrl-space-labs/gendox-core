@@ -1,5 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxRuntimeException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
@@ -9,11 +11,15 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
 public class TypeService {
+
+    private static final ObjectMapper TOOL_JSON = new ObjectMapper();
 
     private TypeRepository typeRepository;
 
@@ -32,6 +38,20 @@ public class TypeService {
                 .stream()
                 .sorted(Comparator.comparing(Type::getName, Comparator.reverseOrder()))
                 .collect(Collectors.toList());
+    }
+
+    /** The tool examples' function definitions, keyed by function name. Rows that can't be read are skipped. */
+    public Map<String, JsonNode> getToolExampleDefinitions() {
+        Map<String, JsonNode> definitions = new HashMap<>();
+        for (Type example : typeRepository.findByTypeCategory("AI_TOOL_EXAMPLES")) {
+            try {
+                JsonNode definition = TOOL_JSON.readTree(example.getDescription());
+                definitions.put(definition.path("name").asText(), definition);
+            } catch (Exception e) {
+                // not a tool definition; leave it out
+            }
+        }
+        return definitions;
     }
 
     //by category and name

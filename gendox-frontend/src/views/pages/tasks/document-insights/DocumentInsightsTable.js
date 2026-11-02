@@ -49,9 +49,8 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   const dispatch = useDispatch()
   const token = window.localStorage.getItem('accessToken')
   const { organizationId, taskId, projectId } = router.query
-  const { taskNodesDocumentList, taskNodesQuestionList, taskNodesAnswerList, isLoading } = useSelector(
-    state => state.activeTaskNode
-  )
+  const { taskNodesDocumentList, taskNodesQuestionList, taskNodesAnswerList, isLoading, pendingQuestions } =
+    useSelector(state => state.activeTaskNode)
 
   const [page, setPage] = useState(0)
   const [pageSize, setPageSize] = useState(20)
@@ -116,6 +115,11 @@ const DocumentInsightsTable = ({ selectedTask }) => {
       insightConfig: node.nodeValue?.insightConfig || { version: 1, answerMode: 'GENERATED_TEXT' }
     }))
   }, [taskNodesQuestionList])
+
+  const taskPendingQuestions = useMemo(
+    () => (pendingQuestions || []).filter(q => q.taskId === taskId),
+    [pendingQuestions, taskId]
+  )
 
   const handleMoveQuestion = useCallback(
     (questionId, direction) => {
@@ -315,6 +319,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
           title={selectedTask?.title}
           description={selectedTask?.description}
           onAddQuestion={() => openDialog('questionDetail', null, true)}
+          isAddingQuestions={taskPendingQuestions.length > 0}
           openAddDocument={() => openDialog('newDoc')}
           handleGenerate={handleGenerate}
           isPageLoading={isPageLoading}
@@ -342,6 +347,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
             openDialog={openDialog}
             documents={documents}
             questions={questions}
+            pendingQuestions={taskPendingQuestions}
             answers={answers}
             isPageLoading={isPageLoading}
             page={page}
