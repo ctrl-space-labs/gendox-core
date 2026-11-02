@@ -15,7 +15,7 @@ import invitationService from 'src/gendox-sdk/invitationService'
 import { hasPlanFeature, planFeatureMessages, planFeatures } from 'src/configs/planFeatures'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import { getToken } from 'src/components/agent/useAgent'
-import { ROLES, grantableRoles, roleInOrganization, roleTitle } from 'src/components/agent/roles'
+import { ROLES, grantableRoles, roleInOrganization, roleTitle, Role } from 'src/components/agent/roles'
 import { formatDate } from 'src/components/knowledge/documentUtils'
 import OrgScope from 'src/components/organization/OrgScope'
 import AppLayout from 'src/layouts/AppLayout'
@@ -285,7 +285,7 @@ const OrganizationMembersPage = () => {
                           width={300}
                           trigger={({ onClick }) => (
                             <button className='btn ghost s' onClick={onClick}>
-                              {roleTitle(role)}
+                              <Role role={role} />
                               <ChevronDown className='lucide' />
                             </button>
                           )}
@@ -308,7 +308,7 @@ const OrganizationMembersPage = () => {
                           ))}
                         </Menu>
                       ) : (
-                        <span className='role'>{roleTitle(role)}</span>
+                        <Role role={role} />
                       )}
                     </td>
                     <td className='hide-sm'>

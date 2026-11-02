@@ -12,7 +12,6 @@ import useChat from 'src/components/chat/useChat'
 import AppLayout from 'src/layouts/AppLayout'
 import ConfirmDialog from 'src/components/ui/ConfirmDialog'
 import SaveBar from 'src/components/ui/SaveBar'
-import Spinner from 'src/components/ui/Spinner'
 import Switch from 'src/components/ui/Switch'
 
 // one-click rules added to the instructions
@@ -107,11 +106,27 @@ const AgentBehaviorPage = () => {
     if (saved) setDraft(saved)
   }, [saved])
 
+  // the header is known from the profile; the sections are sure to come, so their shape shows while they load
   if (!project || !draft) {
     return (
-      <main className='content'>
-        <div className='center' style={{ padding: 80 }}>
-          <Spinner />
+      <main className='content' aria-busy='true'>
+        <AgentScope tab='behavior' />
+        <div className='behav'>
+          <div>
+            {[150, 70, 110, 90].map((height, i) => (
+              <section key={i} className='sect' style={i ? undefined : { paddingTop: 8, gridTemplateColumns: 'minmax(0, 1fr)' }}>
+                <header>
+                  <span className='skel' style={{ display: 'block', width: 120, height: 16 }} />
+                  <span className='skel' style={{ display: 'block', width: '90%', marginTop: 10 }} />
+                  <span className='skel' style={{ display: 'block', width: '60%', marginTop: 6 }} />
+                </header>
+                <span className='skel' style={{ display: 'block', width: '100%', height }} />
+              </section>
+            ))}
+          </div>
+          <aside className='card try'>
+            <span className='skel' style={{ display: 'block', width: '100%', height: '100%', minHeight: 320 }} />
+          </aside>
         </div>
       </main>
     )
@@ -168,6 +183,7 @@ const AgentBehaviorPage = () => {
         disabled={!canEdit}
         title={label}
         keysHref={keysHref}
+        loading={models.loading}
       />
       {help && <span className='help'>{help}</span>}
     </div>
@@ -229,8 +245,10 @@ const AgentBehaviorPage = () => {
                   disabled={!canEdit}
                   title='Answer models'
                   keysHref={keysHref}
+                  loading={models.loading}
                 />
                 {completion &&
+                  !models.loading &&
                   (needsKey(completion, models.keys) ? (
                     <ModelKeyWarning model={completion} keys={models.keys} keysHref={keysHref} />
                   ) : (
@@ -332,6 +350,7 @@ const AgentBehaviorPage = () => {
                         disabled={!canEdit}
                         title='Re-rank models'
                         keysHref={keysHref}
+                        loading={models.loading}
                       />
                     </div>
                   )}
@@ -366,6 +385,7 @@ const AgentBehaviorPage = () => {
                         disabled={!canEdit}
                         title='Moderation models'
                         keysHref={keysHref}
+                        loading={models.loading}
                       />
                     </div>
                   )}
@@ -461,6 +481,7 @@ const AgentBehaviorPage = () => {
                     disabled={!canEdit}
                     title='Search models'
                     keysHref={keysHref}
+                    loading={models.loading}
                   />
                 </div>
                 {modelField(

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import toast from 'react-hot-toast'
 import { Link as LinkIcon, Mail, MailPlus, UserRoundPlus } from 'lucide-react'
@@ -12,13 +12,14 @@ import { hasPlanFeature, planFeatureMessages, planFeatures } from 'src/configs/p
 import { getErrorMessage } from 'src/utils/errorHandler'
 import useAgent, { getToken } from 'src/components/agent/useAgent'
 import AgentScope from 'src/components/agent/AgentScope'
-import { ROLES, grantableRoles, roleInOrganization, roleTitle } from 'src/components/agent/roles'
+import AgentPageSkeleton from 'src/components/agent/AgentPageSkeleton'
+import { ROLES, ROLE_ICONS, Role, grantableRoles, roleInOrganization, roleTitle } from 'src/components/agent/roles'
 import { formatDate } from 'src/components/knowledge/documentUtils'
 import AppLayout from 'src/layouts/AppLayout'
 import Avatar from 'src/components/ui/Avatar'
 import ConfirmDialog from 'src/components/ui/ConfirmDialog'
+import { SkeletonList, SkeletonRows } from 'src/components/ui/Skeleton'
 import Dialog from 'src/components/ui/Dialog'
-import Spinner from 'src/components/ui/Spinner'
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const USER_TYPES = { GENDOX_USER: 'Person', DISCORD_USER: 'Discord' }
@@ -80,16 +81,22 @@ const InviteDialog = ({ open, onClose, agentName, organizationName, roles, canIn
         <div className='field'>
           <span className='lab'>Role in {organizationName}</span>
           <div className='choice' style={{ gridTemplateColumns: '1fr 1fr' }}>
-            {roles.map(r => (
+            {roles.map(r => {
+              const Icon = ROLE_ICONS[r]
+
+              return (
               <label key={r}>
                 <input type='radio' name='invite-role' checked={role === r} onChange={() => setRole(r)} />
+                <Icon className='lucide' />
                 <b>{ROLES[r][0]}</b>
                 <span>{ROLES[r][1]}</span>
               </label>
-            ))}
+              )
+            })}
           </div>
           <span className='help'>Someone already in {organizationName} keeps the role they have.</span>
         </div>
+        <p className='faint sm'>They get an email with a link that works for 30 days.</p>
         {!canInvite && (
           <div className='alert' style={{ '--c': 'var(--warn)' }}>
             <b>Upgrade to invite people</b>
@@ -173,7 +180,9 @@ const AgentMembersPage = () => {
   const dispatch = useDispatch()
   const { user } = useAuth()
   const { project, organization, organizationId, projectId } = useAgent()
-  const { projectMembersAndRoles, isMembersLoading, projectInvitations } = useSelector(state => state.activeProject)
+  const { projectMembersAndRoles, isMembersLoading, projectInvitations, isInvitationsLoading } = useSelector(
+    state => state.activeProject
+  )
   const { organizationMembers, organizationPlans } = useSelector(state => state.activeOrganization)
 
   const canManage = useHasOrgRole({ organizationId, roles: ['OP_ADD_PROJECT_MEMBERS'] })
@@ -184,11 +193,25 @@ const AgentMembersPage = () => {
   const [addOpen, setAddOpen] = useState(false)
   const [removing, setRemoving] = useState(null)
 
+  // the store keeps the last agent's lists: they count only once loaded for this agent (null until then)
+  const asked = useRef({ members: null, invitations: null })
+  const [loadedFor, setLoadedFor] = useState({ members: null, invitations: null })
+  useEffect(() => {
+    if (!isMembersLoading && asked.current.members) setLoadedFor(f => ({ ...f, members: asked.current.members }))
+  }, [isMembersLoading])
+  useEffect(() => {
+    if (!isInvitationsLoading && asked.current.invitations)
+      setLoadedFor(f => ({ ...f, invitations: asked.current.invitations }))
+  }, [isInvitationsLoading])
+  const membersReady = loadedFor.members === projectId
+  const invitationsReady = loadedFor.invitations === projectId
+
   const organizationName = organization?.name || 'the organization'
   const agentName = project?.name || 'this agent'
 
   const loadInvitations = useCallback(() => {
     if (!canManage || !projectId) return
+    asked.current.invitations = projectId
     dispatch(
       fetchProjectInvitations({
         organizationId,
@@ -201,6 +224,7 @@ const AgentMembersPage = () => {
 
   const loadMembers = useCallback(() => {
     if (!organizationId || !projectId) return
+    asked.current.members = projectId
     dispatch(fetchProjectMembersAndRoles({ organizationId, projectId, token: getToken() }))
   }, [dispatch, organizationId, projectId])
 
@@ -270,15 +294,11 @@ const AgentMembersPage = () => {
     }
   }
 
-  if (!project) {
-    return (
-      <main className='content'>
-        <div className='center' style={{ padding: 80 }}>
-          <Spinner />
-        </div>
-      </main>
-    )
-  }
+  if (!project) return <AgentPageSkeleton tab='members'>
+      <div className='card'>
+        <SkeletonList rows={2} />
+      </div>
+    </AgentPageSkeleton>
 
   return (
     <main className='content'>
@@ -318,7 +338,8 @@ const AgentMembersPage = () => {
               </tr>
             </thead>
             <tbody>
-              {members.map(member => (
+              {!membersReady && <SkeletonRows rows={2} columns={[null, '90px', '60px', null]} />}
+              {membersReady && members.map(member => (
                 <tr key={member.id} style={{ cursor: 'default' }}>
                   <td>
                     <div className='row' style={{ gap: 10 }}>
@@ -332,7 +353,9 @@ const AgentMembersPage = () => {
                       </div>
                     </div>
                   </td>
-                  <td>{roleTitle(member.role?.name)}</td>
+                  <td>
+                    <Role role={member.role?.name} />
+                  </td>
                   <td className='hide-sm'>
                     <span className='badge'>{USER_TYPES[member.userType] ?? 'Person'}</span>
                   </td>
@@ -345,10 +368,10 @@ const AgentMembersPage = () => {
                   </td>
                 </tr>
               ))}
-              {members.length === 0 && (
+              {membersReady && members.length === 0 && (
                 <tr>
                   <td colSpan={4} className='faint sm' style={{ textAlign: 'center', padding: 24 }}>
-                    {isMembersLoading ? 'Loading…' : 'No members yet.'}
+                    No members yet.
                   </td>
                 </tr>
               )}
@@ -361,9 +384,11 @@ const AgentMembersPage = () => {
         <div className='card'>
           <div className='card-h'>
             <h3>Pending invitations</h3>
-            <span className='faint sm'>{invitations.length}</span>
+            <span className='faint sm'>{invitationsReady ? invitations.length : ''}</span>
           </div>
-          {invitations.length > 0 ? (
+          {!invitationsReady ? (
+            <SkeletonList rows={1} />
+          ) : invitations.length > 0 ? (
             invitations.map(invitation => (
               <div className='item' key={invitation.id}>
                 <span className='avatar s round' style={{ background: 'var(--surface-2)', color: 'var(--text-3)' }}>
@@ -420,7 +445,7 @@ const AgentMembersPage = () => {
         open={Boolean(removing)}
         onClose={() => setRemoving(null)}
         title={`Remove ${removing?.name || removing?.email || ''}?`}
-        text={`They will lose access to ${agentName}. They stay a member of ${organizationName}.`}
+        text={`${removing?.name || removing?.email || 'They'} will lose access to ${agentName}. They stay a member of ${organizationName}.`}
         confirmLabel='Remove'
         onConfirm={() => remove(removing)}
       />

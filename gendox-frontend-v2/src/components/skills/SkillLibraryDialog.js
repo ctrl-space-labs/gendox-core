@@ -1,7 +1,9 @@
 import { useState } from 'react'
-import { Sparkles } from 'lucide-react'
+import { Check, Plus, Sparkles } from 'lucide-react'
 import Dialog from 'src/components/ui/Dialog'
 import Spinner from 'src/components/ui/Spinner'
+import SkillTools from 'src/components/skills/SkillTools'
+import { parseSkill } from 'src/utils/skillMarkdown'
 
 /**
  * "Skills from Gendox": the library an agent adds skills from.
@@ -42,30 +44,31 @@ const SkillLibraryDialog = ({ open, library, loading, addedNames, onAdd, onClose
           No Gendox skills yet.
         </p>
       ) : (
-        <div className='stack' style={{ gap: 8 }}>
+        <div className='skill-lib'>
           {library.map(skill => {
             const added = addedNames.has(skill.name)
 
             return (
-              <div key={skill.id} className='card card-b row' style={{ gap: 12, alignItems: 'flex-start' }}>
-                <span className='ftype' style={{ '--h': 265 }}>
-                  <Sparkles className='lucide' />
-                </span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className='row'>
-                    <b className='mono'>{skill.name}</b>
-                    <span className='faint sm'>v{skill.version}</span>
-                  </div>
-                  <p className='muted sm' style={{ marginTop: 2 }}>
-                    {skill.description}
-                  </p>
+              <div key={skill.id} className='card'>
+                <div className='row' style={{ gap: 10 }}>
+                  <span className='ftype' style={{ '--h': 165, width: 28, height: 28 }}>
+                    <Sparkles className='lucide' />
+                  </span>
+                  <b className='trunc' style={{ flex: 1 }}>
+                    {skill.name}
+                  </b>
+                  <span className='faint sm'>v{skill.version}</span>
                 </div>
+                <p>{skill.description}</p>
+                <SkillTools tools={parseSkill(skill.content).tools} />
                 <button
                   aria-busy={adding === skill.name}
-                  className={`btn s ${added ? 'ghost' : ''}`}
+                  className='btn s'
+                  style={{ alignSelf: 'flex-start' }}
                   disabled={added}
                   onClick={() => add(skill)}
                 >
+                  {added ? <Check className='lucide' /> : <Plus className='lucide' />}
                   {added ? 'Added' : 'Add'}
                 </button>
               </div>

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { CircleAlert, CircleCheck, Copy, Download, Upload } from 'lucide-react'
 import { parseSkill } from 'src/utils/skillMarkdown'
 import Dialog from 'src/components/ui/Dialog'
+import SkillTools from 'src/components/skills/SkillTools'
 
 /**
  * The SKILL.md editor: the file itself is the editor (write, paste or upload), and name and description are read
@@ -119,6 +120,8 @@ const SkillEditorDialog = ({
         readOnly={readOnly}
         onChange={e => setContent(e.target.value)}
       />
+
+      {readOnly && <SkillTools tools={parsed.tools} />}
 
       {!readOnly && (
         <div style={{ marginTop: 10 }}>

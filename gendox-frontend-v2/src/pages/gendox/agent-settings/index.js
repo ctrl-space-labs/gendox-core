@@ -8,19 +8,40 @@ import projectService from 'src/gendox-sdk/projectService'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import useAgent, { getToken, useRefreshProfile } from 'src/components/agent/useAgent'
 import AgentScope from 'src/components/agent/AgentScope'
+import AgentPageSkeleton from 'src/components/agent/AgentPageSkeleton'
 import AppLayout from 'src/layouts/AppLayout'
 import Dialog from 'src/components/ui/Dialog'
-import Spinner from 'src/components/ui/Spinner'
 import Switch from 'src/components/ui/Switch'
+import { findDocuments } from 'src/components/tasks/DocumentPicker'
+import { plural } from 'src/components/knowledge/documentUtils'
 
-// Delete asks for the agent's name, since it removes its knowledge and conversations
-const DeleteAgentDialog = ({ open, onClose, name, onDelete }) => {
+// Delete asks for the agent's name, since it removes its knowledge and conversations; it says how much is lost
+const DeleteAgentDialog = ({ open, onClose, name, organizationId, projectId, onDelete }) => {
   const [typed, setTyped] = useState('')
   const [isDeleting, setIsDeleting] = useState(false)
+  const [counts, setCounts] = useState(null) // { documents, members }, either null when unknown
 
   useEffect(() => {
-    if (open) setTyped('')
-  }, [open])
+    if (!open) return
+    setTyped('')
+    setCounts(null)
+    Promise.allSettled([
+      findDocuments(organizationId, projectId, { size: 1 }),
+      projectService.getProjectMembers(organizationId, projectId, getToken())
+    ]).then(([docs, members]) =>
+      setCounts({
+        documents: docs.status === 'fulfilled' ? docs.value?.totalElements ?? null : null,
+        members:
+          members.status === 'fulfilled'
+            ? (members.value.data ?? []).filter(m => m.user?.userType?.name !== 'GENDOX_AGENT').length
+            : null
+      })
+    )
+  }, [open, organizationId, projectId])
+
+  const documents = counts?.documents != null ? `its ${plural(counts.documents, 'document')}` : 'its documents'
+  const members =
+    counts?.members != null ? `${plural(counts.members, 'member')} ${counts.members === 1 ? 'loses' : 'lose'}` : 'Members lose'
 
   return (
     <Dialog
@@ -49,8 +70,14 @@ const DeleteAgentDialog = ({ open, onClose, name, onDelete }) => {
       }
     >
       <p className='muted' style={{ lineHeight: 1.6 }}>
-        This deletes its documents, conversations and tasks. Members lose access and the widget stops answering. This
-        can’t be undone.
+        {counts === null ? (
+          <>
+            <span className='skel' style={{ display: 'block', width: '95%' }} />
+            <span className='skel' style={{ display: 'block', width: '70%', marginTop: 8 }} />
+          </>
+        ) : (
+          `This deletes ${documents}, conversations and tasks. ${members} access and the widget stops answering. This can’t be undone.`
+        )}
       </p>
       <div className='field' style={{ marginTop: 16 }}>
         <label>
@@ -78,6 +105,7 @@ const AgentSettingsPage = () => {
   const [description, setDescription] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [toggling, setToggling] = useState(null) // { key, value } while a switch's change is saved
   const [deleteOpen, setDeleteOpen] = useState(false)
 
   useEffect(() => {
@@ -86,15 +114,7 @@ const AgentSettingsPage = () => {
     setDescription(project.description || '')
   }, [project?.id, project?.name, project?.description])
 
-  if (!project) {
-    return (
-      <main className='content'>
-        <div className='center' style={{ padding: 80 }}>
-          <Spinner />
-        </div>
-      </main>
-    )
-  }
+  if (!project) return <AgentPageSkeleton tab='general' />
 
   const dirty = name.trim() !== (project.name || '') || description !== (project.description || '')
 
@@ -112,14 +132,21 @@ const AgentSettingsPage = () => {
     }
   }
 
-  const toggle = async changes => {
+  const toggle = async (key, value, changes) => {
+    setToggling({ key, value })
     try {
       await save(changes)
       toast.success('Saved')
     } catch (error) {
       toast.error(`Couldn’t save. ${getErrorMessage(error)}`)
+    } finally {
+      setToggling(null)
     }
   }
+  const switchState = (key, saved) => ({
+    checked: toggling?.key === key ? toggling.value : saved,
+    busy: toggling?.key === key
+  })
 
   const processNow = async () => {
     setIsProcessing(true)
@@ -211,9 +238,9 @@ const AgentSettingsPage = () => {
               </div>
               <Switch
                 label='Process new documents automatically'
-                checked={project.autoTraining}
-                disabled={!canEdit}
-                onChange={value => toggle({ project: { autoTraining: value } })}
+                {...switchState('autoTraining', project.autoTraining)}
+                disabled={!canEdit || Boolean(toggling)}
+                onChange={value => toggle('autoTraining', value, { project: { autoTraining: value } })}
               />
             </div>
             <div className='toggle-row'>
@@ -236,9 +263,9 @@ const AgentSettingsPage = () => {
               </div>
               <Switch
                 label='Read scanned pages with AI'
-                checked={project.projectAgent?.autoDigitization}
-                disabled={!canEdit}
-                onChange={value => toggle({ agent: { autoDigitization: value } })}
+                {...switchState('autoDigitization', project.projectAgent?.autoDigitization)}
+                disabled={!canEdit || Boolean(toggling)}
+                onChange={value => toggle('autoDigitization', value, { agent: { autoDigitization: value } })}
               />
             </div>
           </div>
@@ -271,6 +298,8 @@ const AgentSettingsPage = () => {
         open={deleteOpen}
         onClose={() => setDeleteOpen(false)}
         name={project.name}
+        organizationId={organizationId}
+        projectId={projectId}
         onDelete={deleteAgent}
       />
     </main>

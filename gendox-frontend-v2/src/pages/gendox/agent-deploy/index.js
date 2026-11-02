@@ -1,16 +1,20 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
-import { ArrowUpRight, Copy, Globe, KeyRound, Lock } from 'lucide-react'
+import { ArrowUpRight, Copy, Gauge, Globe, KeyRound, Lock } from 'lucide-react'
 import useHasOrgRole from 'src/authentication/hooks/useHasOrgRole'
 import commonConfig from 'src/configs/common.config'
+import subscriptionPlanService from 'src/gendox-sdk/subscriptionPlanService'
+import { getToken } from 'src/components/agent/useAgent'
+import AgentIntegrations from 'src/components/integrations/AgentIntegrations'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import useAgent from 'src/components/agent/useAgent'
 import AgentScope from 'src/components/agent/AgentScope'
+import AgentPageSkeleton from 'src/components/agent/AgentPageSkeleton'
+import Spinner from 'src/components/ui/Spinner'
 import Chat from 'src/components/chat/Chat'
 import useChat from 'src/components/chat/useChat'
 import AppLayout from 'src/layouts/AppLayout'
-import Spinner from 'src/components/ui/Spinner'
 
 const RESUME_OPTIONS = [
   ['1800000', '30 minutes'],
@@ -54,24 +58,26 @@ const Preview = () => {
  * Put the agent to work: who may use it (projectAgent.privateAgent), the website widget snippet, and the API.
  */
 const AgentDeployPage = () => {
-  const { project, organizationId, projectId, href, save } = useAgent()
+  const { project, organization, organizationId, projectId, href, save } = useAgent()
   const canEdit = useHasOrgRole({ organizationId, roles: ['OP_UPDATE_PROJECT'] })
   const [origin, setOrigin] = useState('https://app.gendox.dev')
   const [options, setOptions] = useState({ startOpen: false, selectedText: true, openPages: true, resume: '86400000' })
   const [isSaving, setIsSaving] = useState(false)
 
+  const [plan, setPlan] = useState(null) // the organization's subscription plan, for the public rate limit
+
   // the widget's script and chat page are served by this app
   useEffect(() => setOrigin(window.location.origin), [])
 
-  if (!project) {
-    return (
-      <main className='content'>
-        <div className='center' style={{ padding: 80 }}>
-          <Spinner />
-        </div>
-      </main>
-    )
-  }
+  useEffect(() => {
+    if (!organizationId) return
+    subscriptionPlanService
+      .getOrganizationPlans(organizationId, getToken())
+      .then(response => setPlan(response.data?.subscriptionPlan ?? null))
+      .catch(() => setPlan(null))
+  }, [organizationId])
+
+  if (!project) return <AgentPageSkeleton tab='deploy' />
 
   const isPrivate = Boolean(project.projectAgent?.privateAgent)
   const attributes = snippetAttributes(origin, organizationId, projectId, options)
@@ -105,12 +111,21 @@ const AgentDeployPage = () => {
         <div>
           <section className='sect' style={{ paddingTop: 8 }}>
             <header>
-              <h2>Who can use this agent</h2>
+              <h2>
+                Who can use this agent
+                {isSaving && (
+                  <span className='row faint sm' style={{ fontWeight: 400 }}>
+                    <Spinner size={12} />
+                    Saving…
+                  </span>
+                )}
+              </h2>
               <p>
                 Public agents answer anyone on a website where the widget is pasted, and API calls without signing in.
-                Private agents answer only signed-in members.
+                Private agents answer only signed-in members of {organization?.name || 'the organization'}.
               </p>
             </header>
+            <div className='stack'>
             <div className='choice'>
               <label>
                 <input
@@ -137,6 +152,14 @@ const AgentDeployPage = () => {
                 <span>Only signed-in members. Use it for internal agents.</span>
               </label>
             </div>
+            {plan?.apiRateLimit?.publicCompletionsPerMinute != null && (
+              <p className='faint sm row fade-in' style={{ gap: 6 }}>
+                <Gauge className='lucide' style={{ width: 14, height: 14 }} />
+                Public chats are limited to {plan.apiRateLimit.publicCompletionsPerMinute} answers a minute on the{' '}
+                {plan.name} plan.
+              </p>
+            )}
+            </div>
           </section>
 
           <section className='sect wide'>
@@ -146,6 +169,11 @@ const AgentDeployPage = () => {
                 Paste this before <code>&lt;/body&gt;</code> on the pages of any website that should show the chat.
               </p>
               <p style={{ marginTop: 12 }}>
+                <Link className='link sm' href={href('/gendox/wordpress')}>
+                  Using WordPress? Install the plugin instead →
+                </Link>
+              </p>
+              <p style={{ marginTop: 6 }}>
                 <a
                   className='link sm'
                   href={`${commonConfig.gendoxDocsUrl}/website-widget/website-widget-installation`}
@@ -238,6 +266,14 @@ const AgentDeployPage = () => {
                 </a>
               </div>
             </div>
+          </section>
+
+          <section className='sect'>
+            <header>
+              <h2>Integrations</h2>
+              <p>What keeps this agent’s knowledge in sync: websites Gendox reads, WordPress, repositories.</p>
+            </header>
+            <AgentIntegrations organizationId={organizationId} projectId={projectId} agentName={project.name} href={href} />
           </section>
         </div>
 
