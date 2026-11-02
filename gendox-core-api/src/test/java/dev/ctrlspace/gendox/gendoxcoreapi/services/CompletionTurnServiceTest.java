@@ -1,7 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxRuntimeException;
+import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.CompletionTurn;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.CompletionTurn.PendingCall;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
@@ -13,6 +13,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.MessageRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -126,7 +127,7 @@ class CompletionTurnServiceTest {
         answer("a", "1", token);
 
         assertTrue(answer("a", "1", token).isEmpty());
-        assertThrows(GendoxRuntimeException.class, () -> answer("a", "other", token));
+        assertEquals(HttpStatus.CONFLICT, assertThrows(GendoxException.class, () -> answer("a", "other", token)).getHttpStatus());
         assertEquals(1, savedMessages.size());
     }
 
@@ -134,8 +135,8 @@ class CompletionTurnServiceTest {
     void anotherSessionCannotAnswer() {
         suspendWithTwoCalls();
 
-        assertThrows(GendoxRuntimeException.class, () -> answer("a", "1", "someone-else"));
-        assertThrows(GendoxRuntimeException.class, () -> answer("a", "1", null));
+        assertEquals(HttpStatus.FORBIDDEN, assertThrows(GendoxException.class, () -> answer("a", "1", "someone-else")).getHttpStatus());
+        assertEquals(HttpStatus.FORBIDDEN, assertThrows(GendoxException.class, () -> answer("a", "1", null)).getHttpStatus());
         assertTrue(savedMessages.isEmpty());
     }
 
@@ -148,22 +149,22 @@ class CompletionTurnServiceTest {
         answer("a", "1", null);
 
         when(securityUtils.getUserId()).thenReturn(UUID.randomUUID());
-        assertThrows(GendoxRuntimeException.class, () -> answer("b", "2", null));
+        assertEquals(HttpStatus.FORBIDDEN, assertThrows(GendoxException.class, () -> answer("b", "2", null)).getHttpStatus());
     }
 
     @Test
     void aCallTheTurnDoesNotWaitForIsRejected() {
         String token = suspendWithTwoCalls().getResumeToken();
 
-        assertThrows(GendoxRuntimeException.class, () -> answer("unknown", "1", token));
+        assertEquals(HttpStatus.CONFLICT, assertThrows(GendoxException.class, () -> answer("unknown", "1", token)).getHttpStatus());
         assertTrue(savedMessages.isEmpty());
     }
 
     @Test
     void aResultNeedsAThreadACallAndAValue() {
-        assertThrows(GendoxRuntimeException.class, () -> service.saveResult(null, "a", "1", projectId, null));
-        assertThrows(GendoxRuntimeException.class, () -> service.saveResult(threadId, null, "1", projectId, null));
-        assertThrows(GendoxRuntimeException.class, () -> service.saveResult(threadId, "a", null, projectId, null));
+        assertEquals(HttpStatus.BAD_REQUEST, assertThrows(GendoxException.class, () -> service.saveResult(null, "a", "1", projectId, null)).getHttpStatus());
+        assertEquals(HttpStatus.BAD_REQUEST, assertThrows(GendoxException.class, () -> service.saveResult(threadId, null, "1", projectId, null)).getHttpStatus());
+        assertEquals(HttpStatus.BAD_REQUEST, assertThrows(GendoxException.class, () -> service.saveResult(threadId, "a", null, projectId, null)).getHttpStatus());
     }
 
     @Test

@@ -77,6 +77,7 @@ public class SecurityConfiguration {
                                 .requestMatchers("/messages/completions").permitAll() // Allow requests when the Project Agent is Public
                                 .requestMatchers("/organizations/*/projects").permitAll()
                                 .requestMatchers("/threads/*/messages").permitAll()
+                                .requestMatchers("/threads/*/completion-status").permitAll() // Public threads; checked by @PreAuthorize
                                 .requestMatchers("/threads").permitAll()
                                 .requestMatchers("/api-documentation",
                                         "/swagger-ui.html",

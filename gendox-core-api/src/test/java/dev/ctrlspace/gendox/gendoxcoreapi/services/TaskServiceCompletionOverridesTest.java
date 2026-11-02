@@ -44,16 +44,15 @@ class TaskServiceCompletionOverridesTest {
                 subscriptionAiModelTierService,
                 10,
                 5000,
-                100000,
-                4000L
+                100000
         );
     }
 
     @Test
-    void usesTaskDefaultMaxTokensWhenTaskSetsNone() {
+    void leavesMaxTokensUnsetWhenTaskSetsNone() {
         Task task = new Task();
 
-        assertThat(taskService.buildDefaultCompletionOverrides(task).getMaxTokens()).isEqualTo(4000L);
+        assertThat(taskService.buildDefaultCompletionOverrides(task).getMaxTokens()).isNull();
     }
 
     @Test

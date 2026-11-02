@@ -239,6 +239,11 @@ public class EmbeddingsController {
                 )
         );
         message.setLocalContexts(contexts);
+        // A new message ends a turn that still waits for the page's tool results. Its calls are answered
+        // before the message is saved, so in the history every tool call is followed by its result.
+        if (message.getThreadId() != null) {
+            completionTurnService.cancelWaitingTurn(message.getThreadId());
+        }
         Message savedMessage = messageService.createMessage(message);
 
         List<ContentPart> attachedImages = messageLocalContextService.getImageContentPartsFromLocalContext(message);

@@ -219,8 +219,9 @@ export const sendMessage = createAsyncThunk(
       response = deepThinking
         ? await completionService.postCompletionMessage(projectId, threadId, message, chatLocalContextResponses, documentInstanceIds, token, true)
         : await _streamCompletion({ projectId, organizationId, token, dispatch, getState, iFrameMessageManager,
+            // Only an embedded chat has a host page to answer CLIENT tools; elsewhere they run as ACTION
             payload: { threadId, value: message, localContexts: chatLocalContextResponses, documentInstanceIds,
-              stream: true, clientToolResults: true } })
+              stream: true, clientToolResults: Boolean(iFrameMessageManager?.isEmbedded) } })
     } catch (error) {
       toast.error(getErrorMessage(error))
       return rejectWithValue(error.response?.data || error.message)
@@ -1030,7 +1031,9 @@ export const recoverCompletion = createAsyncThunk('gendoxChat/recoverCompletion'
       const previous = getState().gendoxChat.completionStatus
       completionEvent(dispatch, projectId, 'status', data)
       if (data.status === 'WAITING_FOR_TOOLS') dispatchHostCalls(data, { projectId, organizationId, dispatch, iFrameMessageManager })
-      if (data.status !== 'IDLE' && (previous !== data.status || ['GENERATING', 'WAITING_FOR_TOOLS'].includes(data.status))) {
+      // Load the saved messages while a turn runs, and once more when it ends, to show its final answer
+      const active = status => ['GENERATING', 'WAITING_FOR_TOOLS'].includes(status)
+      if (active(data.status) || active(previous)) {
         const thread = await _fetchExistingThreadWithMessages(threadId, projectId, organizationId, dispatch, token)
         if (!getState().gendoxChat.isStreaming)
           completionEvent(dispatch, projectId, 'reconcile', { threadId, messages: thread.messages })
