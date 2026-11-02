@@ -265,3 +265,8 @@ fieldset.lock:disabled .btn { opacity: .5; pointer-events: none; }
 /* what arrives after the rest of a panel eases in, instead of popping */
 .fade-in { animation: fade .25s ease-out; }
 @media (prefers-reduced-motion: reduce) { .fade-in { animation: none; } }
+
+/* text still being generated: a highlight sweeps across it */
+.text-shimmer { color: transparent; background: linear-gradient(90deg, var(--text-3) 35%, var(--text) 50%, var(--text-3) 65%) 0 0 / 200% 100%; -webkit-background-clip: text; background-clip: text; animation: text-shimmer 1.8s linear infinite; }
+@keyframes text-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+@media (prefers-reduced-motion: reduce) { .text-shimmer { animation: none; color: var(--text-3); } }

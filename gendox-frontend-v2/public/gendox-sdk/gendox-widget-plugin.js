@@ -341,6 +341,18 @@
 
     // Listen for actions from the AI Agent
     function handleToolUseMessages(event) {
+      const frame = document.getElementById(config.gendoxIframeId)
+      if (event.origin !== new URL(config.gendoxSrc).origin || event.source !== frame?.contentWindow) return
+      if (event.data?.type === 'gendox.events.chat.message.tool_calls.ack') {
+        const outbox = readToolState(TOOL_RESULTS_STORAGE_KEY)
+        delete outbox[toolKey({ ...event.data.payload, id: event.data.payload.toolCallId })]
+        writeToolState(TOOL_RESULTS_STORAGE_KEY, outbox)
+        return
+      }
+      if (event.data?.type === 'gendox.events.chat.message.tool_calls.ready') {
+        flushToolResults()
+        return
+      }
       if (event.data && event.data.type === 'gendox.events.chat.message.tool_calls.request') {
         const toolCalls = event.data.payload
         console.log('Tool Calls Request Received:', event.data.payload)
@@ -355,7 +367,7 @@
         enqueuePendingToolCalls(toolCalls)
         executePendingToolCalls()
 
-        // TODO return all toolCalls->response to the iframe with 'gendox.events.chat.message.tool_calls.response' type
+        flushToolResults()
       }
     }
 
@@ -408,8 +420,29 @@
     }
   }
 
+  const TOOL_RESULTS_STORAGE_KEY = 'gendox-tool-results'
+  const TOOL_EXECUTIONS_STORAGE_KEY = 'gendox-tool-executions'
+  let executingPendingTools = false
+
+  function toolKey(tool) { return `${tool.threadId}|${tool.turnId || tool.messageId || ''}|${tool.id}` }
+  function readToolState(key) {
+    try { return JSON.parse(sessionStorage.getItem(key)) || {} } catch { return {} }
+  }
+  function writeToolState(key, value) {
+    try { sessionStorage.setItem(key, JSON.stringify(value)) } catch { /* Storage may be disabled. */ }
+  }
+  function flushToolResults() {
+    const results = Object.values(readToolState(TOOL_RESULTS_STORAGE_KEY))
+    if (!results.length) return
+    const config = window.gendox?.widget?.config
+    const frame = config && document.getElementById(config.gendoxIframeId)
+    frame?.contentWindow?.postMessage({ type: 'gendox.events.chat.message.tool_calls.response', payload: results }, new URL(config.gendoxSrc).origin)
+  }
   function enqueuePendingToolCalls(toolCalls) {
-    writePendingToolCalls({ createdAt: Date.now(), tools: toolCalls })
+    const queue = readPendingToolCalls()
+    const merged = new Map((queue?.tools || []).map(tool => [toolKey(tool), tool]))
+    toolCalls.forEach(tool => { if (!merged.has(toolKey(tool))) merged.set(toolKey(tool), tool) })
+    writePendingToolCalls({ createdAt: queue?.createdAt || Date.now(), tools: [...merged.values()] })
   }
 
   function sleep(ms) {
@@ -436,80 +469,59 @@
     return Boolean(window.gendox?.tools?.allTools?.[fnName])
   }
 
-  // Runs one tool handler and stores the result on the tool object.
-  function runSingleToolCall(tool) {
+  async function runSingleToolCall(tool) {
     const fnName = tool?.function?.name
-    let parsedArgs = {}
-    try {
-      parsedArgs = JSON.parse(tool?.function?.arguments || '{}')
-    } catch (err) {
-      console.error('Failed to parse arguments for', fnName, err)
-      return
-    }
-
     const handler = window.gendox?.tools?.allTools?.[fnName]
-    if (!handler) {
-      return
-    }
-
+    if (!handler) return { error: 'CLIENT_TOOL_HANDLER_MISSING', message: `No handler registered for ${fnName}` }
     try {
-      const result = handler(parsedArgs)
-      console.log(`Tool “${fnName}” returned:`, result)
-      tool.response = result
-    } catch (err) {
-      console.error(`Error executing handler "${fnName}":`, err)
+      const args = typeof tool.function.arguments === 'string' ? JSON.parse(tool.function.arguments || '{}') : tool.function.arguments
+      return (await handler(args)) ?? null
+    } catch (error) {
+      return { error: 'CLIENT_TOOL_FAILED', message: error.message || String(error) }
     }
   }
 
-  // Runs pending tool calls in the agent's requested order. Session storage holds only tools
-  // that have not run yet; each tool is removed after it executes.
   async function executePendingToolCalls() {
-    const queue = readPendingToolCalls()
-    if (!queue || !Array.isArray(queue.tools)) {
-      return
-    }
-
-    if (Date.now() - (queue.createdAt || 0) > PENDING_TOOL_CALLS_MAX_AGE_MS) {
-      clearPendingToolCalls()
-      return
-    }
-
-    const handlerWaitMs = getPendingToolHandlerWaitMs()
-    const remaining = [...queue.tools]
-
-    while (remaining.length > 0) {
-      const tool = remaining[0]
-      const fnName = tool?.function?.name
-
-      const handlerReady = await waitForToolHandler(fnName, handlerWaitMs)
-      if (!handlerReady) {
-        console.warn(
-          `Tool handler "${fnName}" was not registered within ${handlerWaitMs}ms; skipping pending tool call.`
-        )
-        remaining.shift()
-        if (remaining.length > 0) {
-          writePendingToolCalls({ createdAt: queue.createdAt, tools: remaining })
-        } else {
-          clearPendingToolCalls()
+    if (executingPendingTools) return
+    executingPendingTools = true
+    try {
+      while (true) {
+        const queue = readPendingToolCalls()
+        if (!queue?.tools?.length) break
+        if (Date.now() - (queue.createdAt || 0) > PENDING_TOOL_CALLS_MAX_AGE_MS) { clearPendingToolCalls(); break }
+        const tool = queue.tools[0]
+        const key = toolKey(tool)
+        const executions = readToolState(TOOL_EXECUTIONS_STORAGE_KEY)
+        let execution = executions[key]
+        if (!execution) {
+          await waitForToolHandler(tool?.function?.name, getPendingToolHandlerWaitMs())
+          // Mark started before invoking a handler that may navigate or have external side effects.
+          executions[key] = { startedAt: Date.now() }
+          writeToolState(TOOL_EXECUTIONS_STORAGE_KEY, executions)
+          const result = await runSingleToolCall(tool)
+          execution = { startedAt: executions[key].startedAt, result, completed: true }
+          executions[key] = execution
+          // Prune old executions while retaining deduplication across navigation.
+          for (const [id, value] of Object.entries(executions))
+            if (Date.now() - value.startedAt > PENDING_TOOL_CALLS_MAX_AGE_MS) delete executions[id]
+          writeToolState(TOOL_EXECUTIONS_STORAGE_KEY, executions)
         }
-        continue
+        if (tool.execution === 'CLIENT') {
+          const outbox = readToolState(TOOL_RESULTS_STORAGE_KEY)
+          const result = execution.completed ? execution.result : { error: 'CLIENT_TOOL_OUTCOME_UNKNOWN', message: 'The page changed while this tool was executing; it will not be repeated.' }
+          try { outbox[key] = { threadId: tool.threadId, turnId: tool.turnId, messageId: tool.messageId, toolCallId: tool.id, value: JSON.stringify(result) } }
+          catch { outbox[key] = { threadId: tool.threadId, turnId: tool.turnId, messageId: tool.messageId, toolCallId: tool.id, value: '{"error":"CLIENT_TOOL_RESULT_NOT_SERIALIZABLE"}' } }
+          writeToolState(TOOL_RESULTS_STORAGE_KEY, outbox)
+          flushToolResults()
+        }
+        // Re-read because another saved call can arrive while a Promise is pending.
+        const latest = readPendingToolCalls()
+        const remaining = (latest?.tools || []).filter(call => toolKey(call) !== key)
+        if (remaining.length) writePendingToolCalls({ createdAt: latest.createdAt, tools: remaining })
+        else clearPendingToolCalls()
+        if (execution.result?.navigated) break
       }
-
-      runSingleToolCall(tool)
-      remaining.shift()
-
-      if (remaining.length > 0) {
-        writePendingToolCalls({ createdAt: queue.createdAt, tools: remaining })
-      } else {
-        clearPendingToolCalls()
-      }
-
-      // open_web_page sets response.navigated when it schedules a host-page navigation.
-      // Stop here; the destination page resumes any tools still in session storage.
-      if (tool.response?.navigated) {
-        return
-      }
-    }
+    } finally { executingPendingTools = false }
   }
 
   window.gendox = {}
@@ -551,6 +563,7 @@
 
       // Resume tool calls deferred by a previous navigation (e.g. open_web_page).
       setTimeout(executePendingToolCalls, 0)
+      setInterval(flushToolResults, 2000)
     }
 
     // Check if DOM is already loaded

@@ -143,7 +143,7 @@ const ChatTurn = ({
               <Answer
                 key={item.message.messageId || index}
                 message={item.message}
-                showActions={!item.beforeTools}
+                showActions={!item.beforeTools && !item.message.isStreaming && Boolean(item.message.messageId)}
                 canAskAgain={Boolean(onAskAgain && question?.message)}
                 sourcesOpen={activeSourcesMessageId === item.message.messageId}
                 onSources={onSources && item.message.messageId ? () => onSources(item.message) : null}

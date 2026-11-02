@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
+import { useSelector } from 'react-redux'
 import {
   ArrowLeft,
   ChevronDown,
@@ -69,6 +70,9 @@ const viewFromQuery = query => {
 const DocumentInsightsView = () => {
   const screen = useView()
   const { taskId } = screen.query
+  // questions being saved (Auto ones are resolved by the AI first), shown as placeholder columns
+  const allPending = useSelector(state => state.activeTaskNode.pendingQuestions)
+  const pendingQs = useMemo(() => (allPending ?? []).filter(q => q.taskId === taskId), [allPending, taskId])
   const { organizationId, projectId, project, href } = useActiveScope()
   const split = useSplitPane('gx-ins')
 
@@ -507,9 +511,16 @@ const DocumentInsightsView = () => {
                   <FilePlus className='lucide' />
                   <span className='hide-l'>Add documents</span>
                 </button>
-                <button className='btn s' onClick={() => open({ kind: 'new' })}>
+                <button
+                  className='btn s'
+                  onClick={() => open({ kind: 'new' })}
+                  disabled={pendingQs.length > 0}
+                  title={pendingQs.length ? 'Your new questions are being set up' : undefined}
+                >
                   <Columns3 className='lucide' />
-                  <span className='hide-l'>Add questions</span>
+                  <span className={`hide-l ${pendingQs.length ? 'text-shimmer' : ''}`}>
+                    {pendingQs.length ? 'Adding questions…' : 'Add questions'}
+                  </span>
                 </button>
                 <label className='search'>
                   <Search className='lucide' />
@@ -589,7 +600,7 @@ const DocumentInsightsView = () => {
                   <div className='center' style={{ minHeight: 0, padding: 60 }}>
                     <Spinner />
                   </div>
-                ) : !docs.length && !questions.length && !search ? (
+                ) : !docs.length && !questions.length && !pendingQs.length && !search ? (
                   <Empty
                     icon={<Table2 className='lucide' />}
                     title='Add documents and questions'
@@ -633,7 +644,17 @@ const DocumentInsightsView = () => {
                             </button>
                           </th>
                         ))}
-                        {!questions.length && (
+                        {pendingQs.map(q => (
+                          <th key={q.id} className='q'>
+                            <span
+                              className='qh'
+                              title={q.answerMode === 'AUTO' ? 'Setting up this question as a written answer or decision columns…' : 'Saving the question…'}
+                            >
+                              <span className='trunc text-shimmer'>{q.title || q.text}</span>
+                            </span>
+                          </th>
+                        ))}
+                        {!questions.length && !pendingQs.length && (
                           <th className='q'>
                             <button className='qh' onClick={() => open({ kind: 'new' })}>
                               <Columns3 className='lucide' style={{ width: 14, height: 14 }} />
@@ -723,7 +744,14 @@ const DocumentInsightsView = () => {
                                 </td>
                               )
                             })}
-                            {!questions.length && <td className='q' />}
+                            {pendingQs.map(q => (
+                              <td key={q.id} className='q'>
+                                <div className='cell empty'>
+                                  <span className='skel' style={{ width: '70%' }} />
+                                </div>
+                              </td>
+                            ))}
+                            {!questions.length && !pendingQs.length && <td className='q' />}
                           </tr>
                         )
                       })}
@@ -732,7 +760,7 @@ const DocumentInsightsView = () => {
                           <td className='doc'>
                             <div className='faint sm'>{search ? 'No documents match.' : 'No documents yet.'}</div>
                           </td>
-                          {questions.map(q => (
+                          {[...questions, ...pendingQs].map(q => (
                             <td key={q.id} className='q' />
                           ))}
                         </tr>

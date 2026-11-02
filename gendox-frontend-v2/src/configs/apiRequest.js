@@ -41,6 +41,8 @@ export default {
 
   createOrganization: () => `${url}organizations`,
 
+  completionStatus: threadId => `${url}threads/${threadId}/completion-status`,
+
   postCompletionModel: projectId => `${url}messages/completions?projectId=${projectId}`,
 
   // getThreadsByCriteria: (projectIdIn) => {
@@ -233,6 +235,11 @@ export default {
   userLogout: () => `${url}users/logout`,
 
   getToolExamples: () => `${url}types/ai-tool-examples`,
+
+  // Gendox (system) skills: the library agents add skills from; changes are super admin only
+  skills: () => `${url}skills`,
+  skill: name => `${url}skills/${encodeURIComponent(name)}`,
+  skillTools: () => `${url}skills/tools`,
 
   createTask: (organizationId, projectId) => `${url}organizations/${organizationId}/projects/${projectId}/tasks`,
 

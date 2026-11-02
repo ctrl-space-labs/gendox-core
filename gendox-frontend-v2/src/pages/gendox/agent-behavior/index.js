@@ -29,6 +29,13 @@ const EFFORTS = [
   ['high', 'High']
 ]
 
+// when the agent searches its documents in a chat (the backend's advancedSearchMode)
+const SEARCH_MODES = [
+  ['ALWAYS', 'Always', 'Searches the documents before every answer.'],
+  ['AUTO', 'When needed', 'Searches the documents only when a question needs them.'],
+  ['OFF', 'Never', 'Answers without searching the documents.']
+]
+
 // the agent's fields this page edits; models are kept by name
 const draftOf = agent => ({
   agentBehavior: agent.agentBehavior || '',
@@ -41,7 +48,7 @@ const draftOf = agent => ({
   maxSearchLimit: agent.maxSearchLimit ?? 5,
   maxCompletionLimit: agent.maxCompletionLimit ?? 5,
   rerankEnable: Boolean(agent.rerankEnable),
-  advancedSearchEnable: Boolean(agent.advancedSearchEnable),
+  advancedSearchMode: agent.advancedSearchMode || 'ALWAYS',
   moderationCheck: Boolean(agent.moderationCheck),
   maxToken: agent.maxToken ?? '',
   temperature: agent.temperature ?? 0.2,
@@ -135,7 +142,7 @@ const AgentBehaviorPage = () => {
           maxSearchLimit: Number(draft.maxSearchLimit),
           maxCompletionLimit: Number(draft.maxCompletionLimit),
           rerankEnable: draft.rerankEnable,
-          advancedSearchEnable: draft.advancedSearchEnable,
+          advancedSearchMode: draft.advancedSearchMode,
           moderationCheck: draft.moderationCheck,
           maxToken: draft.maxToken === '' ? null : Number(draft.maxToken),
           temperature: Number(draft.temperature),
@@ -262,6 +269,24 @@ const AgentBehaviorPage = () => {
             <div className='card card-b'>
               <div className='toggle-row'>
                 <div>
+                  <b>Search the documents</b>
+                  <p>{SEARCH_MODES.find(([value]) => value === draft.advancedSearchMode)?.[2]}</p>
+                </div>
+                <div className='pill-tabs'>
+                  {SEARCH_MODES.map(([value, label]) => (
+                    <button
+                      key={value}
+                      className={draft.advancedSearchMode === value ? 'on' : ''}
+                      disabled={!canEdit}
+                      onClick={() => set({ advancedSearchMode: value })}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className='toggle-row'>
+                <div>
                   <b>Passages to look at</b>
                   <p>How many matching passages the search returns.</p>
                 </div>
@@ -316,18 +341,6 @@ const AgentBehaviorPage = () => {
                   checked={draft.rerankEnable}
                   disabled={!canEdit}
                   onChange={value => set({ rerankEnable: value })}
-                />
-              </div>
-              <div className='toggle-row'>
-                <div>
-                  <b>Smarter search</b>
-                  <p>Rewrites vague questions before searching. Helps with short or follow-up questions.</p>
-                </div>
-                <Switch
-                  label='Smarter search'
-                  checked={draft.advancedSearchEnable}
-                  disabled={!canEdit}
-                  onChange={value => set({ advancedSearchEnable: value })}
                 />
               </div>
             </div>

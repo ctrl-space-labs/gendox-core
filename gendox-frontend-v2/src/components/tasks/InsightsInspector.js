@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
+import { useDispatch } from 'react-redux'
+import { addPendingQuestions, removePendingQuestions } from 'src/store/activeTaskNode/activeTaskNode'
 import {
   ArrowLeft,
   ArrowRight,
@@ -926,37 +928,64 @@ const QuestionPane = ({ view, question, ctx, head }) => {
   )
 }
 
+// questions that failed to save, given back to the next "Add questions" (task id → forms)
+const unsavedForms = new Map()
+
 const NewQuestionsPane = ({ ctx, head }) => {
+  const dispatch = useDispatch()
   const { questions, organizationId, projectId, taskId, reload, close } = ctx
-  const [forms, setForms] = useState(() => [questionForm(null)])
-  const [saving, setSaving] = useState(false)
+  const [forms, setForms] = useState(() => {
+    const unsaved = unsavedForms.get(taskId)
+    unsavedForms.delete(taskId)
+
+    return unsaved ?? [questionForm(null)]
+  })
   const filled = forms.filter(f => f.text.trim() || f.title.trim())
   const problem = filled.map(questionProblem).find(Boolean)
 
+  // Auto questions are resolved by the AI on save, which takes a while: the pane closes at once and the questions
+  // show as placeholder columns until they are saved
   const add = async () => {
     if (!filled.length || problem) return
-    setSaving(true)
+    const savingId = Date.now()
+    const pending = filled.map((form, i) => ({
+      id: `pending_${savingId}_${i}`,
+      taskId,
+      title: form.title,
+      text: form.text,
+      answerMode: form.mode
+    }))
+    dispatch(addPendingQuestions(pending))
+    close()
+
+    const payloads = filled.map((form, i) => ({
+      taskId,
+      nodeType: 'QUESTION',
+      nodeValue: {
+        message: form.text,
+        questionTitle: form.title,
+        order: questions.length + i,
+        insightConfig: insightConfigOf(form)
+      }
+    }))
+    let saved = 0
     try {
-      const payloads = filled.map((form, i) => ({
-        taskId,
-        nodeType: 'QUESTION',
-        nodeValue: {
-          message: form.text,
-          questionTitle: form.title,
-          order: questions.length + i,
-          insightConfig: insightConfigOf(form)
-        }
-      }))
       for (let i = 0; i < payloads.length; i += 10) {
         await taskService.createTaskNodesBatch(organizationId, projectId, payloads.slice(i, i + 10), getToken())
+        saved = Math.min(i + 10, payloads.length)
       }
-      toast.success(filled.length === 1 ? 'Question added. Generate missing answers to fill the column.' : `${filled.length} questions added`)
-      close()
-      reload()
     } catch (error) {
-      toast.error(getErrorMessage(error))
+      // only what wasn't saved comes back, so trying again doesn't add the saved questions twice
+      unsavedForms.set(taskId, filled.slice(saved))
+      toast.error(`Couldn’t save ${plural(payloads.length - saved, 'question')}. Add questions again to retry. ${getErrorMessage(error)}`)
+    }
+    try {
+      // reload before removing the placeholders, so the new columns take their place without a gap
+      if (saved > 0) await reload()
+      if (saved === payloads.length)
+        toast.success(saved === 1 ? 'Question added. Generate missing answers to fill the column.' : `${saved} questions added`)
     } finally {
-      setSaving(false)
+      dispatch(removePendingQuestions(pending.map(q => q.id)))
     }
   }
 
@@ -965,7 +994,6 @@ const NewQuestionsPane = ({ ctx, head }) => {
       {head('New questions', 'Add questions', 'Each question becomes a column. The AI answers it for every document.')}
       <div className='insp-b'>
         <div className='form reading-w'>
-          <fieldset className='lock' disabled={saving}>
           {forms.map((form, i) => (
             <div key={i} className={forms.length > 1 ? 'fact-block' : ''} style={forms.length > 1 ? { background: 'none' } : undefined}>
               {forms.length > 1 && (
@@ -985,15 +1013,14 @@ const NewQuestionsPane = ({ ctx, head }) => {
           </button>
           <p className='faint sm'>Supporting documents can be added to a question once it’s saved.</p>
           <div className='row'>
-            <button aria-busy={saving} className='btn primary' onClick={add} disabled={saving || !filled.length || !!problem}>
-              {saving ? 'Adding…' : filled.length > 1 ? `Add ${filled.length} questions` : 'Add question'}
+            <button className='btn primary' onClick={add} disabled={!filled.length || !!problem}>
+              {filled.length > 1 ? `Add ${filled.length} questions` : 'Add question'}
             </button>
             <button className='btn ghost' onClick={close}>
               Cancel
             </button>
             {filled.length > 0 && problem && <span className='sm' style={{ color: 'var(--err)' }}>{problem}</span>}
           </div>
-          </fieldset>
         </div>
       </div>
     </>
