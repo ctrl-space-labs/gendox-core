@@ -2,18 +2,17 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useDispatch, useSelector } from 'react-redux'
 import toast from 'react-hot-toast'
-import { AppWindow, BookOpenText, FlaskConical, Pencil, Plus, Send, Server, Trash2, Wrench, X } from 'lucide-react'
+import { AppWindow, Hourglass, TriangleAlert, Pencil, Plus, Send, Server, Trash2, Wrench, X } from 'lucide-react'
 import useHasOrgRole from 'src/authentication/hooks/useHasOrgRole'
-import { fetchExampleTools, fetchSkillTools } from 'src/store/activeProjectAgent/activeProjectAgent'
-import { parseSkill } from 'src/utils/skillMarkdown'
+import { fetchExampleTools } from 'src/store/activeProjectAgent/activeProjectAgent'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import useAgent, { getToken } from 'src/components/agent/useAgent'
 import AgentScope from 'src/components/agent/AgentScope'
+import AgentPageSkeleton from 'src/components/agent/AgentPageSkeleton'
 import AppLayout from 'src/layouts/AppLayout'
 import ConfirmDialog from 'src/components/ui/ConfirmDialog'
 import Dialog from 'src/components/ui/Dialog'
 import Empty from 'src/components/ui/Empty'
-import Spinner from 'src/components/ui/Spinner'
 
 // tools with a handler inside Gendox (the AiToolHandler implementations); any other tool runs on the client side
 const GENDOX_TOOLS = [
@@ -80,27 +79,56 @@ const fromForm = (form, base = {}) => {
 
 const runsInGendox = name => GENDOX_TOOLS.includes(name)
 
-// a tool that runs on your side: the agent carries on (ACTION), or waits for your page's result (CLIENT)
+// what "your side" writes for a tool the agent waits for (execution CLIENT): the widget hands the call to a handler
+// registered on the page; an app reads the waiting calls and posts each result
+const WAIT_WIDGET_EXAMPLE = `<script>
+  window.addEventListener('load', () => {
+    window.gendox.tools.registerTool('lookup_order', async ({ order_number }) => {
+      const r = await fetch('/api/orders/' + order_number)
+      return r.json() // sent to the agent, which then answers
+    })
+  })
+</script>`
+
+const WAIT_API_EXAMPLE = `POST messages/completions?projectId=…
+{ "value": "Where is order 1042?", "clientToolResults": true }
+→ "status": "WAITING_FOR_TOOLS", "threadId": "…",
+  "messages": [{ "toolCalls": [{ "id": "call_1",
+    "function": { "name": "lookup_order", … } }] }]
+
+POST messages/completions?projectId=…
+{ "threadId": "…", "role": "tool",
+  "toolCallId": "call_1", "value": "{ \"status\": \"shipped\" }" }
+→ the answer`
+
+// a tool that runs on the client side (your website or app): the agent carries on (ACTION, async), or waits for
+// the result (CLIENT, sync)
 const EXECUTIONS = [
-  ['ACTION', 'Carry on', 'The agent is told the call was sent and carries on, e.g. opening a page.'],
-  ['CLIENT', 'Wait for the result', 'The agent waits until your website or app sends back the result, then answers with it.']
+  ['ACTION', Send, 'Runs on Client side · async', 'The agent carries on without the result. E.g. open a page, fill a form.'],
+  ['CLIENT', Hourglass, 'Runs on Client side · sync', 'The agent waits for the result. E.g. look up an order.']
 ]
 
-const RunsBadge = ({ name, execution }) =>
-  runsInGendox(name) ? (
-    <span className='badge accent'>
-      <Server className='lucide' />
-      Runs in Gendox
-    </span>
-  ) : (
+const RunsBadge = ({ name, execution }) => {
+  if (runsInGendox(name)) {
+    return (
+      <span className='badge accent'>
+        <Server className='lucide' />
+        Runs in Gendox
+      </span>
+    )
+  }
+  const [, Icon, label] = EXECUTIONS.find(([value]) => value === execution) ?? EXECUTIONS[0]
+
+  return (
     <span className='badge'>
-      <Send className='lucide' />
-      Runs on your side{execution === 'CLIENT' ? ' · waits for the result' : ''}
+      <Icon className='lucide' />
+      {label}
     </span>
   )
+}
 
 // Add or edit a tool, as a form or as its JSON schema
-const ToolDialog = ({ open, tool, examples, onClose, onSave }) => {
+const ToolDialog = ({ open, tool, examples, examplesLoading, onClose, onSave }) => {
   const [mode, setMode] = useState('form')
   const [base, setBase] = useState({})
   const [form, setForm] = useState({ name: '', description: '', params: [] })
@@ -209,7 +237,7 @@ const ToolDialog = ({ open, tool, examples, onClose, onSave }) => {
           value=''
           onChange={e => applyExample(e.target.value)}
         >
-          <option value=''>Start from an example…</option>
+          <option value=''>{examplesLoading && !examples.length ? 'Loading examples…' : 'Start from an example…'}</option>
           <optgroup label='Runs in Gendox'>
             {examples
               .filter(e => runsInGendox(parseSchema(e.description).name))
@@ -344,23 +372,36 @@ const ToolDialog = ({ open, tool, examples, onClose, onSave }) => {
               </span>
             </div>
           ) : (
-            <div className='alert' style={{ '--c': 'var(--info)' }}>
-              <b>
-                <Send className='lucide' />
-                Runs on your side
-              </b>
-              <span className='muted'>Your website or app acts on the call.</span>
-              <div style={{ margin: '10px 0 6px' }}>
-                <div className='pill-tabs'>
-                  {EXECUTIONS.map(([value, label]) => (
-                    <button key={value} className={execution === value ? 'on' : ''} onClick={() => setExecution(value)}>
-                      {label}
-                    </button>
-                  ))}
-                </div>
+            <>
+              <div className='choice sm'>
+                {EXECUTIONS.map(([value, Icon, label, text]) => (
+                  <label key={value}>
+                    <input
+                      type='radio'
+                      name='execution'
+                      value={value}
+                      checked={execution === value}
+                      onChange={() => setExecution(value)}
+                    />
+                    <Icon className='lucide' />
+                    <b>{label}</b>
+                    <span>{text}</span>
+                  </label>
+                ))}
               </div>
-              <div className='muted sm'>{EXECUTIONS.find(([value]) => value === execution)?.[2]}</div>
-            </div>
+              {execution === 'CLIENT' && (
+                <div className='alert' style={{ '--c': 'var(--warn)', marginTop: 10 }}>
+                  <b>
+                    <TriangleAlert className='lucide' />
+                    Your website or app must send the result back
+                  </b>
+                  <span className='muted'>
+                    Where nothing answers, e.g. chats inside Gendox or a site without the handler, the answer waits for
+                    it. See “How tools run” on the Tools page.
+                  </span>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
@@ -372,42 +413,22 @@ const ToolDialog = ({ open, tool, examples, onClose, onSave }) => {
 const AgentToolsPage = () => {
   const dispatch = useDispatch()
   const { project, organizationId, href, save } = useAgent()
-  const { exampleTools, skillTools } = useSelector(state => state.activeProjectAgent)
+  const { exampleTools, isFetchingExampleTools } = useSelector(state => state.activeProjectAgent)
   const canEdit = useHasOrgRole({ organizationId, roles: ['OP_UPDATE_PROJECT'] })
+  const isAdmin = useHasOrgRole({ organizationId, roles: ['ROLE_OWNER', 'ROLE_ADMIN'] })
 
   const [editing, setEditing] = useState(null) // null closed, { index } — index null for a new tool
   const [removing, setRemoving] = useState(null)
 
   useEffect(() => {
     dispatch(fetchExampleTools({ token: getToken() }))
-    dispatch(fetchSkillTools({ token: getToken() }))
   }, [dispatch])
 
   const tools = useMemo(() => project?.projectAgent?.aiTools ?? [], [project])
 
-  // tools the agent's skills bring: not saved on the agent, so they go with the skill
-  const skillBrought = useMemo(() => {
-    const own = new Set(tools.map(tool => parseSchema(tool.jsonSchema).name))
-    const bySkill = new Map()
-    ;(project?.projectAgent?.agentSkills ?? []).forEach(skill =>
-      parseSkill(skill.content)
-        .tools.filter(name => !own.has(name))
-        .forEach(name => bySkill.set(name, [...(bySkill.get(name) || []), skill.name]))
-    )
-    const descriptions = new Map((skillTools || []).map(tool => [tool.name, tool.description]))
 
-    return [...bySkill.keys()].sort().map(name => ({ name, skills: bySkill.get(name), description: descriptions.get(name) }))
-  }, [project, tools, skillTools])
-
-  if (!project) {
-    return (
-      <main className='content'>
-        <div className='center' style={{ padding: 80 }}>
-          <Spinner />
-        </div>
-      </main>
-    )
-  }
+  // the header is known from the profile; the tools show as cards once the agent loads
+  if (!project) return <AgentPageSkeleton tab='tools' />
 
   const saveTools = async (aiTools, message) => {
     try {
@@ -439,15 +460,11 @@ const AgentToolsPage = () => {
         <div>
           <h2>Tools</h2>
           <p className='muted' style={{ marginTop: 4 }}>
-            Let the agent do things, not only answer: look up an order, open a page, read a document. Each tool says
-            where it runs: in Gendox, or on your side (your website or app).
+            Let the agent do things, not only answer: look up an order, open a ticket, send an email. Each tool says
+            where it runs: in Gendox, or on the client side (your website or app).
           </p>
         </div>
         <span className='sp' />
-        <Link className='btn' href={href('/gendox/project-settings/validate-tools')}>
-          <FlaskConical className='lucide' />
-          Validate tools
-        </Link>
         {canEdit && (
           <button className='btn primary' onClick={() => setEditing({ index: null })}>
             <Plus className='lucide' />
@@ -532,31 +549,6 @@ const AgentToolsPage = () => {
         )}
       </div>
 
-      {skillBrought.length > 0 && (
-        <div className='card'>
-          <div className='card-h'>
-            <h3>From skills</h3>
-            <span className='faint sm'>Come and go with the skill that brings them.</span>
-            <span className='sp' />
-            <Link className='btn ghost s' href={href('/gendox/agent-skills')}>
-              Skills
-            </Link>
-          </div>
-          {skillBrought.map(tool => (
-            <div className='item' key={tool.name}>
-              <span className='ftype' style={{ '--h': 265 }}>
-                <BookOpenText className='lucide' />
-              </span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <b className='mono'>{tool.name}</b>
-                {tool.description && <div className='muted sm clamp2'>{tool.description}</div>}
-                <div className='faint sm trunc'>From {tool.skills.join(', ')}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
       <div className='card card-b row' style={{ gap: 14, flexWrap: 'wrap' }}>
         <span className='ftype' style={{ '--h': 190 }}>
           <AppWindow className='lucide' />
@@ -579,7 +571,7 @@ const AgentToolsPage = () => {
         <div className='card-h'>
           <h3>How tools run</h3>
         </div>
-        <div className='card-b'>
+        <div className='card-b stack'>
           <div className='lanes'>
             <div className='lane'>
               <b>
@@ -592,19 +584,55 @@ const AgentToolsPage = () => {
             <div className='lane'>
               <b>
                 <Send className='lucide' />
-                Runs on your side
+                Runs on Client side · async
               </b>
-              <p>Your website or app acts on the call. The agent carries on, or waits for the result you send back.</p>
-              <p className='faint sm'>open_web_page, fill_fields, and any tool you add</p>
+              <p>Your website or app acts on the call. The agent is told it was done and carries on.</p>
+              <p className='faint sm'>open_web_page, fill_fields</p>
             </div>
+            <div className='lane'>
+              <b>
+                <Hourglass className='lucide' />
+                Runs on Client side · sync
+              </b>
+              <p>Your website or app runs it and sends the result back. The agent waits, then answers with it.</p>
+              <p className='faint sm'>e.g. lookup_order, get_cart</p>
+            </div>
+          </div>
+
+          <div>
+            <b>For a tool the agent waits for</b>
+            <div className='lanes' style={{ marginTop: 10 }}>
+              <div className='stack' style={{ gap: 6 }}>
+                <span className='faint sm'>On your website, after the widget snippet</span>
+                <pre className='code'>{WAIT_WIDGET_EXAMPLE}</pre>
+              </div>
+              <div className='stack' style={{ gap: 6 }}>
+                <span className='faint sm'>From your own app, with the API</span>
+                <pre className='code'>{WAIT_API_EXAMPLE}</pre>
+              </div>
+            </div>
+            <p className='faint sm' style={{ marginTop: 10 }}>
+              Several calls can wait at once; the agent continues when all have a result. Where nothing sends it, e.g.
+              chats inside Gendox, the answer keeps waiting.
+            </p>
           </div>
         </div>
       </div>
+
+      {isAdmin && (
+        <p className='faint sm'>
+          <Link className='link' href={href('/gendox/project-settings/validate-tools')}>
+            Compare two documents
+          </Link>{' '}
+          — a developer check for the document-diff tool (owners and admins).
+        </p>
+      )}
 
       <ToolDialog
         open={Boolean(editing)}
         tool={editing && editing.index != null ? tools[editing.index] : null}
         examples={exampleTools || []}
+        examplesLoading={isFetchingExampleTools}
         onClose={() => setEditing(null)}
         onSave={saveTool}
       />

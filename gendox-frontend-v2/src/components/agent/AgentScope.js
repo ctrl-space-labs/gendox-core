@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import { ArrowLeftRight, Check, MessageSquareText } from 'lucide-react'
+import { ArrowLeftRight, Check, LayoutGrid, MessageSquareText, Plus } from 'lucide-react'
 import useActiveScope from 'src/hooks/useActiveScope'
 import Avatar from 'src/components/ui/Avatar'
 import Menu from 'src/components/ui/Menu'
@@ -23,7 +23,7 @@ export const AGENT_TABS = [
  */
 const AgentScope = ({ project, tab }) => {
   const router = useRouter()
-  const { projects, project: profileProject, projectId, href } = useActiveScope()
+  const { organization, projects, project: profileProject, projectId, href } = useActiveScope()
   const agent = project ?? profileProject
   if (!agent) return null
 
@@ -40,34 +40,50 @@ const AgentScope = ({ project, tab }) => {
               <span className={`badge dot ${privateAgent ? '' : 'ok'}`}>{privateAgent ? 'Private' : 'Public'}</span>
             )}
           </div>
-          {agent.description && <p className='muted sm trunc'>{agent.description}</p>}
-        </div>
-        <div className='row hide-sm'>
-          {projects.length > 1 && (
-            <Menu
-              align='right'
-              trigger={({ onClick }) => (
-                <button className='btn s' onClick={onClick}>
-                  <ArrowLeftRight className='lucide' />
-                  Switch agent
-                </button>
-              )}
-            >
-              <div className='h'>Agents</div>
-              {projects.map(p => (
-                <Link key={p.id} className='mi' href={href(router.pathname, { projectId: p.id })}>
-                  <Avatar name={p.name} seed={p.id} size='s' />
-                  <span className='trunc' style={{ flex: 1 }}>
-                    {p.name}
-                  </span>
-                  {p.id === projectId && <Check className='lucide' />}
-                </Link>
-              ))}
-            </Menu>
+          {agent.description ? (
+            <p className='muted sm trunc'>{agent.description}</p>
+          ) : (
+            <p className='faint sm trunc'>
+              No description yet.{' '}
+              <Link className='link' href={href('/gendox/agent-settings')}>
+                Say what this agent is for
+              </Link>
+            </p>
           )}
-          <Link className='btn s primary' href={`${href('/gendox/agent-home')}#/chat/new`}>
+        </div>
+        <div className='row' style={{ flex: 'none' }}>
+          <Menu
+            align='right'
+            trigger={({ onClick }) => (
+              <button className='btn s' onClick={onClick} title='Switch agent'>
+                <ArrowLeftRight className='lucide' />
+                <span className='hide-sm'>Switch agent</span>
+              </button>
+            )}
+          >
+            <div className='h'>Agents in {organization?.name ?? 'this organization'}</div>
+            {projects.map(p => (
+              <Link key={p.id} className='mi' href={href(router.pathname, { projectId: p.id })}>
+                <Avatar name={p.name} seed={p.id} size='s' />
+                <span className='trunc' style={{ flex: 1 }}>
+                  {p.name}
+                </span>
+                {p.id === projectId && <Check className='lucide' />}
+              </Link>
+            ))}
+            <hr />
+            <Link className='mi' href={href('/gendox/agents')}>
+              <LayoutGrid className='lucide' />
+              All agents
+            </Link>
+            <Link className='mi' href={href('/gendox/create-project')}>
+              <Plus className='lucide' />
+              New agent
+            </Link>
+          </Menu>
+          <Link className='btn s primary' href={`${href('/gendox/agent-home')}#/chat/new`} title='Chat'>
             <MessageSquareText className='lucide' />
-            Chat
+            <span className='hide-sm'>Chat</span>
           </Link>
         </div>
       </div>

@@ -77,6 +77,13 @@ export const parseSkill = (content, knownTools) => {
   return { name, description, tools, body: text.slice(match[0].length), errors }
 }
 
+/** The front matter of a SKILL.md as written, between its --- lines; null without one (SkillMarkdownParser.frontMatterOf) */
+export const frontMatterOf = content => {
+  const match = FRONT_MATTER.exec(content || '')
+
+  return match ? `---\n${match[1]}\n---` : null
+}
+
 /** Renames a skill in its front matter, for "Edit a copy". */
 export const renameSkill = (content, newName) => {
   return (content || '').replace(/^(﻿?\s*---[ \t]*\r?\n[\s\S]*?)^name:.*$/m, `$1name: ${newName}`)

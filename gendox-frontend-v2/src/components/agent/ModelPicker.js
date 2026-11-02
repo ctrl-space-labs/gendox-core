@@ -35,7 +35,8 @@ export const providerLabel = name =>
  * @param keys - GET organizations/{o}/model-keys → content
  */
 export const needsKey = (model, keys = []) => {
-  if (!model) return false
+  // null keys: not loaded yet, so don't warn
+  if (!model || !keys) return false
   const provider = model.aiModelProvider?.name
   if (model.modelTierType?.name === 'FREE_MODEL' || KEYLESS_PROVIDERS.includes(provider)) return false
 
@@ -70,8 +71,20 @@ const ModelTag = ({ model, keys }) => {
  * @param value - the chosen model's name
  * @param keysHref - the Model providers page, offered at the end of the list
  */
-const ModelPicker = ({ models = [], value, onChange, keys, disabled = false, title, keysHref }) => {
+const ModelPicker = ({ models = [], value, onChange, keys, disabled = false, title, keysHref, loading = false }) => {
   const current = models.find(m => m.name === value)
+
+  // until the models arrive only the saved name is known: a placeholder, not a half-drawn model
+  if (loading) {
+    return (
+      <div className='modelpick' aria-busy='true'>
+        <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <span className='skel' style={{ width: '45%' }} />
+          <span className='skel' style={{ width: '30%', height: '.75em' }} />
+        </span>
+      </div>
+    )
+  }
 
   return (
     <Menu

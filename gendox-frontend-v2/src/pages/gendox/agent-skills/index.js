@@ -1,19 +1,24 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import toast from 'react-hot-toast'
-import { BookOpenText, Download, Plus, Sparkles, Trash2 } from 'lucide-react'
+import { BookMarked, Download, Ellipsis, Eye, LibraryBig, Pencil, Plus, Sparkles, Trash2 } from 'lucide-react'
 import useHasOrgRole from 'src/authentication/hooks/useHasOrgRole'
 import { fetchSkillLibrary, fetchSkillTools } from 'src/store/activeProjectAgent/activeProjectAgent'
 import { getErrorMessage } from 'src/utils/errorHandler'
-import { downloadSkill, NEW_SKILL_TEMPLATE, parseSkill, renameSkill } from 'src/utils/skillMarkdown'
+import { downloadSkill, frontMatterOf, NEW_SKILL_TEMPLATE, parseSkill, renameSkill } from 'src/utils/skillMarkdown'
 import useAgent, { getToken } from 'src/components/agent/useAgent'
+import useOrganizationUsers from 'src/hooks/useOrganizationUsers'
+import { authorOf } from 'src/components/knowledge/documentUtils'
 import AgentScope from 'src/components/agent/AgentScope'
+import AgentPageSkeleton from 'src/components/agent/AgentPageSkeleton'
 import AppLayout from 'src/layouts/AppLayout'
 import ConfirmDialog from 'src/components/ui/ConfirmDialog'
 import Empty from 'src/components/ui/Empty'
-import Spinner from 'src/components/ui/Spinner'
+import Menu from 'src/components/ui/Menu'
+import { SkeletonList } from 'src/components/ui/Skeleton'
 import SkillEditorDialog from 'src/components/skills/SkillEditorDialog'
 import SkillLibraryDialog from 'src/components/skills/SkillLibraryDialog'
+import SkillTools from 'src/components/skills/SkillTools'
 
 /**
  * The agent's skills (projectAgent.agentSkills), saved with PUT …/projects/{p} like its tools.
@@ -23,6 +28,7 @@ import SkillLibraryDialog from 'src/components/skills/SkillLibraryDialog'
 const AgentSkillsPage = () => {
   const dispatch = useDispatch()
   const { project, organizationId, save } = useAgent()
+  const organizationUsers = useOrganizationUsers(organizationId)
   const { skillLibrary, isFetchingSkillLibrary, skillTools } = useSelector(state => state.activeProjectAgent)
   const canEdit = useHasOrgRole({ organizationId, roles: ['OP_UPDATE_PROJECT'] })
 
@@ -39,16 +45,23 @@ const AgentSkillsPage = () => {
   const addedNames = useMemo(() => new Set(skills.map(skill => skill.name)), [skills])
   const libraryById = useMemo(() => new Map((skillLibrary || []).map(skill => [skill.id, skill])), [skillLibrary])
   const knownTools = useMemo(() => (skillTools || []).map(tool => tool.name), [skillTools])
+  const toolDescriptions = useMemo(() => new Map((skillTools || []).map(tool => [tool.name, tool.description])), [skillTools])
 
-  if (!project) {
-    return (
-      <main className='content'>
-        <div className='center' style={{ padding: 80 }}>
-          <Spinner />
-        </div>
-      </main>
-    )
-  }
+  // what the backend appends to the agent's system prompt (SkillService.buildSkillsHeader): each skill's front matter
+  const alwaysSees = useMemo(
+    () =>
+      [...skills]
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map(skill => frontMatterOf(skill.content) ?? `---\nname: ${skill.name}\ndescription: ${skill.description}\n---`)
+        .join('\n\n'),
+    [skills]
+  )
+
+  if (!project) return <AgentPageSkeleton tab='skills'>
+      <div className='card'>
+        <SkeletonList rows={2} />
+      </div>
+    </AgentPageSkeleton>
 
   const saveSkills = async (agentSkills, message) => {
     try {
@@ -94,22 +107,22 @@ const AgentSkillsPage = () => {
         <div>
           <h2>Skills</h2>
           <p className='muted' style={{ marginTop: 4 }}>
-            Instructions the agent reads when a question needs them, e.g. how to handle a refund. Each skill is one
-            SKILL.md file, the format Claude Code and Codex use, and can bring tools with it.
+            Instructions {project.name} reads when a question needs them. Each skill is one SKILL.md file, the same
+            format Claude Code and Codex use.
           </p>
         </div>
         <span className='sp' />
         {canEdit && (
-          <>
+          <div className='row' style={{ gap: 8, flex: 'none' }}>
             <button className='btn' onClick={() => setLibraryOpen(true)}>
-              <Sparkles className='lucide' />
+              <LibraryBig className='lucide' />
               Gendox skills
             </button>
             <button className='btn primary' onClick={newSkill}>
               <Plus className='lucide' />
               New skill
             </button>
-          </>
+          </div>
         )}
       </div>
 
@@ -118,50 +131,57 @@ const AgentSkillsPage = () => {
           {skills.map((skill, index) => {
             const fromGendox = Boolean(skill.skillId)
             const version = fromGendox ? libraryById.get(skill.skillId)?.version : null
-            const tools = parseSkill(skill.content).tools
+            const from = fromGendox ? 'Gendox' : authorOf(skill, organizationUsers) || 'Your own'
+            const readOnly = fromGendox || !canEdit
+            const open = () => setEditor({ index, content: skill.content, readOnly })
 
             return (
-              <div
-                key={skill.id ?? `new-${index}`}
-                className='item'
-                style={{ cursor: 'pointer' }}
-                onClick={() => setEditor({ index, content: skill.content, readOnly: fromGendox || !canEdit })}
-              >
-                <span className='ftype' style={{ '--h': fromGendox ? 265 : 210 }}>
-                  {fromGendox ? <Sparkles className='lucide' /> : <BookOpenText className='lucide' />}
+              <div key={skill.id ?? `new-${index}`} className='item skill-row' onClick={open}>
+                <span className='ftype' style={{ '--h': fromGendox ? 165 : 270, width: 28, height: 28 }}>
+                  {fromGendox ? <Sparkles className='lucide' /> : <BookMarked className='lucide' />}
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className='row'>
-                    <b className='mono trunc'>{skill.name}</b>
-                    <span className={`badge ${fromGendox ? 'accent' : ''}`}>
-                      {fromGendox ? `Gendox${version ? ` · v${version}` : ''}` : 'Your own'}
+                  <div className='row' style={{ gap: 8 }}>
+                    <b className='trunc' style={{ fontWeight: 550 }}>
+                      {skill.name}
+                    </b>
+                    <span className='faint sm'>
+                      {from}
+                      {version ? ` · v${version}` : ''}
                     </span>
                   </div>
-                  <div className='muted sm clamp2'>{skill.description}</div>
-                  {tools.length > 0 && <div className='faint sm trunc'>Brings {tools.join(', ')}</div>}
+                  <div className='faint sm trunc'>{skill.description}</div>
+                  <SkillTools tools={parseSkill(skill.content).tools} descriptions={toolDescriptions} />
                 </div>
-                <button
-                  className='btn ghost s icon'
-                  title='Download SKILL.md'
-                  onClick={e => {
-                    e.stopPropagation()
-                    downloadSkill(skill)
-                  }}
-                >
-                  <Download className='lucide' />
-                </button>
-                {canEdit && (
-                  <button
-                    className='btn ghost s icon'
-                    title='Remove'
-                    onClick={e => {
-                      e.stopPropagation()
-                      setRemoving(index)
-                    }}
+                <div onClick={e => e.stopPropagation()}>
+                  <Menu
+                    align='right'
+                    width={220}
+                    trigger={({ onClick }) => (
+                      <button className='btn ghost s icon' title='More' onClick={onClick}>
+                        <Ellipsis className='lucide' />
+                      </button>
+                    )}
                   >
-                    <Trash2 className='lucide' />
-                  </button>
-                )}
+                    <button className='mi' data-close-menu onClick={open}>
+                      {readOnly ? <Eye className='lucide' /> : <Pencil className='lucide' />}
+                      {readOnly ? 'View' : 'Edit'}
+                    </button>
+                    <button className='mi' data-close-menu onClick={() => downloadSkill(skill)}>
+                      <Download className='lucide' />
+                      Download SKILL.md
+                    </button>
+                    {canEdit && (
+                      <>
+                        <hr />
+                        <button className='mi' data-close-menu style={{ color: 'var(--err)' }} onClick={() => setRemoving(index)}>
+                          <Trash2 className='lucide' />
+                          Remove from {project.name}
+                        </button>
+                      </>
+                    )}
+                  </Menu>
+                </div>
               </div>
             )
           })}
@@ -169,9 +189,9 @@ const AgentSkillsPage = () => {
       ) : (
         <div className='card'>
           <Empty
-            icon={<BookOpenText className='lucide' />}
+            icon={<BookMarked className='lucide' />}
             title='No skills yet'
-            text='Add a ready-made skill from Gendox, or write your own.'
+            text='Skills are instructions the agent reads only when it needs them. Start from one Gendox provides.'
             action={
               canEdit && (
                 <button className='btn primary' onClick={() => setLibraryOpen(true)}>
@@ -182,6 +202,19 @@ const AgentSkillsPage = () => {
           />
         </div>
       )}
+
+      <details className='card'>
+        <summary className='card-h' style={{ cursor: 'pointer' }}>
+          <h3>What the agent always sees</h3>
+          <span className='sp' />
+          <span className='faint sm'>Each skill’s front matter</span>
+        </summary>
+        <pre className='code' style={{ border: 0, borderRadius: 0, whiteSpace: 'pre-wrap' }}>
+          {skills.length
+            ? `${alwaysSees}\n\nRead a skill with read_skill(name) before you follow it.`
+            : 'No skills yet: nothing is added to the agent’s instructions.'}
+        </pre>
+      </details>
 
       <SkillLibraryDialog
         open={libraryOpen}
@@ -197,14 +230,16 @@ const AgentSkillsPage = () => {
         title={editor?.readOnly ? editing?.name : editing ? `Edit ${editing.name}` : 'New skill'}
         subtitle={
           editor?.readOnly && editing?.skillId
-            ? 'From Gendox, kept up to date by Gendox. Edit a copy to change it; your copy stops following Gendox’s updates.'
-            : null
+            ? `From Gendox${libraryById.get(editing.skillId)?.version ? ` · version ${libraryById.get(editing.skillId).version}` : ''}. Edit a copy to change it; your copy stops following Gendox’s updates.`
+            : editor?.readOnly
+              ? null
+              : 'Write or paste a SKILL.md, or upload one. The name and description come from its front matter.'
         }
         initialContent={editor?.content}
         knownTools={knownTools.length ? knownTools : undefined}
         readOnly={editor?.readOnly}
         footerNote={editor?.readOnly ? null : 'Saved with the agent.'}
-        saveLabel={editing ? 'Save' : 'Add skill'}
+        saveLabel='Save'
         onClose={() => setEditor(null)}
         onSave={saveFromEditor}
         onEditCopy={canEdit ? editACopy : null}
@@ -215,7 +250,7 @@ const AgentSkillsPage = () => {
         open={removing != null}
         onClose={() => setRemoving(null)}
         title={`Remove ${removing != null ? skills[removing]?.name : ''}?`}
-        text='The agent stops using this skill and the tools it brings.'
+        text={`${project.name} stops using it and the tools it brings. Past conversations keep their history.`}
         confirmLabel='Remove'
         onConfirm={() => saveSkills(skills.filter((_, i) => i !== removing), 'Skill removed')}
       />

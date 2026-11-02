@@ -270,3 +270,17 @@ fieldset.lock:disabled .btn { opacity: .5; pointer-events: none; }
 .text-shimmer { color: transparent; background: linear-gradient(90deg, var(--text-3) 35%, var(--text) 50%, var(--text-3) 65%) 0 0 / 200% 100%; -webkit-background-clip: text; background-clip: text; animation: text-shimmer 1.8s linear infinite; }
 @keyframes text-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 @media (prefers-reduced-motion: reduce) { .text-shimmer { animation: none; color: var(--text-3); } }
+
+/* a switch whose change is being saved: already in its new position, pulsing until the save ends */
+.switch[aria-busy='true'] { cursor: progress; animation: switch-busy 1s ease-in-out infinite alternate; }
+@keyframes switch-busy { from { opacity: 1; } to { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { .switch[aria-busy='true'] { animation: none; opacity: .6; } }
+
+/* an agent's skill: the row opens it */
+.skill-row { cursor: pointer; }
+.skill-row:hover { background: var(--surface-2); }
+.skill-row .ftype .lucide { width: 15px; height: 15px; }
+.skill-lib { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.skill-lib .card { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; }
+.skill-lib .card p { color: var(--text-2); font-size: 13px; line-height: 1.5; flex: 1; }
+.skill-lib .ftype .lucide { width: 15px; height: 15px; }

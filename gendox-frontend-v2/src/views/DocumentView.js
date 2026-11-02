@@ -45,7 +45,6 @@ import ConfirmDialog from 'src/components/ui/ConfirmDialog'
 import Empty from 'src/components/ui/Empty'
 import FileTile from 'src/components/ui/FileTile'
 import Menu from 'src/components/ui/Menu'
-import Spinner from 'src/components/ui/Spinner'
 
 const AUTOSAVE_MS = 900
 const CITED_MS = 10000
@@ -171,6 +170,8 @@ const DocumentView = () => {
   const [confirm, setConfirm] = useState(null)
   const [citedId, setCitedId] = useState(null)
   const [isLoaded, setIsLoaded] = useState(false)
+  const [isAdding, setIsAdding] = useState(false)
+  const [isFinishing, setIsFinishing] = useState(false)
 
   const timers = useRef({})
   const draftsRef = useRef([])
@@ -303,9 +304,11 @@ const DocumentView = () => {
   }
 
   const finishEditing = async () => {
+    setIsFinishing(true)
     flushSaves()
     while (pending.current.size > 0) await new Promise(resolve => setTimeout(resolve, 100))
     await load()
+    setIsFinishing(false)
     setMode('view')
   }
 
@@ -314,6 +317,7 @@ const DocumentView = () => {
   }, [])
 
   const addSection = async () => {
+    setIsAdding(true)
     try {
       const response = await documentService.createDocumentSection(document.id, getToken())
       const section = response.data
@@ -325,6 +329,8 @@ const DocumentView = () => {
       }, 50)
     } catch (error) {
       toast.error(`Couldn’t add a section. ${getErrorMessage(error)}`)
+    } finally {
+      setIsAdding(false)
     }
   }
 
@@ -371,11 +377,35 @@ const DocumentView = () => {
   }
 
   // ---------- render ----------
+  // the document's shape while it loads: its header, the outline and a few sections
   if (!isLoaded && !document) {
     return (
       <ViewMain>
-        <div className='center' style={{ padding: 80 }}>
-          <Spinner />
+        <div aria-busy='true' className='stack' style={{ gap: 24 }}>
+          <div className='doc-h'>
+            <span className='skel' style={{ width: 40, height: 48, borderRadius: 8 }} />
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <span className='skel' style={{ display: 'block', width: '45%', height: 22 }} />
+              <span className='skel' style={{ display: 'block', width: '60%', marginTop: 10 }} />
+            </div>
+          </div>
+          <div className='docpage'>
+            <nav className='outline' style={{ gap: 10 }}>
+              {[70, 55, 80, 60].map((w, i) => (
+                <span key={i} className='skel' style={{ display: 'block', width: `${w}%` }} />
+              ))}
+            </nav>
+            <article className='stack' style={{ gap: 28 }}>
+              {[0, 1].map(i => (
+                <div key={i}>
+                  <span className='skel' style={{ display: 'block', width: '35%', height: 18 }} />
+                  {[96, 92, 98, 70].map((w, j) => (
+                    <span key={j} className='skel' style={{ display: 'block', width: `${w}%`, marginTop: 10 }} />
+                  ))}
+                </div>
+              ))}
+            </article>
+          </div>
         </div>
       </ViewMain>
     )
@@ -416,9 +446,11 @@ const DocumentView = () => {
         </Head>
       )}
         <div className='doc-h'>
-          <Link className='btn ghost s icon' href={knowledgeHref} title='Back to Knowledge'>
-            <ArrowLeft className='lucide' />
-          </Link>
+          {view.mode === 'page' && (
+            <Link className='btn ghost s icon' href={knowledgeHref} title='Back to Knowledge'>
+              <ArrowLeft className='lucide' />
+            </Link>
+          )}
           <FileTile name={fileNameOf(document)} type={tileTypeOf(document)} className='big' />
           <div style={{ flex: 1, minWidth: 200 }}>
             <h1 className='doc-t'>{title}</h1>
@@ -499,11 +531,11 @@ const DocumentView = () => {
                   </>
                 )}
               </span>
-              <button className='btn s' onClick={addSection}>
+              <button aria-busy={isAdding} className='btn s' onClick={addSection} disabled={isAdding || isFinishing}>
                 <Plus className='lucide' />
                 Add section
               </button>
-              <button className='btn s primary' onClick={finishEditing}>
+              <button aria-busy={isFinishing} className='btn s primary' onClick={finishEditing} disabled={isFinishing}>
                 Done
               </button>
             </div>
