@@ -249,8 +249,8 @@ export const sendMessage = createAsyncThunk(
             payload: { threadId, value: message, localContexts: chatLocalContextResponses, documentInstanceIds,
               stream: true, clientToolResults: Boolean(iFrameMessageManager?.isEmbedded) } })
     } catch (error) {
-      toast.error(getErrorMessage(error))
-      return rejectWithValue(error.response?.data || error.message)
+      // the chat shows the failure under the question, with Try again
+      return rejectWithValue({ errorCode: error.response?.data?.errorCode, errorMessage: getErrorMessage(error) })
     }
 
     // Deep thinking returns HTTP 202 with { jobExecutionId, threadId }
@@ -670,6 +670,12 @@ const gendoxChatSlice = createSlice({
     builder.addCase(sendMessage.rejected, (state, action) => {
       const session = sessionOf(state, keyOf(action))
       session.isSendingMessage = ACTIVE_COMPLETION_STATUSES.includes(session.completionStatus)
+      // A turn that still runs is recovered by polling; one that ended marks its question as failed
+      const messages = session.currentThread?.messages
+      if (session.isSendingMessage || !messages) return
+      const userId = action.meta.arg?.user?.id
+      const question = [...messages].reverse().find(m => m.createdBy === userId)
+      if (question) question.failed = { code: action.payload?.errorCode, message: action.payload?.errorMessage }
     })
     builder.addCase(pollDeepThinkingStatus.fulfilled, (state, action) => {
       const { status, steps } = action.payload

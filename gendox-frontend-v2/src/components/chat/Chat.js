@@ -442,7 +442,7 @@ const Chat = ({
               </h1>
               <p className='muted'>
                 {variant === 'widget'
-                  ? 'Ask me anything. I’ll show you where each answer comes from.'
+                  ? `${agent?.description ? `${agent.description} ` : ''}Ask me anything. I’ll show you where each answer comes from.`
                   : `Ask ${agentName || 'the agent'} anything. It answers from its documents and shows where each answer comes from.`}
               </p>
             </div>
