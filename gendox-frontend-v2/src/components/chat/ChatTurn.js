@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Check, ChevronRight, Copy, Lightbulb, RefreshCw, Wrench } from 'lucide-react'
+import { BookMarked, Check, ChevronRight, CircleAlert, Copy, Lightbulb, RefreshCw, Wrench } from 'lucide-react'
 import { copyToClipboard } from 'src/utils/copyToClipboard'
 import Avatar from 'src/components/ui/Avatar'
 import Markdown from 'src/components/chat/Markdown'
@@ -18,9 +18,56 @@ const Trace = ({ icon: Icon, label, children }) => {
   )
 }
 
-// The tools one assistant message called, with their arguments and what each returned
+// A failed answer in plain words; the backend's code stays small, for support
+const FAILURES = {
+  MAX_MESSAGES_EXCEED: [
+    'This month’s messages are used up',
+    'The organization has used all the messages of its plan. An admin can upgrade in Plan & usage.'
+  ],
+  RATE_LIMIT_EXCEEDED: ['Too many questions at once', 'Please wait a few seconds and ask again.']
+}
+
+const Failure = ({ failed, onAskAgain }) => {
+  const [title, text] = FAILURES[failed.code] || ['Something went wrong', failed.message || 'Try again in a moment.']
+
+  return (
+    <div className='alert' style={{ '--c': 'var(--warn)' }}>
+      <b>
+        <CircleAlert className='lucide' />
+        {title}
+      </b>
+      <span className='muted'>{text}</span>
+      <div className='row' style={{ marginTop: 8 }}>
+        {onAskAgain && (
+          <button className='btn s' onClick={onAskAgain}>
+            <RefreshCw className='lucide' />
+            Try again
+          </button>
+        )}
+        <span className='sp' />
+        {failed.code && <span className='faint sm mono'>{failed.code}</span>}
+      </div>
+    </div>
+  )
+}
+
+const skillNameOf = call => {
+  try {
+    const args =
+      typeof call.function?.arguments === 'string' ? JSON.parse(call.function.arguments) : call.function?.arguments
+
+    return args?.name || ''
+  } catch (_) {
+    return ''
+  }
+}
+
+// The tools one assistant message called, with their arguments and what each returned.
+// Reading a skill shows as its own line: the skill's instructions are not worth showing as a tool result.
 const ToolCalls = ({ header, responses }) => {
-  const calls = header.toolCalls || []
+  const allCalls = header.toolCalls || []
+  const skillCalls = allCalls.filter(call => call.function?.name === 'read_skill')
+  const calls = allCalls.filter(call => call.function?.name !== 'read_skill')
 
   return (
     <>
@@ -29,29 +76,38 @@ const ToolCalls = ({ header, responses }) => {
           <Markdown text={header.reasoningContent} className='gc-md muted' />
         </Trace>
       )}
-      <Trace icon={Wrench} label={`Used ${calls.map(call => call.function?.name).join(', ')}`}>
-        {calls.map(call => (
-          <div key={call.id}>
-            <div className='mono sm' style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
-              <span className='faint'>↳ args</span>{' '}
-              {typeof call.function?.arguments === 'string'
-                ? call.function.arguments
-                : JSON.stringify(call.function?.arguments, null, 2)}
+      {skillCalls.map(call => (
+        <Trace key={call.id} icon={BookMarked} label={`Read skill: ${skillNameOf(call)}`}>
+          <p className='muted'>
+            The question matched the skill’s description, so the agent read its instructions before answering.
+          </p>
+        </Trace>
+      ))}
+      {calls.length > 0 && (
+        <Trace icon={Wrench} label={`Used ${calls.map(call => call.function?.name).join(', ')}`}>
+          {calls.map(call => (
+            <div key={call.id}>
+              <div className='mono sm' style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+                <span className='faint'>↳ args</span>{' '}
+                {typeof call.function?.arguments === 'string'
+                  ? call.function.arguments
+                  : JSON.stringify(call.function?.arguments, null, 2)}
+              </div>
+              {responses
+                .filter(response => response.toolCallId === call.id)
+                .map(response => (
+                  <div
+                    key={response.messageId}
+                    className='mono sm'
+                    style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}
+                  >
+                    <span className='faint'>↳ result</span> {response.message}
+                  </div>
+                ))}
             </div>
-            {responses
-              .filter(response => response.toolCallId === call.id)
-              .map(response => (
-                <div
-                  key={response.messageId}
-                  className='mono sm'
-                  style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}
-                >
-                  <span className='faint'>↳ result</span> {response.message}
-                </div>
-              ))}
-          </div>
-        ))}
-      </Trace>
+          ))}
+        </Trace>
+      )}
     </>
   )
 }
@@ -117,6 +173,7 @@ const ChatTurn = ({
 }) => {
   const { question, items } = turn
   const sentAt = question?.createdAt ? new Date(question.createdAt).toLocaleString() : undefined
+  const failed = question?.failed && items.length === 0 && !children ? question.failed : null
 
   return (
     <div className='gc-turn'>
@@ -130,7 +187,7 @@ const ChatTurn = ({
           )}
         </div>
       )}
-      {(items.length > 0 || children) && (
+      {(items.length > 0 || children || failed) && (
         <div className='gc-ai'>
           <div className='gc-who'>
             <Avatar name={agentName} seed={agentSeed} size='s' />
@@ -152,6 +209,12 @@ const ChatTurn = ({
             )
           )}
           {children}
+          {failed && (
+            <Failure
+              failed={failed}
+              onAskAgain={onAskAgain && question.message ? () => onAskAgain(question.message) : null}
+            />
+          )}
         </div>
       )}
     </div>
