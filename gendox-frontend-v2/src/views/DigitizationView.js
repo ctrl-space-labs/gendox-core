@@ -20,7 +20,6 @@ import ConfirmDialog from 'src/components/ui/ConfirmDialog'
 import Empty from 'src/components/ui/Empty'
 import FileTile from 'src/components/ui/FileTile'
 import Menu from 'src/components/ui/Menu'
-import Spinner from 'src/components/ui/Spinner'
 
 const ALL = 2147483647
 
@@ -50,6 +49,7 @@ const DigitizationView = () => {
   const [picker, setPicker] = useState(null)
   const [editing, setEditing] = useState(false)
   const [pending, setPending] = useState(null)
+  const [openingPicker, setOpeningPicker] = useState(false)
   const inspRef = useRef(null)
 
   const loadTask = useCallback(() => {
@@ -245,6 +245,7 @@ const DigitizationView = () => {
 
   const openAddDocuments = async () => {
     let taken = []
+    setOpeningPicker(true)
     try {
       const response = await taskService.getTaskNodesByCriteria(
         organizationId,
@@ -256,7 +257,10 @@ const DigitizationView = () => {
         ALL
       )
       taken = (response.data?.content ?? []).map(n => n.documentId)
-    } catch {}
+    } catch {
+    } finally {
+      setOpeningPicker(false)
+    }
     setPicker({
       title: 'Add documents',
       subtitle: `Pick from ${project?.name ?? 'the agent'}’s knowledge, or upload scans and PDFs.`,
@@ -303,6 +307,16 @@ const DigitizationView = () => {
   }
 
   const pages = Math.max(1, Math.ceil(total / pageSize))
+  // the documents of this page of the list that the job covers, while it runs (a "digitize again" starts from their old text)
+  const progress = (() => {
+    if (!targetIds || !docs || pending?.reGenerateExistingAnswers) return null
+    const covered = docs.filter(d => !d.unsupported && d.pages && isBusy(d.id))
+
+    return {
+      done: covered.reduce((n, d) => n + Math.min(d.done, d.pages), 0),
+      all: covered.reduce((n, d) => n + d.pages, 0)
+    }
+  })()
   const doneTotal = (docs ?? []).reduce((n, d) => n + d.done, 0)
   const pagesTotal = (docs ?? []).reduce((n, d) => n + d.pages, 0)
   const statusOf = d =>
@@ -370,7 +384,7 @@ const DigitizationView = () => {
 
             <div className='card ins-card'>
               <div className='toolbar'>
-                <button className='btn s' onClick={openAddDocuments}>
+                <button aria-busy={openingPicker} className='btn s' onClick={openAddDocuments} disabled={openingPicker}>
                   <FilePlus className='lucide' />
                   <span className='hide-l'>Add documents</span>
                 </button>
@@ -416,8 +430,22 @@ const DigitizationView = () => {
               {job.running && (
                 <div className='run'>
                   <LoaderCircle className='lucide turning' />
-                  <b style={{ fontWeight: 500 }}>{job.stopping ? 'Stopping…' : 'Digitizing'}</b>
-                  <span className='sp' />
+                  <b style={{ fontWeight: 500 }} className='hide-l'>
+                    {job.stopping ? 'Stopping…' : 'Digitizing'}
+                  </b>
+                  {progress && progress.all > 0 ? (
+                    <>
+                      <div className='progress' style={{ flex: 1, minWidth: 100, height: 5 }}>
+                        <i style={{ width: `${(progress.done / progress.all) * 100}%` }} />
+                      </div>
+                      <span className='num faint sm'>
+                        {progress.done} of {plural(progress.all, 'page')}
+                        {pages > 1 ? ' on this page' : ''}
+                      </span>
+                    </>
+                  ) : (
+                    <span className='sp' />
+                  )}
                   <button className='btn s' onClick={job.stop} disabled={job.stopping}>
                     <Square className='lucide' />
                     Stop
@@ -427,9 +455,32 @@ const DigitizationView = () => {
 
               <div className='grid-wrap'>
                 {docs === null ? (
-                  <div className='center' style={{ minHeight: 0, padding: 60 }}>
-                    <Spinner />
-                  </div>
+                  <table className='table' aria-busy='true'>
+                    <thead>
+                      <tr>
+                        <th className='chk' />
+                        <th>Document</th>
+                        <th className='hide-l'>Status</th>
+                        <th className='hide-l'>Pages</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {['62%', '48%', '74%', '55%'].map(width => (
+                        <tr key={width} className='skel-row' aria-hidden='true'>
+                          <td className='chk' />
+                          <td>
+                            <span className='skel' style={{ width }} />
+                          </td>
+                          <td className='hide-l'>
+                            <span className='skel' style={{ width: 90 }} />
+                          </td>
+                          <td className='hide-l'>
+                            <span className='skel' style={{ width: 110 }} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 ) : !docs.length && !search ? (
                   <Empty
                     icon={<ScanText className='lucide' />}

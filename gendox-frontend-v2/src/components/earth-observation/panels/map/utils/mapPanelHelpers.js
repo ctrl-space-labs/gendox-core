@@ -1,5 +1,3 @@
-import toast from 'react-hot-toast'
-
 export function downloadFile(url, filename = 'gee-map-result.png') {
   if (!url) return
   const a = document.createElement('a')
@@ -10,15 +8,18 @@ export function downloadFile(url, filename = 'gee-map-result.png') {
   document.body.removeChild(a)
 }
 
+// true once the image is on the clipboard; the map shows the result beside its toolbar
 export async function copyImageToClipboard(url) {
-  if (!url) return
+  if (!url) return false
   try {
     const res = await fetch(url)
     const blob = await res.blob()
     await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
-    toast.success('Image copied! You can now paste it anywhere.')
+
+    return true
   } catch (err) {
     console.warn('Copy image failed:', err)
-    toast.error('Copy failed — try Download instead.')
+
+    return false
   }
 }

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/router'
 import { useAuth } from 'src/authentication/useAuth'
 import { localStorageConstants } from 'src/utils/generalConstants'
+import useAppTheme from 'src/hooks/useAppTheme'
 
 // The widget plugin reads its settings from the script tag with this id
 const SCRIPT_ID = 'gendox-chat-script'
@@ -46,6 +47,8 @@ const removeWidget = () => {
 const GendoxAssistant = () => {
   const router = useRouter()
   const { user } = useAuth()
+  // the widget follows the app's colours; a change of mode loads it again
+  const theme = useAppTheme()
 
   const organizationId = router.query.organizationId || readStorage(localStorageConstants.selectedOrganizationId)
   const projectId = router.query.projectId || readStorage(localStorageConstants.selectedProjectId)
@@ -58,7 +61,8 @@ const GendoxAssistant = () => {
     pageRef.current = { asPath: router.asPath, query: router.query }
   }, [router.asPath, router.query])
 
-  const enabled = router.isReady && Boolean(user) && !excluded && Boolean(organizationId) && Boolean(projectId)
+  const enabled =
+    router.isReady && Boolean(user) && Boolean(theme) && !excluded && Boolean(organizationId) && Boolean(projectId)
 
   useEffect(() => {
     if (!enabled) return undefined
@@ -73,6 +77,7 @@ const GendoxAssistant = () => {
     script.setAttribute('data-gendox-container-id', CONTAINER_ID)
     script.setAttribute('data-gendox-iframe-id', IFRAME_ID)
     script.setAttribute('data-gendox-chat-initial-state', 'closed')
+    script.setAttribute('data-gendox-theme', theme)
     script.setAttribute('data-gendox-open-web-page-tool-enabled', 'true')
     script.setAttribute('data-gendox-local-context-max-responses', '4')
     script.setAttribute('data-gendox-local-context-max-wait-ms', '1000')
@@ -97,7 +102,7 @@ const GendoxAssistant = () => {
     document.head.appendChild(script)
 
     return removeWidget
-  }, [enabled, organizationId, projectId])
+  }, [enabled, organizationId, projectId, theme])
 
   return null
 }

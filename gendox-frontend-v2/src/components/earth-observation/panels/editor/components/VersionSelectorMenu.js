@@ -6,6 +6,8 @@ import { fmtRelative } from '../utils/editorDateUtils'
 export default function VersionSelectorMenu({ currentScriptVersions, currentVersion, currentVersionId, onSelectVersion }) {
   if (!currentScriptVersions.length) return null
   const index = currentScriptVersions.findIndex(v => v.id === currentVersionId)
+  // the newest first; a save's own description (e.g. "Run-Saved – …") goes under its number
+  const numberOf = i => `Version ${currentScriptVersions.length - i}`
 
   return (
     <>
@@ -13,9 +15,14 @@ export default function VersionSelectorMenu({ currentScriptVersions, currentVers
       <Menu
         width={260}
         trigger={({ onClick }) => (
-          <button className='btn ghost s' title='Version history' onClick={onClick} style={{ maxWidth: 220 }}>
+          <button
+            className='btn ghost s'
+            title={currentVersion?.description ? `Version history · ${currentVersion.description}` : 'Version history'}
+            onClick={onClick}
+            style={{ maxWidth: 220 }}
+          >
             <span className='trunc'>
-              {currentVersion?.description || (index >= 0 ? `Version ${currentScriptVersions.length - index}` : 'Latest')}
+              {index >= 0 ? numberOf(index) : 'Latest'}
               {currentVersion?.createdAt ? ` · ${fmtRelative(currentVersion.createdAt)}` : ''}
             </span>
             <ChevronDown className='lucide' />
@@ -24,9 +31,16 @@ export default function VersionSelectorMenu({ currentScriptVersions, currentVers
       >
         <div className='h'>Each save is a version</div>
         {currentScriptVersions.map((version, i) => (
-          <button key={version.id} className='mi' data-close-menu onClick={() => onSelectVersion(version)}>
-            <span className='trunc' style={{ flex: 1 }}>
-              {version.description || `Version ${currentScriptVersions.length - i}`}
+          <button key={version.id} className='mi tall' data-close-menu onClick={() => onSelectVersion(version)}>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span className='trunc' style={{ display: 'block' }}>
+                {numberOf(i)}
+              </span>
+              {version.description && (
+                <span className='faint sm trunc' style={{ display: 'block' }}>
+                  {version.description}
+                </span>
+              )}
             </span>
             <span className='faint sm'>{fmtRelative(version.createdAt)}</span>
             {version.id === currentVersionId && <Check className='lucide' />}

@@ -1,23 +1,49 @@
-import { useEffect, useState } from 'react'
 import Editor from '@monaco-editor/react'
+import useAppTheme from 'src/hooks/useAppTheme'
 import Spinner from 'src/components/ui/Spinner'
 import FirstScriptOnboarding from './FirstScriptOnboarding'
 
-// the app's colour mode (data-theme on <html>), so the editor matches it
-const useAppTheme = () => {
-  const [theme, setTheme] = useState('dark')
+// The editor in the app's colours (themes.css; Monaco takes hex only): the page background, keywords in the accent,
+// strings in warn, numbers in info, comments faint
+const THEMES = {
+  'gendox-dark': {
+    base: 'vs-dark',
+    colors: { bg: '#1f2136', fg: '#cecedb', faint: '#a7a8b6', line: '#282a42', keyword: '#3dd6ae', string: '#f3b546', number: '#6cb8ff' }
+  },
+  'gendox-light': {
+    base: 'vs',
+    colors: { bg: '#f7f7f9', fg: '#4d4e64', faint: '#7d8094', line: '#eeeef5', keyword: '#008b6d', string: '#b26b00', number: '#0172cb' }
+  }
+}
 
-  useEffect(() => {
-    const root = document.documentElement
-    const read = () => setTheme(root.dataset.theme === 'light' ? 'light' : 'dark')
-    read()
-    const observer = new MutationObserver(read)
-    observer.observe(root, { attributes: true, attributeFilter: ['data-theme'] })
-
-    return () => observer.disconnect()
-  }, [])
-
-  return theme
+const defineThemes = monaco => {
+  Object.entries(THEMES).forEach(([name, { base, colors: c }]) =>
+    monaco.editor.defineTheme(name, {
+      base,
+      inherit: true,
+      rules: [
+        { token: '', foreground: c.fg.slice(1) },
+        { token: 'comment', foreground: c.faint.slice(1) },
+        { token: 'keyword', foreground: c.keyword.slice(1) },
+        { token: 'string', foreground: c.string.slice(1) },
+        { token: 'number', foreground: c.number.slice(1) },
+        { token: 'regexp', foreground: c.string.slice(1) }
+      ],
+      colors: {
+        'editor.background': c.bg,
+        'editor.foreground': c.fg,
+        'editorLineNumber.foreground': c.faint,
+        'editorLineNumber.activeForeground': c.fg,
+        'editor.lineHighlightBackground': c.line,
+        'editor.lineHighlightBorder': c.line,
+        'editorGutter.background': c.bg,
+        'editor.selectionBackground': '#08b68d40',
+        'editorCursor.foreground': c.keyword,
+        'editorIndentGuide.background1': c.line,
+        'scrollbarSlider.background': c.faint + '33'
+      }
+    })
+  )
 }
 
 export default function MonacoEditorPane({
@@ -54,14 +80,20 @@ export default function MonacoEditorPane({
       <Editor
         height='100%'
         defaultLanguage='javascript'
-        theme={theme === 'light' ? 'vs' : 'vs-dark'}
+        theme={theme === 'light' ? 'gendox-light' : 'gendox-dark'}
+        beforeMount={defineThemes}
         value={code}
         onChange={onChange}
         onMount={onMount}
         loading={<Spinner />}
         options={{
           minimap: { enabled: false },
-          fontSize: 13,
+          fontSize: 12.5,
+          lineHeight: 22,
+          fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+          renderLineHighlight: 'line',
+          scrollBeyondLastLine: false,
+          padding: { top: 8 },
           wordWrap: 'on',
           automaticLayout: true,
           tabSize: 2,

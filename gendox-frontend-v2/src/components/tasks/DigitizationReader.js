@@ -27,7 +27,6 @@ import { getToken } from 'src/components/agent/useAgent'
 import Markdown from 'src/components/chat/Markdown'
 import Empty from 'src/components/ui/Empty'
 import Menu from 'src/components/ui/Menu'
-import Spinner from 'src/components/ui/Spinner'
 import { plural } from 'src/components/knowledge/documentUtils'
 
 const STEP = 8 // pages shown at a time
@@ -469,9 +468,16 @@ const DigitizationReader = ({ doc, tab, ctx }) => {
                 </nav>
                 <div className='pg-stream scroller' ref={streamRef}>
                   {pages === null ? (
-                    <div className='center' style={{ minHeight: 0, padding: 40 }}>
-                      <Spinner />
-                    </div>
+                    <section className='pg' aria-busy='true' aria-label='Loading'>
+                      <div className='pg-h'>
+                        <span className='skel' style={{ width: 60 }} />
+                      </div>
+                      <div className='stack'>
+                        {['92%', '86%', '95%', '70%', '88%', '45%'].map((width, i) => (
+                          <span key={i} className='skel' style={{ width }} />
+                        ))}
+                      </div>
+                    </section>
                   ) : !last ? (
                     <Empty
                       icon={<Sparkles className='lucide' />}
@@ -534,7 +540,13 @@ const DigitizationReader = ({ doc, tab, ctx }) => {
                 </button>
               </Menu>
             </div>
-            <button className='btn s' title='Export this document’s pages as CSV' onClick={exportCsv} disabled={exporting || !doc.done}>
+            <button
+              aria-busy={exporting}
+              className='btn s'
+              title='Export this document’s pages as CSV'
+              onClick={exportCsv}
+              disabled={exporting || !doc.done}
+            >
               <Download className='lucide' />
               CSV
             </button>
