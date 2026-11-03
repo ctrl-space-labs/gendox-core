@@ -6,10 +6,10 @@ import { GEOM_ICON, GEOM_TYPE_MAP } from 'src/components/earth-observation/panel
 import { geometrySlug } from 'src/components/earth-observation/panels/map/utils/geometryHelpers'
 
 /** The shapes drawn on the map, as the script reaches them: geometries['Title'], geometries[i] or geometries.slug */
-export default function GeometryVariablesPanel() {
-  const eoGeometries = useSelector(selectEoGeometries)
+export default function GeometryVariablesPanel({ hidden }) {
+  const eoGeometries = useSelector(selectEoGeometries) ?? []
 
-  if (!eoGeometries?.length) return null
+  if (hidden) return null
 
   return (
     <details className='eo-geo'>
@@ -18,11 +18,16 @@ export default function GeometryVariablesPanel() {
         Shapes in code<span className='faint num'>{eoGeometries.length}</span>
       </summary>
       <div className='rows'>
+        {!eoGeometries.length && (
+          <p className='faint sm'>
+            Draw a point, a ring or a polygon on the map. Your script reaches it as <code>geometries['name']</code>.
+          </p>
+        )}
         {eoGeometries.map((geom, i) => {
           const type = GEOM_TYPE_MAP[geom.geometryTypeName] ?? geom.geometryTypeName
           const Icon = GEOM_ICON[type] ?? GEOM_ICON.Point
           const label = geom.title || geom.name || `${type} ${i + 1}`
-          const snippet = `geometries["${label}"]`
+          const snippet = `geometries['${label.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}']`
           const slug = geometrySlug(label)
 
           return (

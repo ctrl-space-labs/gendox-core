@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Copy, Eye, EyeOff, LoaderCircle, Pencil, Shapes, Trash2, X } from 'lucide-react'
 
+import ConfirmDialog from 'src/components/ui/ConfirmDialog'
 import { geomLabel } from '../utils/geometryHelpers'
 import { GEOM_ICON } from '../constants/geometryConstants'
 
@@ -40,6 +41,7 @@ export default function GeometryInspector({
   // pendingTitles: { [id]: newTitle } — optimistic label shown while in-flight
   const [savingId, setSavingId] = useState(null)
   const [pendingTitles, setPendingTitles] = useState({})
+  const [removing, setRemoving] = useState(null) // { geom, index } or 'all'
 
   // Clear the spinner once Redux reflects the new title
   useEffect(() => {
@@ -71,7 +73,7 @@ export default function GeometryInspector({
       <div className='h'>
         Shapes<span className='faint num'>{geometries.length}</span>
         <span className='sp' />
-        <button className='btn ghost s' onClick={onDeleteAll} disabled={!geometries.length}>
+        <button className='btn ghost s' onClick={() => setRemoving('all')} disabled={!geometries.length}>
           Clear all
         </button>
         <button className='btn ghost s icon' title='Close' onClick={() => setInspectorOpen(false)}>
@@ -157,7 +159,7 @@ export default function GeometryInspector({
                   title='Remove'
                   onClick={e => {
                     e.stopPropagation()
-                    onDeleteGeometry(geom.id, i)
+                    setRemoving({ geom, index: i })
                   }}
                 >
                   <Trash2 className='lucide' />
@@ -167,6 +169,18 @@ export default function GeometryInspector({
           })
         )}
       </div>
+      <ConfirmDialog
+        open={!!removing}
+        onClose={() => setRemoving(null)}
+        onConfirm={() => (removing === 'all' ? onDeleteAll() : onDeleteGeometry(removing.geom.id, removing.index))}
+        title={removing === 'all' ? 'Remove every shape?' : `Remove “${removing ? geomLabel(removing.geom, removing.index) : ''}”?`}
+        text={
+          removing === 'all'
+            ? `${geometries.length === 1 ? 'The shape is' : `${geometries.length} shapes are`} removed. Scripts that use them will fail until you draw them again.`
+            : 'Scripts that use it will fail until you draw it again.'
+        }
+        confirmLabel={removing === 'all' ? 'Remove all' : 'Remove'}
+      />
     </div>
   )
 }

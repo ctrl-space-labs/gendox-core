@@ -17,7 +17,9 @@ const CHAT_TOGGLE_REQUEST_EVENT = 'gendox.events.embedded.chat.toggle.request'
  */
 const EmbeddedChatPage = () => {
   const router = useRouter()
-  const { organizationId, projectId } = router.query
+  // variant, placeholder, footnote (and theme, read before the first paint): set by the host's script tag
+  const { organizationId, projectId, variant, placeholder, footnote } = router.query
+  const isPanel = variant === 'panel'
   const [isOpen, setIsOpen] = useState(false)
   const iFrameMessageManager = useIFrameMessageManager()
   const { isEmbedded, iFrameConfiguration, originUrl } = iFrameMessageManager
@@ -169,6 +171,25 @@ const EmbeddedChatPage = () => {
     applyChatState(!isOpenRef.current)
   }
 
+  // a panel the host page lays out itself (e.g. Earth observation's chat window): always open, no header or greeting
+  if (isPanel) {
+    return (
+      <div className='wgt-fill'>
+        <Chat
+          token={token}
+          variant='panel'
+          greeting={false}
+          deep={false}
+          sources={isSignedIn}
+          placeholder={placeholder || undefined}
+          footnote={footnote || undefined}
+          onNewThread={newThread}
+          onOpenThread={openThread}
+        />
+      </div>
+    )
+  }
+
   return (
     <>
       {!isOpen && (
@@ -184,6 +205,8 @@ const EmbeddedChatPage = () => {
           threadsDrawer
           sources={isSignedIn}
           poweredBy
+          placeholder={placeholder || undefined}
+          footnote={footnote || undefined}
           onNewThread={newThread}
           onOpenThread={openThread}
           onClose={toggleChatWindow}

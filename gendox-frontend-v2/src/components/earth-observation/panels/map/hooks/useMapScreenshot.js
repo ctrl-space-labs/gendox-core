@@ -65,10 +65,12 @@ export default function useMapScreenshot(panelRef) {
     }
   }, [dispatch])
 
-  // Button-triggered: capture, store in Redux, AND copy to clipboard.
+  // Button-triggered: capture, store in Redux, AND copy to clipboard. Resolves { dataUrl, copied }, or null.
   const handlePanelScreenshot = useCallback(async panelElement => {
     const dataUrl = await capturePanel(panelElement)
-    if (dataUrl) await copyImageToClipboard(dataUrl)
+    if (!dataUrl) return null
+
+    return { dataUrl, copied: await copyImageToClipboard(dataUrl) }
   }, [capturePanel])
 
   // Auto-capture when all GEE layers have finished rendering their tiles.

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useRouter } from 'next/router'
 
@@ -13,7 +13,7 @@ import { normalizeGeometries } from './utils/geometryHelpers'
 
 import EOMapView from './components/EOMapView'
 import DrawingToolbar, { DrawingHint } from './components/DrawingToolbar'
-import ScreenshotToolbar from './components/ScreenshotToolbar'
+import ScreenshotToolbar, { ScreenshotCard } from './components/ScreenshotToolbar'
 import LayersPanel from './components/LayersPanel'
 import ExportsPanel from './components/ExportsPanel'
 import GeometryInspector, { GeometryButton } from './components/GeometryInspector'
@@ -41,6 +41,7 @@ export default function MapPanel() {
 
   const { isPanelCapturing, handlePanelScreenshot, handleMapReady } =
     useMapScreenshot(panelRef)
+  const [shot, setShot] = useState(null) // { dataUrl, copied }: the last screenshot, until dismissed
 
   const { activeTool, pendingVertices, canFinish, handleMapClick, handleSelectTool, handleFinish, handleCancel } =
     useGeometryDrawing({ organizationId, projectId, taskId, token })
@@ -96,7 +97,10 @@ export default function MapPanel() {
       <div className='float eo-tools' data-html2canvas-ignore=''>
         <DrawingToolbar activeTool={activeTool} onSelectTool={handleSelectTool} />
         <hr />
-        <ScreenshotToolbar isPanelCapturing={isPanelCapturing} onPanelScreenshot={() => handlePanelScreenshot(panelRef.current)} />
+        <ScreenshotToolbar
+          isPanelCapturing={isPanelCapturing}
+          onPanelScreenshot={() => handlePanelScreenshot(panelRef.current).then(result => result && setShot(result))}
+        />
         <hr />
         <GeometryButton geometries={geometries} inspectorOpen={inspectorOpen} setInspectorOpen={setInspectorOpen} />
       </div>
@@ -127,6 +131,8 @@ export default function MapPanel() {
         />
         <ExportsPanel geeExports={geeExports} />
       </div>
+
+      {shot && <ScreenshotCard shot={shot} onDismiss={() => setShot(null)} />}
 
       <DrawingHint
         activeTool={activeTool}

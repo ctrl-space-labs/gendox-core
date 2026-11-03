@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/router'
 import { useSelector } from 'react-redux'
 import { selectEoGeometries } from 'src/store/earthObservation'
+import useAppTheme from 'src/hooks/useAppTheme'
 import { editorCodeRef, keepAllRef } from 'src/components/earth-observation/panels/shared/panelState'
 import {
   geomLabel,
@@ -18,6 +19,8 @@ export default function ChatPanel() {
   const router = useRouter()
   const { organizationId, projectId } = router.query
   const containerRef = useRef(null)
+  // the chat follows the app's colours; a change of mode loads it again
+  const theme = useAppTheme()
   const printMessages = useSelector(state => state.earthObservation.map.printMessages)
   const printMessagesRef = useRef(printMessages)
   useEffect(() => { printMessagesRef.current = printMessages }, [printMessages])
@@ -31,7 +34,7 @@ export default function ChatPanel() {
   useEffect(() => { mapResultScreenshotRef.current = mapResultScreenshot }, [mapResultScreenshot])
 
   useEffect(() => {
-    if (!organizationId || !projectId) return
+    if (!organizationId || !projectId || !theme) return
 
     // Create container div in the Box before script loads
     if (containerRef.current && !document.getElementById(CONTAINER_ID)) {
@@ -56,6 +59,10 @@ export default function ChatPanel() {
     script.setAttribute('data-gendox-container-id', CONTAINER_ID)
     script.setAttribute('data-gendox-iframe-id', IFRAME_ID)
     script.setAttribute('data-gendox-chat-initial-state', 'open')
+    script.setAttribute('data-gendox-theme', theme)
+    script.setAttribute('data-gendox-variant', 'panel')
+    script.setAttribute('data-gendox-placeholder', 'Ask about your analysis…')
+    script.setAttribute('data-gendox-footnote', 'Sees your script, its output and your shapes.')
     script.setAttribute('data-gendox-local-context-max-responses', '4')
     script.setAttribute('data-gendox-local-context-max-wait-ms', '1000')
     script.src = `${window.location.origin}/gendox-sdk/gendox-widget-plugin.js`
@@ -125,7 +132,7 @@ export default function ChatPanel() {
       document.getElementById(SCRIPT_ID)?.remove()
       document.getElementById(CONTAINER_ID)?.remove()
     }
-  }, [organizationId, projectId])
+  }, [organizationId, projectId, theme])
 
   // the widget plugin puts the embedded chat (the same chat as everywhere) in an iframe here
   return <div ref={containerRef} style={{ height: '100%', display: 'flex', flexDirection: 'column' }} />

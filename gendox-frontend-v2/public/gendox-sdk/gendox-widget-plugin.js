@@ -37,13 +37,18 @@
             height: 35rem;
             max-width: calc(100vw - 2rem);
             max-height: calc(100dvh - 2rem);
-            box-sizing: border-box;
-            border: 1px solid rgba(20, 30, 60, 0.14);
-            box-shadow: 0 24px 60px -20px rgba(20, 30, 60, 0.5);
         }
         .gendox-chat-closed {
             width: 3.5rem;
             height: 3.5rem;
+        }
+        /* the floating look, for the plugin's own container only (a host may give its own one, e.g. a panel) */
+        .gendox-chat-container-position.gendox-chat-open {
+            box-sizing: border-box;
+            border: 1px solid rgba(20, 30, 60, 0.14);
+            box-shadow: 0 24px 60px -20px rgba(20, 30, 60, 0.5);
+        }
+        .gendox-chat-container-position.gendox-chat-closed {
             border-radius: 50%;
             box-shadow: 0 10px 30px -8px rgba(20, 30, 60, 0.45);
         }
@@ -110,6 +115,14 @@
       projectId: scriptTag.getAttribute('data-project-id') || '',
       gendoxContainerId: scriptTag.getAttribute('data-gendox-container-id') || 'gendox-chat-container-id',
       gendoxIframeId: scriptTag.getAttribute('data-gendox-iframe-id') || 'gendox-chat-iframe-id',
+      // how the chat looks: theme (light | dark), variant (widget, or panel: always open, no header or greeting),
+      // and the message box's placeholder and the note under it
+      chatAppearance: {
+        theme: scriptTag.getAttribute('data-gendox-theme') || '',
+        variant: scriptTag.getAttribute('data-gendox-variant') || '',
+        placeholder: scriptTag.getAttribute('data-gendox-placeholder') || '',
+        footnote: scriptTag.getAttribute('data-gendox-footnote') || ''
+      },
       chatInitialState: normalizedInitialState,
       localContextMaxResponses,
       localContextMaxWaitMs,
@@ -146,7 +159,7 @@
   }
 
   // Create container and iframe dynamically if they don't exist
-  function createChatElements(containerId, iframeId, gendoxSrc, organizationId, projectId, origin, chatInitialState) {
+  function createChatElements(containerId, iframeId, gendoxSrc, organizationId, projectId, origin, chatInitialState, appearance) {
     let container = document.getElementById(containerId)
     let iframe = document.getElementById(iframeId)
     const containerStateClass = chatInitialState === 'open' ? 'gendox-chat-open' : 'gendox-chat-closed'
@@ -164,9 +177,9 @@
       iframe = document.createElement('iframe')
       iframe.id = iframeId
       iframe.classList.add('gendox-chat-iframe')
-      iframe.src = `${gendoxSrc}/gendox/embed/embedded-chat/?organizationId=${organizationId}&projectId=${projectId}&origin=${encodeURIComponent(
-        origin
-      )}`
+      const params = new URLSearchParams({ organizationId, projectId, origin })
+      Object.entries(appearance || {}).forEach(([name, value]) => value && params.set(name, value))
+      iframe.src = `${gendoxSrc}/gendox/embed/embedded-chat/?${params}`
       container.appendChild(iframe)
     }
   }
@@ -570,7 +583,8 @@
         config.organizationId,
         config.projectId,
         config.origin,
-        config.chatInitialState
+        config.chatInitialState,
+        config.chatAppearance
       )
 
       // Inject user-defined styles if provided

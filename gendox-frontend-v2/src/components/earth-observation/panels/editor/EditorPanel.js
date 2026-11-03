@@ -62,7 +62,7 @@ export default function EditorPanel() {
         token={token}
       />
 
-      <GeometryVariablesPanel />
+      <GeometryVariablesPanel hidden={scripts.isFirstScript} />
 
       <MonacoEditorPane
         code={code}
