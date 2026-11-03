@@ -7,14 +7,15 @@ import apiRequests from 'src/configs/apiRequest.js'
  * @param token
  * @returns {Promise<axios.AxiosResponse<ProjectAgent>>}
  */
-const getProjectsByOrganization = async (organizationId, token) => {
+// size: without it the API returns its default page of 20, and the other agents are missing; 100 is its maximum
+const getProjectsByOrganization = async (organizationId, token, params = { size: 100 }) => {
   let headers = {
     'Content-Type': 'application/json'
   }
   if (token) {
     headers.Authorization = 'Bearer ' + token
   }
-  return axios.get(apiRequests.getProjectsByOrganization(organizationId), { headers })
+  return axios.get(apiRequests.getProjectsByOrganization(organizationId), { headers, params })
 }
 
 /**

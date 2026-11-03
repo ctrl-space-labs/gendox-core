@@ -106,7 +106,7 @@ export const TaskFormDialog = ({ open, task, type = 'DOCUMENT_INSIGHTS', organiz
           <button className='btn' onClick={onClose}>
             Cancel
           </button>
-          <button className='btn primary' onClick={save} disabled={saving}>
+          <button aria-busy={saving} className='btn primary' onClick={save} disabled={saving}>
             {task ? 'Save' : 'Create task'}
           </button>
         </>
@@ -326,7 +326,7 @@ export const DuplicateTaskDialog = ({ task, organizationId, projectId, onClose, 
           <button className='btn' onClick={onClose}>
             Cancel
           </button>
-          <button className='btn primary' onClick={duplicate} disabled={saving || !title.trim()}>
+          <button aria-busy={saving} className='btn primary' onClick={duplicate} disabled={saving || !title.trim()}>
             Duplicate
           </button>
         </>
