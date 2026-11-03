@@ -5,11 +5,11 @@ import subscriptionPlanService from 'src/gendox-sdk/subscriptionPlanService'
 import organizationService from 'src/gendox-sdk/organizationService'
 import organizationWebSiteService from 'src/gendox-sdk/organizationWebSiteService'
 import webScrapeService from 'src/gendox-sdk/webScrapeService'
+import integrationService from 'src/gendox-sdk/integrationService'
 import { getToken } from 'src/components/agent/useAgent'
 import { formatDate } from 'src/components/knowledge/documentUtils'
 import OrgScope from 'src/components/organization/OrgScope'
 import AppLayout from 'src/layouts/AppLayout'
-import Spinner from 'src/components/ui/Spinner'
 
 const MANAGE_URL = 'https://gendox.dev/my-account'
 const PRICING_URL = 'https://gendox.dev/pricing'
@@ -17,6 +17,8 @@ const UNLIMITED = 9999
 
 const price = plan => (plan.price ? `€${plan.price} / month` : 'Free')
 const limit = value => (value == null ? '—' : value >= UNLIMITED ? 'Unlimited' : value.toLocaleString())
+// a plan's limits are per seat: the organization gets each one times its seats (SubscriptionValidationService.effectiveLimit)
+const forSeats = (value, seats) => (value == null || value >= UNLIMITED ? value : value * (seats || 1))
 
 const Meter = ({ label, used, max, note }) => {
   const unlimited = max >= UNLIMITED
@@ -53,6 +55,7 @@ const PlanPage = () => {
   const [members, setMembers] = useState(null)
   const [websites, setWebsites] = useState(null)
   const [budget, setBudget] = useState(null)
+  const [integrationsOn, setIntegrationsOn] = useState(null)
 
   useEffect(() => {
     if (!organizationId) return
@@ -73,6 +76,10 @@ const PlanPage = () => {
       .getOrganizationWebSitesByOrganizationId(organizationId, token)
       .then(r => setWebsites((r.data?.content ?? r.data ?? []).length))
       .catch(() => setWebsites(null))
+    integrationService
+      .getIntegrationsByOrganizationId(organizationId, token)
+      .then(r => setIntegrationsOn((r.data?.content ?? r.data ?? []).filter(i => i.active).length))
+      .catch(() => setIntegrationsOn(null))
     webScrapeService
       .getBudget(organizationId, token)
       .then(r => setBudget(r.data))
@@ -83,8 +90,20 @@ const PlanPage = () => {
     return (
       <main className='content'>
         <OrgScope tab='plan' />
-        <div className='center' style={{ padding: 60 }}>
-          <Spinner />
+        <div aria-busy='true' aria-label='Loading' className='stack'>
+          <section className='hero'>
+            <span className='skel' style={{ width: 110, height: 22, borderRadius: 99 }} />
+            <span className='skel' style={{ width: 220, height: 24, marginTop: 12 }} />
+            <span className='skel' style={{ width: '50%', marginTop: 10 }} />
+          </section>
+          <div className='grid' style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
+            {[0, 1, 2, 3].map(i => (
+              <div key={i} className='card card-b meter'>
+                <span className='skel' style={{ width: '60%' }} />
+                <span className='skel' style={{ width: '100%', height: 6 }} />
+              </div>
+            ))}
+          </div>
         </div>
       </main>
     )
@@ -92,12 +111,15 @@ const PlanPage = () => {
 
   const sub = plan.subscriptionPlan || {}
   const rate = sub.apiRateLimit || {}
+  const seats = plan.numberOfSeats
 
   const rows = [
     ['Price', p => price(p)],
+    // moq: the fewest seats the plan is sold with
+    ['Seats', p => (p.moq > 1 ? `From ${p.moq}` : p.moq === 1 ? 'From 1' : '—')],
     ['Agents', p => limit(p.projectLimit)],
     ['Messages / month', p => limit(p.userMessageMonthlyLimitCount)],
-    ['Websites', p => limit(p.organizationWebSites)],
+    ['Websites · integrations on', p => limit(p.organizationWebSites)],
     ['Website pages read / month', p => limit(p.webScrapePagesMonthlyLimit)],
     ['Document pages', p => limit(p.documentPagesLimit)],
     ['Upload size', p => (p.userUploadLimitMb ? `${limit(p.userUploadLimitMb)} MB` : '—')]
@@ -155,9 +177,27 @@ const PlanPage = () => {
             note={`People in ${organization?.name || 'the organization'}`}
           />
         )}
-        <Meter label='Agents' used={projects.length} max={sub.projectLimit} note='The agents you belong to' />
+        <Meter
+          label='Agents'
+          used={projects.length}
+          max={forSeats(sub.projectLimit, seats)}
+          note='The agents you belong to'
+        />
         {websites != null && (
-          <Meter label='Websites' used={websites} max={sub.organizationWebSites} note='Sites where the widget can run' />
+          <Meter
+            label='Websites'
+            used={websites}
+            max={forSeats(sub.organizationWebSites, seats)}
+            note='Sites where the widget can run'
+          />
+        )}
+        {integrationsOn != null && (
+          <Meter
+            label='Integrations switched on'
+            used={integrationsOn}
+            max={forSeats(sub.organizationWebSites, seats)}
+            note='The same plan number as websites.'
+          />
         )}
         {budget && (
           <Meter
@@ -173,13 +213,13 @@ const PlanPage = () => {
             {sub.userUploadLimitMb != null && (
               <>
                 <dt>Upload size</dt>
-                <dd>{limit(sub.userUploadLimitMb)} MB</dd>
+                <dd>{limit(forSeats(sub.userUploadLimitMb, seats))} MB per file</dd>
               </>
             )}
             {sub.userMessageMonthlyLimitCount != null && (
               <>
                 <dt>Messages</dt>
-                <dd>{limit(sub.userMessageMonthlyLimitCount)} a month</dd>
+                <dd>{limit(forSeats(sub.userMessageMonthlyLimitCount, seats))} a month</dd>
               </>
             )}
             {rate.completionsPerMinute != null && (
@@ -198,6 +238,7 @@ const PlanPage = () => {
         <div className='card'>
           <div className='card-h'>
             <h3>Compare plans</h3>
+            <span className='faint sm'>Per seat</span>
             <span className='sp' />
             <a className='btn ghost s' href={PRICING_URL} target='_blank' rel='noopener noreferrer'>
               Full comparison

@@ -4,6 +4,7 @@ import { ArrowLeftRight, Check, LayoutGrid, MessageSquareText, Plus } from 'luci
 import useActiveScope from 'src/hooks/useActiveScope'
 import Avatar from 'src/components/ui/Avatar'
 import Menu from 'src/components/ui/Menu'
+import MenuList from 'src/components/ui/MenuList'
 
 // the agent's settings, one page each; Knowledge has the same header without tabs
 export const AGENT_TABS = [
@@ -62,15 +63,17 @@ const AgentScope = ({ project, tab }) => {
             )}
           >
             <div className='h'>Agents in {organization?.name ?? 'this organization'}</div>
-            {projects.map(p => (
-              <Link key={p.id} className='mi' href={href(router.pathname, { projectId: p.id })}>
-                <Avatar name={p.name} seed={p.id} size='s' />
-                <span className='trunc' style={{ flex: 1 }}>
-                  {p.name}
-                </span>
-                {p.id === projectId && <Check className='lucide' />}
-              </Link>
-            ))}
+            <MenuList items={projects} currentId={projectId} noun='agents'>
+              {p => (
+                <Link key={p.id} className='mi' href={href(router.pathname, { projectId: p.id })}>
+                  <Avatar name={p.name} seed={p.id} size='s' />
+                  <span className='trunc' style={{ flex: 1 }}>
+                    {p.name}
+                  </span>
+                  {p.id === projectId && <Check className='lucide' />}
+                </Link>
+              )}
+            </MenuList>
             <hr />
             <Link className='mi' href={href('/gendox/agents')}>
               <LayoutGrid className='lucide' />

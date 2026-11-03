@@ -185,6 +185,8 @@ export default {
   integrationActive: (organizationId, integrationId) =>
     `${url}organizations/${organizationId}/integrations/${integrationId}/active`,
 
+  integrationsTrigger: organizationId => `${url}organizations/${organizationId}/integrations/trigger`,
+
   integrationSchedule: (organizationId, integrationId) =>
     `${url}organizations/${organizationId}/integrations/${integrationId}/schedule`,
 

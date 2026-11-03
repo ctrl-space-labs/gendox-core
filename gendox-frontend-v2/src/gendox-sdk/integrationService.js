@@ -85,8 +85,23 @@ const deleteIntegration = async (organizationId, integrationId, token) => {
   })
 }
 
+/**
+ * Check every switched-on integration of an organization now, whatever its schedule (202, runs in the background)
+ * @param organizationId
+ * @param token
+ */
+const triggerIntegrations = async (organizationId, token) => {
+  return axios.post(apiRequest.integrationsTrigger(organizationId), null, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
+    }
+  })
+}
+
 export default {
   getIntegration,
+  triggerIntegrations,
   getIntegrationsByOrganizationId,
   setIntegrationActive,
   setIntegrationSchedule,

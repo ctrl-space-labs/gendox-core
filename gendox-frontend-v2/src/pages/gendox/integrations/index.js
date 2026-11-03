@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import toast from 'react-hot-toast'
-import { ArrowUpRight, Cable, Ellipsis, Pencil, Plus, Search, SearchX, Trash2 } from 'lucide-react'
+import { ArrowUpRight, Cable, Ellipsis, Pencil, Plus, RefreshCw, Search, SearchX, Trash2 } from 'lucide-react'
 import useActiveScope from 'src/hooks/useActiveScope'
 import useHasOrgRole from 'src/authentication/hooks/useHasOrgRole'
 import integrationService from 'src/gendox-sdk/integrationService'
@@ -29,7 +29,8 @@ import AppLayout from 'src/layouts/AppLayout'
 import Avatar from 'src/components/ui/Avatar'
 import Empty from 'src/components/ui/Empty'
 import Menu from 'src/components/ui/Menu'
-import Spinner from 'src/components/ui/Spinner'
+import ConfirmDialog from 'src/components/ui/ConfirmDialog'
+import { SkeletonRows } from 'src/components/ui/Skeleton'
 import Switch from 'src/components/ui/Switch'
 
 const UNLIMITED = 9999
@@ -63,7 +64,8 @@ const IntegrationsPage = () => {
 
   const [integrations, setIntegrations] = useState(null)
   const [websites, setWebsites] = useState([])
-  const [limit, setLimit] = useState(null)
+  const [limit, setLimit] = useState(null) // { count, plan }: switched-on integrations allowed
+  const [checkingAll, setCheckingAll] = useState(false)
   const [budget, setBudget] = useState(null)
   const [show, setShow] = useState('on')
   const [query, setQuery] = useState('')
@@ -94,7 +96,18 @@ const IntegrationsPage = () => {
     if (!organizationId) return
     subscriptionPlanService
       .getOrganizationPlans(organizationId, getToken())
-      .then(r => setLimit(r.data?.subscriptionPlan?.organizationWebSites ?? null))
+      .then(r => {
+        const perSeat = r.data?.subscriptionPlan?.organizationWebSites
+        // a plan's limits are per seat (SubscriptionValidationService.effectiveLimit)
+        setLimit(
+          perSeat == null
+            ? null
+            : {
+                count: perSeat >= UNLIMITED ? perSeat : perSeat * (r.data?.numberOfSeats || 1),
+                plan: r.data?.subscriptionPlan?.name
+              }
+        )
+      })
       .catch(() => setLimit(null))
   }, [load, organizationId])
 
@@ -135,6 +148,15 @@ const IntegrationsPage = () => {
     }
   }
 
+  const checkAll = async () => {
+    try {
+      await integrationService.triggerIntegrations(organizationId, getToken())
+      toast.success('Checking now. New content shows up in the knowledge as it arrives.')
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+    }
+  }
+
   // after adding a website, open it to find its pages
   const onAdded = async url => {
     const fresh = await load()
@@ -154,6 +176,10 @@ const IntegrationsPage = () => {
         </div>
         {canEdit && (
           <div className='actions'>
+            <button className='btn' onClick={() => setCheckingAll(true)} disabled={!counts.on}>
+              <RefreshCw className='lucide' />
+              Check all now
+            </button>
             <button className='btn primary' onClick={() => setAdding(true)}>
               <Plus className='lucide' />
               Add integration
@@ -167,8 +193,10 @@ const IntegrationsPage = () => {
           <Meter
             label='Switched on'
             used={counts.on}
-            max={limit}
-            note='Sources Gendox reads. Switched-off ones don’t count against your plan.'
+            max={limit.count}
+            note={`Sources Gendox reads.${
+              limit.plan && limit.count < UNLIMITED ? ` Your ${limit.plan} plan allows ${limit.count} at once;` : ''
+            } Switched-off ones don’t count.`}
           />
         )}
         {budget?.maxPages != null && (
@@ -201,8 +229,22 @@ const IntegrationsPage = () => {
         </div>
 
         {integrations === null ? (
-          <div className='center' style={{ minHeight: 0, padding: 40 }}>
-            <Spinner />
+          <div className='scroll'>
+            <table className='table' aria-busy='true'>
+              <thead>
+                <tr>
+                  <th>Integration</th>
+                  <th>Adds to</th>
+                  <th className='hide-sm'>Schedule</th>
+                  <th className='hide-sm'>Last run</th>
+                  <th>On</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                <SkeletonRows rows={4} columns={[null, 110, 80, 80, 34, null]} />
+              </tbody>
+            </table>
           </div>
         ) : rows.length === 0 ? (
           <Empty
@@ -349,6 +391,17 @@ const IntegrationsPage = () => {
         onClose={() => setAdding(false)}
         onAdded={onAdded}
         budget={budget}
+      />
+      <ConfirmDialog
+        open={checkingAll}
+        onClose={() => setCheckingAll(false)}
+        onConfirm={checkAll}
+        title='Check all integrations now?'
+        text={`Gendox checks the ${counts.on} switched-on integrations now instead of waiting for their schedule. Websites are read again too: each page counts against this period’s allowance${
+          budget?.remainingPages != null ? ` (${budget.remainingPages.toLocaleString()} left)` : ''
+        }.`}
+        confirmLabel='Check now'
+        danger={false}
       />
       <EditIntegrationDialog row={editing} onClose={() => setEditing(null)} onSaved={load} />
       <RemoveIntegrationDialog row={removing} onClose={() => setRemoving(null)} onRemoved={load} />

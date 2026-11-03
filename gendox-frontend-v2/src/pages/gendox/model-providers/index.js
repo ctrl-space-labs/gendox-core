@@ -4,9 +4,10 @@ import { Plus, Search } from 'lucide-react'
 import useActiveScope from 'src/hooks/useActiveScope'
 import useHasOrgRole from 'src/authentication/hooks/useHasOrgRole'
 import aiModelService from 'src/gendox-sdk/aiModelService'
+import projectService from 'src/gendox-sdk/projectService'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import { getToken } from 'src/components/agent/useAgent'
-import { KEYLESS_PROVIDERS, providerLabel } from 'src/components/agent/ModelPicker'
+import { KEYLESS_PROVIDERS, needsKey, providerLabel } from 'src/components/agent/ModelPicker'
 import { formatDate } from 'src/components/knowledge/documentUtils'
 import OrgScope from 'src/components/organization/OrgScope'
 import AppLayout from 'src/layouts/AppLayout'
@@ -91,6 +92,34 @@ const ModelProvidersPage = () => {
   const [query, setQuery] = useState('')
   const [editing, setEditing] = useState(null) // { provider, key }
   const [removing, setRemoving] = useState(null)
+  const [affected, setAffected] = useState(null) // the agents that stop answering without the key being removed
+
+  // one request, when the dialog opens: each agent's answer model
+  useEffect(() => {
+    setAffected(null)
+    if (!removing) return
+    let current = true
+    const others = (keys ?? []).filter(k => k.id !== removing.key.id)
+    projectService
+      .getProjectsByOrganization(organizationId, getToken())
+      .then(r => {
+        if (!current) return
+        const agents = r.data?.content ?? r.data ?? []
+        setAffected(
+          agents.filter(p => {
+            const model = p.projectAgent?.completionModel
+
+            return model?.aiModelProvider?.id === removing.provider.id && needsKey(model, others)
+          })
+        )
+      })
+      .catch(() => current && setAffected(null))
+
+    return () => {
+      current = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [removing])
 
   const load = useCallback(() => {
     if (!organizationId) return
@@ -253,7 +282,17 @@ const ModelProvidersPage = () => {
         open={Boolean(removing)}
         onClose={() => setRemoving(null)}
         title={`Remove your ${removing ? providerLabel(removing.provider.name) : ''} key?`}
-        text='The provider goes back to the allowance Gendox provides. Agents using one of its models that needs your key stop answering until you add a key again or pick another model.'
+        text={
+          !removing
+            ? ''
+            : affected?.length
+            ? `${affected.map(p => p.name).join(', ')} ${affected.length === 1 ? 'uses' : 'use'} a ${providerLabel(
+                removing.provider.name
+              )} model that needs your key, and will stop answering until you pick another model.`
+            : affected
+            ? `${providerLabel(removing.provider.name)} goes back to the allowance Gendox provides. The key isn’t kept.`
+            : 'The provider goes back to the allowance Gendox provides. Agents using one of its models that needs your key stop answering until you add a key again or pick another model.'
+        }
         confirmLabel='Remove key'
         onConfirm={() => remove(removing)}
       />

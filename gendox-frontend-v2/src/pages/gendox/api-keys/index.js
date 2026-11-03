@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
+import { useDispatch, useSelector } from 'react-redux'
 import { Copy, KeyRound, Pencil, Plus, TriangleAlert } from 'lucide-react'
 import useActiveScope from 'src/hooks/useActiveScope'
 import useHasOrgRole from 'src/authentication/hooks/useHasOrgRole'
 import apiKeyService from 'src/gendox-sdk/apiKeyService'
+import { fetchOrganizationMembers } from 'src/store/activeOrganization/activeOrganization'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import { getToken } from 'src/components/agent/useAgent'
 import { formatDate } from 'src/components/knowledge/documentUtils'
@@ -120,6 +122,13 @@ const CreateKeyDialog = ({ open, onClose, onCreate }) => {
 
 const RenameDialog = ({ apiKey, onClose, onRename }) => {
   const [name, setName] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+
+  const save = async () => {
+    setIsSaving(true)
+    await onRename(apiKey, name.trim())
+    setIsSaving(false)
+  }
 
   useEffect(() => {
     if (apiKey) setName(apiKey.name || '')
@@ -127,6 +136,7 @@ const RenameDialog = ({ apiKey, onClose, onRename }) => {
 
   return (
     <Dialog
+      busy={isSaving}
       open={Boolean(apiKey)}
       onClose={onClose}
       size='s'
@@ -137,7 +147,7 @@ const RenameDialog = ({ apiKey, onClose, onRename }) => {
           <button className='btn' onClick={onClose}>
             Cancel
           </button>
-          <button className='btn primary' disabled={!name.trim()} onClick={() => onRename(apiKey, name.trim())}>
+          <button aria-busy={isSaving} className='btn primary' disabled={!name.trim() || isSaving} onClick={save}>
             Save
           </button>
         </>
@@ -145,7 +155,12 @@ const RenameDialog = ({ apiKey, onClose, onRename }) => {
     >
       <div className='field'>
         <label>Name</label>
-        <input className='input' value={name} onChange={e => setName(e.target.value)} />
+        <input
+          className='input'
+          value={name}
+          onChange={e => setName(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && name.trim() && !isSaving && save()}
+        />
       </div>
     </Dialog>
   )
@@ -156,7 +171,11 @@ const RenameDialog = ({ apiKey, onClose, onRename }) => {
  * GET/POST organizations/{o}/api-keys { name, durationInDays }, rename PUT …/{id}, revoke DELETE …/{id}.
  */
 const ApiKeysPage = () => {
+  const dispatch = useDispatch()
   const { organization, organizationId } = useActiveScope()
+  // who created each key, by name
+  const members = useSelector(state => state.activeOrganization.organizationMembers)
+  const creatorOf = apiKey => members?.find(m => m.user?.id === apiKey.createdBy)?.user
   const canEdit = useHasOrgRole({ organizationId, roles: ['OP_EDIT_API_KEYS'] })
   const [keys, setKeys] = useState(null)
   const [createOpen, setCreateOpen] = useState(false)
@@ -177,6 +196,11 @@ const ApiKeysPage = () => {
   useEffect(() => {
     load()
   }, [load])
+
+  useEffect(() => {
+    if (organizationId && !members?.length) dispatch(fetchOrganizationMembers({ organizationId, token: getToken() }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dispatch, organizationId])
 
   const create = async (name, durationInDays) => {
     try {
@@ -258,7 +282,12 @@ const ApiKeysPage = () => {
                 {keys === null && <SkeletonRows columns={[null, '120px', '80px', '90px', null]} />}
                 {sorted.map(apiKey => (
                   <tr key={apiKey.id} style={{ cursor: 'default', opacity: apiKey.active ? 1 : 0.6 }}>
-                    <td style={{ fontWeight: 500 }}>{apiKey.name}</td>
+                    <td>
+                      <div style={{ fontWeight: 500 }}>{apiKey.name}</div>
+                      {creatorOf(apiKey) && (
+                        <div className='faint sm'>by {creatorOf(apiKey).name || creatorOf(apiKey).email}</div>
+                      )}
+                    </td>
                     <td className='mono'>{tail(apiKey.apiKey)}</td>
                     <td className='hide-sm muted sm'>{formatDate(apiKey.createdAt)}</td>
                     <td>
