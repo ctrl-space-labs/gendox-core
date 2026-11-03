@@ -340,6 +340,8 @@ export default {
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/earth-observation/eo-geometries`,
 
   // Document content (inline preview) + download
+  viewProjectDocumentContent: documentId => `${url}documents/${documentId}/content`,
+
   viewDocumentContent: (threadId, documentId) => `${url}threads/${threadId}/documents/${documentId}/content`,
 
   downloadDocument: (threadId, documentId) => `${url}threads/${threadId}/documents/${documentId}/download`

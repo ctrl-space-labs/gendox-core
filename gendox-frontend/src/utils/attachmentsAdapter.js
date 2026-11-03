@@ -1,6 +1,6 @@
 const imageExt = /\.(png|jpe?g|gif|webp|bmp|svg)$/i
 
-const isImageDoc = doc => {
+export const isImageDoc = doc => {
   const name = (doc?.title || doc?.name || '').toLowerCase()
   const ft = (doc?.fileType?.name || '').toUpperCase()
 
