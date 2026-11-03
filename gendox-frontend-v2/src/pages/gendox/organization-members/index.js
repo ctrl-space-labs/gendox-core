@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/router'
 import { useDispatch, useSelector } from 'react-redux'
 import toast from 'react-hot-toast'
 import { Check, ChevronDown, Info, Link as LinkIcon, Mail, MailPlus, Search, UserMinus } from 'lucide-react'
@@ -141,6 +142,16 @@ const OrganizationMembersPage = () => {
   const [query, setQuery] = useState('')
   const [invitations, setInvitations] = useState(null) // null while loading
   const [inviteOpen, setInviteOpen] = useState(false)
+  const router = useRouter()
+
+  // the palette's "Invite people" opens the dialog
+  useEffect(() => {
+    const openFromHash = () => canInviteRole && window.location.hash === '#invite' && setInviteOpen(true)
+    if (router.isReady) openFromHash()
+    router.events.on('hashChangeComplete', openFromHash)
+
+    return () => router.events.off('hashChangeComplete', openFromHash)
+  }, [router.isReady, router.events, canInviteRole])
   const [removing, setRemoving] = useState(null)
 
   const organizationName = organization?.name || 'the organization'
@@ -398,7 +409,10 @@ const OrganizationMembersPage = () => {
 
       <InviteDialog
         open={inviteOpen}
-        onClose={() => setInviteOpen(false)}
+        onClose={() => {
+          setInviteOpen(false)
+          if (window.location.hash === '#invite') history.replaceState(null, '', window.location.pathname + window.location.search)
+        }}
         organizationName={organizationName}
         projects={projects}
         roles={grantableRoles(myRole)}
