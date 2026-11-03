@@ -3,8 +3,11 @@ import { useRouter } from 'next/router'
 import { ArrowRight, Check, ClockAlert } from 'lucide-react'
 import invitationService from 'src/gendox-sdk/invitationService'
 import { routeTypes } from 'src/authentication/components/RouteHandler'
+import { ROLES, roleTitle } from 'src/components/agent/roles'
 
 const REDIRECT_SECONDS = 3
+
+const article = word => (/^[aeiou]/i.test(word) ? 'an' : 'a')
 
 /**
  * The link in an invitation email (accept-url-template in application.yml): /accept-invitation/?email&token.
@@ -13,6 +16,7 @@ const REDIRECT_SECONDS = 3
 const AcceptInvitationPage = () => {
   const router = useRouter()
   const [state, setState] = useState('joining')
+  const [invitation, setInvitation] = useState(null)
   const [error, setError] = useState(null)
   const [counter, setCounter] = useState(REDIRECT_SECONDS)
 
@@ -21,7 +25,10 @@ const AcceptInvitationPage = () => {
     if (!email || !token) return
     invitationService
       .acceptInvitation(email, token)
-      .then(() => setState('joined'))
+      .then(response => {
+        setInvitation(response.data)
+        setState('joined')
+      })
       .catch(e => {
         setError(e.response?.data ?? {})
         setState('failed')
@@ -36,9 +43,17 @@ const AcceptInvitationPage = () => {
     return () => clearInterval(timer)
   }, [state])
 
+  // the agent they were invited to, in the organization that invited them
+  const destination = invitation?.organizationId
+    ? `/gendox/agent-home/?organizationId=${invitation.organizationId}${
+        invitation.projectId ? `&projectId=${invitation.projectId}` : ''
+      }`
+    : '/'
+  const role = invitation?.userRoleType?.name
+
   useEffect(() => {
-    if (state === 'joined' && counter <= 0) router.replace('/')
-  }, [state, counter, router])
+    if (state === 'joined' && counter <= 0) router.replace(destination)
+  }, [state, counter, router, destination])
 
   return (
     <main className='center'>
@@ -60,10 +75,18 @@ const AcceptInvitationPage = () => {
             </span>
             <h2>You’re in</h2>
             <p className='muted' style={{ lineHeight: 1.6 }}>
-              You joined the team that invited you. Gendox opens in {Math.max(counter, 0)} seconds.
+              You joined the team that invited you
+              {ROLES[role] && (
+                <>
+                  {' '}
+                  as {article(roleTitle(role))} <b>{roleTitle(role)}</b>
+                </>
+              )}
+              {invitation?.projectId ? ', with access to the agent they shared' : ''}. Gendox opens in{' '}
+              {Math.max(counter, 0)} seconds.
             </p>
-            <button className='btn primary' style={{ marginTop: 8 }} onClick={() => router.replace('/')}>
-              Open Gendox
+            <button className='btn primary' style={{ marginTop: 8 }} onClick={() => router.replace(destination)}>
+              {invitation?.projectId ? 'Open the agent' : 'Open Gendox'}
               <ArrowRight className='lucide' />
             </button>
           </>

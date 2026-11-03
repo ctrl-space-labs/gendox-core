@@ -1,17 +1,22 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
-import { LogOut } from 'lucide-react'
+import { ArrowUpRight, LogOut, ShieldCheck } from 'lucide-react'
 import { useAuth } from 'src/authentication/useAuth'
 import useActiveScope from 'src/hooks/useActiveScope'
 import useThemePreference from 'src/hooks/useThemePreference'
+import commonConfig from 'src/configs/common.config'
 import userService from 'src/gendox-sdk/userService'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import { getToken } from 'src/components/agent/useAgent'
 import { roleInOrganization, roleTitle } from 'src/components/agent/roles'
 import AppLayout from 'src/layouts/AppLayout'
 import Avatar from 'src/components/ui/Avatar'
+import MenuList from 'src/components/ui/MenuList'
 import ConfirmDialog from 'src/components/ui/ConfirmDialog'
+
+// Keycloak's account console: password, two-step verification, sessions
+const ACCOUNT_URL = `${commonConfig.oidcAuthority}/account`
 
 const THEMES = [
   ['light', 'Light'],
@@ -32,7 +37,7 @@ const UserProfilePage = () => {
   if (!user) return null
 
   const organizations = user.organizations ?? []
-  const ownsOne = organizations.some(o => roleInOrganization(o) === 'ROLE_OWNER')
+  const owned = organizations.filter(o => roleInOrganization(o) === 'ROLE_OWNER').map(o => o.name)
 
   const deleteAccount = async () => {
     try {
@@ -67,24 +72,40 @@ const UserProfilePage = () => {
             <h2>Your details</h2>
             <p>Shown to your team in member lists and conversations.</p>
           </header>
-          <div className='card card-b'>
-            <dl className='kv'>
-              {detail('Name', user.name)}
-              {detail('First name', user.firstName)}
-              {detail('Last name', user.lastName)}
-              {detail('Email', user.email)}
-              {detail('Username', user.userName)}
-              {detail('Phone', user.phone)}
-            </dl>
+          <div className='card'>
+            <div className='card-b'>
+              <dl className='kv'>
+                {detail('First name', user.firstName)}
+                {detail('Last name', user.lastName)}
+                {!user.firstName && !user.lastName && detail('Name', user.name)}
+                {detail('Email', user.email)}
+                {detail('Phone', user.phone)}
+              </dl>
+            </div>
+            {user.userName && (
+              <div className='card-f faint sm'>
+                Username <span className='mono'>{user.userName}</span>
+              </div>
+            )}
           </div>
         </section>
 
         <section className='sect'>
           <header>
-            <h2>Sign-in</h2>
+            <h2>Sign-in & security</h2>
             <p>Your password and sign-in methods are managed by the Gendox account service.</p>
           </header>
           <div className='card'>
+            <a className='item' href={ACCOUNT_URL} target='_blank' rel='noopener noreferrer'>
+              <span className='ftype' style={{ '--h': 210 }}>
+                <ShieldCheck className='lucide' />
+              </span>
+              <div style={{ flex: 1 }}>
+                <div>Password and two-step verification</div>
+                <div className='faint sm'>Opens your Gendox account</div>
+              </div>
+              <ArrowUpRight className='lucide' />
+            </a>
             <button className='item' onClick={() => logout()}>
               <span className='ftype' style={{ background: 'var(--surface-2)', color: 'var(--text-2)' }}>
                 <LogOut className='lucide' />
@@ -100,33 +121,35 @@ const UserProfilePage = () => {
             <p>Switch between them from the menu at the bottom of the sidebar.</p>
           </header>
           <div className='card'>
-            {organizations.map(o => {
-              const current = o.id === organizationId
+            <MenuList items={organizations} currentId={organizationId} noun='organizations' toggleClassName='item'>
+              {o => {
+                const current = o.id === organizationId
 
-              return (
-                <div className='item' key={o.id}>
-                  <Avatar name={o.name} seed={o.id} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 500 }}>
-                      {o.name} {current && <span className='badge accent'>Current</span>}
+                return (
+                  <div className='item' key={o.id}>
+                    <Avatar name={o.name} seed={o.id} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 500 }}>
+                        {o.name} {current && <span className='badge accent'>Current</span>}
+                      </div>
+                      <div className='faint sm'>
+                        {roleTitle(roleInOrganization(o))} · {o.projects?.length ?? 0}{' '}
+                        {o.projects?.length === 1 ? 'agent' : 'agents'}
+                      </div>
                     </div>
-                    <div className='faint sm'>
-                      {roleTitle(roleInOrganization(o))} · {o.projects?.length ?? 0}{' '}
-                      {o.projects?.length === 1 ? 'agent' : 'agents'}
-                    </div>
+                    {current ? (
+                      <Link className='btn ghost s' href={href('/gendox/organization-settings')}>
+                        Settings
+                      </Link>
+                    ) : (
+                      <Link className='btn s' href={`/gendox/agent-home/?organizationId=${o.id}`}>
+                        Switch
+                      </Link>
+                    )}
                   </div>
-                  {current ? (
-                    <Link className='btn ghost s' href={href('/gendox/organization-settings')}>
-                      Settings
-                    </Link>
-                  ) : (
-                    <Link className='btn s' href={`/gendox/agent-home/?organizationId=${o.id}`}>
-                      Switch
-                    </Link>
-                  )}
-                </div>
-              )
-            })}
+                )
+              }}
+            </MenuList>
             <div className='card-f'>
               <Link className='btn ghost s' href='/gendox/create-organization'>
                 Create organization
@@ -161,7 +184,7 @@ const UserProfilePage = () => {
                 <b>Delete your account</b>
                 <div className='muted sm'>
                   You leave every organization and are signed out.
-                  {ownsOne ? ' You own an organization: make someone else an owner first, or delete it.' : ''}
+                  {owned.length > 0 && ` You own ${owned.join(', ')}: make someone else an owner first, or delete it.`}
                 </div>
               </div>
               <button className='btn danger' onClick={() => setDeleteOpen(true)}>
@@ -176,7 +199,13 @@ const UserProfilePage = () => {
         open={deleteOpen}
         onClose={() => setDeleteOpen(false)}
         title='Delete your account?'
-        text='You leave every organization and lose access to their agents. This can’t be undone.'
+        text={
+          owned.length
+            ? `You own ${owned.join(', ')}. Without another owner, no one can manage ${
+                owned.length === 1 ? 'it' : 'them'
+              } after you leave. This can’t be undone.`
+            : 'You leave every organization and lose access to their agents. This can’t be undone.'
+        }
         confirmLabel='Delete account'
         onConfirm={deleteAccount}
       />
