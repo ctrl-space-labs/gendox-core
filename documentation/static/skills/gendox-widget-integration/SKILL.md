@@ -141,5 +141,5 @@ window.gendox.widget.updateConfig({  // runtime config push to the iframe
 
 ## Further reference
 
-- **Local context and tools (detail)**: [skills/gendox-widget-integration/references/tools-and-local-context.md](/skills/gendox-widget-integration/references/tools-and-local-context.md)
+- **Local context and tools (detail)**: [references/tools-and-local-context.md](references/tools-and-local-context.md)
 - **Human docs**: [Website Widget docs](https://docs.gendox.dev/website-widget/website-widget-installation)
