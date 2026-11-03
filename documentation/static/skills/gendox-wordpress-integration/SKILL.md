@@ -126,7 +126,8 @@ $payload = wp_json_encode( array(
 - **`removeTool` and `removeLocalContextRequestCallback` throw** if the name was never
   registered. Guard them.
 
-- **Tool results are one-way** — they are not returned to the model.
+- **Tool results reach the model only for Sync tools** (the tool's **Client tool execution**
+  setting in Gendox). An Async tool's return value is not sent; see the widget skill for both.
 
 ## REST API exposed to Gendox
 

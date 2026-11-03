@@ -38,7 +38,12 @@ Chat window initialization and open/close controls are part of the **Widget API*
 
 1. **Open your project** → **Settings** → **AI Agent** → **Tools**
 ![how-to-add-tool.gif](./img/how-to-add-tool.gif)
-2. Click **“Add Tool”** and paste a JSON schema identical to OpenAI’s format.
+2. Click **“Add Tool”**, choose the **Client tool execution** and paste a JSON schema identical to OpenAI’s format.
+
+   | Client tool execution | Behaviour | Use for |
+   |---|---|---|
+   | **Async — continue without the result** (default) | The agent is told the tool was executed and continues. | Actions: open a page, set filters, fill a form. |
+   | **Sync — wait for the host result** | The agent waits until your handler returns, then continues with its result. | Data the agent needs: cart contents, order status, the user's selections. |
 
 Example schema for “open web page”:
 
@@ -96,7 +101,18 @@ window.gendox.tools.registerTool('open_web_page', (args) => {
 ```
 
 Gendox SDK will automatically call the `handler` function when the agent calls the tool.   
-If you to handle the tool calls in your own way, you can add a listener to the `message` event in the browser:
+The handler may return a value or a Promise. For a **Sync** tool, that value is sent to the agent as the tool result:
+
+```javascript
+window.gendox.tools.registerTool('get_cart', async () => {
+  const cart = await fetch('/api/cart').then(r => r.json());
+  return { items: cart.items, total: cart.total, currency: cart.currency };
+});
+```
+
+If the handler throws, the agent receives `{"error":"CLIENT_TOOL_FAILED","message":…}`; if no handler is registered for the name, `{"error":"CLIENT_TOOL_HANDLER_MISSING",…}`.
+
+If you want to handle **Async** tool calls in your own way, you can add a listener to the `message` event in the browser. Sync tools must use `registerTool`, which is how their results are sent back:
 
 ```javascript
 window.addEventListener('message', (event) => {
@@ -106,8 +122,6 @@ window.addEventListener('message', (event) => {
     toolCalls.forEach((tool) => {
         if (tool.function.name === 'open_web_page') {
             // your implementation here
-            // ----->>>>>  Add response message <<<<<-----
-            tool.response = { status: "executed" };
         } 
         ...
       
@@ -118,9 +132,7 @@ window.addEventListener('message', (event) => {
 
 
 :::warning
-**Note:** Tool use is currently **one-way**: the agent **notifies the browser** to run a tool or action (e.g., open a page, update filters, etc.). Data **is not yet sent back to the agent**; this will be available in future versions.\
-**Contact us** if you need this feature urgently!
-
+**Sync tools wait without a time limit.** While a Sync tool runs, the chat shows *Waiting for your page…* and the user cannot send a message. Add your own timeout to anything that can hang and return an error result when it expires. Don't navigate the page from a Sync tool: its result is lost and the agent receives `CLIENT_TOOL_OUTCOME_UNKNOWN`. Use an Async tool such as `open_web_page` for navigation.
 :::
 
 ### 4.2  Payload format
@@ -131,12 +143,14 @@ The widget sends **an array** (you may receive multiple tool calls at once):
 [
   {
     "threadId": "2043baeb-873f-464a-8840-5bf32dd6856a",
+    "turnId": "9b1c7e52-3a0f-4d8e-b6a1-2f4c8d9e0a17",
     "messageId": "fe8244bf-ddc7-4ac8-9def-ff9f5163ae2f",
+    "execution": "ACTION",
     "function": {
       "name": "open_web_page",
       "arguments": "{\"url\":\"https://example.com\"}"
     },
-    "id": "",
+    "id": "call_abc123",
     "type": "function"
   }
 ]
@@ -147,7 +161,10 @@ Field cheat-sheet:
 | Field            | Meaning                                     |
 |------------------|---------------------------------------------|
 | `threadId`       | Chat thread the call belongs to             |
+| `turnId`         | The user question the call answers          |
 | `messageId`      | Specific message that triggered the call    |
+| `execution`      | `ACTION` (Async) or `CLIENT` (Sync: the agent waits for the result) |
+| `id`             | Tool call id; a Sync result is matched to the call by it |
 | `function.name`  | Tool name you registered in Gendox          |
 | `function.arguments` | JSON string with the parameters          |
 
@@ -162,13 +179,13 @@ Field cheat-sheet:
 | 3.   | Add a `window.addEventListener('message', handler)` in your front-end.                                    |
 | 4.   | In the handler, look for `type === 'gendox.events.chat.message.tool_calls.request'`.                      |
 | 5.   | Parse `event.data.payload`, match each `function.name`, run your own JS (open tab, modify DOM, etc.).     |
-| 6.   | (Future) In a later release you’ll be able to send results back to the agent.                             |
+| 6.   | For Sync tools, register a handler with `window.gendox.tools.registerTool` instead; its return value is sent to the agent. |
 
 ---
 
 ### 6. Gotchas & Best Practices
 
-* **One-way only:** don’t expect a reply channel yet; perform the action and you’re done.
+* **Results:** only Sync tools send a result to the agent; return just the data it needs, as the result is saved in the chat thread.
 * **Security:** validate the arguments (`new URL(url)`, whitelists, etc.) before executing.
 * **Multiple calls:** the array may contain more than one tool invocation—loop through it.
 * **Versioning:** schema changes won’t break old widgets, but keep your handler switch-case up-to-date.
