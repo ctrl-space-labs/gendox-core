@@ -31,7 +31,6 @@ import { copyToClipboard } from 'src/utils/copyToClipboard'
 import { getToken } from 'src/components/agent/useAgent'
 import Markdown from 'src/components/chat/Markdown'
 import Empty from 'src/components/ui/Empty'
-import Spinner from 'src/components/ui/Spinner'
 import { formatDateTime, plural, sectionTitleOf, sortSections } from 'src/components/knowledge/documentUtils'
 import {
   FLAGS,
@@ -149,8 +148,10 @@ const DocumentText = ({ documentId }) => {
 
   if (sections === null) {
     return (
-      <div className='center' style={{ minHeight: 0, padding: 40 }}>
-        <Spinner />
+      <div className='stack' aria-busy='true' aria-label='Loading'>
+        {['92%', '86%', '95%', '60%'].map((width, i) => (
+          <span key={i} className='skel' style={{ width }} />
+        ))}
       </div>
     )
   }
@@ -658,7 +659,7 @@ const DocumentPane = ({ view, doc, ctx, head }) => {
           <Sparkles className='lucide' />
           {answered ? 'Generate again' : 'Generate answers'}
         </button>
-        <button className='btn s' onClick={exportCsv} disabled={exporting || !answered}>
+        <button aria-busy={exporting} className='btn s' onClick={exportCsv} disabled={exporting || !answered}>
           <Download className='lucide' />
           CSV
         </button>

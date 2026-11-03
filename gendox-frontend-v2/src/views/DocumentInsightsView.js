@@ -42,12 +42,12 @@ import {
 import InsightsInspector, { docTabOf, useDocumentNames } from 'src/components/tasks/InsightsInspector'
 import DocumentPicker, { findDocuments } from 'src/components/tasks/DocumentPicker'
 import useSplitPane from 'src/components/tasks/useSplitPane'
+import InsightsColumnMenu, { toDocumentSearch } from 'src/components/tasks/InsightsColumnMenu'
 import useTaskJob, { jobParam } from 'src/components/tasks/useTaskJob'
 import { ViewMain, useScreenTitle, useView } from 'src/views/ViewContext'
 import ConfirmDialog from 'src/components/ui/ConfirmDialog'
 import Empty from 'src/components/ui/Empty'
 import Menu from 'src/components/ui/Menu'
-import Spinner from 'src/components/ui/Spinner'
 
 const ALL = 2147483647
 
@@ -87,12 +87,15 @@ const DocumentInsightsView = () => {
   const [pageSize, setPageSize] = useState(20)
   const [query, setQuery] = useState('')
   const [search, setSearch] = useState('')
+  const [sort, setSort] = useState(null) // { by: 'title' | 'answer', qId, dir }, null for the newest first
+  const [filter, setFilter] = useState(null) // { qId, values, negate }: one question's answers
   const [selected, setSelected] = useState(new Set())
   const [view, setView] = useState(null)
   const [confirm, setConfirm] = useState(null)
   const [picker, setPicker] = useState(null)
   const [editing, setEditing] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [openingPicker, setOpeningPicker] = useState(false)
   const [pending, setPending] = useState(null) // what the job just started covers, until its own parameters arrive
   const inspRef = useRef(null)
 
@@ -130,17 +133,18 @@ const DocumentInsightsView = () => {
   const load = useCallback(async () => {
     if (!organizationId || !projectId || !taskId) return
     const token = getToken()
+    const order = toDocumentSearch(sort, filter, questionsRef.current)
     try {
       const [docsResponse, questionsResponse] = await Promise.all([
         taskService.getTaskNodesByCriteria(
           organizationId,
           projectId,
           taskId,
-          { taskId, nodeTypeNames: ['DOCUMENT'], ...(search ? { documentNameContains: search } : {}) },
+          { taskId, nodeTypeNames: ['DOCUMENT'], ...(search ? { documentNameContains: search } : {}), ...order.criteria },
           token,
           page,
           pageSize,
-          'createdAt,desc'
+          order.sort
         ),
         taskService.getTaskNodesByCriteria(organizationId, projectId, taskId, { taskId, nodeTypeNames: ['QUESTION'] }, token, 0, ALL)
       ])
@@ -170,7 +174,7 @@ const DocumentInsightsView = () => {
       toast.error(getErrorMessage(error))
       setDocs(d => d ?? [])
     }
-  }, [organizationId, projectId, taskId, search, page, pageSize, loadAnswers])
+  }, [organizationId, projectId, taskId, search, page, pageSize, sort, filter, loadAnswers])
 
   useEffect(loadTask, [loadTask])
   useEffect(() => {
@@ -185,6 +189,22 @@ const DocumentInsightsView = () => {
 
     return () => clearTimeout(timer)
   }, [query])
+
+  const sortBy = next => {
+    setSort(next)
+    setPage(0)
+  }
+  const filterBy = next => {
+    setFilter(next)
+    setPage(0)
+  }
+
+  // a sort or filter on a question that was deleted
+  useEffect(() => {
+    if (!questions.length) return
+    if (sort?.qId && !questions.some(q => q.id === sort.qId)) setSort(null)
+    if (filter && !questions.some(q => q.id === filter.qId)) setFilter(null)
+  }, [questions, sort, filter])
 
   // ---------- generating ----------
   const job = useTaskJob({
@@ -395,6 +415,7 @@ const DocumentInsightsView = () => {
   const openAddDocuments = async () => {
     // every document already in the task, not only this page, so none is added twice
     let taken = []
+    setOpeningPicker(true)
     try {
       const response = await taskService.getTaskNodesByCriteria(
         organizationId,
@@ -406,7 +427,10 @@ const DocumentInsightsView = () => {
         ALL
       )
       taken = (response.data?.content ?? []).map(n => n.documentId)
-    } catch {}
+    } catch {
+    } finally {
+      setOpeningPicker(false)
+    }
     setPicker({
       title: 'Add documents',
       subtitle: `Pick from ${project?.name ?? 'the agent'}’s knowledge, or upload new files.`,
@@ -507,7 +531,7 @@ const DocumentInsightsView = () => {
 
             <div className='card ins-card'>
               <div className='toolbar'>
-                <button className='btn s' onClick={openAddDocuments}>
+                <button aria-busy={openingPicker} className='btn s' onClick={openAddDocuments} disabled={openingPicker}>
                   <FilePlus className='lucide' />
                   <span className='hide-l'>Add documents</span>
                 </button>
@@ -527,7 +551,13 @@ const DocumentInsightsView = () => {
                   <input placeholder='Find a document' value={query} onChange={e => setQuery(e.target.value)} />
                 </label>
                 <span className='sp' />
-                <button className='btn s' title='Export every answer as CSV' onClick={exportAll} disabled={exporting || !answers.size}>
+                <button
+                  aria-busy={exporting}
+                  className='btn s'
+                  title='Export every answer as CSV'
+                  onClick={exportAll}
+                  disabled={exporting || !answers.size}
+                >
                   <Download className='lucide' />
                   <span className='hide-l'>CSV</span>
                 </button>
@@ -597,10 +627,41 @@ const DocumentInsightsView = () => {
 
               <div className='grid-wrap'>
                 {docs === null ? (
-                  <div className='center' style={{ minHeight: 0, padding: 60 }}>
-                    <Spinner />
-                  </div>
-                ) : !docs.length && !questions.length && !pendingQs.length && !search ? (
+                  <table className='ig' aria-busy='true'>
+                    <thead>
+                      <tr>
+                        <th className='doc'>
+                          <div>Document</div>
+                        </th>
+                        {[0, 1, 2].map(i => (
+                          <th key={i} className='q'>
+                            <span className='qh'>
+                              <span className='skel' style={{ width: '60%' }} />
+                            </span>
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[62, 48, 74, 55, 68].map(width => (
+                        <tr key={width} aria-hidden='true'>
+                          <td className='doc'>
+                            <div>
+                              <span className='skel' style={{ width: `${width}%` }} />
+                            </div>
+                          </td>
+                          {[0, 1, 2].map(i => (
+                            <td key={i} className='q'>
+                              <div className='cell empty'>
+                                <span className='skel' style={{ width: '50%' }} />
+                              </div>
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : !docs.length && !questions.length && !pendingQs.length && !search && !filter ? (
                   <Empty
                     icon={<Table2 className='lucide' />}
                     title='Add documents and questions'
@@ -630,7 +691,8 @@ const DocumentInsightsView = () => {
                               checked={docs.length > 0 && docs.every(d => selected.has(d.id))}
                               onChange={e => setSelected(e.target.checked ? new Set(docs.map(d => d.id)) : new Set())}
                             />
-                            Document
+                            <span className='sp'>Document</span>
+                            <InsightsColumnMenu question={null} sort={sort} onSort={sortBy} />
                           </div>
                         </th>
                         {questions.map(q => (
@@ -638,10 +700,13 @@ const DocumentInsightsView = () => {
                             key={q.id}
                             className={`q ${(viewOn.kind === 'q' || viewOn.kind === 'answer') && viewOn.qId === q.id ? 'on' : ''}`}
                           >
-                            <button className='qh' title={q.text} onClick={() => open({ kind: 'q', qId: q.id, tab: 'setup' })}>
-                              <span className='trunc'>{questionLabel(q)}</span>
-                              {isDecision(q) && <span className='kind'>{KIND[kindOf(q)]}</span>}
-                            </button>
+                            <div className='qhs'>
+                              <button className='qh' title={q.text} onClick={() => open({ kind: 'q', qId: q.id, tab: 'setup' })}>
+                                <span className='trunc'>{questionLabel(q)}</span>
+                                {isDecision(q) && <span className='kind'>{KIND[kindOf(q)]}</span>}
+                              </button>
+                              <InsightsColumnMenu question={q} sort={sort} filter={filter} onSort={sortBy} onFilter={filterBy} />
+                            </div>
                           </th>
                         ))}
                         {pendingQs.map(q => (
@@ -758,7 +823,7 @@ const DocumentInsightsView = () => {
                       {!docs.length && (
                         <tr>
                           <td className='doc'>
-                            <div className='faint sm'>{search ? 'No documents match.' : 'No documents yet.'}</div>
+                            <div className='faint sm'>{search || filter ? 'No documents match.' : 'No documents yet.'}</div>
                           </td>
                           {[...questions, ...pendingQs].map(q => (
                             <td key={q.id} className='q' />

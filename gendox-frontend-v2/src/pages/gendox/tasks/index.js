@@ -14,7 +14,7 @@ import AppLayout from 'src/layouts/AppLayout'
 import ConfirmDialog from 'src/components/ui/ConfirmDialog'
 import Empty from 'src/components/ui/Empty'
 import Menu from 'src/components/ui/Menu'
-import Spinner from 'src/components/ui/Spinner'
+import { SkeletonRows } from 'src/components/ui/Skeleton'
 
 /**
  * The agent's tasks: GET …/projects/{p}/tasks?taskNameContains, newest first.
@@ -123,8 +123,20 @@ const TasksPage = () => {
 
       <div className='card' style={{ minWidth: 0 }}>
         {tasks === null ? (
-          <div className='center' style={{ minHeight: 0, padding: 40 }}>
-            <Spinner />
+          <div className='scroll'>
+            <table className='table' aria-busy='true'>
+              <thead>
+                <tr>
+                  <th>Task</th>
+                  <th className='hide-sm'>Type</th>
+                  <th className='hide-sm'>Created</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                <SkeletonRows rows={4} columns={[null, 110, 90, null]} />
+              </tbody>
+            </table>
           </div>
         ) : tasks.length === 0 ? (
           query ? (
