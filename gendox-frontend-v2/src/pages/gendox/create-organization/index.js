@@ -2,7 +2,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import toast from 'react-hot-toast'
-import { ArrowRight } from 'lucide-react'
+import { ArrowLeft, ArrowRight } from 'lucide-react'
 import { useAuth } from 'src/authentication/useAuth'
 import organizationService from 'src/gendox-sdk/organizationService'
 import { getErrorMessage } from 'src/utils/errorHandler'
@@ -44,6 +44,16 @@ const CreateOrganizationPage = () => {
         <div className='row' style={{ gap: 10, fontWeight: 600 }}>
           <span className='mark' />
           Gendox
+          {/* someone with an organization can go back; a first-time user has nowhere to go yet */}
+          {hasOrganizations && (
+            <>
+              <span className='sp' />
+              <Link className='btn ghost s' href='/gendox/agent-home' style={{ fontWeight: 500 }}>
+                <ArrowLeft className='lucide' />
+                Back to Gendox
+              </Link>
+            </>
+          )}
         </div>
         <div className='card card-b form' style={{ padding: 28 }}>
           <div>
@@ -55,45 +65,55 @@ const CreateOrganizationPage = () => {
             </p>
           </div>
           <fieldset className='lock' disabled={isCreating}>
-          <div className='field'>
-            <label htmlFor='org-name'>Organization name</label>
-            <input
-              id='org-name'
-              className='input'
-              autoFocus
-              placeholder='e.g. Acme Legal'
-              value={fields.name}
-              onChange={e => {
-                set('name', e.target.value)
-                setNameError(false)
-              }}
-              onKeyDown={e => e.key === 'Enter' && create()}
-            />
-            {nameError && <span className='err'>Give your organization a name.</span>}
-          </div>
-          <details>
-            <summary className='muted sm' style={{ cursor: 'pointer' }}>
-              Add invoice details (optional)
-            </summary>
-            <div className='form' style={{ marginTop: 12 }}>
-              <div className='field'>
-                <label>Legal name</label>
-                <input className='input' value={fields.displayName} onChange={e => set('displayName', e.target.value)} />
-              </div>
-              <div className='form-grid'>
-                <div className='field'>
-                  <label>Address</label>
-                  <input className='input' value={fields.address} onChange={e => set('address', e.target.value)} />
-                </div>
-                <div className='field'>
-                  <label>Phone</label>
-                  <input className='input' value={fields.phone} onChange={e => set('phone', e.target.value)} />
-                </div>
-              </div>
+            <div className='field'>
+              <label htmlFor='org-name'>Organization name</label>
+              <input
+                id='org-name'
+                className='input'
+                autoFocus
+                placeholder='e.g. Acme Legal'
+                value={fields.name}
+                onChange={e => {
+                  set('name', e.target.value)
+                  setNameError(false)
+                }}
+                onKeyDown={e => e.key === 'Enter' && create()}
+              />
+              {nameError && <span className='err'>Give your organization a name.</span>}
             </div>
-          </details>
+            <details>
+              <summary className='muted sm' style={{ cursor: 'pointer' }}>
+                Add invoice details (optional)
+              </summary>
+              <div className='form' style={{ marginTop: 12 }}>
+                <div className='field'>
+                  <label>Legal name</label>
+                  <input
+                    className='input'
+                    value={fields.displayName}
+                    onChange={e => set('displayName', e.target.value)}
+                  />
+                </div>
+                <div className='form-grid'>
+                  <div className='field'>
+                    <label>Address</label>
+                    <input className='input' value={fields.address} onChange={e => set('address', e.target.value)} />
+                  </div>
+                  <div className='field'>
+                    <label>Phone</label>
+                    <input className='input' value={fields.phone} onChange={e => set('phone', e.target.value)} />
+                  </div>
+                </div>
+              </div>
+            </details>
           </fieldset>
-          <button aria-busy={isCreating} className='btn primary' style={{ height: 40 }} onClick={create} disabled={isCreating}>
+          <button
+            aria-busy={isCreating}
+            className='btn primary'
+            style={{ height: 40 }}
+            onClick={create}
+            disabled={isCreating}
+          >
             {isCreating ? 'Creating…' : 'Create organization'}
             <ArrowRight className='lucide' />
           </button>
@@ -101,15 +121,11 @@ const CreateOrganizationPage = () => {
             Next: create your first agent.
           </p>
         </div>
-        <p className='faint sm' style={{ textAlign: 'center' }}>
-          {hasOrganizations ? (
-            <Link className='link' href='/gendox/agent-home'>
-              Back to Gendox
-            </Link>
-          ) : (
-            'Were you invited? Open the link in the invitation email to join that team instead.'
-          )}
-        </p>
+        {!hasOrganizations && (
+          <p className='faint sm' style={{ textAlign: 'center' }}>
+            Were you invited? Open the link in the invitation email to join that team instead.
+          </p>
+        )}
       </div>
     </main>
   )
