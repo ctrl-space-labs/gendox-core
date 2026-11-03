@@ -28,6 +28,8 @@
             height: 100%;
             border: 0;
             border-radius: 0.5rem;
+            /* matches the chat page's root; a host in dark mode would otherwise get an opaque frame */
+            color-scheme: normal;
         }
         .gendox-chat-open {
             width: 25rem;

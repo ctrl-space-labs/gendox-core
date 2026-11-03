@@ -54,18 +54,31 @@ const EmbeddedChatPage = () => {
     }
   }
 
-  // The frame is see-through around the bubble, and light unless the host asks otherwise with ?theme=
+  // The frame is see-through around the bubble, and light unless the host asks otherwise with ?theme=.
+  // The root keeps the plain colour scheme the plugin gives the <iframe>: when the two differ, the browser
+  // paints the frame opaque. The theme's scheme moves to the body.
   useEffect(() => {
     const root = document.documentElement
-    const previous = { theme: root.dataset.theme, html: root.style.background, body: document.body.style.background }
+    const body = document.body
+    const previous = {
+      theme: root.dataset.theme,
+      html: root.style.background,
+      body: body.style.background,
+      htmlScheme: root.style.colorScheme,
+      bodyScheme: body.style.colorScheme
+    }
     if (!new URLSearchParams(window.location.search).get('theme')) root.dataset.theme = 'light'
     root.style.background = 'transparent'
-    document.body.style.background = 'transparent'
+    body.style.background = 'transparent'
+    root.style.colorScheme = 'normal'
+    body.style.colorScheme = 'var(--scheme)'
 
     return () => {
       root.dataset.theme = previous.theme
       root.style.background = previous.html
-      document.body.style.background = previous.body
+      body.style.background = previous.body
+      root.style.colorScheme = previous.htmlScheme
+      body.style.colorScheme = previous.bodyScheme
     }
   }, [])
 
