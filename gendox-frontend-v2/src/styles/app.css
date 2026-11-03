@@ -56,8 +56,8 @@
 
 /* the embedded widget: a bubble, then the chat filling the frame the host page gives it */
 .wgt-bubble { position: fixed; right: 0; bottom: 0; width: min(56px, 100vw); height: min(56px, 100vh); border: 0; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--accent-fg); cursor: pointer; }
-.wgt-panel { position: fixed; inset: 0; z-index: 1000; transition: transform .3s ease-in-out; transform: translateY(100%); }
-.wgt-panel.open { transform: none; }
+.wgt-panel { position: fixed; inset: 0; z-index: 1000; visibility: hidden; opacity: 0; transform: translateY(16px); transition: transform .2s ease-out, opacity .2s ease-out, visibility .2s; }
+.wgt-panel.open { visibility: visible; opacity: 1; transform: none; }
 
 /* New document: the Markdown editor with its preview (from the prototype's document-new.html) */
 .md-editor { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: 460px; }
