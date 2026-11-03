@@ -8,7 +8,7 @@ import { getToken, useRefreshProfile } from 'src/components/agent/useAgent'
 import OrgScope from 'src/components/organization/OrgScope'
 import AppLayout from 'src/layouts/AppLayout'
 import Dialog from 'src/components/ui/Dialog'
-import Spinner from 'src/components/ui/Spinner'
+import { formatDate } from 'src/components/knowledge/documentUtils'
 
 const fieldsOf = organization => ({
   name: organization?.name || '',
@@ -28,6 +28,7 @@ const OrganizationSettingsPage = () => {
   const canDelete = useHasOrgRole({ organizationId, roles: ['OP_DELETE_ORGANIZATION'] })
 
   const [saved, setSaved] = useState(null)
+  const [createdAt, setCreatedAt] = useState(null)
   const [fields, setFields] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -41,6 +42,7 @@ const OrganizationSettingsPage = () => {
       .then(response => {
         setSaved(fieldsOf(response.data))
         setFields(fieldsOf(response.data))
+        setCreatedAt(response.data?.createdAt ?? null)
       })
       .catch(() => {
         setSaved(fieldsOf(organization))
@@ -52,8 +54,22 @@ const OrganizationSettingsPage = () => {
     return (
       <main className='content'>
         <OrgScope tab='general' />
-        <div className='center' style={{ padding: 60 }}>
-          <Spinner />
+        <div aria-busy='true' aria-label='Loading'>
+          {[1, 3].map(lines => (
+            <section key={lines} className='sect' style={lines === 1 ? { paddingTop: 8 } : undefined}>
+              <header>
+                <span className='skel' style={{ width: 140, height: 18 }} />
+              </header>
+              <div className='card card-b form'>
+                {Array.from({ length: lines }, (_, i) => (
+                  <div key={i} className='field'>
+                    <span className='skel' style={{ width: 90 }} />
+                    <span className='skel' style={{ width: '100%', height: 34 }} />
+                  </div>
+                ))}
+              </div>
+            </section>
+          ))}
         </div>
       </main>
     )
@@ -93,6 +109,21 @@ const OrganizationSettingsPage = () => {
     }
   }
 
+  // each card saves the whole form, as in the prototype
+  const actions = (created = false) =>
+    canEdit && (
+      <div className='row'>
+        {created && createdAt && <span className='faint sm'>Created {formatDate(createdAt)}</span>}
+        <span className='sp' />
+        <button className='btn ghost' disabled={!dirty || isSaving} onClick={() => setFields(saved)}>
+          Discard
+        </button>
+        <button aria-busy={isSaving} className='btn primary' disabled={!dirty || isSaving} onClick={save}>
+          {isSaving ? 'Saving…' : 'Save'}
+        </button>
+      </div>
+    )
+
   const input = (key, props = {}) => (
     <input className='input' value={fields[key]} disabled={!canEdit} onChange={e => set(key, e.target.value)} {...props} />
   )
@@ -113,6 +144,7 @@ const OrganizationSettingsPage = () => {
               {input('name')}
               <span className='help'>Shown in the app and in invitations.</span>
             </div>
+            {actions(true)}
           </div>
         </section>
         <section className='sect'>
@@ -125,27 +157,17 @@ const OrganizationSettingsPage = () => {
               <label>Legal name</label>
               {input('displayName', { placeholder: 'Acme Legal Services S.A.' })}
             </div>
+            <div className='field'>
+              <label>Address</label>
+              {input('address', { placeholder: 'Street, number, postcode, city, country' })}
+            </div>
             <div className='form-grid'>
-              <div className='field'>
-                <label>Address</label>
-                {input('address', { placeholder: 'Street, number, postcode, city, country' })}
-              </div>
               <div className='field'>
                 <label>Phone</label>
                 {input('phone')}
               </div>
             </div>
-            {canEdit && (
-              <div className='row'>
-                <span className='sp' />
-                <button className='btn ghost' disabled={!dirty || isSaving} onClick={() => setFields(saved)}>
-                  Discard
-                </button>
-                <button aria-busy={isSaving} className='btn primary' disabled={!dirty || isSaving} onClick={save}>
-                  {isSaving ? 'Saving…' : 'Save'}
-                </button>
-              </div>
-            )}
+            {actions()}
           </div>
         </section>
         </fieldset>
@@ -159,7 +181,8 @@ const OrganizationSettingsPage = () => {
                 <div style={{ flex: 1 }}>
                   <b>Delete {saved.name}</b>
                   <div className='muted sm'>
-                    All agents, knowledge, conversations and tasks are deleted, and every member loses access.
+                    All agents, knowledge, conversations and tasks are deleted, and every member loses access. Only
+                    owners can do this.
                   </div>
                 </div>
                 <button

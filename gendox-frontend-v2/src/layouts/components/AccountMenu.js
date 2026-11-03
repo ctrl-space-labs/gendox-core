@@ -6,7 +6,6 @@ import {
   Check,
   ChevronsUpDown,
   CreditCard,
-  KeyRound,
   LogOut,
   Monitor,
   Moon,
@@ -24,6 +23,7 @@ import commonConfig from 'src/configs/common.config'
 import { sortByField } from 'src/utils/orderUtils'
 import Avatar from 'src/components/ui/Avatar'
 import Menu from 'src/components/ui/Menu'
+import MenuList from 'src/components/ui/MenuList'
 import WordPressIcon from 'src/components/ui/WordPressIcon'
 
 const themes = [
@@ -32,13 +32,13 @@ const themes = [
   { id: 'system', icon: Monitor }
 ]
 
-// the organization's pages; one without a path has not moved to this app yet
+// the organization's pages; one without a path has not moved to this app yet.
+// API keys, Model providers and Connected services are tabs of Organization settings only.
 const organizationPages = [
   { title: 'Organization settings', icon: Building2, path: '/gendox/organization-settings' },
   { title: 'Members', icon: Users, path: '/gendox/organization-members' },
   { title: 'Integrations', icon: Cable, path: '/gendox/integrations' },
   { title: 'WordPress', icon: WordPressIcon, path: '/gendox/wordpress' },
-  { title: 'API keys', icon: KeyRound, path: '/gendox/api-keys' },
   { title: 'Plan & usage', icon: CreditCard, path: '/gendox/plan' }
 ]
 
@@ -64,19 +64,22 @@ const AccountMenu = () => {
       )}
     >
       <div className='h'>{user?.email}</div>
-      {sortedOrganizations.map(o => (
-        <Link
-          key={o.id}
-          className='mi'
-          href={href('/gendox/agent-home', { organizationId: o.id, projectId: undefined })}
-        >
-          <Avatar name={o.name} seed={o.id} size='s' />
-          <span className='trunc' style={{ flex: 1 }}>
-            {o.name}
-          </span>
-          {o.id === organization?.id && <Check className='lucide' />}
-        </Link>
-      ))}
+      <MenuList items={sortedOrganizations} currentId={organization?.id} noun='organizations'>
+        {o => (
+          <Link
+            key={o.id}
+            className='mi'
+            href={href('/gendox/agent-home', { organizationId: o.id, projectId: undefined })}
+          >
+            <Avatar name={o.name} seed={o.id} size='s' />
+            <span className='trunc' style={{ flex: 1 }}>
+              {o.name}
+            </span>
+            {o.id === organization?.id && <Check className='lucide' />}
+          </Link>
+        )}
+      </MenuList>
+      <hr />
       <Link className='mi' href='/gendox/create-organization'>
         <Plus className='lucide' />
         Create organization

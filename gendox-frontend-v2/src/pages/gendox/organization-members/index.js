@@ -16,7 +16,7 @@ import invitationService from 'src/gendox-sdk/invitationService'
 import { hasPlanFeature, planFeatureMessages, planFeatures } from 'src/configs/planFeatures'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import { getToken } from 'src/components/agent/useAgent'
-import { ROLES, grantableRoles, roleInOrganization, roleTitle, Role } from 'src/components/agent/roles'
+import { ROLES, ROLE_ICONS, grantableRoles, roleInOrganization, roleTitle, Role } from 'src/components/agent/roles'
 import { formatDate } from 'src/components/knowledge/documentUtils'
 import OrgScope from 'src/components/organization/OrgScope'
 import AppLayout from 'src/layouts/AppLayout'
@@ -31,7 +31,7 @@ const RANK = { ROLE_OWNER: 4, ROLE_ADMIN: 3, ROLE_EDITOR: 2, ROLE_READER: 1 }
 const USER_TYPES = { GENDOX_USER: 'Person', DISCORD_USER: 'Discord' }
 
 // Invitations always name an agent (projectId is required): the person joins the organization through it
-const InviteDialog = ({ open, onClose, organizationName, projects, roles, canInvite, onInvite }) => {
+const InviteDialog = ({ open, onClose, organizationName, projects, roles, canInvite, seatsLeft, onInvite }) => {
   const [emails, setEmails] = useState('')
   const [role, setRole] = useState('')
   const [projectId, setProjectId] = useState('')
@@ -69,7 +69,12 @@ const InviteDialog = ({ open, onClose, organizationName, projects, roles, canInv
           <button className='btn' onClick={onClose}>
             Cancel
           </button>
-          <button aria-busy={isSending} className='btn primary' onClick={send} disabled={!canInvite || !role || !projectId || isSending}>
+          <button
+            aria-busy={isSending}
+            className='btn primary'
+            onClick={send}
+            disabled={!canInvite || !role || !projectId || isSending}
+          >
             {isSending ? 'Sending…' : 'Send invitations'}
           </button>
         </>
@@ -113,7 +118,10 @@ const InviteDialog = ({ open, onClose, organizationName, projects, roles, canInv
             <span className='help'>Add more agents after they join.</span>
           </div>
         </div>
-        <p className='faint sm'>They get an email with a link to join.</p>
+        <p className='faint sm'>
+          They get an email with a link to join.
+          {seatsLeft != null && ` ${seatsLeft === 1 ? '1 seat' : `${Math.max(0, seatsLeft)} seats`} left on your plan.`}
+        </p>
         {!canInvite && (
           <div className='alert' style={{ '--c': 'var(--warn)' }}>
             <b>Upgrade to invite people</b>
@@ -178,18 +186,27 @@ const OrganizationMembersPage = () => {
     loadInvitations()
   }, [dispatch, organizationId, loadInvitations])
 
+  const people = useMemo(
+    () => (organizationMembers || []).filter(m => m.user?.userType?.name !== 'GENDOX_AGENT' && m.user?.email),
+    [organizationMembers]
+  )
   const members = useMemo(() => {
     const value = query.trim().toLowerCase()
 
-    return (organizationMembers || [])
-      .filter(m => m.user?.userType?.name !== 'GENDOX_AGENT' && m.user?.email)
-      .filter(m => `${m.user.name || ''} ${m.user.email || ''} ${m.user.userName || ''}`.toLowerCase().includes(value))
-  }, [organizationMembers, query])
+    return people.filter(m =>
+      `${m.user.name || ''} ${m.user.email || ''} ${m.user.userName || ''}`.toLowerCase().includes(value)
+    )
+  }, [people, query])
 
+  // seats are taken by people, whatever the search shows
   const seats = organizationPlans?.numberOfSeats
+  const seatsTaken = people.filter(m => m.user.userType?.name !== 'DISCORD_USER').length
+  const [changingId, setChangingId] = useState(null) // the member whose role is being saved
 
-  const changeRole = (member, role) =>
-    dispatch(
+  const changeRole = (member, role) => {
+    setChangingId(member.id)
+
+    return dispatch(
       updateMemberRole({
         organizationId,
         userId: member.user.id,
@@ -203,6 +220,8 @@ const OrganizationMembersPage = () => {
         dispatch(fetchOrganizationMembers({ organizationId, token: getToken() }))
       })
       .catch(() => {})
+      .finally(() => setChangingId(null))
+  }
 
   const remove = member =>
     dispatch(removeOrganizationMember({ organizationId, userId: member.user.id, token: getToken() }))
@@ -247,7 +266,7 @@ const OrganizationMembersPage = () => {
         <span className='sp' />
         {seats > 0 && (
           <span className='faint sm'>
-            {members.length} of {seats} seats
+            {seatsTaken} of {seats} seats
           </span>
         )}
         {canInviteRole && (
@@ -270,7 +289,9 @@ const OrganizationMembersPage = () => {
               </tr>
             </thead>
             <tbody>
-              {isFetchingMembers && !organizationMembers?.length && <SkeletonRows columns={[null, '90px', '60px', null]} />}
+              {isFetchingMembers && !organizationMembers?.length && (
+                <SkeletonRows columns={[null, '90px', '60px', null]} />
+              )}
               {members.map(member => {
                 const role = member.role?.name
                 const isMe = member.user.id === user?.id
@@ -295,7 +316,12 @@ const OrganizationMembersPage = () => {
                         <Menu
                           width={300}
                           trigger={({ onClick }) => (
-                            <button className='btn ghost s' onClick={onClick}>
+                            <button
+                              aria-busy={changingId === member.id}
+                              className='btn ghost s'
+                              onClick={onClick}
+                              disabled={changingId === member.id}
+                            >
                               <Role role={role} />
                               <ChevronDown className='lucide' />
                             </button>
@@ -398,12 +424,19 @@ const OrganizationMembersPage = () => {
           <b style={{ fontWeight: 500 }}>What each role can do</b>
         </summary>
         <dl className='kv' style={{ marginTop: 14 }}>
-          {Object.entries(ROLES).map(([key, [title, text]]) => (
-            <div key={key} style={{ display: 'contents' }}>
-              <dt className='role'>{title}</dt>
-              <dd className='muted'>{text}</dd>
-            </div>
-          ))}
+          {Object.entries(ROLES).map(([key, [title, text]]) => {
+            const Icon = ROLE_ICONS[key]
+
+            return (
+              <div key={key} style={{ display: 'contents' }}>
+                <dt className='role'>
+                  <Icon className='lucide' />
+                  {title}
+                </dt>
+                <dd className='muted'>{text}</dd>
+              </div>
+            )
+          })}
         </dl>
       </details>
 
@@ -411,12 +444,14 @@ const OrganizationMembersPage = () => {
         open={inviteOpen}
         onClose={() => {
           setInviteOpen(false)
-          if (window.location.hash === '#invite') history.replaceState(null, '', window.location.pathname + window.location.search)
+          if (window.location.hash === '#invite')
+            history.replaceState(null, '', window.location.pathname + window.location.search)
         }}
         organizationName={organizationName}
         projects={projects}
         roles={grantableRoles(myRole)}
         canInvite={canInvite}
+        seatsLeft={seats > 0 ? seats - seatsTaken : null}
         onInvite={invite}
       />
 

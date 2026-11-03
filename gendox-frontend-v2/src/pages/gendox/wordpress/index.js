@@ -1,14 +1,18 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { BookOpen, ChevronRight, Info, KeyRound } from 'lucide-react'
+import { BookOpen, ChevronRight, Download, Info, KeyRound } from 'lucide-react'
 import useActiveScope from 'src/hooks/useActiveScope'
 import commonConfig from 'src/configs/common.config'
 import integrationService from 'src/gendox-sdk/integrationService'
 import organizationWebSiteService from 'src/gendox-sdk/organizationWebSiteService'
+import apiKeyService from 'src/gendox-sdk/apiKeyService'
 import useAgent, { getToken } from 'src/components/agent/useAgent'
 import { IntegrationTile, bareUrl, buildRows, formatWhen } from 'src/components/integrations/integrationUtils'
 import AppLayout from 'src/layouts/AppLayout'
 import { SkeletonList } from 'src/components/ui/Skeleton'
+
+const PLUGIN_URL = 'https://github.com/ctrl-space-labs/gendox-ai-agent'
+const GUIDE_URL = `${commonConfig.gendoxDocsUrl}/website-widget/wordpress-plugin`
 
 /**
  * WordPress: the sites connected through the plugin (an OrganizationWebSite with an API_INTEGRATION, created by the
@@ -18,6 +22,7 @@ const WordPressPage = () => {
   const { organizationId, href } = useActiveScope()
   const { project } = useAgent()
   const [sites, setSites] = useState(null)
+  const [keyTails, setKeyTails] = useState({}) // apiKeyId → ••••tail; the website holds only the key's id
 
   useEffect(() => {
     if (!organizationId) return
@@ -25,13 +30,17 @@ const WordPressPage = () => {
     Promise.all([
       integrationService.getIntegrationsByOrganizationId(organizationId, token).catch(() => null),
       organizationWebSiteService.getOrganizationWebSitesByOrganizationId(organizationId, token).catch(() => null)
-    ]).then(([ints, webs]) =>
-      setSites(
-        buildRows(ints?.data?.content ?? ints?.data ?? [], webs?.data?.content ?? webs?.data ?? []).filter(
-          r => r.type === 'API_INTEGRATION'
-        )
+    ]).then(([ints, webs]) => {
+      const rows = buildRows(ints?.data?.content ?? ints?.data ?? [], webs?.data?.content ?? webs?.data ?? []).filter(
+        r => r.type === 'API_INTEGRATION'
       )
-    )
+      setSites(rows)
+      if (!rows.some(r => r.website?.apiKeyId)) return
+      apiKeyService
+        .getApiKeysByOrganizationId(organizationId, token)
+        .then(r => setKeyTails(Object.fromEntries((r.data ?? []).map(k => [k.id, `••••${String(k.apiKey).slice(-4)}`]))))
+        .catch(() => {})
+    })
   }, [organizationId])
 
   const isPublic = project ? !project.projectAgent?.privateAgent : null
@@ -47,9 +56,13 @@ const WordPressPage = () => {
           <p>Show an agent on your WordPress site, and keep its posts and pages in the agent’s knowledge.</p>
         </div>
         <div className='actions'>
-          <a className='btn' href={commonConfig.gendoxDocsUrl} target='_blank' rel='noopener noreferrer'>
+          <a className='btn ghost' href={GUIDE_URL} target='_blank' rel='noopener noreferrer'>
             <BookOpen className='lucide' />
             Plugin guide
+          </a>
+          <a className='btn' href={PLUGIN_URL} target='_blank' rel='noopener noreferrer'>
+            <Download className='lucide' />
+            Get the plugin
           </a>
         </div>
       </div>
@@ -79,7 +92,12 @@ const WordPressPage = () => {
                 <span className={`badge ${site.active ? 'dot ok' : ''}`}>{site.active ? 'Connected' : 'Not connected'}</span>
               </div>
               <div className='faint sm'>
-                {site.integration.lastRunAt ? `Last checked ${formatWhen(site.integration.lastRunAt)}` : 'Never checked'}
+                {keyTails[site.website?.apiKeyId] && (
+                  <>
+                    Key <span className='mono'>{keyTails[site.website.apiKeyId]}</span> ·{' '}
+                  </>
+                )}
+                {site.integration.lastRunAt ? `last checked ${formatWhen(site.integration.lastRunAt)}` : 'never connected'}
               </div>
             </div>
             <ChevronRight className='lucide' />
@@ -125,16 +143,22 @@ const WordPressPage = () => {
             </li>
             <li>
               <div>
-                <b>Install the Gendox AI Agent plugin</b>
-                <p>In WordPress: Plugins → Add New → search “Gendox”, or upload the zip.</p>
+                <b>Install the Gendox WP AI Agent plugin</b>
+                <p>
+                  In WordPress: Plugins → Add New → search “Gendox WP AI Agent”, or upload the zip from{' '}
+                  <a className='link' href={PLUGIN_URL} target='_blank' rel='noopener noreferrer'>
+                    its releases
+                  </a>
+                  .
+                </p>
               </div>
             </li>
             <li>
               <div>
                 <b>Paste the key and pick where the agent shows</b>
                 <p>
-                  In the plugin’s settings, choose post types or categories per agent. The site then appears above, and
-                  its posts start syncing.
+                  Gendox AI Chat → Settings. Choose post types or categories per agent. The site then appears above,
+                  and its posts start syncing.
                 </p>
               </div>
             </li>

@@ -62,6 +62,7 @@ const WebPagesPicker = ({ organizationId, integration, agentName, onRunFinished 
   const [data, setData] = useState({ content: [], totalElements: 0 })
   const [loaded, setLoaded] = useState(false) // the first page of the list has arrived
   const [ticked, setTicked] = useState(0)
+  const [found, setFound] = useState(null) // { all, read }: the site's pages, and how many are in the knowledge
   const [budget, setBudget] = useState(null)
   const [view, setView] = useState('')
   const [typed, setTyped] = useState('')
@@ -104,12 +105,15 @@ const WebPagesPicker = ({ organizationId, integration, agentName, onRunFinished 
   const load = useCallback(async () => {
     const token = getToken()
     try {
-      const [rows, picked] = await Promise.all([
+      const [rows, picked, all, read] = await Promise.all([
         webScrapeService.getPages(organizationId, integration.id, page, PAGE_SIZE, status, undefined, hasContent, search, token),
-        webScrapeService.getPages(organizationId, integration.id, 0, 1, '', true, undefined, '', token)
+        webScrapeService.getPages(organizationId, integration.id, 0, 1, '', true, undefined, '', token),
+        webScrapeService.getPages(organizationId, integration.id, 0, 1, '', undefined, undefined, '', token),
+        webScrapeService.getPages(organizationId, integration.id, 0, 1, '', undefined, true, '', token)
       ])
       setData(rows.data)
       setTicked(picked.data.totalElements)
+      setFound({ all: all.data.totalElements, read: read.data.totalElements })
     } catch (error) {
       toast.error(`Couldn’t load the pages. ${getErrorMessage(error)}`, { id: 'pages' })
     } finally {
@@ -230,7 +234,15 @@ const WebPagesPicker = ({ organizationId, integration, agentName, onRunFinished 
     <>
       <div className='card' style={{ minWidth: 0 }}>
         <div className='card-h' style={{ flexWrap: 'wrap', gap: 8 }}>
-          <h3 style={{ flex: 1 }}>Pages</h3>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <h3>Pages</h3>
+            {found && (
+              <p className='faint sm'>
+                {found.all.toLocaleString()} found · {found.read.toLocaleString()} read into{' '}
+                {agentName ? `${agentName}’s` : 'the agent’s'} knowledge
+              </p>
+            )}
+          </div>
           <button
             className='btn s'
             disabled={Boolean(busy)}
@@ -277,17 +289,18 @@ const WebPagesPicker = ({ organizationId, integration, agentName, onRunFinished 
             <Search className='lucide' />
             <input placeholder='Search pages…' value={typed} onChange={e => setTyped(e.target.value)} />
           </label>
+          <div className='spend'>
           {left != null && (
             <span
               className='faint sm'
               style={left === 0 || overBudget ? { color: 'var(--warn)' } : undefined}
-              title={`${left} of ${budget.maxPages} pages left this period${budget.period?.to ? `, renews ${formatDate(budget.period.to)}` : ''}.`}
+              title={`${left} of ${budget.maxPages} pages left this period${budget.period?.to ? `, renews ${formatDate(budget.period.to)}` : ''}. Shared by every website.`}
             >
-              {left.toLocaleString()} left
+              {left.toLocaleString()} left this month
             </span>
           )}
           <button
-            className='btn primary s'
+            className='btn primary'
             disabled={Boolean(busy) || left === 0}
             title={
               left === 0
@@ -303,6 +316,7 @@ const WebPagesPicker = ({ organizationId, integration, agentName, onRunFinished 
             <Download className='lucide' />
             {ticked ? `Read ${ticked}` : 'Read'}
           </button>
+          </div>
         </div>
 
         {!loaded ? (
@@ -330,6 +344,7 @@ const WebPagesPicker = ({ organizationId, integration, agentName, onRunFinished 
                     </th>
                     <th>Page</th>
                     <th style={{ textAlign: 'right' }}>Last read</th>
+                    <th style={{ width: '1%' }} />
                   </tr>
                 </thead>
                 <tbody>
@@ -344,13 +359,8 @@ const WebPagesPicker = ({ organizationId, integration, agentName, onRunFinished 
                           <input type='checkbox' checked={Boolean(p.isSelected)} disabled={gone} onChange={e => pick(p.id, e.target.checked)} aria-label='Read this page' />
                         </td>
                         <td style={{ width: '100%', whiteSpace: 'normal' }}>
-                          <div className='row' style={{ gap: 6, alignItems: 'flex-start' }}>
-                            <span style={{ overflowWrap: 'anywhere' }}>{p.title || pathOf(p.url, integration.url)}</span>
-                            <a href={p.url} target='_blank' rel='noreferrer' onClick={e => e.stopPropagation()} title='Open the page' className='faint'>
-                              <ArrowUpRight className='lucide' style={{ width: 13, height: 13 }} />
-                            </a>
-                          </div>
-                          {p.title && <div className='faint sm'>{pathOf(p.url, integration.url)}</div>}
+                          <div className={`page-t ${p.title ? '' : 'mono'}`}>{p.title || pathOf(p.url, integration.url)}</div>
+                          {p.title && <div className='faint sm mono trunc'>{pathOf(p.url, integration.url)}</div>}
                           {p.status === 'FAILED' && p.errorMessage && (
                             <div className='sm' style={{ color: 'var(--err)' }}>{failureOf(p.errorMessage)}</div>
                           )}
@@ -361,7 +371,17 @@ const WebPagesPicker = ({ organizationId, integration, agentName, onRunFinished 
                             {p.status === 'FAILED' && <span className='badge dot err'>Couldn’t read</span>}
                             {!gone && p.isSelected && !stored && <span className='badge dot info'>Will be read</span>}
                             {!gone && !p.isSelected && stored && <span className='badge dot warn'>Will be taken out</span>}
-                            {stored && <span className='faint sm'>{read ?? 'Read'}</span>}
+                            {stored && <span className='num'>{read ?? 'Read'}</span>}
+                            {!gone && !stored && !p.isSelected && p.status !== 'FAILED' && (
+                              <span className='faint'>Not read yet</span>
+                            )}
+                          </div>
+                        </td>
+                        <td style={{ whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>
+                          <div className='row' style={{ gap: 0 }}>
+                            <a className='btn ghost s icon' href={p.url} target='_blank' rel='noreferrer' title='Open on the site'>
+                              <ArrowUpRight className='lucide' />
+                            </a>
                             {!gone && !stored && (
                               <button className='btn ghost s icon' title='Read this page now' disabled={fetchingId === p.id} onClick={() => readOne(p.id)}>
                                 {fetchingId === p.id ? <Spinner size={13} /> : <Download className='lucide' />}
