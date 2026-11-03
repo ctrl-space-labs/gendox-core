@@ -21,13 +21,14 @@
             bottom: 1rem;
             right: 1rem;
             z-index: 1000;
-            border-radius: 10px;
+            border-radius: 18px;
         }
         .gendox-chat-iframe {
+            display: block;
             width: 100%;
             height: 100%;
             border: 0;
-            border-radius: 0.5rem;
+            border-radius: inherit;
             /* matches the chat page's root; a host in dark mode would otherwise get an opaque frame */
             color-scheme: normal;
         }
@@ -36,10 +37,27 @@
             height: 35rem;
             max-width: calc(100vw - 2rem);
             max-height: calc(100dvh - 2rem);
+            box-sizing: border-box;
+            border: 1px solid rgba(20, 30, 60, 0.14);
+            box-shadow: 0 24px 60px -20px rgba(20, 30, 60, 0.5);
         }
         .gendox-chat-closed {
             width: 3.5rem;
             height: 3.5rem;
+            border-radius: 50%;
+            box-shadow: 0 10px 30px -8px rgba(20, 30, 60, 0.45);
+        }
+        /* phones: the open chat takes the whole screen */
+        @media (max-width: 560px) {
+            .gendox-chat-container-position.gendox-chat-open {
+                inset: 0;
+                width: auto;
+                height: auto;
+                max-width: none;
+                max-height: none;
+                border: 0;
+                border-radius: 0;
+            }
         }
     `
 

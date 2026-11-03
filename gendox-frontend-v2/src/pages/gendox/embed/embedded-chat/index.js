@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
+import { useAuth } from 'src/authentication/useAuth'
 import { useIFrameMessageManager } from 'src/authentication/context/IFrameMessageManagerContext'
 import { routeTypes } from 'src/authentication/components/RouteHandler'
 import { loadSession, saveSession } from 'src/utils/embeddedChatSession'
@@ -24,6 +25,10 @@ const EmbeddedChatPage = () => {
   const sessionRestoredRef = useRef(false)
 
   const { token, newThread, openThread } = useChat({ authProviderOption: AUTH_PROVIDER_OPTION })
+
+  // a source's passages need OP_READ_DOCUMENT, which an anonymous visitor doesn't have
+  const { user } = useAuth()
+  const isSignedIn = Boolean(user) && user.id !== 'anonymous'
 
   const sendToggleMessage = nextState => {
     iFrameMessageManager.messageManager.sendMessage({
@@ -177,7 +182,7 @@ const EmbeddedChatPage = () => {
           variant='widget'
           header
           threadsDrawer
-          sources={false}
+          sources={isSignedIn}
           poweredBy
           onNewThread={newThread}
           onOpenThread={openThread}
