@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
-import { CornerDownLeft, FilePenLine, Library, Search, SquarePen, Upload } from 'lucide-react'
+import { CornerDownLeft, FilePenLine, Library, Search, SquarePen, Upload, UserPlus } from 'lucide-react'
 import navigation from 'src/navigation'
 import useActiveScope from 'src/hooks/useActiveScope'
+import useHasOrgRole from 'src/authentication/hooks/useHasOrgRole'
 import searchService from 'src/gendox-sdk/searchService'
 import { localStorageConstants } from 'src/utils/generalConstants'
 import Avatar from 'src/components/ui/Avatar'
@@ -21,7 +22,8 @@ const DOCUMENTS_SIZE = 5
  */
 const CommandPalette = ({ open, onClose }) => {
   const router = useRouter()
-  const { projects, project, projectId, href } = useActiveScope()
+  const { projects, project, projectId, organizationId, href } = useActiveScope()
+  const canInvite = useHasOrgRole({ organizationId, roles: ['OP_ADD_USERS'] })
   const [query, setQuery] = useState('')
   const [active, setActive] = useState(0)
   const [passages, setPassages] = useState([])
@@ -89,11 +91,14 @@ const CommandPalette = ({ open, onClose }) => {
                 { key: 'upload', icon: Upload, title: 'Upload documents', href: href('/gendox/knowledge') + '#upload' },
                 { key: 'write', icon: FilePenLine, title: 'Write a document', href: href('/gendox/create-document') }
               ]
+            : []),
+          ...(canInvite
+            ? [{ key: 'invite', icon: UserPlus, title: 'Invite people', href: href('/gendox/organization-members') + '#invite' }]
             : [])
         ]
 
     return { agents, documents, pages, actions, results: [...agents, ...documents, ...pages, ...actions] }
-  }, [value, projects, passages, projectId, href])
+  }, [value, projects, passages, projectId, canInvite, href])
 
   const go = result => {
     onClose()
