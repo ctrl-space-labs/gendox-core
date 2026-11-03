@@ -194,7 +194,7 @@ const EmbeddedChatPage = () => {
     <>
       {!isOpen && (
         <button className='wgt-bubble' aria-label='Open chat' onClick={toggleChatWindow}>
-          <span className='mark white' style={{ width: '46%', height: '46%' }} />
+          <img src='/images/gendoxLogo.svg' alt='' />
         </button>
       )}
       <div className={`wgt-panel ${isOpen ? 'open' : ''}`}>
