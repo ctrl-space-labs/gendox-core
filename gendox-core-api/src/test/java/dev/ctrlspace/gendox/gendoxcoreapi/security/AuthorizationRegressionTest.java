@@ -1,5 +1,9 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.security;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.MessageCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ChatThreadDTO;
+import org.springframework.security.authorization.AuthorizationDeniedException;
+import dev.ctrlspace.gendox.authentication.ApiKeyAuthenticationToken;
 import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
 import dev.ctrlspace.gendox.authentication.JwtUserProfileConversionFilter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
@@ -217,6 +221,7 @@ class AuthorizationRegressionTest {
         request.setAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE, Map.of("threadId", ownedThread.toString()));
         ChatThreadRepository threads = (ChatThreadRepository) ReflectionTestUtils.getField(security, "chatThreadRepository");
         when(threads.existsByIdAndProjectIdIn(eq(ownedThread), anyList())).thenReturn(true);
+        when(threads.existsByIdAndChatThreadMembers_UserId(ownedThread, user)).thenReturn(true);
         MessageService messages = mock(MessageService.class);
         ChatThreadController c = guarded(ChatThreadController.class, new ChatThreadController(mock(ChatThreadService.class), security,
                 messages, mock(MessageLocalContextService.class)));
@@ -299,12 +304,55 @@ class AuthorizationRegressionTest {
         ProjectAgentService agents = (ProjectAgentService) ReflectionTestUtils.getField(security, "projectAgentService");
         ChatThread thread = new ChatThread(); thread.setId(UUID.randomUUID()); thread.setProjectId(project);
         when(threads.findById(thread.getId())).thenReturn(Optional.of(thread));
+        when(threads.existsByIdAndChatThreadMembers_UserId(thread.getId(), user)).thenReturn(true);
         assertDoesNotThrow(() -> security.requireThreadInProject(thread.getId(), project));
         SecurityContextHolder.clearContext();
         assertThrows(GendoxException.class, () -> security.requireThreadInProject(thread.getId(), project));
         thread.setPublicThread(true); when(agents.isPublicAgent(project)).thenReturn(true);
         assertDoesNotThrow(() -> security.requireThreadInProject(thread.getId(), project));
         assertThrows(GendoxException.class, () -> security.requireThreadInProject(thread.getId(), UUID.randomUUID()));
+    }
+
+    @Test void projectMembersCannotUseAnotherMembersThread() throws Exception {
+        ChatThreadRepository threads = (ChatThreadRepository) ReflectionTestUtils.getField(security, "chatThreadRepository");
+        UUID othersThread = UUID.randomUUID();
+        request.setAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE, Map.of("threadId", othersThread.toString(), "organizationId", org.toString()));
+        // the thread is in the user's project, but they are not one of its members
+        when(threads.existsByIdAndProjectIdIn(eq(othersThread), anyList())).thenReturn(true);
+        ChatThread thread = new ChatThread(); thread.setId(othersThread); thread.setProjectId(project);
+        when(threads.findById(othersThread)).thenReturn(Optional.of(thread));
+        ChatThreadService service = mock(ChatThreadService.class);
+        MessageService messages = mock(MessageService.class);
+        ChatThreadController c = guarded(ChatThreadController.class, new ChatThreadController(service, security,
+                messages, mock(MessageLocalContextService.class)));
+
+        assertThrows(AuthorizationDeniedException.class, () -> c.getById(othersThread));
+        assertThrows(AuthorizationDeniedException.class, () -> c.getMessagesById(othersThread, new MessageCriteria(), null));
+        assertThrows(AuthorizationDeniedException.class, () -> c.updateChatThread(org, othersThread, new ChatThreadDTO()));
+        assertThrows(AuthorizationDeniedException.class, () -> c.deActiveChatThread(org, othersThread));
+        assertThrows(GendoxException.class, () -> security.requireThreadInProject(othersThread, project));
+        verifyNoInteractions(service, messages);
+
+        // a public thread stays readable, as before
+        when(threads.existsByIdAndPublicThreadIsTrue(othersThread)).thenReturn(true);
+        assertDoesNotThrow(() -> c.getMessagesById(othersThread, new MessageCriteria(), null));
+
+        // members keep full access
+        when(threads.existsByIdAndChatThreadMembers_UserId(othersThread, user)).thenReturn(true);
+        assertDoesNotThrow(() -> c.getById(othersThread));
+        assertDoesNotThrow(() -> c.deActiveChatThread(org, othersThread));
+        assertDoesNotThrow(() -> security.requireThreadInProject(othersThread, project));
+    }
+
+    @Test void apiKeysAndSuperAdminsKeepProjectLevelThreadAccess() {
+        UUID thread = UUID.randomUUID();
+        SecurityContextHolder.getContext().setAuthentication(new ApiKeyAuthenticationToken(profile, "key", List.of()));
+        assertTrue(security.isThreadMemberOrApiKey(thread));
+        Type admin = new Type(); admin.setName("GENDOX_SUPER_ADMIN"); profile.setGlobalUserRoleType(admin);
+        SecurityContextHolder.getContext().setAuthentication(new GendoxAuthenticationToken(profile, null, List.of()));
+        assertTrue(security.isThreadMemberOrApiKey(thread));
+        SecurityContextHolder.clearContext();
+        assertFalse(security.isThreadMemberOrApiKey(thread));
     }
 
     @Test void authorizedAttachmentIsStillBuiltAndUnknownDocumentsAreRejected() throws Exception {

@@ -10,6 +10,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.AccessCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ChatThreadDocumentsRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ChatThreadRepository;
+import dev.ctrlspace.gendox.authentication.ApiKeyAuthenticationToken;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.MessageLocalContextService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectAgentService;
@@ -80,7 +81,8 @@ public class SecurityUtils {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         UserProfile profile = authentication != null && authentication.getPrincipal() instanceof UserProfile p ? p : null;
         boolean readable = profile != null && hasAuthority(profile, "OP_READ_DOCUMENT",
-                AccessCriteria.builder().projectIds(Set.of(projectId.toString())).build());
+                AccessCriteria.builder().projectIds(Set.of(projectId.toString())).build())
+                && isThreadMemberOrApiKey(threadId);
         if (thread == null || !Boolean.TRUE.equals(thread.getActive()) || !projectId.equals(thread.getProjectId())
                 || (!readable && !(Boolean.TRUE.equals(thread.getPublicThread()) && isPublicProject(projectId.toString())))) {
             throw new GendoxException("CHAT_THREAD_NOT_FOUND", "Chat thread not found", HttpStatus.NOT_FOUND);
@@ -660,6 +662,25 @@ public class SecurityUtils {
 //        ProjectAgent projectAgent = projectAgentService.getAgentByProjectId(UUID.fromString(projectId));
 //        return Boolean.FALSE.equals(projectAgent.getPrivateAgent());
         return projectAgentService.isPublicAgent(UUID.fromString(projectId));
+    }
+
+    /**
+     * Signed-in users act only on the chat threads they are a member of, the same threads GET /threads lists
+     * for them. API keys work for the whole organization, so they keep the project rule of hasAuthority, and a
+     * super admin is always allowed. Used together with hasAuthority, never instead of it.
+     */
+    public boolean isThreadMemberOrApiKey(UUID threadId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication instanceof ApiKeyAuthenticationToken) {
+            return true;
+        }
+        if (threadId == null || authentication == null || !(authentication.getPrincipal() instanceof UserProfile userProfile)) {
+            return false;
+        }
+        if (isSuperAdmin(userProfile)) {
+            return true;
+        }
+        return chatThreadRepository.existsByIdAndChatThreadMembers_UserId(threadId, UUID.fromString(userProfile.getId()));
     }
 
     public boolean isPublicThread(UUID threadId) {

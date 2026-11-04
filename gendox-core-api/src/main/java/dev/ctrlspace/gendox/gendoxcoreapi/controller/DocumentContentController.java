@@ -43,7 +43,7 @@ public class DocumentContentController {
 
     @PreAuthorize("(" +
             "  @securityUtils.threadHasDocumentInMessageLocalContext(#threadId, #documentId) && " +
-            "  (@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable') " +
+            "  ((@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable') && @securityUtils.isThreadMemberOrApiKey(#threadId)) " +
             "   || @securityUtils.isPublicThread(#threadId))" +
             ") || @securityUtils.isDocumentCreatedByCurrentUser(#documentId)") // that is because we call this endpoint sometimes before MessageLocalContext created
     @GetMapping("threads/{threadId}/documents/{documentId}/content")
@@ -101,7 +101,7 @@ public class DocumentContentController {
 
 
     @PreAuthorize("@securityUtils.threadHasDocumentInMessageLocalContext(#threadId, #documentId) && " +
-            "(@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable') " +
+            "((@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable') && @securityUtils.isThreadMemberOrApiKey(#threadId)) " +
             "|| @securityUtils.isPublicThread(#threadId))")
     @GetMapping("threads/{threadId}/documents/{documentId}/download")
     @Operation(summary = "Download document (attachment)",
