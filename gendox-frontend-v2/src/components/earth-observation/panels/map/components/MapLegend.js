@@ -3,16 +3,8 @@ const cssColor = color => (/^([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(color
 
 const formatValue = value => (typeof value === 'number' ? String(Number(value.toPrecision(3))) : String(value))
 
-/**
- * What the colours of the top visible layer mean, bottom left on the map: the name the script gave it in
- * Map.addLayer, with its palette from min to max, or the colour of a drawn collection.
- * Layers without one (an RGB composite) show none.
- */
-export default function MapLegend({ mapLayers, visibleLayers }) {
-  const index = mapLayers.findLastIndex((layer, i) => visibleLayers.has(i))
-  const layer = mapLayers[index]
-  const legend = layer?.legend
-  if (!legend) return null
+function LegendCard({ layer }) {
+  const { legend } = layer
 
   return (
     <div className='float eo-legend'>
@@ -34,6 +26,27 @@ export default function MapLegend({ mapLayers, visibleLayers }) {
           </div>
         </>
       )}
+    </div>
+  )
+}
+
+/**
+ * What the colours of the visible layers mean, bottom left on the map: one card per layer, named as the
+ * script named it in Map.addLayer, with its palette from min to max, or the colour of a drawn collection.
+ * Cards stack upwards with the top layer first. Layers without a legend (an RGB composite) show none.
+ */
+export default function MapLegend({ mapLayers, visibleLayers }) {
+  const layers = mapLayers
+    .map((layer, i) => ({ layer, i }))
+    .filter(({ layer, i }) => layer.legend && visibleLayers.has(i))
+    .reverse()
+  if (layers.length === 0) return null
+
+  return (
+    <div className='eo-legends'>
+      {layers.map(({ layer, i }) => (
+        <LegendCard key={i} layer={layer} />
+      ))}
     </div>
   )
 }
