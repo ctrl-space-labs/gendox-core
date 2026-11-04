@@ -176,12 +176,20 @@ button.item:hover { background: var(--surface-2); }
 .eo-shot { left: 56px; bottom: 30px; width: 240px; overflow: hidden; }
 .eo-shot img { display: block; width: 100%; max-height: 140px; object-fit: cover; }
 .eo-msg { left: 50%; top: 10px; transform: translateX(-50%); max-width: calc(100% - 140px); display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 12px; font-size: 13px; }
-.eo-legends { position: absolute; z-index: 1001; left: 56px; bottom: 26px; max-height: calc(100% - 120px); overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
-.eo-legends .float.eo-legend { position: static; flex: none; }
-.eo-legend { width: 150px; padding: 6px 8px; font-size: 11px; color: var(--text-2); }
+.eo-legends { left: 10px; bottom: 10px; width: 160px; max-height: max(100px, calc(100% - 340px)); display: flex; flex-direction: column; overflow: hidden; }
+.eo-legends .h { flex: none; display: flex; align-items: center; gap: 6px; width: 100%; height: 30px; padding: 0 8px; border: 0; background: none; color: var(--text); font: inherit; font-size: 12px; font-weight: 550; cursor: pointer; }
+.eo-legends .h .lucide { width: 14px; height: 14px; }
+.eo-legends .h .lucide:last-child { margin-left: auto; color: var(--text-3); }
+.eo-legends .b { min-height: 0; overflow-y: auto; border-top: 1px solid var(--border); }
+.eo-legend { padding: 6px 8px; font-size: 11px; color: var(--text-2); }
+.eo-legend + .eo-legend { border-top: 1px solid var(--border); }
 .eo-legend .scale { display: block; height: 7px; margin: 4px 0 3px; border-radius: 4px; }
 .eo-legend .swatch { flex: none; width: 10px; height: 10px; border-radius: 3px; }
-@container (max-width: 520px) { .eo-right { width: 200px; } .eo-panel { width: 220px; } .eo-legends { display: none; } }
+.eo-probe { position: absolute; z-index: 1002; max-width: 220px; display: flex; flex-direction: column; gap: 2px; padding: 5px 8px; background: var(--surface); border: 1px solid var(--border-2); border-radius: 8px; box-shadow: var(--pop-shadow); color: var(--text-2); font-size: 11px; pointer-events: none; }
+.eo-probe .row { gap: 6px; }
+.eo-probe .swatch { flex: none; width: 10px; height: 10px; border-radius: 3px; box-shadow: inset 0 0 0 1px var(--border-2); }
+.eo-probe b { margin-left: auto; padding-left: 6px; color: var(--text); font-weight: 600; white-space: nowrap; }
+@container (max-width: 520px) { .eo-right { width: 200px; } .eo-panel { width: 220px; } .eo-legends { width: 140px; } }
 
 .eo-ed { display: flex; flex-direction: column; height: 100%; min-height: 0; container-type: inline-size; }
 .eo-ed .eo-bar { flex: none; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; padding: 6px 8px; border-bottom: 1px solid var(--border); }

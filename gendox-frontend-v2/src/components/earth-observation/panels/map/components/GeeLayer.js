@@ -18,6 +18,7 @@ export default function GeeLayer({ url, opacity = 1 }) {
 
   return <TileLayer
       url={url} opacity={opacity} updateWhenIdle={true}
+      crossOrigin='anonymous' // GEE answers with CORS; lets PixelProbe read tile colours
       updateWhenZooming={false}
       keepBuffer={0}
       eventHandlers={eventHandlers()}/>

@@ -1,21 +1,25 @@
-// GEE palettes are often hex without '#' ('3d9b46'); names ('red') pass as they are
-const cssColor = color => (/^([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(color) ? `#${color}` : color)
+import { useState } from 'react'
+import { ChevronDown, ChevronUp, Palette } from 'lucide-react'
 
-const formatValue = value => (typeof value === 'number' ? String(Number(value.toPrecision(3))) : String(value))
+import { cssColor, formatValue } from '../utils/legendColors'
 
-function LegendCard({ layer }) {
+function LegendSection({ layer }) {
   const { legend } = layer
 
   return (
-    <div className='float eo-legend'>
+    <div className='eo-legend'>
       {legend.color ? (
         <div className='row' style={{ gap: 6 }}>
           <i className='swatch' style={{ background: cssColor(legend.color) }} />
-          <span className='trunc'>{layer.name}</span>
+          <span className='trunc' title={layer.name}>
+            {layer.name}
+          </span>
         </div>
       ) : (
         <>
-          <div className='trunc'>{layer.name}</div>
+          <div className='trunc' title={layer.name}>
+            {layer.name}
+          </div>
           <i
             className='scale'
             style={{ background: `linear-gradient(90deg, ${legend.palette.map(cssColor).join(', ')})` }}
@@ -31,11 +35,15 @@ function LegendCard({ layer }) {
 }
 
 /**
- * What the colours of the visible layers mean, bottom left on the map: one card per layer, named as the
+ * What the colours of the visible layers mean, bottom left on the map: one section per layer, named as the
  * script named it in Map.addLayer, with its palette from min to max, or the colour of a drawn collection.
- * Cards stack upwards with the top layer first. Layers without a legend (an RGB composite) show none.
+ * Sections list the top layer first, in one card whose header folds them away.
+ * Layers without a legend (an RGB composite) show none.
  */
 export default function MapLegend({ mapLayers, visibleLayers }) {
+  // a phone-sized screen starts folded, so the legend does not cover the map
+  const [open, setOpen] = useState(() => typeof window === 'undefined' || window.innerWidth >= 600)
+
   const layers = mapLayers
     .map((layer, i) => ({ layer, i }))
     .filter(({ layer, i }) => layer.legend && visibleLayers.has(i))
@@ -43,10 +51,24 @@ export default function MapLegend({ mapLayers, visibleLayers }) {
   if (layers.length === 0) return null
 
   return (
-    <div className='eo-legends'>
-      {layers.map(({ layer, i }) => (
-        <LegendCard key={i} layer={layer} />
-      ))}
+    <div className='float eo-legends'>
+      <button
+        className='h'
+        onClick={() => setOpen(o => !o)}
+        title={open ? 'Minimize legend' : 'Show legend'}
+        aria-expanded={open}
+      >
+        <Palette className='lucide' />
+        Legend <span className='faint num'>{layers.length}</span>
+        {open ? <ChevronDown className='lucide' /> : <ChevronUp className='lucide' />}
+      </button>
+      {open && (
+        <div className='b'>
+          {layers.map(({ layer, i }) => (
+            <LegendSection key={i} layer={layer} />
+          ))}
+        </div>
+      )}
     </div>
   )
 }
