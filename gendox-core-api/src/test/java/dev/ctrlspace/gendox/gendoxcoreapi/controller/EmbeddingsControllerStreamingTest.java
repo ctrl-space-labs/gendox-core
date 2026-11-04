@@ -10,6 +10,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionMessageDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionStatusDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.spring.batch.services.DeepThinkingBatchService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -76,7 +77,7 @@ class EmbeddingsControllerStreamingTest {
 
         EmbeddingsController controller = new EmbeddingsController(mock(EmbeddingService.class), mock(TrainingService.class), completions,
                 messages, mock(OrganizationModelKeyService.class), subscriptions, projects, contextConverter, contexts, deep,
-                turns, executor);
+                turns, mock(DocumentSectionService.class), mock(SecurityUtils.class), executor);
         mvc = MockMvcBuilders.standaloneSetup(controller).build();
     }
 

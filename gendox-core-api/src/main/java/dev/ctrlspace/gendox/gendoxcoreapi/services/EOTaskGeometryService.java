@@ -30,6 +30,12 @@ public class EOTaskGeometryService {
         return eoTaskGeometryRepository.findByTaskIdOrderByDisplayOrderAsc(taskId);
     }
 
+    public EOTaskGeometry getGeometryById(UUID id) throws GendoxException {
+        return eoTaskGeometryRepository.findById(id)
+                .orElseThrow(() -> new GendoxException("EO_GEOMETRY_NOT_FOUND",
+                        "EOTaskGeometry not found: " + id, HttpStatus.NOT_FOUND));
+    }
+
     @Transactional
     public EOTaskGeometry createGeometry(EOTaskGeometry geometry) {
         logger.info("Creating EOTaskGeometry for taskId: {}", geometry.getTaskId());

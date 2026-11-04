@@ -34,6 +34,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.Moderatio
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.MessageLocalContextConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Embedding;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.MessageLocalContext;
@@ -47,6 +48,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.services.CompletionTurnService;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ContentPart;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.CompletionService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentSectionService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.EmbeddingService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.MessageLocalContextService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.MessageService;
@@ -54,6 +56,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.services.OrganizationModelKeyService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.SubscriptionValidationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TrainingService;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import dev.ctrlspace.gendox.spring.batch.services.DeepThinkingBatchService;
 import io.micrometer.observation.annotation.Observed;
@@ -76,6 +79,8 @@ public class EmbeddingsController {
     private MessageLocalContextService messageLocalContextService;
     private DeepThinkingBatchService deepThinkingBatchService;
     private CompletionTurnService completionTurnService;
+    private DocumentSectionService documentSectionService;
+    private SecurityUtils securityUtils;
     private TaskExecutor taskExecutor;
 
     // Identifies an anonymous chat session when it answers or checks a waiting turn
@@ -97,6 +102,8 @@ public class EmbeddingsController {
                                 MessageLocalContextService messageLocalContextService,
                                 DeepThinkingBatchService deepThinkingBatchService,
                                 CompletionTurnService completionTurnService,
+                                DocumentSectionService documentSectionService,
+                                SecurityUtils securityUtils,
                                 @Qualifier("taskExecutor") TaskExecutor taskExecutor) {
         this.embeddingService = embeddingService;
         this.trainingService = trainingService;
@@ -109,6 +116,8 @@ public class EmbeddingsController {
         this.messageLocalContextService = messageLocalContextService;
         this.deepThinkingBatchService = deepThinkingBatchService;
         this.completionTurnService = completionTurnService;
+        this.documentSectionService = documentSectionService;
+        this.securityUtils = securityUtils;
         this.taskExecutor = taskExecutor;
     }
 
@@ -120,7 +129,11 @@ public class EmbeddingsController {
                     "This endpoint calculates and returns the embedding of the text content within the specified section. " +
                     "It also associates the calculated embedding with the section in the database for further analysis.")
     public Embedding getSectionEmbedding(@PathVariable UUID sectionId, @RequestParam String projectId) throws GendoxException, NoSuchAlgorithmException {
-        return trainingService.runTrainingForSection(sectionId, UUID.fromString(projectId));
+        DocumentInstanceSection section = documentSectionService.getSectionById(sectionId);
+        if (!securityUtils.areAllDocumentsInAnyProject(List.of(section.getDocumentInstance().getId()), List.of(UUID.fromString(projectId)))) {
+            throw new GendoxException("INVALID_PROJECT", "Section does not belong to the specified project", HttpStatus.BAD_REQUEST);
+        }
+        return trainingService.runTrainingForSection(section, UUID.fromString(projectId));
     }
 
 
@@ -321,6 +334,7 @@ public class EmbeddingsController {
         return moderationResponse;
     }
 
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedDocumentIdFromRequestParam')")
     @PostMapping("/messages/moderation/document")
     public Map<Map<String, Boolean>, String> getModerationForDocumentSections(@RequestParam UUID documentId) throws GendoxException {
 

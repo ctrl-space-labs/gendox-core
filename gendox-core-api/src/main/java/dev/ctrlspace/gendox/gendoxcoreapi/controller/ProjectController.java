@@ -175,6 +175,10 @@ public class ProjectController {
         UUID updatedprojectId = project.getId();
         Project existingProject = this.getProjectById(updatedprojectId);
 
+        if (!existingProject.getProjectAgent().getId().equals(project.getProjectAgent().getId())) {
+            throw new GendoxException("PROJECT_AGENT_ID_MISMATCH", "Agent ID in body is not the agent of the project", HttpStatus.BAD_REQUEST);
+        }
+
         // Update the properties of the existingProject with the values from the updated project
         existingProject.setName(project.getName());
         existingProject.setDescription(project.getDescription());
@@ -323,9 +327,13 @@ public class ProjectController {
     @Operation(summary = "Create project agent verifiable presentation offer",
             description = "Create a verifiable presentation offer for the project agent. " +
                     "The user must have the necessary permissions to create a verifiable presentation offer for the project agent.")
-    public ProjectAgentVPCredential createProjectAgentVerifiablePresentationOffer(@PathVariable UUID agentId,
+    public ProjectAgentVPCredential createProjectAgentVerifiablePresentationOffer(@PathVariable UUID projectId,
+                                                                                  @PathVariable UUID agentId,
                                                                                   @RequestBody ProjectAgentVPOfferRequest projectAgentVPOfferRequest) throws Exception {
         ProjectAgent projectAgent = projectAgentService.getAgentById(agentId);
+        if (!projectAgent.getProject().getId().equals(projectId)) {
+            throw new GendoxException("INVALID_PROJECT", "Agent does not belong to the specified project", HttpStatus.BAD_REQUEST);
+        }
         ProjectAgentVPCredential projectAgentVPCredential = new ProjectAgentVPCredential();
 
         Object agentVpJwt = projectAgentService.createVerifiablePresentation(projectAgent, projectAgentVPOfferRequest.getSubjectKey(),

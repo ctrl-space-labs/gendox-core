@@ -285,6 +285,9 @@ public class DocumentController {
             throw new GendoxException("DOCUMENT_ID_MISMATCH", "Document ID in path and Document ID in body are not the same", HttpStatus.BAD_REQUEST);
         }
 
+        if (!documentId.equals(documentSectionService.getSectionById(sectionId).getDocumentInstance().getId())) {
+            throw new GendoxException("INVALID_DOCUMENT", "Section does not belong to the specified document", HttpStatus.BAD_REQUEST);
+        }
 
         documentSection = documentSectionService.updateSection(documentSection);
 
@@ -337,8 +340,11 @@ public class DocumentController {
     @Operation(summary = "Delete document section by ID",
             description = "Delete an existing document section by specifying its unique ID. " +
                     "This operation permanently removes the section and its associated metadata.")
-    public void deleteSection(@PathVariable UUID sectionId) throws GendoxException {
+    public void deleteSection(@PathVariable UUID documentId, @PathVariable UUID sectionId) throws GendoxException {
         DocumentInstanceSection documentSection = documentSectionService.getSectionById(sectionId);
+        if (!documentId.equals(documentSection.getDocumentInstance().getId())) {
+            throw new GendoxException("INVALID_DOCUMENT", "Section does not belong to the specified document", HttpStatus.BAD_REQUEST);
+        }
         documentSectionService.deleteSection(documentSection);
 
     }

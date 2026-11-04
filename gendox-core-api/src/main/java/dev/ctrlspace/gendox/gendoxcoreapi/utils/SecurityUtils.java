@@ -538,6 +538,11 @@ public class SecurityUtils {
         return getRequestedDocumentIdAccessCriteria(documentId);
     }
 
+    /** The ?documentId= of the endpoints that take a single document as a request param. */
+    private AccessCriteria getRequestedDocumentIdFromRequestParam() {
+        return getRequestedDocumentIdAccessCriteria(getCurrentHttpRequest().getParameter(QueryParamNames.DOCUMENT_INSTANCE_ID));
+    }
+
     /** The {taskId} of the path, so a task of another project can't be reached through it. */
     private AccessCriteria getRequestedTaskIdFromPathVariable() {
         AccessCriteria accessCriteria = new AccessCriteria();
@@ -708,6 +713,7 @@ public class SecurityUtils {
 
         public static final String THREAD_ID_FROM_PATH_VARIABLE = "getRequestedThreadIdFromPathVariable";
         public static final String DOCUMENT_ID_FROM_PATH_VARIABLE = "getRequestedDocumentIdFromPathVariable";
+        public static final String DOCUMENT_ID_FROM_REQUEST_PARAM = "getRequestedDocumentIdFromRequestParam";
         public static final String DOCUMENT_IDS_FROM_REQUEST_PARAMS = "getRequestedDocumentIdsFromRequestParams";
         public static final String ORG_ID_FROM_DOCUMENT_ID_PATH_VARIABLE = "getRequestedOrgIdFromDocumentIdPathVariable";
 
@@ -750,6 +756,10 @@ public class SecurityUtils {
 
         if (AccessCriteriaGetterFunction.DOCUMENT_ID_FROM_PATH_VARIABLE.equals(getterFunction)) {
             accessCriteria = getRequestedDocumentIdFromPathVariable();
+        }
+
+        if (AccessCriteriaGetterFunction.DOCUMENT_ID_FROM_REQUEST_PARAM.equals(getterFunction)) {
+            accessCriteria = getRequestedDocumentIdFromRequestParam();
         }
 
         if (AccessCriteriaGetterFunction.DOCUMENT_IDS_FROM_REQUEST_PARAMS.equals(getterFunction)) {
