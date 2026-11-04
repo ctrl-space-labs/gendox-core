@@ -5,6 +5,7 @@ const url = commonConfig.gendoxUrl
 export default {
   getProfile: url + 'profile',
   deleteProfileCaches: () => `${url}profile/caches`,
+  updateProfile: () => `${url}profile`,
 
   getAllUsers: () => `${url}users`,
 
