@@ -1,6 +1,8 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.ChatSettings;
 import dev.ctrlspace.gendox.authentication.AuthenticationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxRuntimeException;
@@ -65,7 +67,7 @@ public class ProjectAgentService {
 
     private AiToolsRepository aiToolsRepository;
     private SkillService skillService;
-    private AgentChatSettingsService agentChatSettingsService;
+    private SecurityUtils securityUtils;
 
 
     @Autowired
@@ -96,8 +98,8 @@ public class ProjectAgentService {
     }
 
     @Autowired
-    public void setAgentChatSettingsService(AgentChatSettingsService agentChatSettingsService) {
-        this.agentChatSettingsService = agentChatSettingsService;
+    public void setSecurityUtils(@Lazy SecurityUtils securityUtils) {
+        this.securityUtils = securityUtils;
     }
 
     public ProjectAgent getAgentByProjectId(UUID projectId) {
@@ -214,7 +216,9 @@ public class ProjectAgentService {
             projectAgent.setAdvancedSearchMode("ALWAYS");
         }
         validateAdvancedSearchMode(projectAgent.getAdvancedSearchMode());
-        agentChatSettingsService.applyOnCreate(projectAgent);
+        if (projectAgent.getChatSettings() != null) {
+            validateChatSettings(projectAgent.getChatSettings(), null);
+        }
         if (projectAgent.getAutoDigitization() == null) {
             projectAgent.setAutoDigitization(false);
         }
@@ -347,7 +351,10 @@ public class ProjectAgentService {
         if (projectAgent.getAutoDigitization() != null) {
             existingProjectAgent.setAutoDigitization(projectAgent.getAutoDigitization());
         }
-        agentChatSettingsService.apply(projectAgent, existingProjectAgent);
+        if (projectAgent.getChatSettings() != null) {
+            validateChatSettings(projectAgent.getChatSettings(), existingProjectAgent.getChatSettings());
+            existingProjectAgent.setChatSettings(projectAgent.getChatSettings());
+        }
         existingProjectAgent.setOrganizationDid(projectAgent.getOrganizationDid());
 
 
@@ -356,6 +363,32 @@ public class ProjectAgentService {
 
         existingProjectAgent = projectAgentRepository.save(existingProjectAgent);
         return existingProjectAgent;
+    }
+
+    /**
+     * The Deploy settings of the agent's chat (#527). Colours reach the widget's CSS, so only hex is accepted.
+     * Removing the branding (NONE) is a plan entitlement that only a super admin sets; an agent that already has it keeps it.
+     */
+    private void validateChatSettings(ChatSettings settings, @Nullable ChatSettings current) {
+        if (settings.suggestedQuestions() != null && settings.suggestedQuestions().size() > 6) {
+            throw new GendoxRuntimeException(HttpStatus.BAD_REQUEST, "TOO_MANY_SUGGESTED_QUESTIONS", "An agent can suggest at most 6 questions");
+        }
+        if (settings.theme() != null && !Set.of("LIGHT", "DARK", "AUTO").contains(settings.theme())) {
+            throw new GendoxRuntimeException(HttpStatus.BAD_REQUEST, "INVALID_CHAT_THEME", "Theme must be LIGHT, DARK or AUTO");
+        }
+        for (String color : Arrays.asList(settings.accentColor(), settings.backgroundColor())) {
+            if (color != null && !color.matches("^#[0-9a-fA-F]{6}$")) {
+                throw new GendoxRuntimeException(HttpStatus.BAD_REQUEST, "INVALID_CHAT_COLOR", "Colours must be hex, such as #127A5B");
+            }
+        }
+        String branding = settings.branding();
+        if (branding != null && !Set.of("STANDARD", "SMALL", "NONE").contains(branding)) {
+            throw new GendoxRuntimeException(HttpStatus.BAD_REQUEST, "INVALID_BRANDING", "Branding must be STANDARD, SMALL or NONE");
+        }
+        boolean hadNoBranding = current != null && "NONE".equals(current.branding());
+        if ("NONE".equals(branding) && !hadNoBranding && !securityUtils.isSuperAdmin()) {
+            throw new GendoxRuntimeException(HttpStatus.FORBIDDEN, "BRANDING_NOT_IN_PLAN", "Only Gendox can remove the branding");
+        }
     }
 
     private void validateAdvancedSearchMode(String mode) {

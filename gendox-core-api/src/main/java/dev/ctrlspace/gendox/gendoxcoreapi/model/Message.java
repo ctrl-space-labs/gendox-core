@@ -91,7 +91,7 @@ public class Message {
     // 1 (👍) or -1 (👎) on an answer, with an optional comment
     @Basic
     @Column(name = "feedback")
-    private Short feedback;
+    private Integer feedback;
 
     @Basic
     @Column(name = "feedback_comment")
@@ -260,11 +260,11 @@ public class Message {
         this.aiModelId = aiModelId;
     }
 
-    public Short getFeedback() {
+    public Integer getFeedback() {
         return feedback;
     }
 
-    public void setFeedback(Short feedback) {
+    public void setFeedback(Integer feedback) {
         this.feedback = feedback;
     }
 

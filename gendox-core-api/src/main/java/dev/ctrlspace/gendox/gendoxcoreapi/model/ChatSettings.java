@@ -13,6 +13,7 @@ import java.util.List;
  * @param backgroundColor    #RRGGBB
  * @param bubbleText         the text beside the closed widget bubble
  * @param disclaimer         shown under the message box
+ * @param branding           the "Powered by Gendox" line: STANDARD, SMALL or NONE; only Gendox sets NONE
  */
 public record ChatSettings(String welcomeMessage,
                            List<String> suggestedQuestions,
@@ -20,5 +21,6 @@ public record ChatSettings(String welcomeMessage,
                            String accentColor,
                            String backgroundColor,
                            String bubbleText,
-                           String disclaimer) {
+                           String disclaimer,
+                           String branding) {
 }

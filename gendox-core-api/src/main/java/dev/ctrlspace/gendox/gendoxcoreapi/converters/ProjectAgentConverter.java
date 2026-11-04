@@ -47,7 +47,6 @@ public class ProjectAgentConverter implements GendoxConverter<ProjectAgent, Proj
         }
 
         projectAgentDTO.setChatSettings(projectAgent.getChatSettings());
-        projectAgentDTO.setBranding(projectAgent.getBranding());
 
         if (projectAgent.getAutoDigitization() != null) {
             projectAgentDTO.setAutoDigitization(projectAgent.getAutoDigitization());
@@ -101,7 +100,6 @@ public class ProjectAgentConverter implements GendoxConverter<ProjectAgent, Proj
         }
 
         projectAgent.setChatSettings(projectAgentDTO.getChatSettings());
-        projectAgent.setBranding(projectAgentDTO.getBranding());
 
         if (projectAgentDTO.getAutoDigitization() != null) {
             projectAgent.setAutoDigitization(projectAgentDTO.getAutoDigitization());

@@ -51,7 +51,6 @@ const Preview = ({ look }) => {
         sources={false}
         poweredBy
         chatSettings={chatSettingsOf(look)}
-        branding={look.branding}
         onNewThread={newThread}
         onOpenThread={openThread}
       />
@@ -119,7 +118,7 @@ const AgentDeployPage = () => {
   const saveLook = async () => {
     setIsSavingLook(true)
     try {
-      await save({ agent: { chatSettings: chatSettingsOf(look), branding: look.branding } })
+      await save({ agent: { chatSettings: chatSettingsOf(look) } })
       toast.success('Look and branding saved')
     } catch (error) {
       toast.error(`Couldn’t save. ${getErrorMessage(error)}`)

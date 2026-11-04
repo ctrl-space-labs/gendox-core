@@ -28,9 +28,8 @@ const projectToAgent = (project) => {
     fullName: projectAgent.agentName || 'Unknown Agent',
     role: "Agent",
     description: project.description || '',
-    // how the chat looks (welcome message, suggested questions, theme, colours, disclaimer) and its branding
+    // how the chat looks: welcome message, suggested questions, theme, colours, disclaimer and branding
     chatSettings: projectAgent.chatSettings || null,
-    branding: projectAgent.branding || 'STANDARD',
   };
 };
 

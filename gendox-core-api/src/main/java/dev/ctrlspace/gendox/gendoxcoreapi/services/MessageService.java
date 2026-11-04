@@ -80,7 +80,7 @@ public class MessageService {
             throw new GendoxException("FEEDBACK_ONLY_ON_ANSWERS", "Feedback can only be given on an answer of the agent",
                     org.springframework.http.HttpStatus.BAD_REQUEST);
         }
-        Short feedback = update.getFeedback();
+        Integer feedback = update.getFeedback();
         if (feedback != null && feedback != 1 && feedback != -1) {
             throw new GendoxException("INVALID_FEEDBACK", "Feedback must be 1, -1 or null",
                     org.springframework.http.HttpStatus.BAD_REQUEST);

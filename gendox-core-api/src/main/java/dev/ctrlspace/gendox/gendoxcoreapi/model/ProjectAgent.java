@@ -142,11 +142,6 @@ public class ProjectAgent {
     @Column(name = "chat_settings")
     private ChatSettings chatSettings;
 
-    // STANDARD, SMALL or NONE: the "Powered by Gendox" line. Only Gendox sets NONE.
-    @Basic
-    @Column(name = "branding")
-    private String branding;
-
     @JsonManagedReference(value = "aiTools")
     @OneToMany(mappedBy = "agent", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<AiTools> aiTools = new ArrayList<>();
@@ -395,9 +390,6 @@ public class ProjectAgent {
         if (advancedSearchMode == null) {
             advancedSearchMode = "ALWAYS";
         }
-        if (branding == null) {
-            branding = "STANDARD";
-        }
     }
 
     public ChatSettings getChatSettings() {
@@ -406,14 +398,6 @@ public class ProjectAgent {
 
     public void setChatSettings(ChatSettings chatSettings) {
         this.chatSettings = chatSettings;
-    }
-
-    public String getBranding() {
-        return branding;
-    }
-
-    public void setBranding(String branding) {
-        this.branding = branding;
     }
 
     public String getAdvancedSearchMode() {
