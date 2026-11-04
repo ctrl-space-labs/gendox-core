@@ -207,4 +207,46 @@ class CompletionTurnServiceTest {
         latest.setCreatedAt(Instant.now().minusSeconds(600));
         assertEquals("IDLE", service.getStatus(threadId, null).status());
     }
+
+    @Test
+    void aFailedTurnIsReportedAtOnceUntilTheNextQuestion() throws Exception {
+        // the turn waited for a tool, resumed, then the model call failed
+        String token = suspendWithTwoCalls().getResumeToken();
+        answer("a", "1", token);
+        answer("b", "2", token);
+        service.fail(question);
+        question.setRole("user");
+        question.setCreatedAt(Instant.now());
+        when(messageRepository.findFirstByThreadIdOrderByCreatedAtDesc(threadId)).thenReturn(Optional.of(savedMessages.getLast()));
+        when(messageRepository.findFirstByThreadIdAndRoleOrderByCreatedAtDesc(threadId, "user")).thenReturn(Optional.of(question));
+
+        CompletionStatusDTO failed = service.getStatus(threadId, null);
+        assertEquals(CompletionTurn.FAILED, failed.status());
+        assertEquals(question.getId(), failed.turnId());
+
+        Message next = new Message();
+        next.setId(UUID.randomUUID());
+        next.setRole("user");
+        next.setCreatedAt(Instant.now());
+        when(messageRepository.findFirstByThreadIdOrderByCreatedAtDesc(threadId)).thenReturn(Optional.of(next));
+        when(messageRepository.findFirstByThreadIdAndRoleOrderByCreatedAtDesc(threadId, "user")).thenReturn(Optional.of(next));
+        assertEquals("GENERATING", service.getStatus(threadId, null).status());
+    }
+
+    @Test
+    void aTurnThatFailsBeforeAnyMessageIsSavedWithoutOne() {
+        service.fail(question);
+
+        CompletionTurn turn = turns.get(question.getId());
+        assertEquals(CompletionTurn.FAILED, turn.getStatus());
+        assertNull(turn.getAssistantMessageId());
+        assertTrue(turn.getPendingCalls().isEmpty());
+    }
+
+    @Test
+    void savingAFailedTurnNeverThrows() {
+        doThrow(new RuntimeException("database down")).when(turnRepository).save(any());
+
+        assertDoesNotThrow(() -> service.fail(question));
+    }
 }

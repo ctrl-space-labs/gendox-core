@@ -9,6 +9,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.AccessCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ChatThreadDocumentsRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ChatThreadRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.MessageRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.MessageLocalContextService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectAgentService;
@@ -50,6 +51,7 @@ public class SecurityUtils {
     private DocumentInstanceRepository documentInstanceRepository;
     private UserOrganizationService userOrganizationService;
     private MessageLocalContextService messageLocalContextService;
+    private MessageRepository messageRepository;
 
     @Autowired
     public SecurityUtils(ChatThreadRepository chatThreadRepository,
@@ -59,7 +61,8 @@ public class SecurityUtils {
                          MessageLocalContextService messageLocalContextService,
                          ChatThreadDocumentsRepository chatThreadDocumentsRepository,
                          TaskRepository taskRepository,
-                         TaskNodeRepository taskNodeRepository) {
+                         TaskNodeRepository taskNodeRepository,
+                         MessageRepository messageRepository) {
         this.chatThreadRepository = chatThreadRepository;
         this.projectAgentService = projectAgentService;
         this.documentInstanceRepository = documentInstanceRepository;
@@ -68,6 +71,7 @@ public class SecurityUtils {
         this.chatThreadDocumentsRepository = chatThreadDocumentsRepository;
         this.taskRepository = taskRepository;
         this.taskNodeRepository = taskNodeRepository;
+        this.messageRepository = messageRepository;
     }
 
 
@@ -583,6 +587,27 @@ public class SecurityUtils {
     public boolean isPublicThread(UUID threadId) {
 
         return chatThreadRepository.existsByIdAndPublicThreadIsTrue(threadId);
+    }
+
+    /** Whether the caller may read the thread of a message: a member of its project, or anyone when the thread is public. */
+    public boolean canReadThreadOfMessage(UUID messageId) {
+        Optional<UUID> threadId = messageRepository.findThreadIdById(messageId);
+        if (threadId.isEmpty()) {
+            return false;
+        }
+        if (isPublicThread(threadId.get())) {
+            return true;
+        }
+        if (!(SecurityContextHolder.getContext().getAuthentication().getPrincipal() instanceof UserProfile userProfile)) {
+            return false;
+        }
+        return hasAuthority(userProfile, "OP_READ_DOCUMENT", AccessCriteria
+                .builder()
+                .orgIds(new HashSet<>())
+                .projectIds(new HashSet<>())
+                .threadId(threadId.get().toString())
+                .documentIds(List.of())
+                .build());
     }
 
     public boolean threadHasDocumentInMessageLocalContext(UUID threadId, UUID documentId) {

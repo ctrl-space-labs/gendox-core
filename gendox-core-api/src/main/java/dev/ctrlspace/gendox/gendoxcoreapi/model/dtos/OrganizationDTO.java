@@ -24,6 +24,8 @@ public class OrganizationDTO {
 
     private String phone;
 
+    private String taxId;
+
     private Instant createdAt;
 
     private Instant updatedAt;

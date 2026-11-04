@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BookMarked, Check, ChevronRight, CircleAlert, Copy, Lightbulb, RefreshCw, Wrench } from 'lucide-react'
+import { BookMarked, Check, ChevronRight, CircleAlert, Copy, Lightbulb, RefreshCw, ThumbsDown, ThumbsUp, Wrench } from 'lucide-react'
 import { copyToClipboard } from 'src/utils/copyToClipboard'
 import Avatar from 'src/components/ui/Avatar'
 import Markdown from 'src/components/chat/Markdown'
@@ -115,7 +115,71 @@ const ToolCalls = ({ header, responses }) => {
   )
 }
 
-const Answer = ({ message, showActions, canAskAgain, sourcesOpen, onSources, onAskAgain }) => {
+/**
+ * 👍 / 👎 on an answer. Clicking the chosen one again takes it back; 👎 asks what was wrong, optionally.
+ * @param onFeedback - (message, feedback 1 | -1 | null, comment) => void
+ */
+const Feedback = ({ message, onFeedback }) => {
+  const [comment, setComment] = useState(null) // the comment being written after a 👎, or null
+
+  const rate = value => {
+    const next = message.feedback === value ? null : value
+    onFeedback(message, next, null)
+    setComment(next === -1 ? '' : null)
+  }
+
+  const sendComment = () => {
+    if (comment.trim()) onFeedback(message, -1, comment.trim())
+    setComment(null)
+  }
+
+  return (
+    <>
+      <button
+        data-fb='up'
+        className={`btn ghost s icon ${message.feedback === 1 ? 'on' : ''}`}
+        title='Good answer'
+        aria-pressed={message.feedback === 1}
+        onClick={() => rate(1)}
+      >
+        <ThumbsUp className='lucide' />
+      </button>
+      <button
+        data-fb='down'
+        className={`btn ghost s icon ${message.feedback === -1 ? 'on' : ''}`}
+        title='Bad answer'
+        aria-pressed={message.feedback === -1}
+        onClick={() => rate(-1)}
+      >
+        <ThumbsDown className='lucide' />
+      </button>
+      {comment !== null && (
+        <form
+          className='gc-feedback row'
+          onSubmit={e => {
+            e.preventDefault()
+            sendComment()
+          }}
+        >
+          <input
+            className='input s'
+            autoFocus
+            maxLength={2000}
+            placeholder='What was wrong? (optional)'
+            value={comment}
+            onChange={e => setComment(e.target.value)}
+            onKeyDown={e => e.key === 'Escape' && setComment(null)}
+          />
+          <button className='btn s' type='submit'>
+            Send
+          </button>
+        </form>
+      )}
+    </>
+  )
+}
+
+const Answer = ({ message, showActions, canAskAgain, sourcesOpen, onSources, onAskAgain, onFeedback }) => {
   const [copied, setCopied] = useState(false)
   const hasText = Boolean(message.message && message.message.trim())
 
@@ -153,6 +217,7 @@ const Answer = ({ message, showActions, canAskAgain, sourcesOpen, onSources, onA
               <RefreshCw className='lucide' />
             </button>
           )}
+          {onFeedback && <Feedback message={message} onFeedback={onFeedback} />}
         </div>
       )}
     </>
@@ -172,6 +237,7 @@ const ChatTurn = ({
   activeSourcesMessageId,
   onSources,
   onAskAgain,
+  onFeedback,
   unfinished = false,
   children
 }) => {
@@ -211,6 +277,7 @@ const ChatTurn = ({
                 sourcesOpen={activeSourcesMessageId === item.message.messageId}
                 onSources={onSources && item.message.messageId ? () => onSources(item.message) : null}
                 onAskAgain={() => onAskAgain(question.message)}
+                onFeedback={onFeedback}
               />
             )
           )}

@@ -143,6 +143,14 @@ public class OrganizationService {
         existingOrganization.setName(organization.getName());
         existingOrganization.setAddress(organization.getAddress());
         existingOrganization.setPhone(organization.getPhone());
+        // Left out (as older clients send it) keeps the tax ID; an empty one clears it
+        if (organization.getTaxId() != null) {
+            String taxId = organization.getTaxId().strip();
+            if (taxId.length() > 64) {
+                throw new GendoxException("TAX_ID_TOO_LONG", "The tax ID can be at most 64 characters", HttpStatus.BAD_REQUEST);
+            }
+            existingOrganization.setTaxId(taxId.isEmpty() ? null : taxId);
+        }
         existingOrganization.setDisplayName(organization.getDisplayName());
 
 
@@ -191,6 +199,7 @@ public class OrganizationService {
         organization.setDisplayName(null);
         organization.setAddress(null);
         organization.setPhone(null);
+        organization.setTaxId(null);
         organization.setDeveloperEmail(null);
         organization.setUpdatedAt(null);
         organization.setCreatedAt(null);

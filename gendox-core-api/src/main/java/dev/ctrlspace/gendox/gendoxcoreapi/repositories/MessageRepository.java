@@ -61,6 +61,8 @@ public interface MessageRepository extends JpaRepository<Message, UUID>, Queryds
                         reasoning_content,
                         reasoning_metadata,
                         ai_model_id,
+                        feedback,
+                        feedback_comment,
                         ROW_NUMBER() OVER (PARTITION BY thread_id ORDER BY created_at DESC) AS row_number
                     FROM gendox_core.message
                     WHERE thread_id IN :threadIds
@@ -79,7 +81,9 @@ public interface MessageRepository extends JpaRepository<Message, UUID>, Queryds
                         tool_calls,
                         reasoning_content,
                         reasoning_metadata,
-                        ai_model_id
+                        ai_model_id,
+                        feedback,
+                        feedback_comment
                 FROM ranked_messages
                 WHERE row_number = 1
             """, nativeQuery = true)
@@ -112,6 +116,11 @@ public interface MessageRepository extends JpaRepository<Message, UUID>, Queryds
     List<Message> findByThreadIdAndCreatedAtAfterOrderByCreatedAtAsc(UUID threadId, Instant createdAt);
 
     Optional<Message> findFirstByThreadIdOrderByCreatedAtDesc(UUID threadId);
+
+    @Query("SELECT m.threadId FROM Message m WHERE m.id = :id")
+    Optional<UUID> findThreadIdById(@Param("id") UUID id);
+
+    Optional<Message> findFirstByThreadIdAndRoleOrderByCreatedAtDesc(UUID threadId, String role);
 
     Optional<Message> findFirstByThreadIdAndRoleAndToolCallIdOrderByCreatedAtDesc(UUID threadId, String role, String toolCallId);
 }

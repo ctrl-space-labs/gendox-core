@@ -4,6 +4,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.model.dtos;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AgentSkill;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiTools;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.ChatSettings;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -49,6 +50,8 @@ public class ProjectAgentDTO {
     private AiModel rerankModel;
     private String advancedSearchMode;
     private Boolean autoDigitization;
+    private ChatSettings chatSettings;
+    private String branding;
     private List<AiTools> aiTools = new ArrayList<>();
     // null means "leave the agent's skills as they are", so clients that don't know about skills can't wipe them
     private List<AgentSkill> agentSkills;

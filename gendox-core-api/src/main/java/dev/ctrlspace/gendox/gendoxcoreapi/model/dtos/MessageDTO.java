@@ -17,5 +17,8 @@ public class MessageDTO {
     private String value;
     private UUID threadId;
     private UUID projectId;
+    // 1 (👍), -1 (👎) or null (none), with an optional comment
+    private Short feedback;
+    private String feedbackComment;
 
 }

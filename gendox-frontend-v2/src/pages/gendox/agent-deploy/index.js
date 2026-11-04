@@ -9,6 +9,8 @@ import { getToken } from 'src/components/agent/useAgent'
 import AgentIntegrations from 'src/components/integrations/AgentIntegrations'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import useAgent from 'src/components/agent/useAgent'
+import DeployLook, { chatSettingsOf, lookOf } from 'src/components/agent/DeployLook'
+import useIsSuperAdmin from 'src/authentication/hooks/useIsSuperAdmin'
 import AgentScope from 'src/components/agent/AgentScope'
 import AgentPageSkeleton from 'src/components/agent/AgentPageSkeleton'
 import Spinner from 'src/components/ui/Spinner'
@@ -35,7 +37,8 @@ const snippetAttributes = (origin, organizationId, projectId, options) => [
   ['data-gendox-session-resume-timeout-ms', options.resume]
 ]
 
-const Preview = () => {
+// the real widget, showing the look as it is being edited
+const Preview = ({ look }) => {
   const { token, newThread, openThread } = useChat()
 
   return (
@@ -47,6 +50,8 @@ const Preview = () => {
         threadsDrawer
         sources={false}
         poweredBy
+        chatSettings={chatSettingsOf(look)}
+        branding={look.branding}
         onNewThread={newThread}
         onOpenThread={openThread}
       />
@@ -65,6 +70,16 @@ const AgentDeployPage = () => {
   const [isSaving, setIsSaving] = useState(false)
 
   const [plan, setPlan] = useState(null) // the organization's subscription plan, for the public rate limit
+  const isSuperAdmin = useIsSuperAdmin()
+  const savedLook = lookOf(project?.projectAgent)
+  const [look, setLook] = useState(savedLook)
+  const [isSavingLook, setIsSavingLook] = useState(false)
+  const isLookDirty = JSON.stringify(look) !== JSON.stringify(savedLook)
+
+  // the saved look, once the agent loads and after each save
+  useEffect(() => {
+    setLook(lookOf(project?.projectAgent))
+  }, [project?.projectAgent])
 
   // the widget's script and chat page are served by this app
   useEffect(() => setOrigin(window.location.origin), [])
@@ -98,6 +113,18 @@ const AgentDeployPage = () => {
       toast.error(`Couldn’t save. ${getErrorMessage(error)}`)
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  const saveLook = async () => {
+    setIsSavingLook(true)
+    try {
+      await save({ agent: { chatSettings: chatSettingsOf(look), branding: look.branding } })
+      toast.success('Look and branding saved')
+    } catch (error) {
+      toast.error(`Couldn’t save. ${getErrorMessage(error)}`)
+    } finally {
+      setIsSavingLook(false)
     }
   }
 
@@ -246,6 +273,17 @@ const AgentDeployPage = () => {
             </div>
           </section>
 
+          <DeployLook
+            look={look}
+            onChange={setLook}
+            onSave={saveLook}
+            onReset={() => setLook(savedLook)}
+            isDirty={isLookDirty}
+            isSaving={isSavingLook}
+            canEdit={canEdit}
+            canRemoveBranding={isSuperAdmin}
+          />
+
           <section className='sect'>
             <header>
               <h2>Use it from your code</h2>
@@ -281,7 +319,7 @@ const AgentDeployPage = () => {
           <div className='row'>
             <b style={{ flex: 1 }}>Live preview</b>
           </div>
-          <Preview />
+          <Preview look={look} />
           <p className='faint sm'>
             This is the real widget, signed in as you: try a question. Visitors chat without signing in.
           </p>
