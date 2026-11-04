@@ -12,7 +12,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.UserPublicDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.OrganizationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import io.micrometer.observation.annotation.Observed;
@@ -33,13 +32,9 @@ import java.util.UUID;
 @RestController
 public class UserController {
 
-
     Logger logger = LoggerFactory.getLogger(UserController.class);
 
-
-    //    @Autowired
     private UserService userService;
-    private JWTUtils jwtUtils;
     private UserProfileConverter userProfileConverter;
     private UserConverter userConverter;
     private OrganizationService organizationService;
@@ -47,22 +42,17 @@ public class UserController {
 
     @Autowired
     public UserController(UserService userService,
-                          JWTUtils jwtUtils,
                           UserProfileConverter userProfileConverter,
                           UserConverter userConverter,
                           OrganizationService organizationService,
                           SecurityUtils securityUtils) {
         this.userService = userService;
-        this.jwtUtils = jwtUtils;
         this.userProfileConverter = userProfileConverter;
         this.userConverter = userConverter;
         this.organizationService = organizationService;
         this.securityUtils = securityUtils;
     }
 
-
-//    @PreAuthorize("@securityUtils.hasAuthorityToRequestedOrgId('OP_READ_DOCUMENT') " +
-//            "|| @securityUtils.hasAuthorityToRequestedProjectId()")
     @PreAuthorize("@securityUtils.canSearchUsers(#criteria)")
     @GetMapping("/users")
     @Operation(summary = "Get all users",
@@ -73,7 +63,6 @@ public class UserController {
         return userService.getAllUsers(criteria, pageable);
     }
 
-
     @PreAuthorize("@securityUtils.canSearchUsers(#criteria)")
     @GetMapping("/users/public")
     @Operation(summary = "Get all users",
@@ -82,9 +71,6 @@ public class UserController {
 
             return userService.getAllPublicUsers(criteria, pageable);
     }
-
-
-    // TODO add authorization check if the user belongs to the same organization
 
     @PreAuthorize("@securityUtils.isCurrentUser(#id)")
     @GetMapping("/users/{id}")
@@ -98,7 +84,6 @@ public class UserController {
         return user;
     }
 
-
     @GetMapping("/profile")
     @Operation(summary = "Get user profile by ID",
             description = "Retrieve a user's profile by their unique ID.")
@@ -111,7 +96,6 @@ public class UserController {
                     ObservabilityTags.LOG_ARGS, "false"
             })
     public UserProfile getUserUserProfile(Authentication authentication) throws Exception {
-
 
         if (authentication instanceof ApiKeyAuthenticationToken || authentication instanceof GendoxAuthenticationToken) {
             UserProfile loginPrincipalProfile = (UserProfile) authentication.getPrincipal();
@@ -136,26 +120,6 @@ public class UserController {
         userService.evictUserProfileByUniqueIdentifier(userIdentifier);
     }
 
-    // TODO this is just for demo purposes, need to be rewrite
-//    @GetMapping("/users/login")
-//    @Operation(summary = "Get users token by email or user name",
-//            description = "Retrieve user information based on their email address or username. " +
-//                    "This method decodes the user's JWT based on the provided email or username " +
-//                    "and returns a JWTResponse containing the user's JWT token.")
-//    @Observed(name = "user.login",
-//            contextualName = "user-login-method",
-//            lowCardinalityKeyValues = {
-//                    ObservabilityTags.LOGGABLE, "true",
-//            })
-//    public JwtResponse getUserByLogin(@RequestParam("userIdentifier") String userIdentifier) throws Exception {
-//
-//        // run code to get the user from the database
-//        JwtClaimsSet claims = userService.getJwtClaims(userIdentifier);
-//
-//        String jwt = jwtUtils.toJwtString(claims);
-//        return new JwtResponse(jwt);
-//    }
-
     @PreAuthorize("@securityUtils.isSuperAdmin()")
     @PostMapping(value = "/users", consumes = {"application/json"})
     @ResponseStatus(value = HttpStatus.CREATED)
@@ -167,33 +131,6 @@ public class UserController {
         user = userService.createUser(user);
         return user;
     }
-
-//
-//    @PostMapping("/users")
-//    @ResponseStatus(value = HttpStatus.CREATED)
-//    public User createUser(@RequestBody User user) throws Exception {
-//
-//        // validate
-//        user = userService.createUser(user);
-//
-//        return user;
-//    }
-//
-//    @PutMapping("/users/{id}")
-//    public User updateUser(@PathVariable Long id, @RequestBody User user, Authentication authentication) throws Exception {
-//
-//        user = userService.updateUser(user);
-//
-//        return user;
-//    }
-//
-//    @DeleteMapping("/users/{id}")
-//    @ResponseStatus(HttpStatus.NO_CONTENT)
-//    public void deleteUser(@PathVariable Long id) {
-//        // validate
-//        userService.deleteUser(id);
-//    }
-
 
     @PreAuthorize("@securityUtils.isCurrentUser(#id)")
     @PutMapping("/users/{id}")
