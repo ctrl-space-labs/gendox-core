@@ -40,7 +40,7 @@ export const mapReducers = {
     }
   },
   addMapLayer: (state, action) => {
-    // payload: { url, name }
+    // payload: { url, name, legend: { min, max, palette } | null }
     state.map.mapLayers.push(action.payload)
   },
   clearMapLayers: state => {

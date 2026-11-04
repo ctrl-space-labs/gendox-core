@@ -3,6 +3,8 @@ package dev.ctrlspace.gendox.gendoxcoreapi.model;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
@@ -134,6 +136,16 @@ public class ProjectAgent {
     @Basic
     @Column(name = "auto_digitization")
     private Boolean autoDigitization;
+
+    // How the agent's chat looks in the widget, the agent home and Try it (#527)
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "chat_settings")
+    private ChatSettings chatSettings;
+
+    // STANDARD, SMALL or NONE: the "Powered by Gendox" line. Only Gendox sets NONE.
+    @Basic
+    @Column(name = "branding")
+    private String branding;
 
     @JsonManagedReference(value = "aiTools")
     @OneToMany(mappedBy = "agent", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -383,6 +395,25 @@ public class ProjectAgent {
         if (advancedSearchMode == null) {
             advancedSearchMode = "ALWAYS";
         }
+        if (branding == null) {
+            branding = "STANDARD";
+        }
+    }
+
+    public ChatSettings getChatSettings() {
+        return chatSettings;
+    }
+
+    public void setChatSettings(ChatSettings chatSettings) {
+        this.chatSettings = chatSettings;
+    }
+
+    public String getBranding() {
+        return branding;
+    }
+
+    public void setBranding(String branding) {
+        this.branding = branding;
     }
 
     public String getAdvancedSearchMode() {

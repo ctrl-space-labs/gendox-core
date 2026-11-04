@@ -42,6 +42,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionMessageDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionRequestDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionStatusDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.CompletionTurn;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.ChatThreadNamingService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.CompletionListener;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.CompletionTurnService;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ContentPart;
@@ -76,6 +77,7 @@ public class EmbeddingsController {
     private MessageLocalContextService messageLocalContextService;
     private DeepThinkingBatchService deepThinkingBatchService;
     private CompletionTurnService completionTurnService;
+    private ChatThreadNamingService chatThreadNamingService;
     private TaskExecutor taskExecutor;
 
     // Identifies an anonymous chat session when it answers or checks a waiting turn
@@ -97,6 +99,7 @@ public class EmbeddingsController {
                                 MessageLocalContextService messageLocalContextService,
                                 DeepThinkingBatchService deepThinkingBatchService,
                                 CompletionTurnService completionTurnService,
+                                ChatThreadNamingService chatThreadNamingService,
                                 @Qualifier("taskExecutor") TaskExecutor taskExecutor) {
         this.embeddingService = embeddingService;
         this.trainingService = trainingService;
@@ -109,6 +112,7 @@ public class EmbeddingsController {
         this.messageLocalContextService = messageLocalContextService;
         this.deepThinkingBatchService = deepThinkingBatchService;
         this.completionTurnService = completionTurnService;
+        this.chatThreadNamingService = chatThreadNamingService;
         this.taskExecutor = taskExecutor;
     }
 
@@ -244,7 +248,12 @@ public class EmbeddingsController {
         if (message.getThreadId() != null) {
             completionTurnService.cancelWaitingTurn(message.getThreadId());
         }
+        boolean newThread = message.getThreadId() == null;
         Message savedMessage = messageService.createMessage(message);
+        // A new thread is named from its first question beside the answer, never delaying it
+        if (newThread) {
+            taskExecutor.execute(new DelegatingSecurityContextRunnable(() -> chatThreadNamingService.nameThread(savedMessage, project)));
+        }
 
         List<ContentPart> attachedImages = messageLocalContextService.getImageContentPartsFromLocalContext(message);
         savedMessage.setAdditionalResources(attachedImages);
@@ -286,8 +295,8 @@ public class EmbeddingsController {
     @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable') || @securityUtils.isPublicThread(#threadId)")
     @GetMapping("/threads/{threadId}/completion-status")
     @Operation(summary = "Get the status of a thread's latest chat turn",
-            description = "IDLE, GENERATING or WAITING_FOR_TOOLS, with the calls a waiting turn needs results for. " +
-                    "Lets a reloaded page show a turn that is still running.")
+            description = "IDLE, GENERATING, WAITING_FOR_TOOLS or FAILED, with the calls a waiting turn needs results for. " +
+                    "Lets a reloaded page show a turn that is still running, or that failed.")
     public CompletionStatusDTO getCompletionStatus(@PathVariable UUID threadId, HttpServletRequest request) {
         return completionTurnService.getStatus(threadId, request.getHeader(COMPLETION_TOKEN_HEADER));
     }
@@ -298,12 +307,21 @@ public class EmbeddingsController {
      */
     private ResponseEntity<?> respond(boolean stream, boolean waitsForClientTools, Message question,
                                       SseCompletionListener.ChatCompletion completion) throws Exception {
+        // A turn that fails is saved as FAILED, so a reloaded page sees it at once instead of a turn still running
+        SseCompletionListener.ChatCompletion recordsFailure = listener -> {
+            try {
+                return completion.run(listener);
+            } catch (Exception e) {
+                completionTurnService.fail(question);
+                throw e;
+            }
+        };
         if (!stream) {
-            return ResponseEntity.ok(completion.run(new CompletionListener(waitsForClientTools)));
+            return ResponseEntity.ok(recordsFailure.run(new CompletionListener(waitsForClientTools)));
         }
 
         SseCompletionListener events = new SseCompletionListener(question, waitsForClientTools);
-        taskExecutor.execute(new DelegatingSecurityContextRunnable(() -> events.run(completion)));
+        taskExecutor.execute(new DelegatingSecurityContextRunnable(() -> events.run(recordsFailure)));
         return ResponseEntity.ok()
                 .contentType(MediaType.TEXT_EVENT_STREAM)
                 .header("Cache-Control", "no-cache, no-transform")

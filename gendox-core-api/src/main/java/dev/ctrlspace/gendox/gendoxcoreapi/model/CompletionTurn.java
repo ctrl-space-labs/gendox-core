@@ -13,8 +13,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * A chat turn that waits for the results of CLIENT tool calls. The messages stay in the message
- * table; this row only says what the turn waits for and who may answer.
+ * A chat turn that waits for the results of CLIENT tool calls, or that failed. The messages stay in the
+ * message table; this row only says what the turn waits for and who may answer, or that it failed.
  */
 @Entity
 @Table(name = "completion_turn", schema = "gendox_core")
@@ -26,6 +26,7 @@ public class CompletionTurn {
     public static final String WAITING_FOR_TOOLS = "WAITING_FOR_TOOLS";
     public static final String RESUMED = "RESUMED";
     public static final String CANCELLED = "CANCELLED";
+    public static final String FAILED = "FAILED";
 
     @Id
     private UUID id;

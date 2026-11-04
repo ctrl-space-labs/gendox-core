@@ -33,6 +33,9 @@ public class Organization {
     @Column(name = "phone", nullable = true)
     private String phone;
     @Basic
+    @Column(name = "tax_id", nullable = true)
+    private String taxId;
+    @Basic
     @Column(name = "created_at", nullable = true)
     @CreatedDate
     private Instant createdAt;
@@ -91,6 +94,14 @@ public class Organization {
 
     public void setPhone(String phone) {
         this.phone = phone;
+    }
+
+    public String getTaxId() {
+        return taxId;
+    }
+
+    public void setTaxId(String taxId) {
+        this.taxId = taxId;
     }
 
     public Instant getCreatedAt() {

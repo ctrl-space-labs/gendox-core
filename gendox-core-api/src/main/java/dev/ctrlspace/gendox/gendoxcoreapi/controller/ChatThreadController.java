@@ -110,6 +110,16 @@ public class ChatThreadController {
         return messageService.getAllMessagesMetadataByMessageId(messageId);
     }
 
+    @PreAuthorize("@securityUtils.canReadThreadOfMessage(#messageId)")
+    @PutMapping("/messages/{messageId}")
+    @Operation(summary = "Update a message",
+            description = "Sets the feedback on an answer of the agent: feedback 1 (👍), -1 (👎) or null to clear it, " +
+                    "and an optional feedbackComment. The other fields of the message cannot be changed. " +
+                    "Anyone who can read the thread may set it, including visitors of a public thread.")
+    public Message updateMessage(@PathVariable UUID messageId, @RequestBody MessageDTO messageDTO) throws GendoxException {
+        return messageService.updateFeedback(messageId, messageDTO);
+    }
+
     @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable')")
     @PutMapping("/organizations/{organizationId}/threads/{threadId}")
     public ChatThread updateChatThread(@PathVariable UUID organizationId, @PathVariable UUID threadId, @RequestBody ChatThreadDTO chatThreadDTO) throws GendoxException {

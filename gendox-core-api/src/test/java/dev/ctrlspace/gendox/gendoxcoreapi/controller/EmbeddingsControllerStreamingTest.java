@@ -26,7 +26,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.containsString;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.mockito.InOrder;
 
 import static org.mockito.ArgumentMatchers.*;
@@ -49,6 +50,7 @@ class EmbeddingsControllerStreamingTest {
     final MessageService messages = mock(MessageService.class);
     final CompletionService completions = mock(CompletionService.class);
     final CompletionTurnService turns = mock(CompletionTurnService.class);
+    final ChatThreadNamingService naming = mock(ChatThreadNamingService.class);
     final DeepThinkingBatchService deep = mock(DeepThinkingBatchService.class);
     // Background work is collected and run by the test, after the response has started
     final List<Runnable> background = new ArrayList<>();
@@ -76,7 +78,7 @@ class EmbeddingsControllerStreamingTest {
 
         EmbeddingsController controller = new EmbeddingsController(mock(EmbeddingService.class), mock(TrainingService.class), completions,
                 messages, mock(OrganizationModelKeyService.class), subscriptions, projects, contextConverter, contexts, deep,
-                turns, executor);
+                turns, naming, executor);
         mvc = MockMvcBuilders.standaloneSetup(controller).build();
     }
 
@@ -100,7 +102,29 @@ class EmbeddingsControllerStreamingTest {
 
         verify(completions).getCompletionSearch(eq(saved), eq(project),
                 argThat(listener -> !(listener instanceof SseCompletionListener) && !listener.waitsForClientTools()));
-        assertFalse(background.iterator().hasNext());
+        // only the naming of the new thread runs in the background
+        assertEquals(1, background.size());
+    }
+
+    @Test
+    void aNewThreadIsNamedInTheBackground() throws Exception {
+        mvc.perform(post("/messages/completions").param("projectId", projectId.toString())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"value\":\"question\"}"))
+                .andExpect(status().isOk());
+
+        verify(naming, never()).nameThread(any(), any());
+        background.forEach(Runnable::run);
+        verify(naming).nameThread(saved, project);
+    }
+
+    @Test
+    void anExistingThreadIsNotNamedAgain() throws Exception {
+        mvc.perform(post("/messages/completions").param("projectId", projectId.toString())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"threadId\":\"" + threadId + "\",\"value\":\"question\"}"))
+                .andExpect(status().isOk());
+
+        background.forEach(Runnable::run);
+        verify(naming, never()).nameThread(any(), any());
     }
 
     @Test
@@ -170,6 +194,32 @@ class EmbeddingsControllerStreamingTest {
     }
 
     @Test
+    void aStreamedTurnThatFailsIsSavedAsFailed() throws Exception {
+        when(completions.getCompletionSearch(eq(saved), eq(project), any(CompletionListener.class)))
+                .thenThrow(new RuntimeException("model unavailable"));
+
+        MvcResult result = mvc.perform(post("/messages/completions").param("projectId", projectId.toString())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"value\":\"question\",\"stream\":true}"))
+                .andExpect(request().asyncStarted())
+                .andReturn();
+        background.forEach(Runnable::run);
+
+        mvc.perform(asyncDispatch(result))
+                .andExpect(content().string(containsString("event:error")));
+        verify(turns).fail(saved);
+    }
+
+    @Test
+    void aTurnAnsweredAsJsonThatFailsIsSavedAsFailed() throws Exception {
+        when(completions.getCompletionSearch(eq(saved), eq(project), any(CompletionListener.class)))
+                .thenThrow(new RuntimeException("model unavailable"));
+
+        assertThrows(Exception.class, () -> mvc.perform(post("/messages/completions").param("projectId", projectId.toString())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"value\":\"question\"}")));
+        verify(turns).fail(saved);
+    }
+
+    @Test
     void deepThinkingKeepsItsAcceptedJobResponse() throws Exception {
         when(deep.runDeepThinking(any(), any(), any())).thenReturn(new JobExecution(77L));
 
@@ -180,6 +230,6 @@ class EmbeddingsControllerStreamingTest {
                 .andExpect(jsonPath("$.jobExecutionId").value(77));
 
         verify(completions, never()).getCompletionSearch(any(), any(), any());
-        assertFalse(background.iterator().hasNext());
+        assertEquals(1, background.size());
     }
 }

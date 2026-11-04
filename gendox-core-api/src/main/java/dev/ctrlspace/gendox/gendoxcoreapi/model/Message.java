@@ -88,6 +88,15 @@ public class Message {
     @Column(name = "ai_model_id")
     private UUID aiModelId;
 
+    // 1 (👍) or -1 (👎) on an answer, with an optional comment
+    @Basic
+    @Column(name = "feedback")
+    private Short feedback;
+
+    @Basic
+    @Column(name = "feedback_comment")
+    private String feedbackComment;
+
     //    @JsonBackReference(value = "message")
     @JsonManagedReference(value = "message")
     @OneToMany(mappedBy = "message")
@@ -249,6 +258,22 @@ public class Message {
 
     public void setAiModelId(UUID aiModelId) {
         this.aiModelId = aiModelId;
+    }
+
+    public Short getFeedback() {
+        return feedback;
+    }
+
+    public void setFeedback(Short feedback) {
+        this.feedback = feedback;
+    }
+
+    public String getFeedbackComment() {
+        return feedbackComment;
+    }
+
+    public void setFeedbackComment(String feedbackComment) {
+        this.feedbackComment = feedbackComment;
     }
 
 

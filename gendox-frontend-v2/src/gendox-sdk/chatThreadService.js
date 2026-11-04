@@ -22,6 +22,22 @@ const getThreadsByCriteria = async (projectIdIn, threadIdIn, token) => {
 }
 
 /**
+ * Sets the feedback on an answer: PUT messages/{messageId}. Only feedback and feedbackComment are read.
+ * @param messageId
+ * @param payload - { feedback: 1 | -1 | null, feedbackComment }
+ * @param token - none for a visitor of a public thread
+ */
+const updateMessage = async (messageId, payload, token) => {
+  let headers = {
+    'Content-Type': 'application/json'
+  }
+  if (token) {
+    headers.Authorization = 'Bearer ' + token
+  }
+  return axios.put(apiRequests.message(messageId), payload, { headers })
+}
+
+/**
  * Get Thread Message Metadata By Message Id
  * @param threadId
  * @param messageId
@@ -95,6 +111,7 @@ export default {
   getThreadMessagesByCriteria,
   getThreadsByCriteria,
   getThreadMessageMetadataByMessageId,
+  updateMessage,
   getMessageAttachmentsBatch,
   updateChatThread,
   deleteChatThread

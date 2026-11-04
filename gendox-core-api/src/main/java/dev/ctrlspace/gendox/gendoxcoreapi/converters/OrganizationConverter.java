@@ -21,6 +21,7 @@ public class OrganizationConverter implements GendoxConverter<Organization, Orga
         organizationDTO.setDisplayName(organization.getDisplayName());
         organizationDTO.setAddress(organization.getAddress());
         organizationDTO.setPhone(organization.getPhone());
+        organizationDTO.setTaxId(organization.getTaxId());
         organizationDTO.setCreatedAt(organization.getCreatedAt());
         organizationDTO.setUpdatedAt(organization.getUpdatedAt());
 
@@ -37,6 +38,7 @@ public class OrganizationConverter implements GendoxConverter<Organization, Orga
         organization.setDisplayName(organizationDTO.getDisplayName());
         organization.setAddress(organizationDTO.getAddress());
         organization.setPhone(organizationDTO.getPhone());
+        organization.setTaxId(organizationDTO.getTaxId());
         organization.setCreatedAt(organizationDTO.getCreatedAt());
         organization.setUpdatedAt(organizationDTO.getUpdatedAt());
 

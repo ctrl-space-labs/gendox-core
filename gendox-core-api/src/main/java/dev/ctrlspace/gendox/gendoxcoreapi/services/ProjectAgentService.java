@@ -65,6 +65,7 @@ public class ProjectAgentService {
 
     private AiToolsRepository aiToolsRepository;
     private SkillService skillService;
+    private AgentChatSettingsService agentChatSettingsService;
 
 
     @Autowired
@@ -92,6 +93,11 @@ public class ProjectAgentService {
         this.organizationPlanService = organizationPlanService;
         this.aiToolsRepository = aiToolsRepository;
         this.skillService = skillService;
+    }
+
+    @Autowired
+    public void setAgentChatSettingsService(AgentChatSettingsService agentChatSettingsService) {
+        this.agentChatSettingsService = agentChatSettingsService;
     }
 
     public ProjectAgent getAgentByProjectId(UUID projectId) {
@@ -208,6 +214,7 @@ public class ProjectAgentService {
             projectAgent.setAdvancedSearchMode("ALWAYS");
         }
         validateAdvancedSearchMode(projectAgent.getAdvancedSearchMode());
+        agentChatSettingsService.applyOnCreate(projectAgent);
         if (projectAgent.getAutoDigitization() == null) {
             projectAgent.setAutoDigitization(false);
         }
@@ -340,6 +347,7 @@ public class ProjectAgentService {
         if (projectAgent.getAutoDigitization() != null) {
             existingProjectAgent.setAutoDigitization(projectAgent.getAutoDigitization());
         }
+        agentChatSettingsService.apply(projectAgent, existingProjectAgent);
         existingProjectAgent.setOrganizationDid(projectAgent.getOrganizationDid());
 
 

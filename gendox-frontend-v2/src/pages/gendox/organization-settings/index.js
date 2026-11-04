@@ -14,11 +14,12 @@ const fieldsOf = organization => ({
   name: organization?.name || '',
   displayName: organization?.displayName || '',
   address: organization?.address || '',
-  phone: organization?.phone || ''
+  phone: organization?.phone || '',
+  taxId: organization?.taxId || ''
 })
 
 /**
- * The organization's details: GET/PUT organizations/{o} { name, displayName, address, phone }.
+ * The organization's details: GET/PUT organizations/{o} { name, displayName, address, phone, taxId }.
  * Delete: PUT organizations/{o}/deactivate.
  */
 const OrganizationSettingsPage = () => {
@@ -165,6 +166,10 @@ const OrganizationSettingsPage = () => {
               <div className='field'>
                 <label>Phone</label>
                 {input('phone')}
+              </div>
+              <div className='field'>
+                <label>Tax ID</label>
+                {input('taxId', { placeholder: 'VAT or company registration number', maxLength: 64 })}
               </div>
             </div>
             {actions()}

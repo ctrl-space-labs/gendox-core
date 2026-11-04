@@ -8,6 +8,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionStatusDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.CompletionTurnRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.MessageRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -27,10 +29,13 @@ import java.util.UUID;
 /**
  * Chat turns that wait for CLIENT tool results (#518): the page or app runs the tool and posts the
  * result back, and the turn continues once every waiting call has one. The backend sets no time limit:
- * a call waits until its result arrives or a new user message cancels it.
+ * a call waits until its result arrives or a new user message cancels it. A turn that fails is saved
+ * as FAILED, so its status says so at once.
  */
 @Service
 public class CompletionTurnService {
+
+    private static final Logger logger = LoggerFactory.getLogger(CompletionTurnService.class);
 
     // A turn whose latest message is newer than this, and is not a final answer, is shown as generating
     private static final Duration GENERATING_WINDOW = Duration.ofMinutes(5);
@@ -157,6 +162,22 @@ public class CompletionTurnService {
         turnRepository.save(turn);
     }
 
+    /**
+     * Saves the turn of {@code question} as FAILED, so its status says so at once. A new question starts
+     * a turn of its own, which ends the failed state. Never throws, so the original error is the one reported;
+     * not @Transactional, so a failed save throws here, inside the try, rather than at commit.
+     */
+    public void fail(Message question) {
+        try {
+            CompletionTurn turn = turnRepository.findById(question.getId()).orElseGet(() -> newTurn(question));
+            turn.setStatus(CompletionTurn.FAILED);
+            turn.setPendingCalls(new ArrayList<>());
+            turnRepository.save(turn);
+        } catch (Exception e) {
+            logger.warn("Could not save the failed turn of message {}", question.getId(), e);
+        }
+    }
+
     public CompletionStatusDTO getStatus(UUID threadId, String resumeToken) {
         Optional<CompletionTurn> waiting = turnRepository.findByThreadIdAndStatus(threadId, CompletionTurn.WAITING_FOR_TOOLS);
         if (waiting.isPresent()) {
@@ -164,20 +185,30 @@ public class CompletionTurnService {
             return CompletionStatusDTO.waiting(turn, canAnswer(turn, resumeToken));
         }
         Optional<Message> latest = messageRepository.findFirstByThreadIdOrderByCreatedAtDesc(threadId);
-        if (latest.isPresent() && isGenerating(latest.get())) {
+        if (latest.isEmpty() || isFinalAnswer(latest.get())) {
+            return CompletionStatusDTO.of(threadId, "IDLE");
+        }
+        Optional<CompletionTurn> failed = failedLatestTurn(threadId);
+        if (failed.isPresent()) {
+            return CompletionStatusDTO.failed(failed.get());
+        }
+        // No state is kept while a turn generates: a recent message that is not a final answer means it still runs
+        if (latest.get().getCreatedAt().isAfter(Instant.now().minus(GENERATING_WINDOW))) {
             return CompletionStatusDTO.of(threadId, "GENERATING");
         }
         return CompletionStatusDTO.of(threadId, "IDLE");
     }
 
-    // No state is kept while a turn generates: a recent message that is not a final answer means it still runs
-    private static boolean isGenerating(Message latest) {
-        if (latest.getCreatedAt().isBefore(Instant.now().minus(GENERATING_WINDOW))) {
-            return false;
-        }
-        boolean hasToolCalls = latest.getToolCalls() != null && !latest.getToolCalls().isEmpty();
-        boolean finalAnswer = "assistant".equals(latest.getRole()) && !hasToolCalls;
-        return !finalAnswer;
+    // The turn of the thread's latest question, when it failed. A turn's id is its question's id.
+    private Optional<CompletionTurn> failedLatestTurn(UUID threadId) {
+        return messageRepository.findFirstByThreadIdAndRoleOrderByCreatedAtDesc(threadId, "user")
+                .flatMap(question -> turnRepository.findById(question.getId()))
+                .filter(turn -> CompletionTurn.FAILED.equals(turn.getStatus()));
+    }
+
+    private static boolean isFinalAnswer(Message message) {
+        boolean hasToolCalls = message.getToolCalls() != null && !message.getToolCalls().isEmpty();
+        return "assistant".equals(message.getRole()) && !hasToolCalls;
     }
 
     private void answerPendingCalls(CompletionTurn turn, String result) throws GendoxException {

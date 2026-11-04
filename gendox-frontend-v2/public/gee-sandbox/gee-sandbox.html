@@ -23,6 +23,20 @@
       let layerAdded = false
       let mapCenter = null  // stored when user calls Map.setCenter()
       let lastLayerData = null  // { eeImg, visParams } — reused for on-demand screenshots
+
+      // The colour scale of a layer drawn with a palette, for the map's legend: { min, max, palette: ['#rrggbb', …] }.
+      // Only hex codes and colour names pass, since the palette becomes a CSS gradient in the app.
+      function toLegend(visParams) {
+        if (!visParams.palette) return null
+        const palette = String(visParams.palette)
+          .split(',')
+          .map(c => c.trim())
+          .filter(c => /^#?[0-9a-fA-F]{3,8}$|^[a-zA-Z]+$/.test(c))
+          .map(c => (/^[0-9a-fA-F]{3,8}$/.test(c) ? '#' + c : c))
+        if (!palette.length) return null
+        const first = v => (typeof v === 'number' ? v : Array.isArray(v) && typeof v[0] === 'number' ? v[0] : null)
+        return { min: first(visParams.min), max: first(visParams.max), palette }
+      }
       let currentEeInstance = null // set after ee.initialize — used for cancelOperation from parent
 
       const ProxyMap = {
@@ -87,7 +101,10 @@
                 return
               }
 
-              window.parent.postMessage({ type: 'SUCCESS', payload: { url: urlFormat, name: name || 'Layer' } }, '*')
+              window.parent.postMessage(
+                { type: 'SUCCESS', payload: { url: urlFormat, name: name || 'Layer', legend: toLegend(normalizedVisParams) } },
+                '*'
+              )
 
               // Store the last rendered image so on-demand screenshots can reuse it
               lastLayerData = { eeImg, visParams: normalizedVisParams }

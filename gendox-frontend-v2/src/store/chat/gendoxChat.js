@@ -195,6 +195,20 @@ export const fetchMessageMetadata = createAsyncThunk(
   }
 )
 
+/** 👍 (1), 👎 (-1) or none (null) on an answer, shown at once and put back if saving fails */
+export const setMessageFeedback = createAsyncThunk(
+  'gendoxChat/setMessageFeedback',
+  async ({ messageId, feedback, feedbackComment = null, token }, { rejectWithValue }) => {
+    try {
+      const response = await chatThreadService.updateMessage(messageId, { feedback, feedbackComment }, token)
+      return response.data
+    } catch (error) {
+      toast.error(`Couldn’t save your feedback. ${getErrorMessage(error)}`)
+      return rejectWithValue(error.message)
+    }
+  }
+)
+
 export const sendMessage = createAsyncThunk(
   'gendoxChat/sendMessage',
   async (
@@ -649,6 +663,16 @@ const gendoxChatSlice = createSlice({
       const session = sessionOf(state, keyOf(action))
       session.currentMessageMetadata = null
       session.isLoadingMetadata = false
+    })
+    builder.addCase(setMessageFeedback.pending, (state, action) => {
+      const { messageId, feedback, feedbackComment = null } = action.meta.arg
+      const message = sessionOf(state, keyOf(action)).currentThread?.messages?.find(m => m.messageId === messageId)
+      if (message) Object.assign(message, { feedback, feedbackComment: feedback == null ? null : feedbackComment })
+    })
+    builder.addCase(setMessageFeedback.rejected, (state, action) => {
+      const { messageId, previous } = action.meta.arg
+      const message = sessionOf(state, keyOf(action)).currentThread?.messages?.find(m => m.messageId === messageId)
+      if (message && previous) Object.assign(message, previous)
     })
     builder.addCase(sendMessage.pending, (state, action) => {
       sessionOf(state, keyOf(action)).isSendingMessage = true

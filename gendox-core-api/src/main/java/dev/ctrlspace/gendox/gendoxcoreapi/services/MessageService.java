@@ -15,6 +15,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.MessageDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ChatThread;
@@ -34,6 +35,8 @@ import jakarta.transaction.Transactional;
 
 @Service
 public class MessageService {
+
+    private static final int MAX_FEEDBACK_COMMENT_LENGTH = 2000;
 
     private MessageRepository messageRepository;
 
@@ -65,6 +68,31 @@ public class MessageService {
                 .orElseThrow(() -> new GendoxException("MESSAGE_NOT_FOUND",
                         "Message not found: " + messageId,
                         org.springframework.http.HttpStatus.NOT_FOUND));
+    }
+
+    /**
+     * Saves the 👍 / 👎 and comment on an answer. Only the feedback fields of {@code update} are read;
+     * a null feedback clears it.
+     */
+    public Message updateFeedback(UUID messageId, MessageDTO update) throws GendoxException {
+        Message message = getMessageById(messageId);
+        if (!"assistant".equals(message.getRole())) {
+            throw new GendoxException("FEEDBACK_ONLY_ON_ANSWERS", "Feedback can only be given on an answer of the agent",
+                    org.springframework.http.HttpStatus.BAD_REQUEST);
+        }
+        Short feedback = update.getFeedback();
+        if (feedback != null && feedback != 1 && feedback != -1) {
+            throw new GendoxException("INVALID_FEEDBACK", "Feedback must be 1, -1 or null",
+                    org.springframework.http.HttpStatus.BAD_REQUEST);
+        }
+        String comment = update.getFeedbackComment();
+        if (comment != null && comment.length() > MAX_FEEDBACK_COMMENT_LENGTH) {
+            throw new GendoxException("FEEDBACK_COMMENT_TOO_LONG", "The comment can be at most " + MAX_FEEDBACK_COMMENT_LENGTH + " characters",
+                    org.springframework.http.HttpStatus.BAD_REQUEST);
+        }
+        message.setFeedback(feedback);
+        message.setFeedbackComment(feedback == null || comment == null || comment.isBlank() ? null : comment.strip());
+        return messageRepository.save(message);
     }
 
     /** The message with its local contexts (and the contexts' documents) loaded. */

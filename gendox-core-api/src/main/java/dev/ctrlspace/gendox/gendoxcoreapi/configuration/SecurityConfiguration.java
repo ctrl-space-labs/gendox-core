@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
@@ -77,6 +78,7 @@ public class SecurityConfiguration {
                                 .requestMatchers("/messages/completions").permitAll() // Allow requests when the Project Agent is Public
                                 .requestMatchers("/organizations/*/projects").permitAll()
                                 .requestMatchers("/threads/*/messages").permitAll()
+                                .requestMatchers(HttpMethod.PUT, "/messages/*").permitAll() // Feedback on public threads; checked by @PreAuthorize
                                 .requestMatchers("/threads/*/completion-status").permitAll() // Public threads; checked by @PreAuthorize
                                 .requestMatchers("/threads").permitAll()
                                 .requestMatchers("/api-documentation",
