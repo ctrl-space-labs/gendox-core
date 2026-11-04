@@ -3,7 +3,7 @@ import axios from 'axios'
 import { useDispatch, useSelector } from 'react-redux'
 import { useAuth } from 'src/authentication/useAuth'
 import useActiveScope from 'src/hooks/useActiveScope'
-import { fetchProject } from 'src/store/activeProject/activeProject'
+import { activeProjectActions, fetchProject } from 'src/store/activeProject/activeProject'
 import projectService from 'src/gendox-sdk/projectService'
 import userService from 'src/gendox-sdk/userService'
 import apiRequests from 'src/configs/apiRequest'
@@ -44,7 +44,8 @@ export const useRefreshProfile = () => {
  * The agent (project) in the URL, loaded in full, and a way to save changes to it.
  *
  * save({ project, agent }) sends PUT …/projects/{p} with the whole project, `project` merged into it
- * and `agent` merged into its projectAgent, then reloads it.
+ * and `agent` merged into its projectAgent. The PUT returns the saved project, the same as GET …/projects/{p}, so
+ * that goes into the store instead of loading the project and its members again.
  */
 const useAgent = () => {
   const dispatch = useDispatch()
@@ -72,11 +73,12 @@ const useAgent = () => {
         projectAgent: { ...project.projectAgent, ...agentChanges }
       }
       const response = await projectService.updateProject(organizationId, projectId, payload, getToken())
-      await reload()
+      if (response.data?.id === projectId) dispatch(activeProjectActions.setProjectDetails(response.data))
+      else await reload()
 
       return response.data
     },
-    [project, organizationId, projectId, reload]
+    [project, organizationId, projectId, reload, dispatch]
   )
 
   return { ...scope, project, members: project ? projectMembers : [], save, reload }

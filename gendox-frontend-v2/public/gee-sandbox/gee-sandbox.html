@@ -23,20 +23,6 @@
       let layerAdded = false
       let mapCenter = null  // stored when user calls Map.setCenter()
       let lastLayerData = null  // { eeImg, visParams } — reused for on-demand screenshots
-
-      // The colour scale of a layer drawn with a palette, for the map's legend: { min, max, palette: ['#rrggbb', …] }.
-      // Only hex codes and colour names pass, since the palette becomes a CSS gradient in the app.
-      function toLegend(visParams) {
-        if (!visParams.palette) return null
-        const palette = String(visParams.palette)
-          .split(',')
-          .map(c => c.trim())
-          .filter(c => /^#?[0-9a-fA-F]{3,8}$|^[a-zA-Z]+$/.test(c))
-          .map(c => (/^[0-9a-fA-F]{3,8}$/.test(c) ? '#' + c : c))
-        if (!palette.length) return null
-        const first = v => (typeof v === 'number' ? v : Array.isArray(v) && typeof v[0] === 'number' ? v[0] : null)
-        return { min: first(visParams.min), max: first(visParams.max), palette }
-      }
       let currentEeInstance = null // set after ee.initialize — used for cancelOperation from parent
 
       const ProxyMap = {
@@ -44,9 +30,20 @@
           layerAdded = true
 
           try {
+            // the map's legend: a colour scale for a single band with a palette, a swatch for shapes, none for RGB
+            let legend = null
+            const palette = typeof visParams.palette === 'string' ? visParams.palette.split(',') : visParams.palette
+            const single = v => (Array.isArray(v) && v.length === 1 ? v[0] : v) // min: [0] for one band
+            const min = single(visParams.min ?? 0)
+            const max = single(visParams.max ?? 1)
+            if (Array.isArray(palette) && palette.length && typeof min !== 'object' && typeof max !== 'object') {
+              legend = { palette: palette.map(String), min, max }
+            }
+
             // 1. check for Geometry/Feature/FeatureCollection and convert to Image
             if (image instanceof ee.Geometry || image instanceof ee.Feature || image instanceof ee.FeatureCollection) {
               const color = visParams.color || 'red'
+              legend = { color: String(color) }
               image = ee
                 .Image()
                 .paint(image, 2)
@@ -101,10 +98,7 @@
                 return
               }
 
-              window.parent.postMessage(
-                { type: 'SUCCESS', payload: { url: urlFormat, name: name || 'Layer', legend: toLegend(normalizedVisParams) } },
-                '*'
-              )
+              window.parent.postMessage({ type: 'SUCCESS', payload: { url: urlFormat, name: name || 'Layer', legend } }, '*')
 
               // Store the last rendered image so on-demand screenshots can reuse it
               lastLayerData = { eeImg, visParams: normalizedVisParams }

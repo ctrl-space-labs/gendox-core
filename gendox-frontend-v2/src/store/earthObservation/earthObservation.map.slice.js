@@ -6,7 +6,7 @@ export const mapInitialState = {
   // tier so the workspace still opens; the header warns the user.
   geeProjectFallbackActive: false,
   sessionExpired: false, // true when token expired mid-session; shows Snackbar instead of blocking dialog
-  mapLayers: [], // [{ url, name }]
+  mapLayers: [], // [{ url, name, legend }]; legend is { palette, min, max }, { color } or null
   loadedLayerCount: 0, // incremented each time a GeeLayer fires its Leaflet 'load' event
   mapResultScreenshot: null, // data URL of the latest auto/manual full-panel screenshot
   mapThumbnailUrl: null, // auto-thumbnail after script run (from Map.setCenter region)
@@ -40,7 +40,7 @@ export const mapReducers = {
     }
   },
   addMapLayer: (state, action) => {
-    // payload: { url, name, legend: { min, max, palette } | null }
+    // payload: { url, name, legend }
     state.map.mapLayers.push(action.payload)
   },
   clearMapLayers: state => {
