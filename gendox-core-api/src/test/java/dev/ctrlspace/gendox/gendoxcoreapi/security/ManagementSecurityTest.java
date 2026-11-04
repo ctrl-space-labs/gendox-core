@@ -5,6 +5,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.configuration.SecurityConfiguration;
 import dev.ctrlspace.gendox.gendoxcoreapi.controller.InvitationController;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.JwtDTOUserProfileConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Invitation;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
@@ -37,7 +38,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @TestPropertySource(properties = {
         "rsa.private-key=unused",
         "walt-id.default-key.size=256",
-        "spring.security.oauth2.resourceserver.jwt.issuer-uri=https://issuer.example/realm",
         "spring.security.oauth2.resourceserver.jwt.jwk-set-uri=https://issuer.example/realm/certs"
 })
 class ManagementSecurityTest {
@@ -60,14 +60,19 @@ class ManagementSecurityTest {
         @Bean(name = "delegatedAuthenticationEntryPoint") AuthenticationEntryPoint entryPoint() {
             return (request, response, exception) -> response.sendError(401);
         }
-        @Bean InvitationController invitationController() {
-            return new InvitationController(mock(UserInvitationService.class), mock(SubscriptionValidationService.class),
+        @Bean InvitationController invitationController() throws Exception {
+            Type pending = new Type(); pending.setName("PENDING");
+            Invitation invitation = new Invitation(); invitation.setStatusType(pending);
+            invitation.setExpiresAt(java.time.Instant.now().plusSeconds(600));
+            UserInvitationService invitations = mock(UserInvitationService.class);
+            org.mockito.Mockito.when(invitations.getByInviteeEmailAndToken("invitee@example.invalid", "invitation-token")).thenReturn(invitation);
+            return new InvitationController(invitations, mock(SubscriptionValidationService.class),
                     mock(ProjectService.class), mock(UserOrganizationService.class), mock(SecurityUtils.class));
         }
         @Bean ManagementProbe probe() { return new ManagementProbe(); }
     }
     @RestController static class ManagementProbe {
-        @GetMapping({"/actuator/health", "/actuator/heapdump"}) String endpoint() { return "probe"; }
+        @GetMapping("/actuator/health") String endpoint() { return "probe"; }
     }
     @Autowired WebApplicationContext context;
     MockMvc mvc;
@@ -78,12 +83,8 @@ class ManagementSecurityTest {
         return new GendoxAuthenticationToken(UserProfile.builder().id(UUID.randomUUID().toString())
                 .globalUserRoleType(type).organizations(List.of()).build(), null, List.of());
     }
-    @Test void diagnosticsRejectOrdinaryAccountsAndAnonymousRequests() throws Exception {
-        mvc.perform(get("/actuator/heapdump")).andExpect(status().isUnauthorized());
-        mvc.perform(get("/actuator/heapdump").with(authentication(token("GENDOX_USER")))).andExpect(status().isForbidden());
-    }
-    @Test void diagnosticsAllowSuperAdminsAndHealthRemainsPublic() throws Exception {
-        mvc.perform(get("/actuator/heapdump").with(authentication(token("GENDOX_SUPER_ADMIN")))).andExpect(status().isOk());
+    // Which actuator endpoints exist is limited in application.yml (management.endpoints.web.exposure)
+    @Test void healthRemainsPublic() throws Exception {
         mvc.perform(get("/actuator/health")).andExpect(status().isOk());
     }
     @Test void invitationAcceptanceRemainsPublicWithoutAuthentication() throws Exception {

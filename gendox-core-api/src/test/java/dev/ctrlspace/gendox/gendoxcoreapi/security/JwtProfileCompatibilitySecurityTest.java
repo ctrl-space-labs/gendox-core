@@ -11,6 +11,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.Page;
 import org.springframework.mock.web.*;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -55,7 +56,8 @@ class JwtProfileCompatibilitySecurityTest {
 
     @Test void registrationAndProfileConversionPreserveOriginalFieldsAndOrganizationAuthorities() throws Exception {
         AtomicReference<User> registered = new AtomicReference<>();
-        when(users.getOptionalById(subject)).thenReturn(Optional.empty());
+        when(users.getOptionalUserByUniqueIdentifier(login)).thenReturn(Optional.empty());
+        when(invitations.getInvitationsByCriteria(any(), any())).thenReturn(Page.empty());
         when(users.createUser(any())).thenAnswer(call -> { registered.set(call.getArgument(0)); return registered.get(); });
         when(users.getUserProfileByUniqueIdentifier(login)).thenAnswer(call -> profile(registered.get()));
         Jwt jwt = token(true); SecurityContextHolder.getContext().setAuthentication(new JwtAuthenticationToken(jwt));
@@ -79,14 +81,16 @@ class JwtProfileCompatibilitySecurityTest {
         assertSame(jwt, result.getJwt());
         verify(users).getUserProfileByUniqueIdentifier(login);
         verify(users, never()).getUserProfileByUserId(any());
-        verify(invitations).completeAcceptedInvitations(same(created));
+        // the accepted invitations of the new account's email are looked up, as before
+        verify(invitations).getInvitationsByCriteria(argThat(criteria -> login.equals(criteria.getEmail())
+                && "ACCEPTED".equals(criteria.getStatusName())), any());
     }
 
     @Test void existingAccountProfileIsNotOverwrittenFromJwtClaims() throws Exception {
         User existing = new User(); existing.setId(subject); existing.setUserName(login);
         existing.setEmail("stored-email@example.invalid"); existing.setName("Stored display name");
         UserProfile savedProfile = profile(existing);
-        when(users.getOptionalById(subject)).thenReturn(Optional.of(existing));
+        when(users.getOptionalUserByUniqueIdentifier(login)).thenReturn(Optional.of(existing));
         when(users.getUserProfileByUniqueIdentifier(login)).thenReturn(savedProfile);
         SecurityContextHolder.getContext().setAuthentication(new JwtAuthenticationToken(token(true)));
         JwtUserProfileConversionFilter conversion = conversion();

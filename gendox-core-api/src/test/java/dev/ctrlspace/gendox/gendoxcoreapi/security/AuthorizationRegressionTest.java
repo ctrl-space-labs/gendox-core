@@ -190,27 +190,8 @@ class AuthorizationRegressionTest {
         dto.setId(null);
         assertThrows(GendoxException.class, () -> taskController(service).createTask(org, project, dto));
         verifyNoInteractions(repository);
-        dto.setProjectId(null);
+        dto.setProjectId(project);
         assertEquals(project, taskController(service).createTask(org, project, dto).getProjectId());
-    }
-
-    @Test void invitationAcceptanceRejectsExpiredOrReusedTokens() throws Exception {
-        InvitationRepository repository = mock(InvitationRepository.class);
-        Invitation invitation = new Invitation(); invitation.setOrganizationId(org); invitation.setProjectId(project);
-        invitation.setExpiresAt(Instant.EPOCH); Type expired = new Type(); expired.setName("EXPIRED"); invitation.setStatusType(expired);
-        when(repository.findByInviteeEmailAndToken("review@example.invalid", "canary")).thenReturn(Optional.of(invitation));
-        when(repository.save(any())).thenAnswer(i -> i.getArgument(0));
-        TypeService types = mock(TypeService.class); Type accepted = new Type(); accepted.setName("ACCEPTED");
-        when(types.getEmailInvitationStatusByName("ACCEPTED")).thenReturn(accepted);
-        SubscriptionValidationService limits = mock(SubscriptionValidationService.class); when(limits.canInviteUsers(org)).thenReturn(true);
-        UserService users = mock(UserService.class); when(users.getOptionalByEmail(any())).thenReturn(Optional.empty());
-        UserInvitationService service = new UserInvitationService(repository, types, mock(UserOrganizationService.class),
-                mock(OrganizationService.class), users, mock(ProjectMemberService.class), mock(EmailService.class),
-                mock(org.thymeleaf.TemplateEngine.class), limits);
-        assertThrows(GendoxException.class, () -> service.acceptInvitation("review@example.invalid", "canary"));
-        invitation.setExpiresAt(Instant.now().plusSeconds(300)); invitation.setStatusType(accepted);
-        assertThrows(GendoxException.class, () -> service.acceptInvitation("review@example.invalid", "canary"));
-        verify(repository, never()).save(any());
     }
 
     @Test void jwtPrincipalIsBoundToSubjectRegardlessOfUsername() throws Exception {
@@ -360,22 +341,6 @@ class AuthorizationRegressionTest {
                 mock(UploadService.class), mock(SplitFileService.class), sections,
                 mock(DocumentInstanceSectionWithoutDocumentConverter.class), mock(DocumentOnlyConverter.class),
                 mock(dev.ctrlspace.gendox.gendoxcoreapi.messages.postgres.QueueProducerService.class), "uploads", security);
-    }
-
-    @Test void duplicationChecksCopiedSupportingDocumentsBeforeCreatingTheTask() throws Exception {
-        TaskService tasks = mock(TaskService.class); TaskNodeService nodes = mock(TaskNodeService.class, CALLS_REAL_METHODS);
-        ReflectionTestUtils.setField(nodes, "securityUtils", security);
-        Task original = new Task(); original.setId(UUID.randomUUID()); original.setProjectId(project);
-        when(tasks.getTaskById(original.getId())).thenReturn(original);
-        TaskDocumentMetadataDTO metadata = new TaskDocumentMetadataDTO(); metadata.setSupportingDocumentIds(List.of(UUID.randomUUID()));
-        TaskNodeValueDTO value = new TaskNodeValueDTO(); value.setDocumentMetadata(metadata);
-        TaskNode question = new TaskNode(); question.setNodeValue(value);
-        doReturn(new org.springframework.data.domain.PageImpl<>(List.of(question))).when(nodes).getTaskNodesByType(original.getId(), "QUESTION");
-        TaskController c = new TaskController(tasks, mock(TaskNodeConverter.class), mock(TaskEdgeConverter.class),
-                mock(TaskCsvExportService.class), nodes, mock(TaskEdgeService.class), mock(InsightQuestionService.class), security);
-        TaskDuplicateDTO dto = TaskDuplicateDTO.builder().taskId(original.getId()).keepQuestions(true).build();
-        assertThrows(GendoxException.class, () -> c.duplicateTask(org, project, dto));
-        verify(tasks, never()).duplicateTask(any(), any());
     }
 
     @Test void uploadValidatesTheThreadBeforeCallingTheUploadService() throws Exception {

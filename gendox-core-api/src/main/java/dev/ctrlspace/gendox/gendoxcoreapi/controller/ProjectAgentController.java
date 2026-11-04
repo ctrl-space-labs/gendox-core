@@ -62,7 +62,7 @@ public class ProjectAgentController {
         if (!securityUtils.isSuperAdmin()) {
             UserProfile userProfile = (UserProfile) authentication.getPrincipal();
             List<UUID> authorizedAgentIds = userProfile.getOrganizations().stream()
-                    .filter(org -> org.getId().equals(criteria.getOrganizationId()))
+                    .filter(org -> criteria.getOrganizationId() == null || org.getId().equals(criteria.getOrganizationId()))
                     .filter(org -> org.getAuthorities().contains("OP_READ_DOCUMENT"))
                     .flatMap(org -> org.getProjectAgents().stream()).map(agent -> agent.getId())
                     .filter(id -> criteria.getAgentIdIn() == null || criteria.getAgentIdIn().isEmpty()

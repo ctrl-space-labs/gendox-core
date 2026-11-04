@@ -26,8 +26,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
+
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskNodeTypeConstants;
 
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -86,20 +86,11 @@ public class TaskController {
     public Task duplicateTask(@PathVariable UUID organizationId,
                               @PathVariable UUID projectId,
                               @RequestBody TaskDuplicateDTO taskDuplicateDTO) throws GendoxException {
+        // the task to copy must be of the authorized project
         Task original = taskService.getTaskById(taskDuplicateDTO.getTaskId());
         if (!projectId.equals(original.getProjectId())) {
             throw new GendoxException("TASK_NOT_FOUND", "Task not found in this project", HttpStatus.NOT_FOUND);
         }
-        List<TaskNodeDTO> copiedNodes = new ArrayList<>();
-        if (taskDuplicateDTO.isKeepQuestions()) {
-            taskNodeService.getTaskNodesByType(original.getId(), TaskNodeTypeConstants.QUESTION).forEach(node ->
-                    copiedNodes.add(TaskNodeDTO.builder().nodeValue(node.getNodeValue()).build()));
-        }
-        if (taskDuplicateDTO.isKeepDocuments()) {
-            taskNodeService.getTaskNodesByType(original.getId(), TaskNodeTypeConstants.DOCUMENT).forEach(node ->
-                    copiedNodes.add(TaskNodeDTO.builder().documentId(node.getDocumentId()).nodeValue(node.getNodeValue()).build()));
-        }
-        taskNodeService.validateNodeDocumentsAccessible(copiedNodes, projectId);
         return taskService.duplicateTask(projectId, taskDuplicateDTO);
     }
 

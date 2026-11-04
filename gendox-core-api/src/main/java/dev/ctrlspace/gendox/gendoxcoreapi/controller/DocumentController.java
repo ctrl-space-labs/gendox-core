@@ -205,8 +205,6 @@ public class DocumentController {
         if (documentInstanceDTO.getRemoteUrl() != null) {
             throw new GendoxException("DOCUMENT_STORAGE_MANAGED", "Use document upload to store a file", HttpStatus.BAD_REQUEST);
         }
-        documentInstanceDTO.setCreatedBy(null);
-        documentInstanceDTO.setUpdatedBy(null);
         DocumentInstance documentInstance = documentInstanceConverter.toEntity(documentInstanceDTO);
 
         if (!organizationId.equals(documentInstanceDTO.getOrganizationId())) {
@@ -256,7 +254,6 @@ public class DocumentController {
                 || (documentInstanceDTO.getOrganizationId() != null && !documentInstanceDTO.getOrganizationId().equals(existing.getOrganizationId()))) {
             throw new GendoxException("DOCUMENT_STORAGE_MANAGED", "Document storage and ownership cannot be changed here", HttpStatus.BAD_REQUEST);
         }
-        documentInstanceDTO.setUpdatedBy(null);
         DocumentInstance documentInstance = documentInstanceConverter.toEntity(documentInstanceDTO);
         documentInstance = documentService.updateDocument(documentInstance);
         return documentInstance;

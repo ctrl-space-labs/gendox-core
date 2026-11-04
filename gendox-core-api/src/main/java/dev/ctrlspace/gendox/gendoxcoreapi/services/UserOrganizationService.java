@@ -147,6 +147,16 @@ public class UserOrganizationService {
         return userOrganizationRepository.save(userOrganization);
     }
 
+    public UserOrganization updateUserRole(UUID userOrganizationId, String roleName) throws GendoxException {
+        UserOrganization userOrganization = userOrganizationRepository.findById(userOrganizationId).orElse(null);
+        if (userOrganization == null) {
+            throw new GendoxException("USER_ORGANIZATION_NOT_FOUND", "User-organization combination not found", HttpStatus.BAD_REQUEST);
+        }
+        Type role = typeService.getOrganizationRolesByName(roleName);
+        userOrganization.setRole(role);
+        return userOrganizationRepository.save(userOrganization);
+    }
+
 
     public void deleteUserOrganization(UserOrganization userOrganization) throws GendoxException {
         userOrganizationRepository.delete(userOrganization);

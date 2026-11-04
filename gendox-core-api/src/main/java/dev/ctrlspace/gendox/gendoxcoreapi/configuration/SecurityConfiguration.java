@@ -2,8 +2,6 @@ package dev.ctrlspace.gendox.gendoxcoreapi.configuration;
 
 import com.nimbusds.jose.JOSEException;
 import dev.ctrlspace.gendox.authentication.*;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,8 +15,6 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.jwt.JwtValidators;
-import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.AuthenticationEntryPoint;
@@ -36,9 +32,6 @@ public class SecurityConfiguration {
 
     @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}")
     private String jwkSetUri;
-
-    @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}")
-    private String issuerUri;
 
     @Autowired
     private ResourceLoader resourceLoader;
@@ -79,12 +72,6 @@ public class SecurityConfiguration {
                         authz
                                 .requestMatchers("/invitations/acceptance").permitAll()
                                 .requestMatchers("/actuator/health").permitAll()
-                                .requestMatchers("/actuator", "/actuator/**").access((authentication, context) ->
-                                        new AuthorizationDecision(authentication.get().getPrincipal() instanceof
-                                                UserProfile profile
-                                                && profile.getGlobalUserRoleType() != null
-                                                && UserNamesConstants.GENDOX_SUPER_ADMIN
-                                                        .equals(profile.getGlobalUserRoleType().getName())))
                                 .requestMatchers("/auth/signup").permitAll()
                                 .requestMatchers("/users/login").permitAll()
                                 .requestMatchers("/messages/completions").permitAll() // Allow requests when the Project Agent is Public
@@ -192,9 +179,7 @@ public class SecurityConfiguration {
 
     @Bean
     public JwtDecoder jwtDecoder() throws JOSEException {
-        NimbusJwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
-        decoder.setJwtValidator(JwtValidators.createDefaultWithIssuer(issuerUri));
-        return decoder;
+        return NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
     }
 
 //    @Bean
