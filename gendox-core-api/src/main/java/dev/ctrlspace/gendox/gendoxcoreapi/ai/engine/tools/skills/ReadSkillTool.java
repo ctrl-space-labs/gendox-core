@@ -13,7 +13,6 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -65,13 +64,12 @@ public class ReadSkillTool extends DefinedToolHandler {
         String requested = readArguments(objectMapper, arguments, Args.class).name();
         String name = requested == null ? "" : requested.trim();
 
-        Optional<AgentSkill> own = agentSkillRepository.findByAgentIdAndName(context.agent().getId(), name);
-        String content = own.isPresent()
-                ? own.filter(AgentSkill::isSwitchedOn).map(AgentSkill::getContent).orElse(null)
-                : skillService.getLibrarySkill(name).map(skill -> skill.getContent()).orElse(null);
+        String content = agentSkillRepository.findByAgentIdAndName(context.agent().getId(), name)
+                .map(AgentSkill::getContent)
+                .or(() -> skillService.getLibrarySkill(name).map(skill -> skill.getContent()))
+                .orElse(null);
         if (content == null) {
             String available = agentSkillRepository.findAllByAgentIdOrderByNameAsc(context.agent().getId()).stream()
-                    .filter(AgentSkill::isSwitchedOn)
                     .map(AgentSkill::getName)
                     .collect(Collectors.joining(", "));
             throw new GendoxException("SKILL_NOT_FOUND",

@@ -19,10 +19,6 @@ import { SkeletonList } from 'src/components/ui/Skeleton'
 import SkillEditorDialog from 'src/components/skills/SkillEditorDialog'
 import SkillLibraryDialog from 'src/components/skills/SkillLibraryDialog'
 import SkillTools from 'src/components/skills/SkillTools'
-import Switch from 'src/components/ui/Switch'
-
-// a skill switched off stays on the agent with its text, but the agent doesn't see it or its tools
-const isOn = skill => skill.enabled !== false
 
 /**
  * The agent's skills (projectAgent.agentSkills), saved with PUT …/projects/{p} like its tools.
@@ -39,9 +35,6 @@ const AgentSkillsPage = () => {
   const [libraryOpen, setLibraryOpen] = useState(false)
   const [editor, setEditor] = useState(null) // { index | null, content, readOnly }
   const [removing, setRemoving] = useState(null)
-  // { index, on } while a switch is saved: it moves at once, and back if the save fails
-  const [switching, setSwitching] = useState(null)
-  const shownOn = (skill, index) => (switching?.index === index ? switching.on : isOn(skill))
 
   useEffect(() => {
     dispatch(fetchSkillLibrary({ token: getToken() }))
@@ -54,16 +47,14 @@ const AgentSkillsPage = () => {
   const knownTools = useMemo(() => (skillTools || []).map(tool => tool.name), [skillTools])
   const toolDescriptions = useMemo(() => new Map((skillTools || []).map(tool => [tool.name, tool.description])), [skillTools])
 
-  const onSkills = useMemo(() => skills.filter(isOn), [skills])
-
   // what the backend appends to the agent's system prompt (SkillService.buildSkillsHeader): each skill's front matter
   const alwaysSees = useMemo(
     () =>
-      [...onSkills]
+      [...skills]
         .sort((a, b) => a.name.localeCompare(b.name))
         .map(skill => frontMatterOf(skill.content) ?? `---\nname: ${skill.name}\ndescription: ${skill.description}\n---`)
         .join('\n\n'),
-    [onSkills]
+    [skills]
   )
 
   if (!project) return <AgentPageSkeleton tab='skills'>
@@ -99,15 +90,6 @@ const AgentSkillsPage = () => {
         ? [...skills, edited]
         : skills.map((skill, i) => (i === editor.index ? { ...skill, ...edited } : skill))
     if (await saveSkills(next, editor.index === null ? `${parsed.name} added` : `${parsed.name} saved`)) setEditor(null)
-  }
-
-  const switchSkill = async (index, on) => {
-    setSwitching({ index, on })
-    await saveSkills(
-      skills.map((skill, i) => (i === index ? { ...skill, enabled: on } : skill)),
-      `${skills[index].name} switched ${on ? 'on' : 'off'}`
-    )
-    setSwitching(null)
   }
 
   const editACopy = content =>
@@ -158,7 +140,7 @@ const AgentSkillsPage = () => {
                 <span className='ftype' style={{ '--h': fromGendox ? 165 : 270, width: 28, height: 28 }}>
                   {fromGendox ? <Sparkles className='lucide' /> : <BookMarked className='lucide' />}
                 </span>
-                <div style={{ flex: 1, minWidth: 0, opacity: shownOn(skill, index) ? 1 : 0.6 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
                   <div className='row' style={{ gap: 8 }}>
                     <b className='trunc' style={{ fontWeight: 550 }}>
                       {skill.name}
@@ -167,19 +149,11 @@ const AgentSkillsPage = () => {
                       {from}
                       {version ? ` · v${version}` : ''}
                     </span>
-                    {!shownOn(skill, index) && <span className='badge'>Off</span>}
                   </div>
                   <div className='faint sm trunc'>{skill.description}</div>
                   <SkillTools tools={parseSkill(skill.content).tools} descriptions={toolDescriptions} />
                 </div>
-                <div className='row' style={{ gap: 4, flex: 'none' }} onClick={e => e.stopPropagation()}>
-                  <Switch
-                    checked={shownOn(skill, index)}
-                    onChange={on => switchSkill(index, on)}
-                    disabled={!canEdit || (switching !== null && switching.index !== index)}
-                    busy={switching?.index === index}
-                    label={isOn(skill) ? `Switch ${skill.name} off` : `Switch ${skill.name} on`}
-                  />
+                <div onClick={e => e.stopPropagation()}>
                   <Menu
                     align='right'
                     width={220}
@@ -236,11 +210,9 @@ const AgentSkillsPage = () => {
           <span className='faint sm'>Each skill’s front matter</span>
         </summary>
         <pre className='code' style={{ border: 0, borderRadius: 0, whiteSpace: 'pre-wrap' }}>
-          {onSkills.length
+          {skills.length
             ? `${alwaysSees}\n\nRead a skill with read_skill(name) before you follow it.`
-            : skills.length
-              ? 'No skill is switched on: nothing is added to the agent’s instructions.'
-              : 'No skills yet: nothing is added to the agent’s instructions.'}
+            : 'No skills yet: nothing is added to the agent’s instructions.'}
         </pre>
       </details>
 

@@ -34,13 +34,9 @@ public class SkillService {
 
     private static final Logger logger = LoggerFactory.getLogger(SkillService.class);
 
-    /**
-     * The local context the Gendox app's chat widget sends with every message.
-     */
+    /** The local context the Gendox app's chat widget sends with every message. */
     public static final String GENDOX_PAGE_CONTEXT = "GENDOX_PAGE";
-    /**
-     * The skill a chat from a Gendox page gets, whether or not the agent has it.
-     */
+    /** The skill a chat from a Gendox page gets, whether or not the agent has it. */
     public static final String ASSISTANT_SKILL = "gendox-assistant";
 
     private final SkillRepository skillRepository;
@@ -80,9 +76,7 @@ public class SkillService {
         return tools;
     }
 
-    /**
-     * Reads a SKILL.md and checks that every tool in {@code allowed-tools} is a Gendox tool (see {@link #getSkillTools}).
-     */
+    /** Reads a SKILL.md and checks that every tool in {@code allowed-tools} is a Gendox tool (see {@link #getSkillTools}). */
     public SkillMarkdownParser.ParsedSkill parse(String content) throws GendoxException {
         SkillMarkdownParser.ParsedSkill parsed = SkillMarkdownParser.parse(content);
         Map<String, JsonNode> examples = parsed.tools().isEmpty() ? Map.of() : typeService.getToolExampleDefinitions();
@@ -97,16 +91,12 @@ public class SkillService {
 
     // ---------------------------------------------------------------- catalog
 
-    /**
-     * The library: the latest version of every system skill that is not deleted.
-     */
+    /** The library: the latest version of every system skill that is not deleted. */
     public List<Skill> getLibrary() {
         return skillRepository.findAllByLatestTrueAndDeletedFalseOrderByNameAsc();
     }
 
-    /**
-     * The latest version of a library skill, by name. Empty when there is none or it was deleted.
-     */
+    /** The latest version of a library skill, by name. Empty when there is none or it was deleted. */
     public Optional<Skill> getLibrarySkill(String name) {
         return skillRepository.findByNameAndLatestTrue(name)
                 .filter(skill -> !Boolean.TRUE.equals(skill.getDeleted()));
@@ -177,9 +167,7 @@ public class SkillService {
         return next;
     }
 
-    /**
-     * Hides the skill from the library. Agents keep their copies until an admin removes them.
-     */
+    /** Hides the skill from the library. Agents keep their copies until an admin removes them. */
     @Transactional
     public void delete(String name) throws GendoxException {
         List<Skill> versions = skillRepository.findAllByNameOrderByVersionDesc(name);
@@ -232,11 +220,8 @@ public class SkillService {
      * That one is not stored on the agent; read_skill finds it in the library.
      */
     public List<AgentSkill> getCompletionSkills(UUID agentId, Message prompt) {
-        List<AgentSkill> agentSkills = getAgentSkills(agentId);
-        List<AgentSkill> skills = agentSkills.stream()
-                .filter(AgentSkill::isSwitchedOn)
-                .collect(Collectors.toCollection(ArrayList::new));
-        if (!fromGendoxPage(prompt) || agentSkills.stream().anyMatch(s -> ASSISTANT_SKILL.equals(s.getName()))) {
+        List<AgentSkill> skills = new ArrayList<>(getAgentSkills(agentId));
+        if (!fromGendoxPage(prompt) || skills.stream().anyMatch(s -> ASSISTANT_SKILL.equals(s.getName()))) {
             return skills;
         }
         getLibrarySkill(ASSISTANT_SKILL).ifPresent(skill -> skills.add(AgentSkill.builder()
@@ -244,7 +229,6 @@ public class SkillService {
                 .name(skill.getName())
                 .description(skill.getDescription())
                 .content(skill.getContent())
-                .enabled(true)
                 .build()));
         return skills;
     }

@@ -45,9 +45,6 @@ public class AgentSkill {
     @Column(name = "content", nullable = false)
     private String content;
 
-    @Column(name = "enabled", nullable = false)
-    private Boolean enabled;
-
     @CreatedDate
     @Column(name = "created_at")
     private Instant createdAt;
@@ -71,10 +68,4 @@ public class AgentSkill {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "agent_id", referencedColumnName = "id", nullable = false)
     private ProjectAgent agent;
-
-
-    @JsonIgnore
-    public boolean isSwitchedOn() {
-        return !Boolean.FALSE.equals(enabled);
-    }
 }
