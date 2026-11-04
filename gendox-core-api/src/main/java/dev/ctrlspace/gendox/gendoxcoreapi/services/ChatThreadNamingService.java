@@ -23,8 +23,8 @@ import java.util.UUID;
 /**
  * Names a new chat thread from its first question (#549), with the cheapest model of the agent's own
  * provider: the same API key works, and no new model association is needed. Runs beside the answer,
- * never in its way: any failure leaves the thread called "Chat Thread". Its tokens are audited as
- * CHAT_THREAD_NAMING, which does not count as a message of the plan.
+ * never in its way: any failure leaves the thread called "Chat Thread". Its tokens are audited like any
+ * completion, as COMPLETION_REQUEST and COMPLETION_RESPONSE.
  */
 @Service
 public class ChatThreadNamingService {
@@ -32,7 +32,6 @@ public class ChatThreadNamingService {
     private static final Logger logger = LoggerFactory.getLogger(ChatThreadNamingService.class);
 
     public static final String DEFAULT_THREAD_NAME = "Chat Thread";
-    private static final String AUDIT_TYPE = "COMPLETION_RESPONSE";
     private static final int MAX_QUESTION_LENGTH = 2000;
     private static final int MAX_NAME_LENGTH = 60;
     private static final String INSTRUCTIONS = """
@@ -120,16 +119,27 @@ public class ChatThreadNamingService {
         return text.length() <= max ? text : text.substring(0, max).strip();
     }
 
-    // Its own audit type: the tokens are recorded, but a name is not a message of the plan (COMPLETION_RESPONSE is)
+    // Audited like any completion: the input tokens as COMPLETION_REQUEST, the output tokens as COMPLETION_RESPONSE
     private void saveAuditLogs(CompletionResponse response, Project project) {
         if (response.getUsage() == null) {
             return;
         }
-        AuditLogs naming = auditLogsService.createDefaultAuditLogs(typeService.getAuditLogTypeByName(AUDIT_TYPE));
-        // TODO review this, probably the input tokens need to be saved separatly
-        naming.setTokenCount((long) response.getUsage().getPromptTokens() + response.getUsage().getCompletionTokens());
-        naming.setProjectId(project.getId());
-        naming.setOrganizationId(project.getOrganizationId());
-        auditLogsService.saveAuditLogs(naming);
+        AuditLogs request = auditLogsService.createDefaultAuditLogs(typeService.getAuditLogTypeByName("COMPLETION_REQUEST"));
+        request.setTokenCount((long) response.getUsage().getPromptTokens());
+        request.setCachedTokenCount((long) Optional.ofNullable(response.getUsage().getPromptTokensDetail())
+                .map(d -> d.getCachedTokens())
+                .orElse(0));
+        request.setProjectId(project.getId());
+        request.setOrganizationId(project.getOrganizationId());
+        auditLogsService.saveAuditLogs(request);
+
+        AuditLogs completion = auditLogsService.createDefaultAuditLogs(typeService.getAuditLogTypeByName("COMPLETION_RESPONSE"));
+        completion.setTokenCount((long) response.getUsage().getCompletionTokens());
+        completion.setReasoningTokenCount((long) Optional.ofNullable(response.getUsage().getCompletionTokensDetail())
+                .map(d -> d.getReasoningTokens())
+                .orElse(0));
+        completion.setProjectId(project.getId());
+        completion.setOrganizationId(project.getOrganizationId());
+        auditLogsService.saveAuditLogs(completion);
     }
 }
