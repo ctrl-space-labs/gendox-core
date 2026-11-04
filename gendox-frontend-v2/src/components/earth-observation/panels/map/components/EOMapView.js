@@ -12,6 +12,9 @@ const MapController = dynamic(() => import('src/components/earth-observation/pan
 const MapResizeWatcher = dynamic(() => import('src/components/earth-observation/panels/map/components/MapResizeWatcher'), {
   ssr: false
 })
+const PixelProbe = dynamic(() => import('src/components/earth-observation/panels/map/components/PixelProbe'), {
+  ssr: false
+})
 const DrawingManager = dynamic(() => import('src/components/earth-observation/panels/map/components/DrawingManager'), {
   ssr: false
 })
@@ -39,6 +42,7 @@ export default function EOMapView({
       ))}
       <MapRefCapture onReady={onMapReady} />
       <MapResizeWatcher />
+      <PixelProbe mapLayers={mapLayers} visibleLayers={visibleLayers} />
       {mapCenter && <MapController centerData={mapCenter} />}
       <DrawingManager
         activeTool={activeTool}
