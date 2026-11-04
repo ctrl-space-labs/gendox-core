@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Monitor, Moon, Sun } from 'lucide-react'
 import Spinner from 'src/components/ui/Spinner'
 
@@ -48,27 +49,80 @@ export const chatSettingsOf = look => ({
   branding: look.branding
 })
 
-const ColorField = ({ label, value, onChange, disabled }) => (
-  <div className='field'>
-    <label>{label}</label>
-    <div className='row' style={{ gap: 8 }}>
-      <input
-        type='color'
-        className='look-color'
-        value={value || '#08b68d'}
-        disabled={disabled}
-        aria-label={label}
-        onChange={e => onChange(e.target.value)}
-      />
-      <span className='mono sm'>{value || 'Theme default'}</span>
-      {value && !disabled && (
-        <button type='button' className='btn ghost s' onClick={() => onChange('')}>
-          Reset
-        </button>
-      )}
+// #RRGGBB, or #RRGGBBAA with transparency
+const HEX_COLOR = /^#[0-9a-f]{6}([0-9a-f]{2})?$/i
+
+// The theme's own colours (themes.css), shown until one is picked
+const THEME_DEFAULTS = {
+  LIGHT: { accentColor: '#08b68d', backgroundColor: '#f7f7f9' },
+  DARK: { accentColor: '#08b68d', backgroundColor: '#1f2136' }
+}
+
+const pageTheme = () =>
+  typeof document !== 'undefined' && document.documentElement.dataset.theme === 'light' ? 'LIGHT' : 'DARK'
+
+const alphaOf = hex => (hex.length === 9 ? Math.round((parseInt(hex.slice(7), 16) / 255) * 100) : 100)
+
+const withAlpha = (rgb, percent) =>
+  percent >= 100 ? rgb : `${rgb}${Math.round((percent / 100) * 255).toString(16).padStart(2, '0')}`
+
+/** A colour as a swatch, a hex field and an opacity slider; empty means the theme's own colour. */
+const ColorField = ({ label, value, fallback, onChange, disabled }) => {
+  const [text, setText] = useState(value)
+  useEffect(() => setText(value), [value])
+
+  const shown = value || fallback
+  const rgb = shown.slice(0, 7)
+  const alpha = alphaOf(shown)
+
+  const typed = input => {
+    setText(input)
+    const hex = input.trim().startsWith('#') ? input.trim() : `#${input.trim()}`
+    if (input.trim() === '') onChange('')
+    else if (HEX_COLOR.test(hex)) onChange(hex.toLowerCase())
+  }
+
+  return (
+    <div className='field'>
+      <label>{label}</label>
+      <div className='row' style={{ gap: 8, flexWrap: 'wrap' }}>
+        <input
+          type='color'
+          className='look-color'
+          value={rgb}
+          disabled={disabled}
+          aria-label={`${label} colour`}
+          onChange={e => onChange(withAlpha(e.target.value, alpha))}
+        />
+        <input
+          className='input mono sm look-hex'
+          value={text}
+          placeholder={`${fallback} (theme)`}
+          disabled={disabled}
+          aria-label={`${label} hex`}
+          onChange={e => typed(e.target.value)}
+          onBlur={() => setText(value)}
+        />
+        <input
+          type='range'
+          className='look-alpha'
+          min='0'
+          max='100'
+          value={alpha}
+          disabled={disabled}
+          aria-label={`${label} opacity`}
+          title={`Opacity ${alpha}%`}
+          onChange={e => onChange(withAlpha(rgb, Number(e.target.value)))}
+        />
+        {value && !disabled && (
+          <button type='button' className='btn ghost s' onClick={() => onChange('')}>
+            Reset
+          </button>
+        )}
+      </div>
     </div>
-  </div>
-)
+  )
+}
 
 /**
  * Deploy → Look and branding (#527): how the agent's chat looks in the widget, and the welcome message,
@@ -77,6 +131,7 @@ const ColorField = ({ label, value, onChange, disabled }) => (
  */
 const DeployLook = ({ look, onChange, onSave, onReset, isDirty, isSaving, canEdit, canRemoveBranding }) => {
   const set = (key, value) => onChange({ ...look, [key]: value })
+  const defaults = THEME_DEFAULTS[look.theme === 'AUTO' || !look.theme ? pageTheme() : look.theme]
   const questionCount = look.suggestedQuestions.split('\n').filter(line => line.trim()).length
 
   return (
@@ -108,10 +163,16 @@ const DeployLook = ({ look, onChange, onSave, onReset, isDirty, isSaving, canEdi
         </div>
 
         <div className='row' style={{ gap: 24, flexWrap: 'wrap' }}>
-          <ColorField label='Accent' value={look.accentColor} onChange={value => set('accentColor', value)} />
+          <ColorField
+            label='Accent'
+            value={look.accentColor}
+            fallback={defaults.accentColor}
+            onChange={value => set('accentColor', value)}
+          />
           <ColorField
             label='Background'
             value={look.backgroundColor}
+            fallback={defaults.backgroundColor}
             onChange={value => set('backgroundColor', value)}
           />
         </div>

@@ -40,7 +40,15 @@ import ChatDeepThinking from 'src/components/chat/ChatDeepThinking'
 
 const COMPLETION_POLL_MS = 2000
 
-const HEX_COLOR = /^#[0-9a-fA-F]{6}$/
+// #RRGGBB, or #RRGGBBAA with transparency
+const HEX_COLOR = /^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/
+
+// Dark text on a light accent, white on a dark one
+const textOn = hex => {
+  const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16))
+
+  return 0.299 * r + 0.587 * g + 0.114 * b > 150 ? '#1b1d31' : '#ffffff'
+}
 
 /**
  * The widget's look from the agent's chat settings: its theme, and its accent and background colours as theme tokens.
@@ -55,9 +63,12 @@ const widgetLook = settings => {
     style['--accent'] = settings.accentColor
     style['--accent-text'] = settings.accentColor
     style['--accent-soft'] = `color-mix(in srgb, ${settings.accentColor} 14%, transparent)`
+    style['--btn-bg'] = settings.accentColor
+    style['--accent-fg'] = textOn(settings.accentColor)
   }
   if (HEX_COLOR.test(settings.backgroundColor || '')) {
     style['--bg'] = settings.backgroundColor
+    style['--side-bg'] = settings.backgroundColor
     style['--surface'] = settings.backgroundColor
   }
 

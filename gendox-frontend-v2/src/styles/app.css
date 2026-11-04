@@ -312,6 +312,8 @@ fieldset.lock:disabled .btn { opacity: .5; pointer-events: none; }
 /* Deploy → Look and branding: the colour pickers */
 .look-color { width: 36px; height: 30px; padding: 2px; border: 1px solid var(--border-2); border-radius: var(--radius-sm); background: var(--surface); cursor: pointer; }
 .look-color:disabled { opacity: .6; cursor: default; }
+.look-hex { width: 120px; }
+.look-alpha { width: 80px; accent-color: var(--accent); }
 
 /* the comment asked for after a 👎, on its own line under the answer's buttons */
 .gc-acts .gc-feedback { flex-basis: 100%; gap: 6px; margin-top: 4px; }
