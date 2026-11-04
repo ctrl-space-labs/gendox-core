@@ -172,11 +172,13 @@ button.item:hover { background: var(--surface-2); }
 .eo-right .h .lucide:last-child { margin-left: auto; color: var(--text-3); }
 .eo-right .b { max-height: 260px; overflow-y: auto; padding: 2px 6px 8px; border-top: 1px solid var(--border); }
 .eo-right input[type=range] { width: 70px; accent-color: var(--accent); }
+.eo-legend { left: 10px; bottom: 22px; display: flex; flex-direction: column; gap: 3px; max-width: 180px; padding: 6px 8px; font-size: 11px; }
+.eo-legend i { display: block; width: 140px; height: 7px; border-radius: 4px; }
 .eo-hint { left: 50%; bottom: 34px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 12px; font-size: 13px; white-space: nowrap; }
 .eo-shot { left: 56px; bottom: 30px; width: 240px; overflow: hidden; }
 .eo-shot img { display: block; width: 100%; max-height: 140px; object-fit: cover; }
 .eo-msg { left: 50%; top: 10px; transform: translateX(-50%); max-width: calc(100% - 140px); display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 12px; font-size: 13px; }
-@container (max-width: 520px) { .eo-right { width: 200px; } .eo-panel { width: 220px; } }
+@container (max-width: 520px) { .eo-right { width: 200px; } .eo-panel { width: 220px; } .eo-legend { display: none; } }
 
 .eo-ed { display: flex; flex-direction: column; height: 100%; min-height: 0; container-type: inline-size; }
 .eo-ed .eo-bar { flex: none; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; padding: 6px 8px; border-bottom: 1px solid var(--border); }
@@ -295,3 +297,11 @@ fieldset.lock:disabled .btn { opacity: .5; pointer-events: none; }
 @media (max-width: 760px) { .int-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } .int-facts > div:nth-child(3) { border-left: 0; } .int-facts > div:nth-child(n+3) { border-top: 1px solid var(--border); } }
 .spend { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
 .page-t { font-weight: 500; overflow-wrap: anywhere; }
+
+/* Deploy → Look and branding: the colour pickers */
+.look-color { width: 36px; height: 30px; padding: 2px; border: 1px solid var(--border-2); border-radius: var(--radius-sm); background: var(--surface); cursor: pointer; }
+.look-color:disabled { opacity: .6; cursor: default; }
+
+/* the comment asked for after a 👎, on its own line under the answer's buttons */
+.gc-acts .gc-feedback { flex-basis: 100%; gap: 6px; margin-top: 4px; }
+.gc-acts .gc-feedback .input { flex: 1; min-width: 0; max-width: 420px; }

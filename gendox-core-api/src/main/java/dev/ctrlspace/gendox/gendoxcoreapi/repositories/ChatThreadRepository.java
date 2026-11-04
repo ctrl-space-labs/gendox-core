@@ -6,8 +6,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.querydsl.QuerydslPredicateExecutor;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
@@ -27,4 +31,10 @@ public interface ChatThreadRepository extends JpaRepository<ChatThread, UUID>, Q
     List<ChatThread> findByIdIn(List<UUID> threadIds);
 
     void deleteById(UUID id);
+
+    // Renames a thread only while it keeps its default name, so a name the user gave it is never overwritten
+    @Modifying
+    @Transactional
+    @Query("UPDATE ChatThread t SET t.name = :name WHERE t.id = :id AND t.name = :defaultName")
+    int renameIfStillNamed(@Param("id") UUID id, @Param("name") String name, @Param("defaultName") String defaultName);
 }

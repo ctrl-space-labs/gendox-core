@@ -12,6 +12,7 @@ import {
   recoverCompletion,
   selectChatSession,
   sendMessage,
+  setMessageFeedback,
   submitClientToolResult
 } from 'src/store/chat/gendoxChat'
 import {
@@ -39,6 +40,30 @@ import ChatDeepThinking from 'src/components/chat/ChatDeepThinking'
 
 const COMPLETION_POLL_MS = 2000
 
+const HEX_COLOR = /^#[0-9a-fA-F]{6}$/
+
+/**
+ * The widget's look from the agent's chat settings: its theme, and its accent and background colours as theme tokens.
+ * AUTO follows the visitor's device.
+ */
+const widgetLook = settings => {
+  if (!settings) return {}
+  const prefersDark = typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches
+  const theme = { LIGHT: 'light', DARK: 'dark', AUTO: prefersDark ? 'dark' : 'light' }[settings.theme]
+  const style = {}
+  if (HEX_COLOR.test(settings.accentColor || '')) {
+    style['--accent'] = settings.accentColor
+    style['--accent-text'] = settings.accentColor
+    style['--accent-soft'] = `color-mix(in srgb, ${settings.accentColor} 14%, transparent)`
+  }
+  if (HEX_COLOR.test(settings.backgroundColor || '')) {
+    style['--bg'] = settings.backgroundColor
+    style['--surface'] = settings.backgroundColor
+  }
+
+  return { theme, style }
+}
+
 const greetingTime = () => {
   const hour = new Date().getHours()
 
@@ -60,7 +85,8 @@ const greetingTime = () => {
  * @param deep - the Deep thinking switch
  * @param sources - the sources button under each answer
  * @param documentHref - (source) => link to a document inside the app; without it, documents show as quotes
- * @param poweredBy - true | 'small'
+ * @param poweredBy - true | 'small'; the agent's branding can make it small or take it away
+ * @param chatSettings, branding - the look to show instead of the agent's saved one (Deploy's live preview)
  * @param prefill - text put in the message box, e.g. "In “Returns policy”, "; set again to put it back
  * @param onNewThread, onOpenThread(thread), onClose - what the header buttons and the drawer do
  * @param chatKey - which chat in the store this one shows (several can be on screen at once); see useChatSession
@@ -77,6 +103,8 @@ const Chat = ({
   documentHref = null,
   footnote = 'Answers cite their sources. AI can make mistakes.',
   poweredBy = false,
+  chatSettings,
+  branding,
   placeholder,
   prefill,
   onNewThread,
@@ -364,6 +392,27 @@ const Chat = ({
   const groupedThreads = useMemo(() => groupThreadsByDate(threads || []), [threads])
   const lastTurnIndex = turns.length - 1
 
+  // the agent's chat settings (#527): welcome message, suggested questions and disclaimer everywhere,
+  // the theme and colours in the widget, and the "Powered by" line where the chat shows one
+  const look = chatSettings !== undefined ? chatSettings : agent?.chatSettings
+  const agentBranding = branding !== undefined ? branding : agent?.branding
+  const suggestions = (look?.suggestedQuestions || []).filter(Boolean)
+  const note = look?.disclaimer || footnote
+  const powered = poweredBy && agentBranding !== 'NONE' ? (agentBranding === 'SMALL' ? 'small' : poweredBy) : false
+  const { theme, style } = variant === 'widget' ? widgetLook(look) : {}
+
+  const handleFeedback = (answer, feedback, feedbackComment) =>
+    dispatch(
+      setMessageFeedback({
+        messageId: answer.messageId,
+        feedback,
+        feedbackComment,
+        previous: { feedback: answer.feedback ?? null, feedbackComment: answer.feedbackComment ?? null },
+        token,
+        chatKey
+      })
+    )
+
   // the answer being written: it shows itself, so no "Searching" under it
   const streamingAnswer = isStreaming && messages?.some(m => m.isStreaming && m.message?.trim())
 
@@ -389,6 +438,8 @@ const Chat = ({
     <ChatKeyContext.Provider value={chatKey}>
     <div
       className={`gc gc-${variant} ${isChatting ? 'chatting' : ''} ${isDragging ? 'dragover' : ''}`}
+      data-theme={theme}
+      style={style}
       {...dragHandlers}
     >
       {header && (
@@ -436,7 +487,9 @@ const Chat = ({
             <div className='gc-greet'>
               <Avatar name={agentName} seed={agent?.projectId} size='l' />
               <h1>
-                {variant === 'widget'
+                {look?.welcomeMessage
+                  ? look.welcomeMessage
+                  : variant === 'widget'
                   ? agentName
                     ? `Hi, I’m ${agentName}`
                     : 'Hi'
@@ -461,6 +514,7 @@ const Chat = ({
                 activeSourcesMessageId={sourcesMessageId}
                 onSources={sources ? openSources : null}
                 onAskAgain={isBusy ? null : text => send(text, [])}
+                onFeedback={handleFeedback}
                 unfinished={index === lastTurnIndex && !isBusy && !ACTIVE_COMPLETION_STATUSES.includes(completionStatus)}
               >
                 {index === lastTurnIndex ? progress : null}
@@ -472,6 +526,15 @@ const Chat = ({
       )}
 
       <div className='gc-foot'>
+        {greeting && suggestions.length > 0 && (
+          <div className='gc-suggest'>
+            {suggestions.map(question => (
+              <button key={question} type='button' disabled={!agent || isBusy} onClick={() => send(question, [])}>
+                {question}
+              </button>
+            ))}
+          </div>
+        )}
         <ChatComposer
           inputRef={inputRef}
           value={message}
@@ -486,10 +549,10 @@ const Chat = ({
           deepThinking={deepThinking}
           onDeepThinkingToggle={deep ? () => setDeepThinking(on => !on) : null}
         />
-        {footnote && <p className='gc-note'>{footnote}</p>}
-        {poweredBy && (
+        {note && <p className='gc-note'>{note}</p>}
+        {powered && (
           <a
-            className={`gc-powered ${poweredBy === 'small' ? 'small' : ''}`}
+            className={`gc-powered ${powered === 'small' ? 'small' : ''}`}
             href='https://gendox.dev'
             target='_blank'
             rel='noreferrer'
