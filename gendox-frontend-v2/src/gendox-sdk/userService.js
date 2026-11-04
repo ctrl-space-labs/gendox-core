@@ -60,7 +60,22 @@ const deactivateUserById = async (userId, token) => {
   })
 }
 
-const logoutUser = async (token) => {
+/**
+ * Update the signed-in user's own details
+ * @param profile - { firstName, lastName, phone }
+ * @param token
+ * @returns {Promise<axios.AxiosResponse<User>>}
+ */
+const updateProfile = async (profile, token) => {
+  return axios.put(apiRequests.updateProfile(), profile, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
+    }
+  })
+}
+
+const logoutUser = async token => {
   return axios.post(apiRequests.userLogout(), null, {
     headers: {
       'Content-Type': 'application/json',
@@ -72,6 +87,8 @@ const logoutUser = async (token) => {
 export default {
   getAllUsers,
   getPublicUsers,
+  deleteProfileCaches,
   deactivateUserById,
+  updateProfile,
   logoutUser
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { ArrowUpRight, LogOut, ShieldCheck } from 'lucide-react'
@@ -8,7 +8,8 @@ import useThemePreference from 'src/hooks/useThemePreference'
 import commonConfig from 'src/configs/common.config'
 import userService from 'src/gendox-sdk/userService'
 import { getErrorMessage } from 'src/utils/errorHandler'
-import { getToken } from 'src/components/agent/useAgent'
+import { getToken, useRefreshProfile } from 'src/components/agent/useAgent'
+import { formatDate } from 'src/components/knowledge/documentUtils'
 import { roleInOrganization, roleTitle } from 'src/components/agent/roles'
 import AppLayout from 'src/layouts/AppLayout'
 import Avatar from 'src/components/ui/Avatar'
@@ -24,8 +25,93 @@ const THEMES = [
   ['system', 'Match system']
 ]
 
+const detailsOf = user => ({ firstName: user.firstName ?? '', lastName: user.lastName ?? '', phone: user.phone ?? '' })
+
+// First name, last name and phone, saved with PUT profile; the email is the sign-in and stays as it is
+const DetailsForm = ({ user }) => {
+  const refreshProfile = useRefreshProfile()
+  const [fields, setFields] = useState(() => detailsOf(user))
+  const [isSaving, setIsSaving] = useState(false)
+
+  useEffect(() => {
+    setFields(detailsOf(user))
+  }, [user])
+
+  const set = (key, value) => setFields(f => ({ ...f, [key]: value }))
+  const changed = Object.keys(fields).some(key => fields[key].trim() !== detailsOf(user)[key])
+
+  const save = async () => {
+    setIsSaving(true)
+    try {
+      await userService.updateProfile(
+        Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, value.trim()])),
+        getToken()
+      )
+      await refreshProfile()
+      toast.success('Profile saved')
+    } catch (error) {
+      toast.error(`Couldn’t save your details. ${getErrorMessage(error)}`)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  return (
+    <div className='card card-b form'>
+      <fieldset className='lock' disabled={isSaving}>
+        <div className='form-grid'>
+          <div className='field'>
+            <label htmlFor='first-name'>First name</label>
+            <input
+              id='first-name'
+              className='input'
+              value={fields.firstName}
+              onChange={e => set('firstName', e.target.value)}
+            />
+          </div>
+          <div className='field'>
+            <label htmlFor='last-name'>Last name</label>
+            <input
+              id='last-name'
+              className='input'
+              value={fields.lastName}
+              onChange={e => set('lastName', e.target.value)}
+            />
+          </div>
+        </div>
+        <div className='form-grid'>
+          <div className='field'>
+            <label htmlFor='email'>Email</label>
+            <input id='email' className='input' value={user.email ?? ''} readOnly />
+            <span className='help'>The email you sign in with.</span>
+          </div>
+          <div className='field'>
+            <label htmlFor='phone'>Phone</label>
+            <input id='phone' className='input' value={fields.phone} onChange={e => set('phone', e.target.value)} />
+          </div>
+        </div>
+      </fieldset>
+      <div className='row'>
+        <span className='faint sm'>
+          {user.userName && (
+            <>
+              Username <span className='mono'>{user.userName}</span>
+            </>
+          )}
+          {user.userName && user.createdAt && ' · '}
+          {user.createdAt && `member since ${formatDate(user.createdAt)}`}
+        </span>
+        <span className='sp' />
+        <button aria-busy={isSaving} className='btn primary' disabled={!changed || isSaving} onClick={save}>
+          {isSaving ? 'Saving…' : 'Save'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 /**
- * The signed-in user: details from GET profile (read-only, as before), organizations, appearance, sign out,
+ * The signed-in user: details (PUT profile), organizations, appearance, sign out,
  * and deleting the account (PUT users/{id}/deactivate, then sign out).
  */
 const UserProfilePage = () => {
@@ -49,14 +135,6 @@ const UserProfilePage = () => {
     }
   }
 
-  const detail = (label, value) =>
-    value ? (
-      <>
-        <dt>{label}</dt>
-        <dd>{value}</dd>
-      </>
-    ) : null
-
   return (
     <main className='content' style={{ maxWidth: 1000 }}>
       <div className='scope-top'>
@@ -72,22 +150,7 @@ const UserProfilePage = () => {
             <h2>Your details</h2>
             <p>Shown to your team in member lists and conversations.</p>
           </header>
-          <div className='card'>
-            <div className='card-b'>
-              <dl className='kv'>
-                {detail('First name', user.firstName)}
-                {detail('Last name', user.lastName)}
-                {!user.firstName && !user.lastName && detail('Name', user.name)}
-                {detail('Email', user.email)}
-                {detail('Phone', user.phone)}
-              </dl>
-            </div>
-            {user.userName && (
-              <div className='card-f faint sm'>
-                Username <span className='mono'>{user.userName}</span>
-              </div>
-            )}
-          </div>
+          <DetailsForm user={user} />
         </section>
 
         <section className='sect'>
