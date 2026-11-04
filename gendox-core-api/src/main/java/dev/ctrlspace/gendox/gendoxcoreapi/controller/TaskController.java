@@ -26,8 +26,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
-
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskNodeTypeConstants;
 
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -73,6 +73,10 @@ public class TaskController {
     public Task createTask(@PathVariable UUID organizationId,
                            @PathVariable UUID projectId,
                            @RequestBody TaskDTO taskDTO) throws GendoxException {
+        if (taskDTO.getId() != null) {
+            throw new GendoxException("NEW_ENTITY_ID_MUST_BE_NULL", "A new entity cannot have an ID", HttpStatus.BAD_REQUEST);
+        }
+        requireTaskProject(taskDTO, projectId);
         return taskService.createTask(projectId, taskDTO);
     }
 
@@ -82,6 +86,20 @@ public class TaskController {
     public Task duplicateTask(@PathVariable UUID organizationId,
                               @PathVariable UUID projectId,
                               @RequestBody TaskDuplicateDTO taskDuplicateDTO) throws GendoxException {
+        Task original = taskService.getTaskById(taskDuplicateDTO.getTaskId());
+        if (!projectId.equals(original.getProjectId())) {
+            throw new GendoxException("TASK_NOT_FOUND", "Task not found in this project", HttpStatus.NOT_FOUND);
+        }
+        List<TaskNodeDTO> copiedNodes = new ArrayList<>();
+        if (taskDuplicateDTO.isKeepQuestions()) {
+            taskNodeService.getTaskNodesByType(original.getId(), TaskNodeTypeConstants.QUESTION).forEach(node ->
+                    copiedNodes.add(TaskNodeDTO.builder().nodeValue(node.getNodeValue()).build()));
+        }
+        if (taskDuplicateDTO.isKeepDocuments()) {
+            taskNodeService.getTaskNodesByType(original.getId(), TaskNodeTypeConstants.DOCUMENT).forEach(node ->
+                    copiedNodes.add(TaskNodeDTO.builder().documentId(node.getDocumentId()).nodeValue(node.getNodeValue()).build()));
+        }
+        taskNodeService.validateNodeDocumentsAccessible(copiedNodes, projectId);
         return taskService.duplicateTask(projectId, taskDuplicateDTO);
     }
 
@@ -131,6 +149,7 @@ public class TaskController {
                            @PathVariable UUID projectId,
                            @PathVariable UUID taskId,
                            @RequestBody TaskDTO taskDTO) throws GendoxException {
+        requireTaskProject(taskDTO, projectId);
         return taskService.updateTask(taskId, taskDTO);
     }
 
@@ -141,6 +160,9 @@ public class TaskController {
     public TaskNode createTaskNode(@PathVariable UUID organizationId,
                                    @PathVariable UUID projectId,
                                    @RequestBody TaskNodeDTO taskNodeDTO) throws GendoxException {
+        if (taskNodeDTO.getId() != null) {
+            throw new GendoxException("NEW_ENTITY_ID_MUST_BE_NULL", "A new entity cannot have an ID", HttpStatus.BAD_REQUEST);
+        }
         Task task = taskService.getTaskById(taskNodeDTO.getTaskId());
         if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
             throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
@@ -158,6 +180,11 @@ public class TaskController {
                                                @PathVariable UUID projectId,
                                                @RequestBody List<TaskNodeDTO> taskNodeDTOs) throws GendoxException {
 
+        for (TaskNodeDTO node : taskNodeDTOs) {
+            if (node.getId() != null) {
+                throw new GendoxException("NEW_ENTITY_ID_MUST_BE_NULL", "A new entity cannot have an ID", HttpStatus.BAD_REQUEST);
+            }
+        }
         // every node's task must belong to the project, not just the first one's. Should be just 1 task though
         for (UUID taskId : taskNodeDTOs.stream().map(TaskNodeDTO::getTaskId).distinct().toList()) {
             Task task = taskService.getTaskById(taskId);
@@ -281,6 +308,9 @@ public class TaskController {
     public TaskEdge createTaskEdge(@PathVariable UUID organizationId,
                                    @PathVariable UUID projectId,
                                    @RequestBody TaskEdgeDTO taskEdgeDTO) throws GendoxException {
+        if (taskEdgeDTO.getId() != null) {
+            throw new GendoxException("NEW_ENTITY_ID_MUST_BE_NULL", "A new entity cannot have an ID", HttpStatus.BAD_REQUEST);
+        }
         requireNodesInProject(List.of(taskEdgeDTO.getFromNodeId(), taskEdgeDTO.getToNodeId()), projectId);
         TaskEdge taskEdge = taskEdgeConverter.toEntity(taskEdgeDTO);
         return taskEdgeService.createTaskEdge(taskEdge);
@@ -462,4 +492,11 @@ public class TaskController {
             throw new GendoxException("TASK_NODE_NOT_IN_PROJECT", "One or more task nodes do not belong to the project", HttpStatus.FORBIDDEN);
         }
     }
+
+    private void requireTaskProject(TaskDTO taskDTO, UUID projectId) throws GendoxException {
+        if (taskDTO.getProjectId() != null && !projectId.equals(taskDTO.getProjectId())) {
+            throw new GendoxException("PROJECT_ID_MISMATCH", "Task project must match the path", HttpStatus.BAD_REQUEST);
+        }
+    }
+
 }

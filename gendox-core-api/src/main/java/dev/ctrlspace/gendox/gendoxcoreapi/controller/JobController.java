@@ -90,18 +90,13 @@ public class JobController {
             @RequestParam(value = "projectId", required = false) UUID projectIdFromRequest,
             @RequestBody(required = false) TimePeriodDTO timePeriodDTO
     ) throws GendoxException {
-        // TODO why there is a projectId and a projectIdFromRequest?? the API should be renamed to avoid confusion
-
-        // validation, only super admin can call the API without projectID
+        // Only a super admin may omit the projectId request parameter.
         if (projectIdFromRequest == null && !securityUtils.isSuperAdmin()) {
-            throw new GendoxException(
-                    "PROJECT_ID_REQUIRED",
-                    "Request param 'projectId' is required for this operation.",
-                    HttpStatus.BAD_REQUEST
-            );
-
+            throw new GendoxException("PROJECT_ID_REQUIRED", "Request param 'projectId' is required for this operation.", HttpStatus.BAD_REQUEST);
         }
-
+        if (projectIdFromRequest != null && !projectId.equals(projectIdFromRequest)) {
+            throw new GendoxException("PROJECT_ID_MISMATCH", "Project ID must match the path", HttpStatus.BAD_REQUEST);
+        }
         switch (jobName.toUpperCase()) {
             case AsyncExecutionTypes.SPLITTER:
                 jobService.executeSplitter(projectIdFromRequest, timePeriodDTO);

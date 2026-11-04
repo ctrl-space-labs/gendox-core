@@ -15,7 +15,6 @@ import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
-import rehypeRaw from "rehype-raw";
 import rehypeHighlight from "rehype-highlight";
 import rehypeKatex from "rehype-katex";
 import "highlight.js/styles/github.css"; // Import a highlight.js theme
@@ -80,7 +79,8 @@ const GendoxMarkdownRenderer = ({ markdownText, sxOverrides = {} }) => {
     <Box className="markdown-container" sx={getSx('container')}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
-        rehypePlugins={[rehypeRaw, rehypeKatex, rehypeHighlight]}
+        skipHtml
+        rehypePlugins={[rehypeKatex, rehypeHighlight]}
         components={{
           // Paragraphs rendered with MUI Typography
           p: ({ node, children, ...props }) => (

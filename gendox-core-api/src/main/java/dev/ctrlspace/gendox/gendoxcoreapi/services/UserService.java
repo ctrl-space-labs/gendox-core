@@ -114,6 +114,10 @@ public class UserService implements UserDetailsService {
         return userRepository.findAll(whereUserPredicate, pageable);
     }
 
+    public Optional<User> getOptionalById(UUID id) {
+        return userRepository.findById(id);
+    }
+
     public User getById(UUID id) throws GendoxException {
         return userRepository.findById(id)
                 .orElseThrow(() -> new GendoxException("USER_NOT_FOUND", "User not found with id: " + id, HttpStatus.NOT_FOUND));

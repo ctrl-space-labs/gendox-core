@@ -56,6 +56,7 @@ public class MessageLocalContextService {
 
         if (normalized.isEmpty()) return List.of();
 
+
         // Load docs in one query (and validate exist)
         List<DocumentInstance> docs = documentInstanceRepository.findAllById(normalized);
 

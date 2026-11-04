@@ -586,15 +586,13 @@ public class DocumentSectionService {
         return existingMetadata;
     }
 
+    @Transactional(rollbackOn = Exception.class)
     public void updateSectionsOrder(List<DocumentInstanceSectionOrderDTO> sectionOrderDTOs) throws GendoxException {
-
-        for (DocumentInstanceSectionOrderDTO sectionOrderDTO : sectionOrderDTOs) {
-            DocumentSectionMetadata metadata = this.getMetadataById(sectionOrderDTO.getDocumentSectionMetadataId());
-            metadata.setSectionOrder(sectionOrderDTO.getSectionOrder());
+        for (DocumentInstanceSectionOrderDTO order : sectionOrderDTOs) {
+            DocumentSectionMetadata metadata = getMetadataById(order.getDocumentSectionMetadataId());
+            metadata.setSectionOrder(order.getSectionOrder());
             documentSectionMetadataRepository.save(metadata);
         }
-
-
     }
 
     public void deleteSection(DocumentInstanceSection section) throws GendoxException {

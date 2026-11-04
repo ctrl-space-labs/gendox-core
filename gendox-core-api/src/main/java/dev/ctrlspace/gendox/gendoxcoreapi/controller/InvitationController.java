@@ -2,7 +2,10 @@ package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Invitation;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Organization;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.OrganizationRoleUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.UserOrganizationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.InvitationCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.SubscriptionValidationService;
@@ -28,12 +31,20 @@ public class InvitationController {
 
     private UserInvitationService userInvitationService;
     private SubscriptionValidationService subscriptionValidationService;
+    private final ProjectService projectService;
+    private final UserOrganizationService userOrganizationService;
+    private final SecurityUtils securityUtils;
 
     @Autowired
     public InvitationController(UserInvitationService userInvitationService,
-                                SubscriptionValidationService subscriptionValidationService) {
+                                SubscriptionValidationService subscriptionValidationService,
+                                ProjectService projectService,
+                                UserOrganizationService userOrganizationService, SecurityUtils securityUtils) {
         this.userInvitationService = userInvitationService;
         this.subscriptionValidationService = subscriptionValidationService;
+        this.projectService = projectService;
+        this.userOrganizationService = userOrganizationService;
+        this.securityUtils = securityUtils;
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_ADD_USERS', 'getRequestedOrgIdFromPathVariable')")
@@ -53,6 +64,9 @@ public class InvitationController {
     @GetMapping("/invitations/acceptance")
     public Invitation acceptInvitation(@RequestParam("email") String inviteeEmail,@RequestParam("token") String token) throws GendoxException {
 
+        if (token == null || token.isBlank()) {
+            throw new GendoxException("INVITATION_NOT_FOUND", "Invitation not found", HttpStatus.NOT_FOUND);
+        }
         return userInvitationService.acceptInvitation(inviteeEmail, token);
     }
 
@@ -67,12 +81,24 @@ public class InvitationController {
             throw new GendoxException("ORGANIZATION_ID_MISMATCH", "Organization id in path variable and in criteria do not match", HttpStatus.BAD_REQUEST);
         }
 
+        UUID inviterUserId = UUID.fromString(((UserProfile) authentication.getPrincipal()).getId());
+        if (invitation.getProjectId() == null || invitation.getUserRoleType() == null) {
+            throw new GendoxException("INVALID_INVITATION", "Project and role are required", HttpStatus.BAD_REQUEST);
+        }
+        projectService.validateProjectsBelongToOrganization(java.util.List.of(invitation.getProjectId()), invitation.getOrganizationId());
+        if (!securityUtils.canAccessProject(invitation.getProjectId(), "OP_ADD_PROJECT_MEMBERS")) {
+            throw new GendoxException("FORBIDDEN_PROJECT", "You cannot invite members to this project", HttpStatus.FORBIDDEN);
+        }
+        int invitedLevel = OrganizationRoleUtils.getRoleLevel(invitation.getUserRoleType().getName());
+        if (invitedLevel == 0 || (!securityUtils.isSuperAdmin() && invitedLevel > OrganizationRoleUtils.getRoleLevel(
+                userOrganizationService.getUserOrganizationRoleType(inviterUserId, invitation.getOrganizationId()).getName()))) {
+            throw new GendoxException("INSUFFICIENT_ROLE", "You cannot assign a role higher than your own", HttpStatus.FORBIDDEN);
+        }
         //check if the user is allowed to invite users
         if (!subscriptionValidationService.canInviteUsers(invitation.getOrganizationId())) {
             throw new GendoxException("USER_INVITATION_LIMIT_REACHED", "User has reached the limit of users that can be invited", HttpStatus.BAD_REQUEST);
         }
 
-        UUID inviterUserId = UUID.fromString(((UserProfile) authentication.getPrincipal()).getId());
         String inviterEmail = ((UserProfile) authentication.getPrincipal()).getEmail();
         return userInvitationService.inviteUser(
                 invitation.getInviteeEmail(),

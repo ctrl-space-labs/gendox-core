@@ -45,7 +45,7 @@ public class OrganizationConnectorController {
         List<OrganizationConnector> entities = organizationConnectorService.getAllByOrganizationId(organizationId);
         List<OrganizationConnectorDTO> dtos = new java.util.ArrayList<>(entities.size());
         for (OrganizationConnector entity : entities) {
-            dtos.add(organizationConnectorConverter.toDTO(entity));
+            dtos.add(organizationConnectorConverter.toPublicDTO(entity));
         }
         return dtos;
     }
@@ -64,7 +64,7 @@ public class OrganizationConnectorController {
     public OrganizationConnectorDTO getConnector(@PathVariable UUID organizationId,
                                                  @PathVariable String connectorType) throws GendoxException {
         OrganizationConnector entity = organizationConnectorService.getByOrganizationAndType(organizationId, connectorType);
-        return organizationConnectorConverter.toDTO(entity);
+        return organizationConnectorConverter.toPublicDTO(entity);
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_ORGANIZATION', 'getRequestedOrgIdFromPathVariable')")
@@ -83,7 +83,7 @@ public class OrganizationConnectorController {
                                                     @PathVariable String connectorType,
                                                     @RequestBody OrganizationConnectorDTO dto) throws GendoxException {
         OrganizationConnector saved = organizationConnectorService.upsert(organizationId, connectorType, dto);
-        return organizationConnectorConverter.toDTO(saved);
+        return organizationConnectorConverter.toPublicDTO(saved);
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_ORGANIZATION', 'getRequestedOrgIdFromPathVariable')")

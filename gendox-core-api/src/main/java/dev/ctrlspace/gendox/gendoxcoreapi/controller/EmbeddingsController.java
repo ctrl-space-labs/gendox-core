@@ -188,6 +188,21 @@ public class EmbeddingsController {
             throw new GendoxException("MAX_PAGE_SIZE_EXCEED", "Page size can't be more than 5", HttpStatus.BAD_REQUEST);
         }
 
+        securityUtils.requireThreadInProject(message.getThreadId(), UUID.fromString(projectId));
+        // Validate protected fields without replacing the supplied message or dropping its metadata.
+        UUID actorId = securityUtils.getUserId();
+        if ((message.getCreatedBy() != null && !message.getCreatedBy().equals(actorId))
+                || (message.getUpdatedBy() != null && !message.getUpdatedBy().equals(actorId))) {
+            throw new GendoxException("INVALID_MESSAGE_AUTHOR", "Message authorship must match the caller", HttpStatus.FORBIDDEN);
+        }
+        if (message.getRole() != null && !"user".equals(message.getRole())) {
+            throw new GendoxException("INVALID_MESSAGE_ROLE", "Search messages must have the user role", HttpStatus.BAD_REQUEST);
+        }
+        if (message.getLocalContexts() != null && !message.getLocalContexts().isEmpty()) {
+            securityUtils.requireDocumentsInProject(message.getLocalContexts().stream()
+                    .map(context -> context == null || context.getDocument() == null ? null : context.getDocument().getId())
+                    .toList(), UUID.fromString(projectId));
+        }
         message.setProjectId(UUID.fromString(projectId));
         message = messageService.createMessage(message);
 
@@ -219,6 +234,8 @@ public class EmbeddingsController {
                                                                     Authentication authentication,
                                                                     HttpServletRequest request) throws Exception {
 
+        securityUtils.requireThreadInProject(completionRequestDTO.getThreadId(), UUID.fromString(projectId));
+        securityUtils.requireDocumentsInProject(completionRequestDTO.getDocumentInstanceIds(), UUID.fromString(projectId));
         if (TOOL_ROLE.equals(completionRequestDTO.getRole())) {
             return postToolResult(completionRequestDTO, UUID.fromString(projectId), request);
         }

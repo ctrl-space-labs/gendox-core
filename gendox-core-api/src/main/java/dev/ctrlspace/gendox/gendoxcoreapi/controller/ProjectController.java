@@ -113,7 +113,12 @@ public class ProjectController {
 //            find user profile organization by organization id
             OrganizationUserDTO organizationUserDTO = userProfile.getOrganizations().stream().filter(org -> org.getId().equals(organizationId)).findFirst().orElseThrow(() -> new GendoxException("ORGANIZATION_NOT_FOUND", "Organization not found", HttpStatus.NOT_FOUND));
 //            add project ids to criteria
-            organizationUserDTO.getProjects().stream().map(ProjectOrganizationDTO::getId).forEach(projectId -> criteria.getProjectIdIn().add(projectId));
+            Set<String> authorizedIds = organizationUserDTO.getProjects().stream().map(ProjectOrganizationDTO::getId)
+                    .collect(java.util.stream.Collectors.toSet());
+            List<String> requested = criteria.getProjectIdIn();
+            criteria.setProjectIdIn(authorizedIds.stream()
+                    .filter(id -> requested == null || requested.isEmpty() || requested.contains(id)).toList());
+            if (criteria.getProjectIdIn().isEmpty()) return Page.empty(pageable);
 
         }
 

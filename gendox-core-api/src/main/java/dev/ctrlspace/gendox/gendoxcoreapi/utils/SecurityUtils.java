@@ -74,6 +74,33 @@ public class SecurityUtils {
     }
 
 
+    public boolean canAccessProject(UUID projectId, String authority) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return projectId != null && authentication != null && authentication.getPrincipal() instanceof UserProfile profile
+                && hasAuthority(profile, authority, AccessCriteria.builder().projectIds(Set.of(projectId.toString())).build());
+    }
+
+    public void requireThreadInProject(UUID threadId, UUID projectId) throws GendoxException {
+        if (threadId == null) return;
+        var thread = chatThreadRepository.findById(threadId).orElse(null);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UserProfile profile = authentication != null && authentication.getPrincipal() instanceof UserProfile p ? p : null;
+        boolean readable = profile != null && hasAuthority(profile, "OP_READ_DOCUMENT",
+                AccessCriteria.builder().projectIds(Set.of(projectId.toString())).build());
+        if (thread == null || !Boolean.TRUE.equals(thread.getActive()) || !projectId.equals(thread.getProjectId())
+                || (!readable && !(Boolean.TRUE.equals(thread.getPublicThread()) && isPublicProject(projectId.toString())))) {
+            throw new GendoxException("CHAT_THREAD_NOT_FOUND", "Chat thread not found", HttpStatus.NOT_FOUND);
+        }
+    }
+
+    public void requireDocumentsInProject(Collection<UUID> ids, UUID projectId) throws GendoxException {
+        if (ids != null && !ids.isEmpty()
+                && (projectId == null || ids.stream().anyMatch(Objects::isNull) || !documentInstanceRepository.areAllDocumentIdsInProjectsOrChats(
+                        ids.stream().distinct().toArray(UUID[]::new), new UUID[]{projectId}))) {
+            throw new GendoxException("DOCUMENT_NOT_IN_PROJECT", "Documents must belong to the selected project", HttpStatus.FORBIDDEN);
+        }
+    }
+
     public boolean isSuperAdmin() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Object principal = authentication != null ? authentication.getPrincipal() : null;

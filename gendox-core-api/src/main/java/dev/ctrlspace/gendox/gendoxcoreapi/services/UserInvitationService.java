@@ -23,8 +23,6 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -89,16 +87,15 @@ public class UserInvitationService {
     public Page<Invitation> getInvitationsByCriteria(InvitationCriteria criteria, Pageable pageable) {
         return invitationRepository.findAll(InvitationPredicate.build(criteria), pageable)
                 .map(invitation -> {
-                    invitation.setInvitationLink(
-                            frontendDomain + String.format(acceptUrlTemplate, invitation.getInviteeEmail(), invitation.getToken())
-                    );
+                    invitation.setInvitationLink(invitation.getToken() == null || invitation.getToken().isBlank() ? null :
+                            frontendDomain + String.format(acceptUrlTemplate, invitation.getInviteeEmail(), invitation.getToken()));
                     return invitation;
                 });
     }
 
     public Invitation getByInviteeEmailAndToken(String inviteeEmail, String token) throws GendoxException {
         return invitationRepository.findByInviteeEmailAndToken(inviteeEmail, token)
-                .orElseThrow(() -> new GendoxException("INVITATION_NOT_FOUND", "Invitation not found with email: " + inviteeEmail + " and token: " + token, HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new GendoxException("INVITATION_NOT_FOUND", "Invitation not found", HttpStatus.NOT_FOUND));
     }
 
 
@@ -150,37 +147,53 @@ public class UserInvitationService {
     }
 
     public Invitation acceptInvitation(String inviteeEmail, String token) throws GendoxException {
-
+        if (token == null || token.isBlank()) {
+            throw new GendoxException("INVITATION_NOT_FOUND", "Invitation not found", HttpStatus.NOT_FOUND);
+        }
         Invitation invitation = getByInviteeEmailAndToken(inviteeEmail, token);
-
-        //check if the user is allowed to accept the invitation
+        if (!isUnexpired(invitation) || !"PENDING".equals(invitation.getStatusType().getName())) {
+            throw new GendoxException("INVITATION_EXPIRED_OR_USED", "Invitation has expired or was already accepted", HttpStatus.BAD_REQUEST);
+        }
         if (!subscriptionValidationService.canInviteUsers(invitation.getOrganizationId())) {
             throw new GendoxException("USER_INVITATION_LIMIT_REACHED", "Please contact organization's administrator.", HttpStatus.BAD_REQUEST);
         }
-
         invitation.setStatusType(typeService.getEmailInvitationStatusByName("ACCEPTED"));
-
-        // if user exists, create user-organization. In case of user not existing, user will be created during signup
         Optional<User> invitedUser = userService.getOptionalByEmail(inviteeEmail);
-        if (invitedUser.isPresent() &&
-                !userOrganizationService.isUserOrganizationMember(invitedUser.get().getId(), invitation.getOrganizationId())) {
-
-            userService.evictUserProfileByUniqueIdentifier(userService.getUserIdentifier(invitedUser.get()));
-            userOrganizationService.createUserOrganization(invitedUser.get().getId(), invitation.getOrganizationId(), invitation.getUserRoleType().getName());
-
+        if (invitedUser.isPresent()) {
+            applyMemberships(invitation, invitedUser.get());
+            invitation.setToken("");
         }
-
-        if (invitedUser.isPresent() &&
-                !projectMemberService.isUserProjectMember(invitedUser.get().getId(), invitation.getProjectId())) {
-
-            userService.evictUserProfileByUniqueIdentifier(userService.getUserIdentifier(invitedUser.get()));
-            projectMemberService.createProjectMember(invitedUser.get().getId(), invitation.getProjectId());
-        }
-
+        // Accepted invitations for accounts that do not exist yet are completed during signup.
         return invitationRepository.save(invitation);
     }
 
+    /** Completes previously accepted invitations when the local account is first registered. */
+    public void completeAcceptedInvitations(User user) throws GendoxException {
+        if (user.getEmail() == null) return;
+        for (Invitation invitation : invitationRepository.lockAcceptedInvitations(user.getEmail())) {
+            if (!isUnexpired(invitation) || invitation.getToken() == null || invitation.getToken().isBlank()) continue;
+            if (!subscriptionValidationService.canInviteUsers(invitation.getOrganizationId())) {
+                throw new GendoxException("USER_INVITATION_LIMIT_REACHED", "Please contact organization's administrator.", HttpStatus.BAD_REQUEST);
+            }
+            applyMemberships(invitation, user);
+            invitation.setToken("");
+            invitationRepository.save(invitation);
+        }
+    }
 
+    private void applyMemberships(Invitation invitation, User user) throws GendoxException {
+        if (!userOrganizationService.isUserOrganizationMember(user.getId(), invitation.getOrganizationId())) {
+            userOrganizationService.createUserOrganization(user.getId(), invitation.getOrganizationId(), invitation.getUserRoleType().getName());
+        }
+        if (!projectMemberService.isUserProjectMember(user.getId(), invitation.getProjectId())) {
+            projectMemberService.createProjectMember(user.getId(), invitation.getProjectId());
+        }
+        userService.evictUserProfileByUniqueIdentifier(userService.getUserIdentifier(user));
+    }
+
+    private static boolean isUnexpired(Invitation invitation) {
+        return invitation.getExpiresAt() != null && invitation.getExpiresAt().isAfter(Instant.now());
+    }
 
     private void sendInvitationEmail(String inviterEmail, Invitation invitation, Organization organization) throws MessagingException {
         String emailHTML = getInvitationEmailContent(invitation, inviterEmail, organization.getName());

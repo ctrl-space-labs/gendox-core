@@ -22,7 +22,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-
 import java.util.*;
 
 @Service
@@ -77,6 +76,7 @@ public class TaskService {
 
     public Task createTask(UUID projectId, TaskDTO taskDTO) throws GendoxException {
         Task task = taskConverter.toEntity(taskDTO);
+        task.setProjectId(projectId);
         // defaults
         if (task.getMaxQuestionsPerBucket() == null) {
             task.setMaxQuestionsPerBucket(this.maxQuestionsPerBucket);
@@ -101,6 +101,7 @@ public class TaskService {
         return taskRepository.save(task);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public Task duplicateTask(UUID projectId, TaskDuplicateDTO taskDuplicateDTO) throws GendoxException {
         logger.debug("Duplicating task {} with options: keepQuestions={}, keepDocuments={}",
                 taskDuplicateDTO.getTaskId(), taskDuplicateDTO.isKeepQuestions(), taskDuplicateDTO.isKeepDocuments());
@@ -207,11 +208,6 @@ public class TaskService {
         Task existingTask = taskRepository.findById(taskId)
                 .orElseThrow(() -> new RuntimeException("Task not found for update"));
 
-
-        // Update projectId
-        if (taskDTO.getProjectId() != null) {
-            existingTask.setProjectId(taskDTO.getProjectId());
-        }
 
         // Update type
         if (taskDTO.getType() != null) {

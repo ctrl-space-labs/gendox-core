@@ -1,13 +1,9 @@
 package dev.ctrlspace.gendox.authentication;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Invitation;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Organization;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.InvitationCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.UserInvitationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.OrganizationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.UserInvitationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -16,8 +12,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.SneakyThrows;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
@@ -45,10 +39,8 @@ public class JwtUserRegistrationFilter extends OncePerRequestFilter {
     private final UserInvitationService userInvitationService;
 
     @Autowired
-    public JwtUserRegistrationFilter(UserService userService,
-                                     OrganizationService organizationService,
-                                     ProjectService projectService,
-                                     UserInvitationService userInvitationService) {
+    public JwtUserRegistrationFilter(UserService userService, OrganizationService organizationService,
+                                     ProjectService projectService, UserInvitationService userInvitationService) {
         this.userService = userService;
         this.organizationService = organizationService;
         this.projectService = projectService;
@@ -63,33 +55,19 @@ public class JwtUserRegistrationFilter extends OncePerRequestFilter {
             JwtAuthenticationToken jwtAuth = (JwtAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
             Jwt jwt = (Jwt) jwtAuth.getPrincipal();
 
-            String email = jwt.getClaimAsString("preferred_username");
-            Optional<User> userOptional = userService.getOptionalUserByUniqueIdentifier(email);
-            // first login, create user
+            UUID subject = UUID.fromString(jwt.getSubject());
+            Optional<User> userOptional = userService.getOptionalById(subject);
             if (userOptional.isEmpty()) {
-                logger.info("User with email {} not found in the database, registering a new user!", email);
                 User user = new User();
-                user.setId(UUID.fromString(jwt.getClaim("sub")));
+                user.setId(subject);
                 user.setFirstName(jwt.getClaimAsString("given_name"));
                 user.setLastName(jwt.getClaimAsString("family_name"));
-                user.setName(user.getFirstName() + " " + user.getLastName());
-                user.setEmail(email);
-                user.setUserName(email);
+                user.setName((user.getFirstName() == null ? "" : user.getFirstName()) + " "
+                        + (user.getLastName() == null ? "" : user.getLastName()));
+                user.setEmail(jwt.getClaimAsString("email"));
+                user.setUserName(jwt.getClaimAsString("preferred_username"));
                 user = userService.createUser(user);
-
-                Page<Invitation> invitations = userInvitationService.getInvitationsByCriteria(
-                        InvitationCriteria
-                                .builder()
-                                .email(email)
-                                .statusName("ACCEPTED")
-                                .build(),
-                        PageRequest.of(0, 100));
-
-                if (invitations.hasContent()) {
-                    for (Invitation invitation : invitations.getContent()) {
-                        userInvitationService.acceptInvitation(email, invitation.getToken());
-                    }
-                }
+                userInvitationService.completeAcceptedInvitations(user);
             }
         }
 

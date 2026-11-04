@@ -18,6 +18,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Component
@@ -45,8 +46,7 @@ public class JwtUserProfileConversionFilter extends OncePerRequestFilter {
             Jwt jwt = (Jwt) jwtAuth.getPrincipal();
 
             // Extract additional information to populate CustomUserDetails
-            String email = jwt.getClaimAsString("preferred_username");
-            UserProfile userProfile = userService.getUserProfileByUniqueIdentifier(email);
+            UserProfile userProfile = userService.getUserProfileByUserId(UUID.fromString(jwt.getSubject()));
             JwtDTO jwtDTO = jwtDTOUserProfileConverter.jwtDTO(userProfile);
             var authorities = jwtUtils.getAuthorities(jwtDTO).stream().map(SimpleGrantedAuthority::new).collect(Collectors.toList());
 

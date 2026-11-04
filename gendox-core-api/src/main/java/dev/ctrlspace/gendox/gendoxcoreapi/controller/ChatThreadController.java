@@ -105,8 +105,10 @@ public class ChatThreadController {
     @GetMapping("threads/{threadId}/message-metadata/{messageId}")
     @Operation(summary = "Get the messages metadata in a Thread",
             description = "Retrieve the messages metadata from a thread. Pagination is supported. The user should have the rights to access this chat.")
-    public List<MessageMetadataDTO> getThreadMessageMetadataByMessageId(@PathVariable UUID messageId) throws GendoxException {
-
+    public List<MessageMetadataDTO> getThreadMessageMetadataByMessageId(@PathVariable UUID threadId, @PathVariable UUID messageId) throws GendoxException {
+        if (!messageService.areAllMessagesInThread(threadId, List.of(messageId))) {
+            throw new GendoxException("MESSAGE_NOT_FOUND", "Message not found", HttpStatus.NOT_FOUND);
+        }
         return messageService.getAllMessagesMetadataByMessageId(messageId);
     }
 
