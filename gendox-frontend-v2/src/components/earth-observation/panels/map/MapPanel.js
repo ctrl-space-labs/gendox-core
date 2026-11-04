@@ -15,6 +15,7 @@ import EOMapView from './components/EOMapView'
 import DrawingToolbar, { DrawingHint } from './components/DrawingToolbar'
 import ScreenshotToolbar, { ScreenshotCard } from './components/ScreenshotToolbar'
 import LayersPanel from './components/LayersPanel'
+import MapLegend from './components/MapLegend'
 import ExportsPanel from './components/ExportsPanel'
 import GeometryInspector, { GeometryButton } from './components/GeometryInspector'
 
@@ -39,8 +40,7 @@ export default function MapPanel() {
     setLayersOpen
   } = useLayerControls()
 
-  const { isPanelCapturing, handlePanelScreenshot, handleMapReady } =
-    useMapScreenshot(panelRef)
+  const { isPanelCapturing, handlePanelScreenshot, handleMapReady } = useMapScreenshot(panelRef)
   const [shot, setShot] = useState(null) // { dataUrl, copied }: the last screenshot, until dismissed
 
   const { activeTool, pendingVertices, canFinish, handleMapClick, handleSelectTool, handleFinish, handleCancel } =
@@ -132,7 +132,12 @@ export default function MapPanel() {
         <ExportsPanel geeExports={geeExports} />
       </div>
 
-      {shot && <ScreenshotCard shot={shot} onDismiss={() => setShot(null)} />}
+      {/* the screenshot card takes the legend's corner while it is open */}
+      {shot ? (
+        <ScreenshotCard shot={shot} onDismiss={() => setShot(null)} />
+      ) : (
+        <MapLegend mapLayers={mapLayers} visibleLayers={visibleLayers} />
+      )}
 
       <DrawingHint
         activeTool={activeTool}

@@ -71,7 +71,7 @@ export function useGeeMessages({
       // Script ran successfully — add map layer and save the script to backend
       if (type === 'SUCCESS') {
         if (payload.url) {
-          dispatch(addMapLayer({ url: payload.url, name: payload.name || 'Layer' }))
+          dispatch(addMapLayer({ url: payload.url, name: payload.name || 'Layer', legend: payload.legend ?? null }))
         }
 
         if (organizationId && projectId && taskId && token) {

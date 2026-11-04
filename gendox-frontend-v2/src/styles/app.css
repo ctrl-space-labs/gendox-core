@@ -176,7 +176,10 @@ button.item:hover { background: var(--surface-2); }
 .eo-shot { left: 56px; bottom: 30px; width: 240px; overflow: hidden; }
 .eo-shot img { display: block; width: 100%; max-height: 140px; object-fit: cover; }
 .eo-msg { left: 50%; top: 10px; transform: translateX(-50%); max-width: calc(100% - 140px); display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 12px; font-size: 13px; }
-@container (max-width: 520px) { .eo-right { width: 200px; } .eo-panel { width: 220px; } }
+.eo-legend { left: 56px; bottom: 26px; width: 150px; padding: 6px 8px; font-size: 11px; color: var(--text-2); }
+.eo-legend .scale { display: block; height: 7px; margin: 4px 0 3px; border-radius: 4px; }
+.eo-legend .swatch { flex: none; width: 10px; height: 10px; border-radius: 3px; }
+@container (max-width: 520px) { .eo-right { width: 200px; } .eo-panel { width: 220px; } .eo-legend { display: none; } }
 
 .eo-ed { display: flex; flex-direction: column; height: 100%; min-height: 0; container-type: inline-size; }
 .eo-ed .eo-bar { flex: none; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; padding: 6px 8px; border-bottom: 1px solid var(--border); }
