@@ -151,7 +151,10 @@ const activeProjectSlice = createSlice({
   name: 'activeProject',
   initialState: initialActiveProjectState,
   reducers: {
-    // standard reducer logic, with auto-generated action types per reducer
+    // the project as a PUT returned it, so a save doesn't load it again
+    setProjectDetails: (state, action) => {
+      state.projectDetails = action.payload
+    }
   },
   extraReducers: builder => {
     builder
