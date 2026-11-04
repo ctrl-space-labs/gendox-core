@@ -42,15 +42,6 @@ public class OrganizationConnectorConverter
         return dto;
     }
 
-    public OrganizationConnectorDTO toPublicDTO(OrganizationConnector entity) throws GendoxException {
-        OrganizationConnectorDTO dto = toDTO(entity);
-        Map<String, Object> config = new java.util.LinkedHashMap<>();
-        dto.getConfig().forEach((key, value) -> config.put(key,
-                "GOOGLE_EARTH_ENGINE".equals(dto.getConnectorType()) && "projectId".equals(key) ? value : null));
-        dto.setConfig(config);
-        return dto;
-    }
-
     /**
      * Maps DTO scalar fields onto an entity. Does NOT resolve the connectorType
      * Type entity — the service is responsible for looking that up from

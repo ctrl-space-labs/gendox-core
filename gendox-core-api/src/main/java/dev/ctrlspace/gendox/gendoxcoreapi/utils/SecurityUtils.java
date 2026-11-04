@@ -74,12 +74,6 @@ public class SecurityUtils {
     }
 
 
-    public boolean canAccessProject(UUID projectId, String authority) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        return projectId != null && authentication != null && authentication.getPrincipal() instanceof UserProfile profile
-                && hasAuthority(profile, authority, AccessCriteria.builder().projectIds(Set.of(projectId.toString())).build());
-    }
-
     public void requireThreadInProject(UUID threadId, UUID projectId) throws GendoxException {
         if (threadId == null) return;
         var thread = chatThreadRepository.findById(threadId).orElse(null);

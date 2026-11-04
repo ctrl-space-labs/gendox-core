@@ -62,10 +62,10 @@ public class JwtUserRegistrationFilter extends OncePerRequestFilter {
                 user.setId(subject);
                 user.setFirstName(jwt.getClaimAsString("given_name"));
                 user.setLastName(jwt.getClaimAsString("family_name"));
-                user.setName((user.getFirstName() == null ? "" : user.getFirstName()) + " "
-                        + (user.getLastName() == null ? "" : user.getLastName()));
-                user.setEmail(jwt.getClaimAsString("email"));
-                user.setUserName(jwt.getClaimAsString("preferred_username"));
+                user.setName(user.getFirstName() + " " + user.getLastName());
+                String email = jwt.getClaimAsString("preferred_username");
+                user.setEmail(email);
+                user.setUserName(email);
                 user = userService.createUser(user);
                 userInvitationService.completeAcceptedInvitations(user);
             }

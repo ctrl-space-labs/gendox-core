@@ -113,7 +113,7 @@ class InvitationAndCreationSecurityTest {
         when(users.createUser(any())).thenAnswer(call -> call.getArgument(0));
         when(repository.lockAcceptedInvitations(invitation.getInviteeEmail())).thenReturn(List.of(invitation));
         when(limits.canInviteUsers(invitation.getOrganizationId())).thenReturn(true);
-        login(subject, invitation.getInviteeEmail(), false, "username-is-not-the-email", invitations);
+        login(subject, "different-email-claim@example.invalid", false, invitation.getInviteeEmail(), invitations);
         verify(users).getOptionalById(subject);
         verify(users, never()).getOptionalUserByUniqueIdentifier(any());
         verify(memberships).createUserOrganization(subject, invitation.getOrganizationId(), "ROLE_READER");

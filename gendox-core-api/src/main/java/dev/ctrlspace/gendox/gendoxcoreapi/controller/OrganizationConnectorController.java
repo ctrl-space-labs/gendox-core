@@ -3,17 +3,22 @@ package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.OrganizationConnectorConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.OrganizationConnector;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.OrganizationConnectorDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.AccessCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.OrganizationConnectorService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import io.micrometer.observation.annotation.Observed;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -22,12 +27,15 @@ public class OrganizationConnectorController {
 
     private final OrganizationConnectorService organizationConnectorService;
     private final OrganizationConnectorConverter organizationConnectorConverter;
+    private final SecurityUtils securityUtils;
 
     @Autowired
     public OrganizationConnectorController(OrganizationConnectorService organizationConnectorService,
-                                           OrganizationConnectorConverter organizationConnectorConverter) {
+                                           OrganizationConnectorConverter organizationConnectorConverter,
+                                           SecurityUtils securityUtils) {
         this.organizationConnectorService = organizationConnectorService;
         this.organizationConnectorConverter = organizationConnectorConverter;
+        this.securityUtils = securityUtils;
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
@@ -41,11 +49,17 @@ public class OrganizationConnectorController {
                     ObservabilityTags.LOG_METHOD_NAME, "true",
                     ObservabilityTags.LOG_ARGS, "false"
             })
-    public List<OrganizationConnectorDTO> getConnectors(@PathVariable UUID organizationId) throws GendoxException {
+    public List<OrganizationConnectorDTO> getConnectors(@PathVariable UUID organizationId, Authentication authentication) throws GendoxException {
+        boolean canReadSecrets = securityUtils.hasAuthority((UserProfile) authentication.getPrincipal(), "OP_UPDATE_ORGANIZATION",
+                AccessCriteria.builder().orgIds(Set.of(organizationId.toString())).build());
         List<OrganizationConnector> entities = organizationConnectorService.getAllByOrganizationId(organizationId);
         List<OrganizationConnectorDTO> dtos = new java.util.ArrayList<>(entities.size());
         for (OrganizationConnector entity : entities) {
-            dtos.add(organizationConnectorConverter.toPublicDTO(entity));
+            OrganizationConnectorDTO dto = organizationConnectorConverter.toDTO(entity);
+            if (!canReadSecrets && dto.getConfig().containsKey("apiKey")) {
+                dto.getConfig().remove("apiKey");
+            }
+            dtos.add(dto);
         }
         return dtos;
     }
@@ -62,9 +76,14 @@ public class OrganizationConnectorController {
                     ObservabilityTags.LOG_ARGS, "false"
             })
     public OrganizationConnectorDTO getConnector(@PathVariable UUID organizationId,
-                                                 @PathVariable String connectorType) throws GendoxException {
+                                                 @PathVariable String connectorType, Authentication authentication) throws GendoxException {
         OrganizationConnector entity = organizationConnectorService.getByOrganizationAndType(organizationId, connectorType);
-        return organizationConnectorConverter.toPublicDTO(entity);
+        OrganizationConnectorDTO dto = organizationConnectorConverter.toDTO(entity);
+        if (!securityUtils.hasAuthority((UserProfile) authentication.getPrincipal(), "OP_UPDATE_ORGANIZATION",
+                AccessCriteria.builder().orgIds(Set.of(organizationId.toString())).build()) && dto.getConfig().containsKey("apiKey")) {
+            dto.getConfig().remove("apiKey");
+        }
+        return dto;
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_ORGANIZATION', 'getRequestedOrgIdFromPathVariable')")
@@ -83,7 +102,7 @@ public class OrganizationConnectorController {
                                                     @PathVariable String connectorType,
                                                     @RequestBody OrganizationConnectorDTO dto) throws GendoxException {
         OrganizationConnector saved = organizationConnectorService.upsert(organizationId, connectorType, dto);
-        return organizationConnectorConverter.toPublicDTO(saved);
+        return organizationConnectorConverter.toDTO(saved);
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_ORGANIZATION', 'getRequestedOrgIdFromPathVariable')")

@@ -18,7 +18,6 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Component
@@ -46,7 +45,16 @@ public class JwtUserProfileConversionFilter extends OncePerRequestFilter {
             Jwt jwt = (Jwt) jwtAuth.getPrincipal();
 
             // Extract additional information to populate CustomUserDetails
-            UserProfile userProfile = userService.getUserProfileByUserId(UUID.fromString(jwt.getSubject()));
+            String email = jwt.getClaimAsString("preferred_username");
+            if (email == null || email.isBlank()) {
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "JWT preferred_username is required");
+                return;
+            }
+            UserProfile userProfile = userService.getUserProfileByUniqueIdentifier(email);
+            if (!jwt.getSubject().equals(userProfile.getId())) {
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "JWT subject does not match the user profile");
+                return;
+            }
             JwtDTO jwtDTO = jwtDTOUserProfileConverter.jwtDTO(userProfile);
             var authorities = jwtUtils.getAuthorities(jwtDTO).stream().map(SimpleGrantedAuthority::new).collect(Collectors.toList());
 

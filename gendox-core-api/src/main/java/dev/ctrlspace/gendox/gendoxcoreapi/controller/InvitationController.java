@@ -8,6 +8,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserOrganizationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.InvitationCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.AccessCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.SubscriptionValidationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserInvitationService;
 import jakarta.mail.MessagingException;
@@ -21,6 +22,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -86,7 +88,8 @@ public class InvitationController {
             throw new GendoxException("INVALID_INVITATION", "Project and role are required", HttpStatus.BAD_REQUEST);
         }
         projectService.validateProjectsBelongToOrganization(java.util.List.of(invitation.getProjectId()), invitation.getOrganizationId());
-        if (!securityUtils.canAccessProject(invitation.getProjectId(), "OP_ADD_PROJECT_MEMBERS")) {
+        if (!securityUtils.hasAuthority((UserProfile) authentication.getPrincipal(), "OP_ADD_PROJECT_MEMBERS",
+                AccessCriteria.builder().projectIds(Set.of(invitation.getProjectId().toString())).build())) {
             throw new GendoxException("FORBIDDEN_PROJECT", "You cannot invite members to this project", HttpStatus.FORBIDDEN);
         }
         int invitedLevel = OrganizationRoleUtils.getRoleLevel(invitation.getUserRoleType().getName());

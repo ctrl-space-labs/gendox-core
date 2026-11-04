@@ -220,15 +220,15 @@ class AuthorizationRegressionTest {
         JWTUtils jwtUtils = mock(JWTUtils.class); when(jwtUtils.getAuthorities(dto)).thenReturn(List.of());
         JwtUserProfileConversionFilter filter = new JwtUserProfileConversionFilter(users, converter, jwtUtils);
         UUID victimId = UUID.randomUUID();
-        when(users.getUserProfileByUserId(user)).thenReturn(profile);
+        when(users.getUserProfileByUniqueIdentifier(victimId.toString())).thenReturn(profile);
         Jwt jwt = Jwt.withTokenValue("review-only").header("alg", "RS256").subject(user.toString())
                 .claim("preferred_username", victimId.toString()).build();
         SecurityContextHolder.getContext().setAuthentication(new JwtAuthenticationToken(jwt));
         filter.doFilter(new MockHttpServletRequest(), new MockHttpServletResponse(), new MockFilterChain());
         UserProfile result = (UserProfile) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         assertEquals(user.toString(), result.getId());
-        verify(users).getUserProfileByUserId(user);
-        verify(users, never()).getUserProfileByUniqueIdentifier(any());
+        verify(users).getUserProfileByUniqueIdentifier(victimId.toString());
+        verify(users, never()).getUserProfileByUserId(any());
     }
 
     @Test void metadataRejectsAMessageOutsideTheAuthorizedThread() throws Exception {
@@ -308,8 +308,8 @@ class AuthorizationRegressionTest {
         OrganizationConnectorService service = mock(OrganizationConnectorService.class);
         when(service.getAllByOrganizationId(org)).thenReturn(List.of(connector));
         OrganizationConnectorController c = guarded(OrganizationConnectorController.class,
-                new OrganizationConnectorController(service, new OrganizationConnectorConverter(new com.fasterxml.jackson.databind.ObjectMapper())));
-        assertNull(c.getConnectors(org).getFirst().getConfig().get("apiKey"));
+                new OrganizationConnectorController(service, new OrganizationConnectorConverter(new com.fasterxml.jackson.databind.ObjectMapper()), security));
+        assertNull(c.getConnectors(org, SecurityContextHolder.getContext().getAuthentication()).getFirst().getConfig().get("apiKey"));
     }
 
 
@@ -420,26 +420,26 @@ class AuthorizationRegressionTest {
         MessageService messages = mock(MessageService.class); EmbeddingService embeddings = mock(EmbeddingService.class);
         EmbeddingsController controller = searchController(messages, embeddings);
         Message question = new Message(); question.setValue("question"); question.setRole("user");
-        question.setCreatedBy(user); question.setUpdatedBy(user); question.setName("existing-name");
+        UUID customAuthor = UUID.randomUUID(), customUpdater = UUID.randomUUID();
+        question.setCreatedBy(customAuthor); question.setUpdatedBy(customUpdater); question.setName("existing-name");
         question.setReasoningContent("existing metadata"); question.setAiModelId(UUID.randomUUID());
         when(messages.createMessage(same(question))).thenReturn(question);
         controller.findCloserSections(question, project.toString(), SecurityContextHolder.getContext().getAuthentication(),
                 request, PageRequest.of(0, 5));
         verify(messages).createMessage(same(question));
         verify(embeddings).findClosestSections(same(question), any(), any());
+        assertEquals(customAuthor, question.getCreatedBy());
+        assertEquals(customUpdater, question.getUpdatedBy());
         assertEquals("existing-name", question.getName());
         assertEquals("existing metadata", question.getReasoningContent());
         assertNotNull(question.getAiModelId());
         assertEquals(project, question.getProjectId());
     }
 
-    @Test void searchRejectsSpoofedAuthorshipRolesAndForeignAttachmentsBeforeSaving() throws Exception {
+    @Test void searchRejectsNonUserRolesAndForeignAttachmentsBeforeSaving() throws Exception {
         MessageService messages = mock(MessageService.class); EmbeddingService embeddings = mock(EmbeddingService.class);
         EmbeddingsController controller = searchController(messages, embeddings);
-        Message question = new Message(); question.setValue("question"); question.setCreatedBy(UUID.randomUUID());
-        assertThrows(GendoxException.class, () -> controller.findCloserSections(question, project.toString(),
-                SecurityContextHolder.getContext().getAuthentication(), request, PageRequest.of(0, 5)));
-        question.setCreatedBy(null); question.setRole("assistant");
+        Message question = new Message(); question.setValue("question"); question.setRole("assistant");
         assertThrows(GendoxException.class, () -> controller.findCloserSections(question, project.toString(),
                 SecurityContextHolder.getContext().getAuthentication(), request, PageRequest.of(0, 5)));
         question.setRole("user");
@@ -449,6 +449,58 @@ class AuthorizationRegressionTest {
         assertThrows(GendoxException.class, () -> controller.findCloserSections(question, project.toString(),
                 SecurityContextHolder.getContext().getAuthentication(), request, PageRequest.of(0, 5)));
         verifyNoInteractions(messages, embeddings);
+    }
+
+    @Test void readersKeepNonSecretConnectorConfiguration() throws Exception {
+        OrganizationConnector connector = new OrganizationConnector(); connector.setOrganizationId(org);
+        Type type = new Type(); type.setName("WEB_SCRAPE_FIRECRAWL"); connector.setConnectorType(type);
+        connector.setConfig("{\"apiKey\":\"test-secret\",\"projectId\":\"project-setting\",\"baseUrl\":\"https://example.invalid\",\"timeout\":30}");
+        OrganizationConnectorService service = mock(OrganizationConnectorService.class);
+        when(service.getAllByOrganizationId(org)).thenReturn(List.of(connector));
+        when(service.getByOrganizationAndType(org, "WEB_SCRAPE_FIRECRAWL")).thenReturn(connector);
+        OrganizationConnectorController controller = guarded(OrganizationConnectorController.class,
+                new OrganizationConnectorController(service, new OrganizationConnectorConverter(new com.fasterxml.jackson.databind.ObjectMapper()), security));
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        List<OrganizationConnectorDTO> responses = List.of(controller.getConnectors(org, authentication).getFirst(),
+                controller.getConnector(org, "WEB_SCRAPE_FIRECRAWL", authentication));
+        for (OrganizationConnectorDTO dto : responses) {
+            assertFalse(dto.getConfig().containsKey("apiKey"));
+            assertEquals("project-setting", dto.getConfig().get("projectId"));
+            assertEquals("https://example.invalid", dto.getConfig().get("baseUrl"));
+            assertEquals(30, dto.getConfig().get("timeout"));
+        }
+        assertTrue(connector.getConfig().contains("test-secret"));
+    }
+
+    @Test void settingsAdministratorsReceiveFullConnectorConfigurationOnReadAndWrite() throws Exception {
+        profile.getOrganizations().getFirst().setAuthorities(Set.of("OP_READ_DOCUMENT", "OP_UPDATE_ORGANIZATION"));
+        OrganizationConnector connector = new OrganizationConnector(); connector.setOrganizationId(org);
+        connector.setConfig("{\"apiKey\":\"test-secret\",\"region\":\"test-region\"}");
+        OrganizationConnectorService service = mock(OrganizationConnectorService.class);
+        when(service.getAllByOrganizationId(org)).thenReturn(List.of(connector));
+        when(service.getByOrganizationAndType(org, "WEB_SCRAPE_FIRECRAWL")).thenReturn(connector);
+        when(service.upsert(eq(org), eq("WEB_SCRAPE_FIRECRAWL"), any())).thenReturn(connector);
+        OrganizationConnectorController controller = guarded(OrganizationConnectorController.class,
+                new OrganizationConnectorController(service, new OrganizationConnectorConverter(new com.fasterxml.jackson.databind.ObjectMapper()), security));
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        for (OrganizationConnectorDTO dto : List.of(controller.getConnectors(org, authentication).getFirst(),
+                controller.getConnector(org, "WEB_SCRAPE_FIRECRAWL", authentication),
+                controller.upsertConnector(org, "WEB_SCRAPE_FIRECRAWL", new OrganizationConnectorDTO()))) {
+            assertEquals("test-secret", dto.getConfig().get("apiKey"));
+            assertEquals("test-region", dto.getConfig().get("region"));
+        }
+    }
+
+    @Test void organizationInvitationAuthorityDoesNotGrantAccessToEveryProject() throws Exception {
+        profile.getOrganizations().getFirst().setAuthorities(Set.of("OP_ADD_USERS", "OP_ADD_PROJECT_MEMBERS"));
+        UserInvitationService invitations = mock(UserInvitationService.class);
+        InvitationController controller = guarded(InvitationController.class, new InvitationController(invitations,
+                mock(SubscriptionValidationService.class), mock(ProjectService.class), mock(UserOrganizationService.class), security));
+        Invitation input = new Invitation(); input.setOrganizationId(org); input.setProjectId(UUID.randomUUID());
+        Type role = new Type(); role.setName("ROLE_READER"); input.setUserRoleType(role);
+        assertThrows(GendoxException.class, () -> controller.inviteUser(org.toString(), input,
+                SecurityContextHolder.getContext().getAuthentication()));
+        verifyNoInteractions(invitations);
     }
 
 }
