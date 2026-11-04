@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -79,7 +80,7 @@ public class ChatThreadNamingService {
                     .build();
 
             CompletionResponse response = aiModelUtils.getAiModelApiAdapterImpl(model.getApiType().getName())
-                    .askCompletion(List.of(message), INSTRUCTIONS, model, params, apiKey, List.of(), null, null);
+                    .askCompletion(new ArrayList<>(List.of(message)), INSTRUCTIONS, model, params, apiKey, List.of(), null, null);
             saveAuditLogs(response, project);
 
             String name = cleanName(response.getChoices().getFirst().getMessage().getContent());
