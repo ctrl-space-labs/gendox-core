@@ -120,4 +120,24 @@ class ProjectAgentServiceSkillsSyncTest {
                 () -> service.syncAgentSkills(incoming(existing, duplicate), persisted));
         assertEquals("SKILL_NAME_DUPLICATE", e.getErrorCode());
     }
+
+    @Test
+    void aGendoxSkillCanBeSwitchedOffThoughItIsReadOnly() throws GendoxException {
+        AgentSkill copy = copyOfSystemSkill("gendox-assistant");
+        persisted.getAgentSkills().add(copy);
+
+        service.syncAgentSkills(incoming(copy.toBuilder().enabled(false).build()), persisted);
+
+        assertFalse(copy.isSwitchedOn());
+    }
+
+    @Test
+    void aSkillSentWithoutTheSwitchKeepsItsState() throws GendoxException {
+        AgentSkill off = copyOfSystemSkill("info-card").toBuilder().enabled(false).build();
+        persisted.getAgentSkills().add(off);
+
+        service.syncAgentSkills(incoming(off.toBuilder().enabled(null).build()), persisted);
+
+        assertFalse(off.isSwitchedOn());
+    }
 }
