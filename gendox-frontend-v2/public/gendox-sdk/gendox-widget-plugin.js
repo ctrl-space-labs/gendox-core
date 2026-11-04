@@ -38,9 +38,10 @@
             max-width: calc(100vw - 2rem);
             max-height: calc(100dvh - 2rem);
         }
+        /* the bubble is the bare Gendox logo, at a launcher icon's size */
         .gendox-chat-closed {
-            width: 3.5rem;
-            height: 3.5rem;
+            width: 2rem;
+            height: 2rem;
         }
         /* the floating look, for the plugin's own container only (a host may give its own one, e.g. a panel) */
         .gendox-chat-container-position.gendox-chat-open {
@@ -48,9 +49,9 @@
             border: 1px solid rgba(20, 30, 60, 0.14);
             box-shadow: 0 24px 60px -20px rgba(20, 30, 60, 0.5);
         }
+        /* closed: the bubble is the bare logo, so no round clip or shadow around it */
         .gendox-chat-container-position.gendox-chat-closed {
-            border-radius: 50%;
-            box-shadow: 0 10px 30px -8px rgba(20, 30, 60, 0.45);
+            border-radius: 0;
         }
         /* phones: the open chat takes the whole screen */
         @media (max-width: 560px) {

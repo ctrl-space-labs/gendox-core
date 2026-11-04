@@ -385,6 +385,7 @@ select.input { appearance: none; padding-right: 32px; background: var(--bg) url(
 .toggle-row > div { flex: 1; min-width: 0; }
 .toggle-row b { font-weight: 500; display: flex; align-items: center; gap: 8px; }
 .toggle-row p { color: var(--text-2); font-size: 13px; margin-top: 2px; }
+.toggle-row > .pill-tabs { flex: none; } /* the choices keep their width; the description beside them wraps instead */
 .choice { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
 .choice label { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 14px 14px 14px 44px; border: 1px solid var(--border-2); border-radius: var(--radius); cursor: pointer; transition: border-color .15s, background .15s; }
 .choice label > .lucide, .choice label > .wp { position: absolute; left: 14px; top: 15px; color: var(--text-2); }
@@ -422,7 +423,7 @@ pre.code .k { color: var(--accent-text); } pre.code .s { color: var(--warn); }
 .list-h { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .menu-x { width: 28px; height: 28px; }
 .pill-tabs { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); }
-.pill-tabs button { height: 28px; padding: 0 12px; border: 0; border-radius: 999px; background: none; color: var(--text-2); font-size: 13px; font-weight: 500; cursor: pointer; }
+.pill-tabs button { height: 28px; padding: 0 12px; border: 0; border-radius: 999px; background: none; color: var(--text-2); font-size: 13px; font-weight: 500; white-space: nowrap; cursor: pointer; }
 .pill-tabs button.on { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.15); }
 .meter { display: flex; flex-direction: column; gap: 6px; }
 .meter .row b { font-weight: 550; }
