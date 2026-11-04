@@ -38,19 +38,27 @@ ALTER TABLE gendox_core.project_agent ADD COLUMN IF NOT EXISTS chat_settings jso
 
 
 -- ---------------------------------------------------------------------------
--- 4. Automatic chat thread names (#549)
---
--- The tokens of the call that names a new thread. Its own type, so it is not counted as a message
--- (organization_daily_usage counts COMPLETION_RESPONSE rows as messages).
+-- 4. Answer feedback: 👍 (1) or 👎 (-1) and an optional comment, set by whoever asked
 -- ---------------------------------------------------------------------------
-INSERT INTO gendox_core.types (type_category, name, description)
-SELECT 'AUDIT_LOG_TYPE', 'CHAT_THREAD_NAMING', 'Tokens used to name a new chat thread from its first question'
-WHERE NOT EXISTS (SELECT 1 FROM gendox_core.types
-                  WHERE type_category = 'AUDIT_LOG_TYPE' AND name = 'CHAT_THREAD_NAMING');
-
-
--- ---------------------------------------------------------------------------
--- 5. Answer feedback: 👍 (1) or 👎 (-1) and an optional comment, set by whoever asked
--- ---------------------------------------------------------------------------
-ALTER TABLE gendox_core.message ADD COLUMN IF NOT EXISTS feedback integer CHECK (feedback IN (-1, 1));
+ALTER TABLE gendox_core.message ADD COLUMN IF NOT EXISTS feedback integer;
+ALTER TABLE gendox_core.message ALTER COLUMN feedback TYPE integer;
 ALTER TABLE gendox_core.message ADD COLUMN IF NOT EXISTS feedback_comment text;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1
+                   FROM pg_constraint
+                   WHERE conrelid = 'gendox_core.message'::regclass
+                     AND conname = 'message_feedback_check') THEN
+        ALTER TABLE gendox_core.message ADD CONSTRAINT message_feedback_check CHECK (feedback IN (-1, 1));
+    END IF;
+END $$;
+
+
+-- ---------------------------------------------------------------------------
+-- 5. Remove the CHAT_THREAD_NAMING audit type, added in some development databases by an earlier draft
+--
+-- Naming a thread is now audited like any completion, so its rows become COMPLETION_RESPONSE.
+-- ---------------------------------------------------------------------------
+DELETE FROM gendox_core.types
+WHERE type_category = 'AUDIT_LOG_TYPE' AND name = 'CHAT_THREAD_NAMING';

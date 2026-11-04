@@ -32,7 +32,7 @@ public class ChatThreadNamingService {
     private static final Logger logger = LoggerFactory.getLogger(ChatThreadNamingService.class);
 
     public static final String DEFAULT_THREAD_NAME = "Chat Thread";
-    private static final String AUDIT_TYPE = "CHAT_THREAD_NAMING";
+    private static final String AUDIT_TYPE = "COMPLETION_RESPONSE";
     private static final int MAX_QUESTION_LENGTH = 2000;
     private static final int MAX_NAME_LENGTH = 60;
     private static final String INSTRUCTIONS = """
@@ -126,6 +126,7 @@ public class ChatThreadNamingService {
             return;
         }
         AuditLogs naming = auditLogsService.createDefaultAuditLogs(typeService.getAuditLogTypeByName(AUDIT_TYPE));
+        // TODO review this, probably the input tokens need to be saved separatly
         naming.setTokenCount((long) response.getUsage().getPromptTokens() + response.getUsage().getCompletionTokens());
         naming.setProjectId(project.getId());
         naming.setOrganizationId(project.getOrganizationId());
