@@ -9,8 +9,8 @@ import java.util.List;
  * @param welcomeMessage     the first thing visitors read
  * @param suggestedQuestions questions offered before the first message, sent with one click
  * @param theme              LIGHT, DARK or AUTO (the visitor's device)
- * @param accentColor        #RRGGBB
- * @param backgroundColor    #RRGGBB
+ * @param accentColor        #RRGGBB, or #RRGGBBAA with transparency
+ * @param backgroundColor    #RRGGBB, or #RRGGBBAA with transparency
  * @param bubbleText         the text beside the closed widget bubble
  * @param disclaimer         shown under the message box
  * @param branding           the "Powered by Gendox" line: STANDARD, SMALL or NONE; only Gendox sets NONE

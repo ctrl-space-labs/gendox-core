@@ -377,8 +377,8 @@ public class ProjectAgentService {
             throw new GendoxRuntimeException(HttpStatus.BAD_REQUEST, "INVALID_CHAT_THEME", "Theme must be LIGHT, DARK or AUTO");
         }
         for (String color : Arrays.asList(settings.accentColor(), settings.backgroundColor())) {
-            if (color != null && !color.matches("^#[0-9a-fA-F]{6}$")) {
-                throw new GendoxRuntimeException(HttpStatus.BAD_REQUEST, "INVALID_CHAT_COLOR", "Colours must be hex, such as #127A5B");
+            if (color != null && !color.matches("^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$")) {
+                throw new GendoxRuntimeException(HttpStatus.BAD_REQUEST, "INVALID_CHAT_COLOR", "Colours must be hex, such as #127A5B or #127A5B80");
             }
         }
         String branding = settings.branding();
