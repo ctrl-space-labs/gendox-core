@@ -7,8 +7,10 @@ import dev.ctrlspace.gendox.gendoxcoreapi.converters.UserConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.UserProfileConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AuditLogs;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectMember;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.UserOrganization;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserDetailsDTO;
@@ -35,7 +37,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -207,25 +208,38 @@ public class UserService implements UserDetailsService {
 
     }
 
+    /**
+     * Updates every editable field, including the ones that identify the account at login
+     * (email, user name, phone) and the user type that grants global roles. For super admins only;
+     * users editing themselves go through {@link #updateUserNames(User)}.
+     */
     public User updateUser(User user) throws GendoxException {
-        Instant now = Instant.now();
-
         User existingUser = this.getById(user.getId());
-        existingUser.setName(user.getName());
-        existingUser.setFirstName(user.getFirstName());
-        existingUser.setLastName(user.getLastName());
+        copyNames(user, existingUser);
         existingUser.setUserName(user.getUserName());
         existingUser.setEmail(user.getEmail());
         existingUser.setPhone(user.getPhone());
         existingUser.setUserType(user.getUserType());
-        existingUser.setUpdatedAt(now);
-        existingUser.setUserOrganizations(user.getUserOrganizations());
-        existingUser.setProjectMembers(user.getProjectMembers());
-        user = userRepository.save(existingUser);
+        existingUser.setUpdatedAt(Instant.now());
 
-        return user;
+        return userRepository.save(existingUser);
+    }
 
+    /**
+     * Updates only the user's display names, leaving the login identifiers and the user type as they are.
+     */
+    public User updateUserNames(User user) throws GendoxException {
+        User existingUser = this.getById(user.getId());
+        copyNames(user, existingUser);
+        existingUser.setUpdatedAt(Instant.now());
 
+        return userRepository.save(existingUser);
+    }
+
+    private void copyNames(User source, User target) {
+        target.setName(source.getName());
+        target.setFirstName(source.getFirstName());
+        target.setLastName(source.getLastName());
     }
 
     public User createDiscordUser(String author) throws GendoxException {
@@ -310,12 +324,14 @@ public class UserService implements UserDetailsService {
         return level;
     }
 
-    public void deactivateUserById(UUID userId, Authentication authentication) throws GendoxException {
+    public void deactivateUserById(UUID userId) throws GendoxException {
         // Fetch user by ID
         User user = getById(userId);
 
-        removeUserAssociations(user, authentication);
+        removeUserAssociations(user);
         deactivateUser(user);
+        // evict before clearing the data, the cache key is the user's identifier
+        evictUserProfileByUniqueIdentifier(getUserIdentifier(user));
         clearUserData(user);
         userRepository.save(user);
 
@@ -340,22 +356,15 @@ public class UserService implements UserDetailsService {
         user.setUpdatedAt(null);
     }
 
-    private void removeUserAssociations(User user,Authentication authentication) throws GendoxException {
-        UserProfile userProfile = (UserProfile) authentication.getPrincipal();
-        if (userProfile != null && userProfile.getOrganizations() != null) {
-            for (OrganizationUserDTO organization : userProfile.getOrganizations()) {
-                UUID organizationId = UUID.fromString(organization.getId());
+    private void removeUserAssociations(User user) throws GendoxException {
+        // Remove the deactivated user's own organization and project memberships
+        for (UserOrganization userOrganization : userOrganizationService.getUserOrganizationsByUserId(user.getId().toString())) {
+            UUID organizationId = userOrganization.getOrganization().getId();
 
-                // Remove user associations with organizations and projects
-                userOrganizationService.deleteUserOrganization(user.getId(), organizationId);
-
-                if (organization.getProjects() != null) {
-                    for (ProjectOrganizationDTO project : organization.getProjects()) {
-                        UUID projectId = UUID.fromString(project.getId());
-                        projectMemberService.removeMemberFromProject(projectId, user.getId());
-                    }
-                }
+            for (ProjectMember projectMember : projectMemberService.getProjectMembersByUserAndOrganization(user.getId(), organizationId)) {
+                projectMemberService.removeMemberFromProject(projectMember.getProject().getId(), user.getId());
             }
+            userOrganizationService.deleteUserOrganization(userOrganization);
         }
     }
 

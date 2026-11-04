@@ -7,6 +7,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.OrganizationUserD
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.AccessCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ChatThreadDocumentsRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ChatThreadRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceRepository;
@@ -39,6 +40,8 @@ import java.util.stream.Collectors;
 
 @Component("securityUtils")
 public class SecurityUtils {
+
+    private static final String READ_MEMBERS_AUTHORITY = "OP_READ_DOCUMENT";
 
     private final ChatThreadDocumentsRepository chatThreadDocumentsRepository;
     private final TaskRepository taskRepository;
@@ -160,6 +163,59 @@ public class SecurityUtils {
                 UserNamesConstants.GENDOX_AGENT.equals(
                         userProfile.getGlobalUserRoleType().getName()
                 );
+    }
+
+    /**
+     * Checks that the requested user is the caller, for actions a user may only take on their own account.
+     * A super admin is always allowed.
+     */
+    public boolean isCurrentUser(UUID userId) {
+        if (!(SecurityContextHolder.getContext().getAuthentication().getPrincipal() instanceof UserProfile userProfile)) {
+            return false;
+        }
+
+        if (isSuperAdmin(userProfile)) {
+            return true;
+        }
+
+        return userId.toString().equals(userProfile.getId());
+    }
+
+    /**
+     * Checks that a user search stays inside an organization or project whose members the caller can read,
+     * with the same authority as the organization and project members endpoints. A super admin is always
+     * allowed, so only a super admin can search across all users.
+     */
+    public boolean canSearchUsers(UserCriteria criteria) {
+        if (!(SecurityContextHolder.getContext().getAuthentication().getPrincipal() instanceof UserProfile userProfile)) {
+            return false;
+        }
+
+        if (isSuperAdmin(userProfile)) {
+            return true;
+        }
+
+        if (criteria.isFetchAll()) {
+            return false;
+        }
+
+        String organizationId = criteria.getOrganizationId();
+        String projectId = criteria.getProjectId();
+
+        // Without an organization or a project, the search would cover every user
+        if (organizationId == null && projectId == null) {
+            return false;
+        }
+
+        if (organizationId != null && !canAccessOrganizations(READ_MEMBERS_AUTHORITY, userProfile, Set.of(organizationId))) {
+            return false;
+        }
+
+        if (projectId != null && !canAccessProjects(READ_MEMBERS_AUTHORITY, userProfile, Set.of(projectId))) {
+            return false;
+        }
+
+        return true;
     }
 
     public boolean isOrganizationOwner() throws GendoxException {
