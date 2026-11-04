@@ -31,13 +31,10 @@ ALTER TABLE gendox_core.organizations ADD COLUMN IF NOT EXISTS tax_id varchar(64
 -- 3. How an agent's chat looks to the people who use it (#527), edited under Deploy
 --
 -- chat_settings: {welcomeMessage, suggestedQuestions[], theme, accentColor, backgroundColor,
---                 bubbleText, disclaimer}, shown by the website widget, the agent home and Try it.
--- branding: the "Powered by Gendox" line. NONE is a plan entitlement that only Gendox sets.
+--                 bubbleText, disclaimer, branding}, shown by the website widget, the agent home and Try it.
+-- branding is the "Powered by Gendox" line: STANDARD, SMALL or NONE. NONE is a plan entitlement only Gendox sets.
 -- ---------------------------------------------------------------------------
 ALTER TABLE gendox_core.project_agent ADD COLUMN IF NOT EXISTS chat_settings jsonb;
-
-ALTER TABLE gendox_core.project_agent ADD COLUMN IF NOT EXISTS branding varchar(16) NOT NULL DEFAULT 'STANDARD'
-    CHECK (branding IN ('STANDARD', 'SMALL', 'NONE'));
 
 
 -- ---------------------------------------------------------------------------
@@ -55,5 +52,5 @@ WHERE NOT EXISTS (SELECT 1 FROM gendox_core.types
 -- ---------------------------------------------------------------------------
 -- 5. Answer feedback: 👍 (1) or 👎 (-1) and an optional comment, set by whoever asked
 -- ---------------------------------------------------------------------------
-ALTER TABLE gendox_core.message ADD COLUMN IF NOT EXISTS feedback smallint CHECK (feedback IN (-1, 1));
+ALTER TABLE gendox_core.message ADD COLUMN IF NOT EXISTS feedback integer CHECK (feedback IN (-1, 1));
 ALTER TABLE gendox_core.message ADD COLUMN IF NOT EXISTS feedback_comment text;

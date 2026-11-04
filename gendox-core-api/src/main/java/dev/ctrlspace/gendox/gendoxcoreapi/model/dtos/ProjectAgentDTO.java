@@ -51,7 +51,6 @@ public class ProjectAgentDTO {
     private String advancedSearchMode;
     private Boolean autoDigitization;
     private ChatSettings chatSettings;
-    private String branding;
     private List<AiTools> aiTools = new ArrayList<>();
     // null means "leave the agent's skills as they are", so clients that don't know about skills can't wipe them
     private List<AgentSkill> agentSkills;

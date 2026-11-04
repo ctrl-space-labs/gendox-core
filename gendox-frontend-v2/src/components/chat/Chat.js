@@ -86,7 +86,7 @@ const greetingTime = () => {
  * @param sources - the sources button under each answer
  * @param documentHref - (source) => link to a document inside the app; without it, documents show as quotes
  * @param poweredBy - true | 'small'; the agent's branding can make it small or take it away
- * @param chatSettings, branding - the look to show instead of the agent's saved one (Deploy's live preview)
+ * @param chatSettings - the look to show instead of the agent's saved one (Deploy's live preview)
  * @param prefill - text put in the message box, e.g. "In “Returns policy”, "; set again to put it back
  * @param onNewThread, onOpenThread(thread), onClose - what the header buttons and the drawer do
  * @param chatKey - which chat in the store this one shows (several can be on screen at once); see useChatSession
@@ -104,7 +104,6 @@ const Chat = ({
   footnote = 'Answers cite their sources. AI can make mistakes.',
   poweredBy = false,
   chatSettings,
-  branding,
   placeholder,
   prefill,
   onNewThread,
@@ -395,7 +394,7 @@ const Chat = ({
   // the agent's chat settings (#527): welcome message, suggested questions and disclaimer everywhere,
   // the theme and colours in the widget, and the "Powered by" line where the chat shows one
   const look = chatSettings !== undefined ? chatSettings : agent?.chatSettings
-  const agentBranding = branding !== undefined ? branding : agent?.branding
+  const agentBranding = look?.branding
   const suggestions = (look?.suggestedQuestions || []).filter(Boolean)
   const note = look?.disclaimer || footnote
   const powered = poweredBy && agentBranding !== 'NONE' ? (agentBranding === 'SMALL' ? 'small' : poweredBy) : false
