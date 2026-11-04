@@ -103,9 +103,9 @@ public class ProjectAgentService {
     }
 
     /**
-     * Gets the agent that the Document is connected to.
-     * * It first check in project documents
-     * * and then in chat thread documents
+     *  Gets the agent that the Document is connected to.
+     *  * It first check in project documents
+     *  * and then in chat thread documents
      *
      * @param documentId
      * @return
@@ -359,7 +359,7 @@ public class ProjectAgentService {
     /**
      * Sync AI-Tools between the incoming ProjectAgent (source) and the
      * already-persisted ProjectAgent (target).
-     * <p>
+     *
      * 1. Update tools whose id exists on both sides.
      * 2. Remove tools that exist only on target.
      * 3. Add tools that exist only on source (id == null *or* id not on target).
@@ -434,9 +434,6 @@ public class ProjectAgentService {
 
             if (managed != null) {
                 keepIds.add(id);
-                if (incoming.getEnabled() != null) {
-                    managed.setEnabled(incoming.getEnabled());
-                }
                 if (managed.getSkillId() != null) {
                     if (incoming.getContent() != null && !incoming.getContent().equals(managed.getContent())) {
                         throw new GendoxException("SKILL_READ_ONLY",
@@ -460,7 +457,6 @@ public class ProjectAgentService {
                         .name(librarySkill.getName())
                         .description(librarySkill.getDescription())
                         .content(librarySkill.getContent())
-                        .enabled(incoming.isSwitchedOn())
                         .build();
             } else {
                 SkillMarkdownParser.ParsedSkill parsed = skillService.parse(incoming.getContent());
@@ -468,7 +464,6 @@ public class ProjectAgentService {
                         .name(parsed.name())
                         .description(parsed.description())
                         .content(parsed.content())
-                        .enabled(incoming.isSwitchedOn())
                         .build();
             }
             created.setAgent(target);
