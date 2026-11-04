@@ -36,6 +36,18 @@ public interface AiModelRepository extends JpaRepository<AiModel, UUID>, Queryds
     @Query("SELECT a FROM AiModel a WHERE (a.organizationId = :organizationId or a.organizationId is null) and a.isActive = true")
     List<AiModel> findAllActiveModelsByOrganizationId(@Param("organizationId") UUID organizationId);
 
+    // With what a completion call reads, for callers outside a transaction
+    @EntityGraph(attributePaths = { "aiModelProvider", "modelTierType", "aiModelType", "apiType" })
+    @Query("SELECT a FROM AiModel a WHERE a.id = :id")
+    Optional<AiModel> findWithDetailsById(@Param("id") UUID id);
+
+    @EntityGraph(attributePaths = { "aiModelProvider", "modelTierType", "aiModelType", "apiType" })
+    @Query("SELECT a FROM AiModel a WHERE a.aiModelProvider.id = :providerId and a.aiModelType.name = 'COMPLETION_MODEL' " +
+            "and a.isActive = true and (a.organizationId = :organizationId or a.organizationId is null) " +
+            "ORDER BY a.price ASC NULLS LAST, a.name ASC")
+    List<AiModel> findActiveCompletionModelsByProviderCheapestFirst(@Param("providerId") UUID providerId,
+                                                                    @Param("organizationId") UUID organizationId);
+
 
 
 }

@@ -28,6 +28,9 @@ const projectToAgent = (project) => {
     fullName: projectAgent.agentName || 'Unknown Agent',
     role: "Agent",
     description: project.description || '',
+    // how the chat looks (welcome message, suggested questions, theme, colours, disclaimer) and its branding
+    chatSettings: projectAgent.chatSettings || null,
+    branding: projectAgent.branding || 'STANDARD',
   };
 };
 
@@ -73,7 +76,9 @@ const gendoxMessageToThreadMessage = (message) => {
     toolCallId: message.toolCallId,
     toolCalls: message.toolCalls,
     attachments: message.attachments || [],
-    reasoningContent: message.reasoningContent || null
+    reasoningContent: message.reasoningContent || null,
+    feedback: message.feedback ?? null,
+    feedbackComment: message.feedbackComment || null
   };
 };
 
