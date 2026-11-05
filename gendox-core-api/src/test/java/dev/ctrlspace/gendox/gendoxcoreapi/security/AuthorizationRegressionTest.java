@@ -347,12 +347,12 @@ class AuthorizationRegressionTest {
     @Test void apiKeysAndSuperAdminsKeepProjectLevelThreadAccess() {
         UUID thread = UUID.randomUUID();
         SecurityContextHolder.getContext().setAuthentication(new ApiKeyAuthenticationToken(profile, "key", List.of()));
-        assertTrue(security.isThreadMemberOrApiKey(thread));
+        assertTrue(security.hasThreadMemberAccess(thread));
         Type admin = new Type(); admin.setName("GENDOX_SUPER_ADMIN"); profile.setGlobalUserRoleType(admin);
         SecurityContextHolder.getContext().setAuthentication(new GendoxAuthenticationToken(profile, null, List.of()));
-        assertTrue(security.isThreadMemberOrApiKey(thread));
+        assertTrue(security.hasThreadMemberAccess(thread));
         SecurityContextHolder.clearContext();
-        assertFalse(security.isThreadMemberOrApiKey(thread));
+        assertFalse(security.hasThreadMemberAccess(thread));
     }
 
     @Test void authorizedAttachmentIsStillBuiltAndUnknownDocumentsAreRejected() throws Exception {

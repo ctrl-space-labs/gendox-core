@@ -307,7 +307,7 @@ public class EmbeddingsController {
         return respond(toolResult.isStream(), true, question, listener -> completionService.resumeCompletionSearch(turn, listener));
     }
 
-    @PreAuthorize("(@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable') && @securityUtils.isThreadMemberOrApiKey(#threadId)) || @securityUtils.isPublicThread(#threadId)")
+    @PreAuthorize("(@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable') && @securityUtils.hasThreadMemberAccess(#threadId)) || @securityUtils.isPublicThread(#threadId)")
     @GetMapping("/threads/{threadId}/completion-status")
     @Operation(summary = "Get the status of a thread's latest chat turn",
             description = "IDLE, GENERATING or WAITING_FOR_TOOLS, with the calls a waiting turn needs results for. " +

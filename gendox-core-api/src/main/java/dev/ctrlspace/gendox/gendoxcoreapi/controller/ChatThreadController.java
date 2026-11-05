@@ -47,7 +47,7 @@ public class ChatThreadController {
         this.messageService = messageService;
     }
 
-    @PreAuthorize("(@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable') && @securityUtils.isThreadMemberOrApiKey(#threadId))")
+    @PreAuthorize("(@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable') && @securityUtils.hasThreadMemberAccess(#threadId))")
     @GetMapping("threads/{threadId}")
     @Operation(summary = "Get Chat Thread by ID",
             description = "Retrieve the Chat Thread details by its unique ID. The user must have the appropriate permissions to access this.")
@@ -81,7 +81,7 @@ public class ChatThreadController {
         return chatThreadService.getAllChatThreads(criteria, pageable);
     }
 
-    @PreAuthorize("(@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable') && @securityUtils.isThreadMemberOrApiKey(#threadId)) " +
+    @PreAuthorize("(@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable') && @securityUtils.hasThreadMemberAccess(#threadId)) " +
             "|| @securityUtils.isPublicThread(#threadId)")
     @GetMapping("threads/{threadId}/messages")
     @Operation(summary = "Get the messages in a Thread",
@@ -101,7 +101,7 @@ public class ChatThreadController {
         return messageService.getAllMessagesByCriteria(criteria, pageable);
     }
 
-    @PreAuthorize("(@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable') && @securityUtils.isThreadMemberOrApiKey(#threadId))")
+    @PreAuthorize("(@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable') && @securityUtils.hasThreadMemberAccess(#threadId))")
     @GetMapping("threads/{threadId}/message-metadata/{messageId}")
     @Operation(summary = "Get the messages metadata in a Thread",
             description = "Retrieve the messages metadata from a thread. Pagination is supported. The user should have the rights to access this chat.")
@@ -112,20 +112,20 @@ public class ChatThreadController {
         return messageService.getAllMessagesMetadataByMessageId(messageId);
     }
 
-    @PreAuthorize("(@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable') && @securityUtils.isThreadMemberOrApiKey(#threadId))")
+    @PreAuthorize("(@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable') && @securityUtils.hasThreadMemberAccess(#threadId))")
     @PutMapping("/organizations/{organizationId}/threads/{threadId}")
     public ChatThread updateChatThread(@PathVariable UUID organizationId, @PathVariable UUID threadId, @RequestBody ChatThreadDTO chatThreadDTO) throws GendoxException {
 
         return chatThreadService.updateChatThread(threadId, chatThreadDTO);
     }
 
-    @PreAuthorize("(@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable') && @securityUtils.isThreadMemberOrApiKey(#threadId))")
+    @PreAuthorize("(@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable') && @securityUtils.hasThreadMemberAccess(#threadId))")
     @DeleteMapping("/organizations/{organizationId}/threads/{threadId}")
     public void deActiveChatThread(@PathVariable UUID organizationId, @PathVariable UUID threadId) throws GendoxException {
         chatThreadService.deActiveChatThread(threadId);
     }
 
-    @PreAuthorize("(@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable') && @securityUtils.isThreadMemberOrApiKey(#threadId)) " +
+    @PreAuthorize("(@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable') && @securityUtils.hasThreadMemberAccess(#threadId)) " +
             "|| @securityUtils.isPublicThread(#threadId)")
     @PostMapping("/organizations/{organizationId}/threads/{threadId}/messages/attachments")
     @Operation(summary = "Get attachments for messages (batch)",

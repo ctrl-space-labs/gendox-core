@@ -82,7 +82,7 @@ public class SecurityUtils {
         UserProfile profile = authentication != null && authentication.getPrincipal() instanceof UserProfile p ? p : null;
         boolean readable = profile != null && hasAuthority(profile, "OP_READ_DOCUMENT",
                 AccessCriteria.builder().projectIds(Set.of(projectId.toString())).build())
-                && isThreadMemberOrApiKey(threadId);
+                && hasThreadMemberAccess(threadId);
         if (thread == null || !Boolean.TRUE.equals(thread.getActive()) || !projectId.equals(thread.getProjectId())
                 || (!readable && !(Boolean.TRUE.equals(thread.getPublicThread()) && isPublicProject(projectId.toString())))) {
             throw new GendoxException("CHAT_THREAD_NOT_FOUND", "Chat thread not found", HttpStatus.NOT_FOUND);
@@ -669,7 +669,7 @@ public class SecurityUtils {
      * for them. API keys work for the whole organization, so they keep the project rule of hasAuthority, and a
      * super admin is always allowed. Used together with hasAuthority, never instead of it.
      */
-    public boolean isThreadMemberOrApiKey(UUID threadId) {
+    public boolean hasThreadMemberAccess(UUID threadId) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication instanceof ApiKeyAuthenticationToken) {
             return true;
