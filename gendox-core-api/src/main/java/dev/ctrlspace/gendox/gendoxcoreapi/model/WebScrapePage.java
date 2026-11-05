@@ -50,6 +50,8 @@ public class WebScrapePage {
     @Basic
     @Column(name = "last_scraped_at")
     private Instant lastScrapedAt;
+    @Column(name = "last_failed_at")
+    private Instant lastFailedAt;
     @Basic
     @Column(name = "error_message")
     private String errorMessage;
@@ -198,16 +200,23 @@ public class WebScrapePage {
         this.updatedBy = updatedBy;
     }
 
+    public Instant getLastFailedAt() {
+        return lastFailedAt;
+    }
+
+    public void setLastFailedAt(Instant lastFailedAt) {
+        this.lastFailedAt = lastFailedAt;
+    }
 
     @Override
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
         WebScrapePage that = (WebScrapePage) o;
-        return Objects.equals(id, that.id) && Objects.equals(integrationId, that.integrationId) && Objects.equals(url, that.url) && Objects.equals(title, that.title) && Objects.equals(isSelected, that.isSelected) && Objects.equals(status, that.status) && Objects.equals(contentHash, that.contentHash) && Objects.equals(documentInstanceId, that.documentInstanceId) && Objects.equals(discoveredAt, that.discoveredAt) && Objects.equals(lastCrawledAt, that.lastCrawledAt) && Objects.equals(lastScrapedAt, that.lastScrapedAt) && Objects.equals(errorMessage, that.errorMessage) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy);
+        return Objects.equals(id, that.id) && Objects.equals(integrationId, that.integrationId) && Objects.equals(url, that.url) && Objects.equals(title, that.title) && Objects.equals(isSelected, that.isSelected) && Objects.equals(status, that.status) && Objects.equals(contentHash, that.contentHash) && Objects.equals(documentInstanceId, that.documentInstanceId) && Objects.equals(discoveredAt, that.discoveredAt) && Objects.equals(lastCrawledAt, that.lastCrawledAt) && Objects.equals(lastScrapedAt, that.lastScrapedAt) && Objects.equals(lastFailedAt, that.lastFailedAt) && Objects.equals(errorMessage, that.errorMessage) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, integrationId, url, title, isSelected, status, contentHash, documentInstanceId, discoveredAt, lastCrawledAt, lastScrapedAt, errorMessage, createdAt, updatedAt, createdBy, updatedBy);
+        return Objects.hash(id, integrationId, url, title, isSelected, status, contentHash, documentInstanceId, discoveredAt, lastCrawledAt, lastScrapedAt, lastFailedAt, errorMessage, createdAt, updatedAt, createdBy, updatedBy);
     }
 }

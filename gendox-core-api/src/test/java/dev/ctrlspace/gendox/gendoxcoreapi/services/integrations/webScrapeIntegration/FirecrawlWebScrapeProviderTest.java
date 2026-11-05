@@ -5,6 +5,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.integrations.webScrape.WebC
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.integrations.webScrape.WebPageContentDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.integrations.webScrape.WebScrapeTargetDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.CryptographyUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.WebScrapeConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ClassPathResource;
@@ -12,6 +13,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.test.web.client.ExpectedCount;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestTemplate;
 
@@ -103,7 +105,7 @@ class FirecrawlWebScrapeProviderTest {
                 () -> provider.scrape(target(), "https://docs.gendox.dev/does-not-exist"));
 
         server.verify();
-        assertEquals("WEB_SCRAPE_PAGE_FAILED", exception.getErrorCode());
+        assertEquals(WebScrapeConstants.ErrorCodes.PAGE_NOT_FOUND, exception.getErrorCode());
     }
 
     @Test
@@ -157,5 +159,39 @@ class FirecrawlWebScrapeProviderTest {
         } catch (Exception e) {
             throw new IllegalStateException("Could not read test fixture: " + path, e);
         }
+    }
+
+    @Test
+    void scrape_triesAgainWhenFirecrawlIsLimitingRequests() throws Exception {
+        server.expect(requestTo(BASE_URL + "/scrape"))
+                .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS).headers(retryNow()));
+        server.expect(requestTo(BASE_URL + "/scrape"))
+                .andRespond(withSuccess(fixture("firecrawl/scrape-document-digitization.json"),
+                        MediaType.APPLICATION_JSON));
+
+        WebPageContentDTO content = provider.scrape(target(),
+                "https://docs.gendox.dev/document-digitization/document-digitization/");
+
+        server.verify();
+        assertEquals("Document Digitization | Gendox", content.getTitle());
+    }
+
+    @Test
+    void scrape_isRateLimitedWhenFirecrawlKeepsLimiting() {
+        server.expect(ExpectedCount.times(3), requestTo(BASE_URL + "/scrape"))
+                .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS).headers(retryNow()));
+
+        GendoxException exception = assertThrows(GendoxException.class,
+                () -> provider.scrape(target(), "https://docs.gendox.dev/any"));
+
+        server.verify();
+        assertEquals(WebScrapeConstants.ErrorCodes.RATE_LIMITED, exception.getErrorCode());
+    }
+
+    // Retry-After: 0, so the retries don't slow the test down
+    private static HttpHeaders retryNow() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.RETRY_AFTER, "0");
+        return headers;
     }
 }

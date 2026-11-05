@@ -23,5 +23,6 @@ public class WebScrapePageDTO {
     private Instant discoveredAt;
     private Instant lastCrawledAt;
     private Instant lastScrapedAt;
+    private Instant lastFailedAt;
     private String errorMessage;
 }

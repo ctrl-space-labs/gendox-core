@@ -8,7 +8,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WebScrapeSourceDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WebsiteIntegrationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.OrganizationWebSiteService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.WebScrapeConfigConstants;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;

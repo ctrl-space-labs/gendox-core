@@ -62,6 +62,9 @@ public class Integration {
     @Basic
     @Column(name = "last_run_at")
     private Instant lastRunAt;
+    @Basic
+    @Column(name = "last_run_error")
+    private String lastRunError;
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "config", nullable = false, columnDefinition = "JSONB")
     private String config;
@@ -226,15 +229,23 @@ public class Integration {
         this.config = config;
     }
 
+    public String getLastRunError() {
+        return lastRunError;
+    }
+
+    public void setLastRunError(String lastRunError) {
+        this.lastRunError = lastRunError;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
         Integration that = (Integration) o;
-        return Objects.equals(id, that.id) && Objects.equals(organizationId, that.organizationId) && Objects.equals(projectId, that.projectId) && Objects.equals(integrationType, that.integrationType) && Objects.equals(isActive, that.isActive) && Objects.equals(url, that.url) && Objects.equals(queueName, that.queueName) && Objects.equals(directoryPath, that.directoryPath) && Objects.equals(repoHead, that.repoHead) && Objects.equals(userName, that.userName) && Objects.equals(password, that.password) && Objects.equals(runIntervalMinutes, that.runIntervalMinutes) && Objects.equals(lastRunAt, that.lastRunAt) && Objects.equals(config, that.config) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy);
+        return Objects.equals(id, that.id) && Objects.equals(organizationId, that.organizationId) && Objects.equals(projectId, that.projectId) && Objects.equals(integrationType, that.integrationType) && Objects.equals(isActive, that.isActive) && Objects.equals(url, that.url) && Objects.equals(queueName, that.queueName) && Objects.equals(directoryPath, that.directoryPath) && Objects.equals(repoHead, that.repoHead) && Objects.equals(userName, that.userName) && Objects.equals(password, that.password) && Objects.equals(runIntervalMinutes, that.runIntervalMinutes) && Objects.equals(lastRunAt, that.lastRunAt) && Objects.equals(lastRunError, that.lastRunError) && Objects.equals(config, that.config) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, organizationId, projectId, integrationType, isActive, url, queueName, directoryPath, repoHead, userName, password, runIntervalMinutes, lastRunAt, config, createdAt, updatedAt, createdBy, updatedBy);
+        return Objects.hash(id, organizationId, projectId, integrationType, isActive, url, queueName, directoryPath, repoHead, userName, password, runIntervalMinutes, lastRunAt, lastRunError, config, createdAt, updatedAt, createdBy, updatedBy);
     }
 }

@@ -4,7 +4,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.OrganizationConnectorService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.webScrapeIntegration.FirecrawlWebScrapeProvider;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.webScrapeIntegration.WebScrapeProvider;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.FirecrawlConfig;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.webScrapeIntegration.utils.constants.FirecrawlConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;

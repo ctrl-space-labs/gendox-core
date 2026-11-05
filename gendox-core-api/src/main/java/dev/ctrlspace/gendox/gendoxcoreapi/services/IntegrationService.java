@@ -11,7 +11,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.Integratio
 import dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.IntegrationManager;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.IntegrationTypesConstants;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.WebScrapeConfigConstants;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.WebScrapeConstants;
 import jakarta.transaction.Transactional;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
@@ -53,7 +53,7 @@ public class IntegrationService {
      * rather than the number.
      */
     private static final Map<String, Integer> RUN_INTERVAL_FLOOR_BY_TYPE = Map.of(
-            IntegrationTypesConstants.WEB_SCRAPE_INTEGRATION, WebScrapeConfigConstants.MIN_RUN_INTERVAL_MINUTES);
+            IntegrationTypesConstants.WEB_SCRAPE_INTEGRATION, WebScrapeConstants.Config.MIN_RUN_INTERVAL_MINUTES);
 
 
     @Autowired
