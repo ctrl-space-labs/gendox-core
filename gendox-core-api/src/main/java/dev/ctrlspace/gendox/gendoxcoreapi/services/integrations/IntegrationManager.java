@@ -95,9 +95,10 @@ public class IntegrationManager {
                     continue;
                 }
                 processIntegration(integration, map);
-                stampRun(integration);
+                stampRun(integration, null);
             } catch (Exception e) {
                 logger.error("Error processing integration with id: {}. Continuing with the next integration...", integration.getId(), e);
+                recordFailure(integration, e);
             }
         }
         return map;
@@ -120,11 +121,24 @@ public class IntegrationManager {
 
     /**
      * Stamped after the run on both paths, because "when did this last run" is the same
-     * question whether the poller asked for it or a person did.
+     * question whether the poller asked for it or a person did. A failed run is stamped too,
+     * with why, so a source failing for a week no longer looks like one with nothing to do.
      */
-    private void stampRun(Integration integration) {
+    private void stampRun(Integration integration, String error) {
         integration.setLastRunAt(Instant.now());
+        integration.setLastRunError(error);
         integrationRepository.save(integration);
+    }
+
+    // recording the failure must not end the pass either
+    private void recordFailure(Integration integration, Exception e) {
+        try {
+            stampRun(integration, e.getMessage() == null || e.getMessage().isBlank()
+                    ? e.getClass().getSimpleName()
+                    : e.getMessage());
+        } catch (Exception stampError) {
+            logger.error("Could not record the failed run of integration {}", integration.getId(), stampError);
+        }
     }
 
 

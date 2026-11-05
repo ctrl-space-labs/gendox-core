@@ -8,7 +8,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.WebScrapePageCrite
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.IntegrationRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.WebScrapePageRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.WebScrapePagePredicates;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.WebScrapePageStatusConstants;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.WebScrapeConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,7 +58,7 @@ public class WebScrapePageService {
         List<WebScrapePage> pages = webScrapePageRepository
                 .findAllByIdInAndIntegrationId(pageIds, integrationId)
                 .stream()
-                .filter(page -> !WebScrapePageStatusConstants.REMOVED.equals(page.getStatus()))
+                .filter(page -> !WebScrapeConstants.PageStatus.REMOVED.equals(page.getStatus()))
                 .toList();
 
         for (WebScrapePage page : pages) {
@@ -74,7 +74,7 @@ public class WebScrapePageService {
     public void selectAll(UUID integrationId, boolean selected) {
 
         int updated = webScrapePageRepository.updateSelectionForIntegration(
-                integrationId, selected, WebScrapePageStatusConstants.REMOVED);
+                integrationId, selected, WebScrapeConstants.PageStatus.REMOVED);
 
         logger.debug("Changed the selection of {} pages of integration {}", updated, integrationId);
     }

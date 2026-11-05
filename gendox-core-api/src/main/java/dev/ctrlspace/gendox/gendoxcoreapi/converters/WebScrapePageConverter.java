@@ -20,6 +20,7 @@ public class WebScrapePageConverter implements GendoxConverter<WebScrapePage, We
         webScrapePageDTO.setDiscoveredAt(webScrapePage.getDiscoveredAt());
         webScrapePageDTO.setLastCrawledAt(webScrapePage.getLastCrawledAt());
         webScrapePageDTO.setLastScrapedAt(webScrapePage.getLastScrapedAt());
+        webScrapePageDTO.setLastFailedAt(webScrapePage.getLastFailedAt());
         webScrapePageDTO.setErrorMessage(webScrapePage.getErrorMessage());
 
         return webScrapePageDTO;
@@ -34,7 +35,7 @@ public class WebScrapePageConverter implements GendoxConverter<WebScrapePage, We
         webScrapePage.setTitle(webScrapePageDTO.getTitle());
         webScrapePage.setSelected(webScrapePageDTO.getIsSelected());
         webScrapePage.setStatus(webScrapePageDTO.getStatus());
-
+        webScrapePage.setDocumentInstanceId(webScrapePageDTO.getDocumentInstanceId());
         return webScrapePage;
     }
 }

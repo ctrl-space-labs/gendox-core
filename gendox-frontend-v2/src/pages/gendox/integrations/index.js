@@ -321,6 +321,13 @@ const IntegrationsPage = () => {
                       <td className='hide-sm muted sm'>{t.still ? '—' : everyText(row.integration.runIntervalMinutes)}</td>
                       <td className='hide-sm muted sm num'>
                         {t.still ? '—' : formatWhen(row.integration.lastRunAt) || 'Never'}
+                        {!t.still && row.integration.lastRunError && (
+                          <div>
+                            <span className='badge err' title={row.integration.lastRunError}>
+                              Failed
+                            </span>
+                          </div>
+                        )}
                       </td>
                       <td>
                         {t.still ? (

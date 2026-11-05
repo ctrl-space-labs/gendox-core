@@ -1,4 +1,4 @@
-package dev.ctrlspace.gendox.gendoxcoreapi.utils.constants;
+package dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.webScrapeIntegration.utils.constants;
 
 import java.util.List;
 
@@ -16,6 +16,9 @@ public class FirecrawlConfig {
     public static final long CRAWL_TIMEOUT_MILLIS = 30 * 60 * 1000L;
     public static final List<String> NON_PAGE_EXTENSIONS =
             List.of(".xml", ".json", ".css", ".js", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".ico", ".zip");
+    public static final int MAX_ATTEMPTS = 3;
+    public static final long RETRY_BASE_WAIT_MILLIS = 2000L;
+    public static final long MAX_RETRY_WAIT_MILLIS = 60 * 1000L;
 
 
 }

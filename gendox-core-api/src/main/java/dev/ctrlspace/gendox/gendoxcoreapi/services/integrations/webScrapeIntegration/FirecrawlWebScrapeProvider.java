@@ -4,6 +4,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.webScrapeIntegr
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.integrations.webScrape.firecrawl.request.FirecrawlCrawlRequest;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.integrations.webScrape.firecrawl.request.FirecrawlScrapeRequest;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.integrations.webScrape.firecrawl.response.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.WebScrapeConstants;
 import org.springframework.http.HttpHeaders;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.integrations.webScrape.DiscoveredPageDTO;
@@ -12,7 +13,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.integrations.webScrape.WebP
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.integrations.webScrape.WebScrapeTargetDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.integrations.webScrape.firecrawl.request.FirecrawlMapRequest;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.CryptographyUtils;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.FirecrawlConfig;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.webScrapeIntegration.utils.constants.FirecrawlConfig;
 import org.springframework.http.MediaType;
 import org.springframework.beans.factory.annotation.Value;
 import org.slf4j.Logger;
@@ -29,6 +30,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Supplier;
 
 @Service
 public class FirecrawlWebScrapeProvider implements WebScrapeProvider {
@@ -57,21 +59,14 @@ public class FirecrawlWebScrapeProvider implements WebScrapeProvider {
                 .limit(target.getCrawlLimit())
                 .build();
 
-        FirecrawlMapResponse response;
+        FirecrawlMapResponse response = call("WEB_SCRAPE_MAP_FAILED", "map", () -> restClient.post()
+                .uri(baseUrl + FirecrawlConfig.MAP_PATH)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + target.getApiKey())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request)
+                .retrieve()
+                .body(FirecrawlMapResponse.class));
 
-        try {
-            response = restClient.post()
-                    .uri(baseUrl + FirecrawlConfig.MAP_PATH)
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + target.getApiKey())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(request)
-                    .retrieve()
-                    .body(FirecrawlMapResponse.class);
-        } catch (HttpStatusCodeException e) {
-            throw new GendoxException("WEB_SCRAPE_MAP_FAILED",
-                    "Firecrawl map failed with HTTP " + e.getStatusCode().value(),
-                    HttpStatus.BAD_GATEWAY, e);
-        }
 
         if (response == null || !Boolean.TRUE.equals(response.getSuccess())) {
             throw new GendoxException("WEB_SCRAPE_MAP_FAILED",
@@ -114,21 +109,14 @@ public class FirecrawlWebScrapeProvider implements WebScrapeProvider {
                         .build())
                 .build();
 
-        FirecrawlCrawlStartResponse start;
+        FirecrawlCrawlStartResponse start = call("WEB_SCRAPE_CRAWL_FAILED", "crawl", () -> restClient.post()
+                .uri(baseUrl + FirecrawlConfig.CRAWL_PATH)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + target.getApiKey())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request)
+                .retrieve()
+                .body(FirecrawlCrawlStartResponse.class));
 
-        try {
-            start = restClient.post()
-                    .uri(baseUrl + FirecrawlConfig.CRAWL_PATH)
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + target.getApiKey())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(request)
-                    .retrieve()
-                    .body(FirecrawlCrawlStartResponse.class);
-        } catch (HttpStatusCodeException e) {
-            throw new GendoxException("WEB_SCRAPE_CRAWL_FAILED",
-                    "Firecrawl crawl failed with HTTP " + e.getStatusCode().value(),
-                    HttpStatus.BAD_GATEWAY, e);
-        }
 
         if (start == null || !Boolean.TRUE.equals(start.getSuccess()) || start.getId() == null) {
             throw new GendoxException("WEB_SCRAPE_CRAWL_FAILED",
@@ -168,21 +156,13 @@ public class FirecrawlWebScrapeProvider implements WebScrapeProvider {
                 .build();
 
 
-        FirecrawlScrapeResponse response;
-
-        try {
-            response = restClient.post()
-                    .uri(baseUrl + FirecrawlConfig.SCRAPE_PATH)
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + target.getApiKey())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(request)
-                    .retrieve()
-                    .body(FirecrawlScrapeResponse.class);
-        } catch (HttpStatusCodeException e) {
-            throw new GendoxException("WEB_SCRAPE_SCRAPE_FAILED",
-                    "Firecrawl scrape failed with HTTP " + e.getStatusCode().value(),
-                    HttpStatus.BAD_GATEWAY, e);
-        }
+        FirecrawlScrapeResponse response = call("WEB_SCRAPE_SCRAPE_FAILED", "scrape", () -> restClient.post()
+                .uri(baseUrl + FirecrawlConfig.SCRAPE_PATH)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + target.getApiKey())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request)
+                .retrieve()
+                .body(FirecrawlScrapeResponse.class));
 
 
         if (response == null || !Boolean.TRUE.equals(response.getSuccess()) || response.getData() == null) {
@@ -203,13 +183,13 @@ public class FirecrawlWebScrapeProvider implements WebScrapeProvider {
         if (metadata.getStatusCode() != null && metadata.getStatusCode() >= 400) {
             boolean pageIsGone = metadata.getStatusCode() == 404 || metadata.getStatusCode() == 410;
 
-            throw new GendoxException(pageIsGone ? "WEB_SCRAPE_PAGE_NOT_FOUND" : "WEB_SCRAPE_PAGE_FAILED",
+            throw new GendoxException(pageIsGone ? WebScrapeConstants.ErrorCodes.PAGE_NOT_FOUND : WebScrapeConstants.ErrorCodes.PAGE_FAILED,
                     "Page " + url + " returned HTTP " + metadata.getStatusCode(),
                     HttpStatus.BAD_GATEWAY);
         }
 
         if (data.getMarkdown() == null || data.getMarkdown().isBlank()) {
-            throw new GendoxException("WEB_SCRAPE_PAGE_FAILED",
+            throw new GendoxException(WebScrapeConstants.ErrorCodes.PAGE_FAILED,
                     "Page " + url + " has no content",
                     HttpStatus.BAD_GATEWAY);
         }
@@ -298,19 +278,12 @@ public class FirecrawlWebScrapeProvider implements WebScrapeProvider {
 
     // for crawl endpoint
     private FirecrawlCrawlStatusResponse getCrawlStatus(String url, String apiKey) throws GendoxException {
-        FirecrawlCrawlStatusResponse status;
+        FirecrawlCrawlStatusResponse status = call("WEB_SCRAPE_CRAWL_FAILED", "crawl status", () -> restClient.get()
+                .uri(url)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
+                .retrieve()
+                .body(FirecrawlCrawlStatusResponse.class));
 
-        try {
-            status = restClient.get()
-                    .uri(url)
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
-                    .retrieve()
-                    .body(FirecrawlCrawlStatusResponse.class);
-        } catch (HttpStatusCodeException e) {
-            throw new GendoxException("WEB_SCRAPE_CRAWL_FAILED",
-                    "Firecrawl crawl status failed with HTTP " + e.getStatusCode().value(),
-                    HttpStatus.BAD_GATEWAY, e);
-        }
 
         if (status == null) {
             throw new GendoxException("WEB_SCRAPE_CRAWL_FAILED",
@@ -335,6 +308,52 @@ public class FirecrawlWebScrapeProvider implements WebScrapeProvider {
                         .build());
             }
         }
+    }
+
+
+    /**
+     * One request to Firecrawl. A 429 or a 5xx is tried again, after the Retry-After it sends or a doubling
+     * wait; anything else (a rejected key, no credits) fails at once, because asking again changes nothing.
+     * A 429 that outlasts the attempts fails as RATE_LIMITED, so the caller can stop instead of failing every page.
+     */
+    private <T> T call(String errorCode, String action, Supplier<T> request) throws GendoxException {
+        for (int attempt = 1; ; attempt++) {
+            try {
+                return request.get();
+            } catch (HttpStatusCodeException e) {
+                int status = e.getStatusCode().value();
+                boolean retryable = status == 429 || status >= 500;
+
+                if (!retryable || attempt == FirecrawlConfig.MAX_ATTEMPTS) {
+                    boolean rateLimited = status == 429;
+                    throw new GendoxException(rateLimited ? WebScrapeConstants.ErrorCodes.RATE_LIMITED : errorCode,
+                            "Firecrawl " + action + " failed with HTTP " + status,
+                            rateLimited ? HttpStatus.TOO_MANY_REQUESTS : HttpStatus.BAD_GATEWAY, e);
+                }
+
+                long waitMillis = retryAfterMillis(e, attempt);
+                logger.info("Firecrawl {} answered HTTP {}, trying again in {} ms", action, status, waitMillis);
+                try {
+                    Thread.sleep(waitMillis);
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    throw new GendoxException(errorCode, "Waiting to retry Firecrawl " + action + " was interrupted",
+                            HttpStatus.BAD_GATEWAY, interrupted);
+                }
+            }
+        }
+    }
+
+    private long retryAfterMillis(HttpStatusCodeException e, int attempt) {
+        String retryAfter = e.getResponseHeaders() == null ? null : e.getResponseHeaders().getFirst(HttpHeaders.RETRY_AFTER);
+        if (retryAfter != null) {
+            try {
+                return Math.min(Long.parseLong(retryAfter.trim()) * 1000L, FirecrawlConfig.MAX_RETRY_WAIT_MILLIS);
+            } catch (NumberFormatException ignored) {
+                // an HTTP date instead of seconds: the doubling wait below
+            }
+        }
+        return FirecrawlConfig.RETRY_BASE_WAIT_MILLIS << (attempt - 1);
     }
 
 

@@ -21,9 +21,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.services.SubscriptionValidationService
 import dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.s3BucketIntegration.ResourceMultipartFile;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.webScrapeIntegration.WebScrapeProvider;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.WebScrapeProviderUtils;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.FirecrawlConfig;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.WebScrapeConfigConstants;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.WebScrapePageStatusConstants;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.webScrapeIntegration.utils.constants.FirecrawlConfig;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.WebScrapeConstants;
 import jakarta.transaction.Transactional;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
@@ -111,7 +110,7 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
 
         List<WebScrapePage> pages = webScrapePageRepository.findAllByIntegrationId(integration.getId())
                 .stream()
-                .filter(page -> !WebScrapePageStatusConstants.REMOVED.equals(page.getStatus()))
+                .filter(page -> !WebScrapeConstants.PageStatus.REMOVED.equals(page.getStatus()))
                 .toList();
 
         dropContent(pages.stream()
@@ -136,7 +135,12 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
                         Comparator.nullsFirst(Comparator.naturalOrder())))
                 .toList();
 
-        for (WebScrapePage page : ordered) {
+        GendoxException rateLimited = null;
+        int leftForNextRun = 0;
+
+        for (int i = 0; i < ordered.size(); i++) {
+            WebScrapePage page = ordered.get(i);
+
             if (!subscriptionValidationService.canScrapeWebPages(integration.getOrganizationId(), 1)) {
                 logger.info("Monthly web scraping budget reached for organization {}, deferring the remaining pages",
                         integration.getOrganizationId());
@@ -169,17 +173,30 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
                     page.setContentHash(content.getContentHash());
                 }
 
-                page.setStatus(WebScrapePageStatusConstants.SCRAPED);
+                page.setStatus(WebScrapeConstants.PageStatus.SCRAPED);
                 page.setErrorMessage(null);
+                page.setLastFailedAt(null);
 
             } catch (GendoxException e) {
-                boolean pageIsGone = "WEB_SCRAPE_PAGE_NOT_FOUND".equals(e.getErrorCode());
+                if (WebScrapeConstants.ErrorCodes.RATE_LIMITED.equals(e.getErrorCode())) {
+                    // the provider's rate, not this page: it keeps its status and is read on the next run,
+                    // and so are the ones after it, instead of each failing with the same 429
+                    rateLimited = e;
+                    leftForNextRun = ordered.size() - i;
+                    break;
+                }
+
+                boolean pageIsGone = WebScrapeConstants.ErrorCodes.PAGE_NOT_FOUND.equals(e.getErrorCode());
 
                 logger.warn("Page {} of integration {} failed: {}", page.getUrl(), integration.getId(), e.getMessage());
                 page.setStatus(pageIsGone
-                        ? WebScrapePageStatusConstants.REMOVED
-                        : WebScrapePageStatusConstants.FAILED);
+                        ? WebScrapeConstants.PageStatus.REMOVED
+                        : WebScrapeConstants.PageStatus.FAILED);
                 page.setErrorMessage(describe(e));
+                // a page gone from the site did not fail, it is not there any more
+                if (!pageIsGone) {
+                    page.setLastFailedAt(Instant.now());
+                }
 
             } catch (Exception e) {
                 // one page must not take the pass down with it. The catches named three
@@ -187,14 +204,22 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
                 // upload or the queue — escaped, abandoned every remaining page, and left
                 // the run unstamped while the pages already read looked perfectly current
                 logger.warn("Could not store page {} of integration {}", page.getUrl(), integration.getId(), e);
-                page.setStatus(WebScrapePageStatusConstants.FAILED);
+                page.setStatus(WebScrapeConstants.PageStatus.FAILED);
                 page.setErrorMessage(describe(e));
+                page.setLastFailedAt(Instant.now());
 
             } finally {
                 // in the finally, so a page that failed still records that it failed. While
                 // this sat after the try, an uncaught failure took the status with it
                 webScrapePageRepository.save(page);
             }
+        }
+
+        if (rateLimited != null) {
+            throw new GendoxException(WebScrapeConstants.ErrorCodes.RATE_LIMITED,
+                    "The scraping provider is limiting requests: " + leftForNextRun + " of " + ordered.size()
+                            + " pages were left for the next run",
+                    HttpStatus.TOO_MANY_REQUESTS, rateLimited);
         }
     }
 
@@ -225,7 +250,7 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
         Integration integration = loadAndCheckPlan(integrationId);
 
         Map<String, Object> config = readConfig(integration);
-        Integer crawlPageLimit = (Integer) config.get(WebScrapeConfigConstants.CRAWL_PAGE_LIMIT);
+        Integer crawlPageLimit = (Integer) config.get(WebScrapeConstants.Config.CRAWL_PAGE_LIMIT);
 
         if (crawlPageLimit == null) {
             throw new GendoxException("WEB_SCRAPE_CRAWL_LIMIT_REQUIRED",
@@ -250,7 +275,7 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
         boolean fetchesSomething = webScrapePageRepository.findAllByIntegrationId(integrationId)
                 .stream()
                 .anyMatch(page -> Boolean.TRUE.equals(page.getSelected())
-                        && !WebScrapePageStatusConstants.REMOVED.equals(page.getStatus()));
+                        && !WebScrapeConstants.PageStatus.REMOVED.equals(page.getStatus()));
 
         if (fetchesSomething) {
             requireBudget(integration);
@@ -277,13 +302,18 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
     @SchedulerLock(name = "webScrapeManualTrigger-#{#integrationId}",
             lockAtMostFor = "PT30M", lockAtLeastFor = "PT5S")
     public void triggerCrawl(UUID integrationId) {
+        Integration integration = null;
         try {
             logger.info("Manually listing the pages of web scrape integration {}", integrationId);
-            Integration integration = loadIntegration(integrationId);
+            integration = loadIntegration(integrationId);
             discoverPages(integration);
-            stampRun(integration);
+            stampRun(integration, null);
         } catch (Exception e) {
             logger.error("Error listing the pages of web scrape integration {}", integrationId, e);
+            // stamped on failure too, so the panel stops waiting and shows why
+            if (integration != null) {
+                stampRun(integration, describe(e));
+            }
         }
     }
 
@@ -291,13 +321,17 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
     @SchedulerLock(name = "webScrapeManualTrigger-#{#integrationId}",
             lockAtMostFor = "PT30M", lockAtLeastFor = "PT5S")
     public void triggerDeepCrawl(UUID integrationId) {
+        Integration integration = null;
         try {
             logger.info("Manually deep crawling the site of web scrape integration {}", integrationId);
-            Integration integration = loadIntegration(integrationId);
+            integration = loadIntegration(integrationId);
             deepDiscoverPages(integration);
-            stampRun(integration);
+            stampRun(integration, null);
         } catch (Exception e) {
             logger.error("Error deep crawling the site of web scrape integration {}", integrationId, e);
+            if (integration != null) {
+                stampRun(integration, describe(e));
+            }
         }
     }
 
@@ -305,13 +339,17 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
     @SchedulerLock(name = "webScrapeManualTrigger-#{#integrationId}",
             lockAtMostFor = "PT30M", lockAtLeastFor = "PT5S")
     public void triggerScrape(UUID integrationId) {
+        Integration integration = null;
         try {
             logger.info("Bringing the project in line with the selected pages of web scrape integration {}", integrationId);
-            Integration integration = loadIntegration(integrationId);
+            integration = loadIntegration(integrationId);
             syncSelectedPages(integration);
-            stampRun(integration);
+            stampRun(integration, null);
         } catch (Exception e) {
             logger.error("Error scraping the selected pages of web scrape integration {}", integrationId, e);
+            if (integration != null) {
+                stampRun(integration, describe(e));
+            }
         }
     }
 
@@ -324,7 +362,7 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
 
         WebScrapePage page = webScrapePageRepository.findById(pageId)
                 .filter(stored -> integrationId.equals(stored.getIntegrationId()))
-                .orElseThrow(() -> new GendoxException("WEB_SCRAPE_PAGE_NOT_FOUND",
+                .orElseThrow(() -> new GendoxException(WebScrapeConstants.ErrorCodes.PAGE_NOT_FOUND,
                         "Web scrape page not found: " + pageId, HttpStatus.NOT_FOUND));
 
         // asking for the content to go is asking for it not to come back on the next pass
@@ -347,10 +385,10 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
 
         WebScrapePage page = webScrapePageRepository.findById(pageId)
                 .filter(stored -> integrationId.equals(stored.getIntegrationId()))
-                .orElseThrow(() -> new GendoxException("WEB_SCRAPE_PAGE_NOT_FOUND",
+                .orElseThrow(() -> new GendoxException(WebScrapeConstants.ErrorCodes.PAGE_NOT_FOUND,
                         "Web scrape page not found: " + pageId, HttpStatus.NOT_FOUND));
 
-        if (WebScrapePageStatusConstants.REMOVED.equals(page.getStatus())) {
+        if (WebScrapeConstants.PageStatus.REMOVED.equals(page.getStatus())) {
             throw new GendoxException("WEB_SCRAPE_PAGE_GONE",
                     "This page is no longer on the site", HttpStatus.CONFLICT);
         }
@@ -387,8 +425,8 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
             page.setContentHash(null);
 
             // a page that is gone from the site keeps saying so
-            if (!WebScrapePageStatusConstants.REMOVED.equals(page.getStatus())) {
-                page.setStatus(WebScrapePageStatusConstants.DISCOVERED);
+            if (!WebScrapeConstants.PageStatus.REMOVED.equals(page.getStatus())) {
+                page.setStatus(WebScrapeConstants.PageStatus.DISCOVERED);
             }
 
             webScrapePageRepository.save(page);
@@ -426,7 +464,7 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
 
         Integration integration = loadIntegration(integrationId);
 
-              if (!subscriptionValidationService.canUseWebScrape(integration.getOrganizationId())) {
+        if (!subscriptionValidationService.canUseWebScrape(integration.getOrganizationId())) {
             throw new GendoxException("WEB_SCRAPE_NOT_IN_PLAN",
                     "Web scraping is not included in the plan of organization "
                             + integration.getOrganizationId(),
@@ -462,8 +500,9 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
      * stamped, and the panel reads this field to know a run has ended — so a path that does
      * not stamp leaves the screen waiting for something that never arrives.
      */
-    private void stampRun(Integration integration) {
+    private void stampRun(Integration integration, String error) {
         integration.setLastRunAt(Instant.now());
+        integration.setLastRunError(error);
         integrationRepository.save(integration);
     }
 
@@ -481,7 +520,7 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
                         newPage.setIntegrationId(integration.getId());
                         newPage.setUrl(url);
                         newPage.setSelected(false);
-                        newPage.setStatus(WebScrapePageStatusConstants.DISCOVERED);
+                        newPage.setStatus(WebScrapeConstants.PageStatus.DISCOVERED);
                         newPage.setDiscoveredAt(now);
                         return newPage;
                     });
@@ -510,7 +549,7 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
 
     private WebScrapeProvider resolveProvider(Map<String, Object> config) throws GendoxException {
         String providerName = (String) config.getOrDefault(
-                WebScrapeConfigConstants.PROVIDER, FirecrawlConfig.PROVIDER_NAME);
+                WebScrapeConstants.Config.PROVIDER, FirecrawlConfig.PROVIDER_NAME);
 
         return webScrapeProviderUtils.getProvider(providerName);
     }
@@ -519,7 +558,7 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
         return WebScrapeTargetDTO.builder()
                 .seedUrl(integration.getUrl())
                 .apiKey(webScrapeProviderUtils.resolveApiKey(integration.getOrganizationId()))
-                .crawlLimit((Integer) config.get(WebScrapeConfigConstants.CRAWL_PAGE_LIMIT))
+                .crawlLimit((Integer) config.get(WebScrapeConstants.Config.CRAWL_PAGE_LIMIT))
                 .build();
     }
 
@@ -533,7 +572,7 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
         if (scheduleDTO.getProvider() != null) {
             // throws when the provider is not one we support
             webScrapeProviderUtils.getProvider(scheduleDTO.getProvider());
-            config.put(WebScrapeConfigConstants.PROVIDER, scheduleDTO.getProvider());
+            config.put(WebScrapeConstants.Config.PROVIDER, scheduleDTO.getProvider());
         }
 
         if (scheduleDTO.getCrawlPageLimit() != null) {
@@ -541,7 +580,7 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
                 throw new GendoxException("WEB_SCRAPE_CRAWL_LIMIT_INVALID",
                         "The crawl page limit must be at least one page", HttpStatus.BAD_REQUEST);
             }
-            config.put(WebScrapeConfigConstants.CRAWL_PAGE_LIMIT, scheduleDTO.getCrawlPageLimit());
+            config.put(WebScrapeConstants.Config.CRAWL_PAGE_LIMIT, scheduleDTO.getCrawlPageLimit());
         }
 
         integration.setConfig(writeConfig(integration, config));

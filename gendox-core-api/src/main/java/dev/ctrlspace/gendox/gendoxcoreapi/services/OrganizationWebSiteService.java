@@ -9,7 +9,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.OrganizationWebSiteRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.WebScrapeIntegrationUpdateService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.DocumentUtils;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.FirecrawlConfig;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.webScrapeIntegration.utils.constants.FirecrawlConfig;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.IntegrationTypesConstants;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;

@@ -149,16 +149,20 @@ const WebPagesPicker = ({ organizationId, integration, agentName, onRunFinished 
       load()
       const fresh = await loadBudget()
       let finished = false
+      let failure = null // the run's own error, set when it ended without finishing
       try {
         const r = await integrationService.getIntegration(organizationId, integration.id, getToken())
         finished = String(r.data?.lastRunAt ?? '') !== String(startedAt ?? '')
+        failure = r.data?.lastRunError ?? null
       } catch {
         finished = false
       }
       if (finished) {
         clearInterval(timer.current)
         setBusy(null)
-        if (label === 'Reading pages' && fresh?.remainingPages === 0) {
+        if (failure) {
+          toast.error(`${label} stopped: ${failure}`)
+        } else if (label === 'Reading pages' && fresh?.remainingPages === 0) {
           toast('The allowance ran out before every ticked page was read. The ticks stay, so Read carries on when it renews.')
         } else {
           toast.success(label === 'Reading pages' ? `Done. ${agentName || 'The agent'}’s knowledge matches the ticks.` : 'Done looking for pages.')
@@ -352,6 +356,9 @@ const WebPagesPicker = ({ organizationId, integration, agentName, onRunFinished 
                     const gone = p.status === 'REMOVED'
                     const stored = Boolean(p.documentInstanceId)
                     const read = formatWhen(p.lastScrapedAt)
+                    const failed = p.status === 'FAILED'
+                    // a failed page says when it failed; when it was last read is in the tooltip
+                    const failedAt = failed ? formatWhen(p.lastFailedAt) : null
 
                     return (
                       <tr key={p.id} className={p.isSelected ? 'sel' : ''} style={{ cursor: gone ? 'default' : 'pointer' }} onClick={() => !gone && pick(p.id, !p.isSelected)}>
@@ -368,10 +375,16 @@ const WebPagesPicker = ({ organizationId, integration, agentName, onRunFinished 
                         <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>
                           <div className='row' style={{ gap: 6, justifyContent: 'flex-end' }}>
                             {gone && <span className='badge'>Gone from the site</span>}
-                            {p.status === 'FAILED' && <span className='badge dot err'>Couldn’t read</span>}
+                            {failed && <span className='badge dot err'>Couldn’t read</span>}
                             {!gone && p.isSelected && !stored && <span className='badge dot info'>Will be read</span>}
                             {!gone && !p.isSelected && stored && <span className='badge dot warn'>Will be taken out</span>}
-                            {stored && <span className='num'>{read ?? 'Read'}</span>}
+                            {failedAt ? (
+                              <span className='num' title={read ? `Last read ${read}` : 'Never read'}>
+                                {failedAt}
+                              </span>
+                            ) : (
+                              stored && <span className='num'>{read ?? 'Read'}</span>
+                            )}
                             {!gone && !stored && !p.isSelected && p.status !== 'FAILED' && (
                               <span className='faint'>Not read yet</span>
                             )}
