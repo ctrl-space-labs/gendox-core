@@ -99,9 +99,26 @@ const triggerIntegrations = async (organizationId, token) => {
   })
 }
 
+/**
+ * Check one switched-on integration now, whatever its schedule (202, runs in the background; it has finished
+ * when the integration's lastRunAt moves)
+ * @param organizationId
+ * @param integrationId
+ * @param token
+ */
+const triggerIntegration = async (organizationId, integrationId, token) => {
+  return axios.post(apiRequest.integrationTrigger(organizationId, integrationId), null, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
+    }
+  })
+}
+
 export default {
   getIntegration,
   triggerIntegrations,
+  triggerIntegration,
   getIntegrationsByOrganizationId,
   setIntegrationActive,
   setIntegrationSchedule,

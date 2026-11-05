@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import toast from 'react-hot-toast'
@@ -34,6 +34,8 @@ import { SkeletonRows } from 'src/components/ui/Skeleton'
 import Switch from 'src/components/ui/Switch'
 
 const UNLIMITED = 9999
+const POLL_MS = 2000
+const GIVE_UP_AFTER = 150 // polls, five minutes
 
 const Meter = ({ label, used, max, note }) => (
   <div className='card card-b meter'>
@@ -73,6 +75,11 @@ const IntegrationsPage = () => {
   const [editing, setEditing] = useState(null)
   const [removing, setRemoving] = useState(null)
   const [togglingId, setTogglingId] = useState(null)
+  const [confirmingCheck, setConfirmingCheck] = useState(null) // a website, asked first: reading pages uses the allowance
+  const [checkingId, setCheckingId] = useState(null)
+  const poll = useRef(null)
+
+  useEffect(() => () => clearInterval(poll.current), [])
 
   const load = useCallback(async () => {
     if (!organizationId) return
@@ -156,6 +163,44 @@ const IntegrationsPage = () => {
       toast.error(getErrorMessage(error))
     }
   }
+
+  // the run is in the background (202): it has finished when the integration's lastRunAt moves
+  const checkNow = async row => {
+    const { id, lastRunAt } = row.integration
+    try {
+      await integrationService.triggerIntegration(organizationId, id, getToken())
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+
+      return
+    }
+    setCheckingId(id)
+    let ticks = 0
+    clearInterval(poll.current)
+    poll.current = setInterval(async () => {
+      ticks += 1
+      let fresh = null
+      try {
+        fresh = (await integrationService.getIntegration(organizationId, id, getToken())).data
+      } catch {
+        // try again on the next tick
+      }
+      const finished = fresh && String(fresh.lastRunAt ?? '') !== String(lastRunAt ?? '')
+      if (!finished && ticks < GIVE_UP_AFTER) return
+      clearInterval(poll.current)
+      setCheckingId(null)
+      load()
+      if (!finished) {
+        toast.error(`${row.title} has not finished after ${Math.round((GIVE_UP_AFTER * POLL_MS) / 60000)} minutes. Last run shows when it does.`)
+      } else if (fresh.lastRunError) {
+        toast.error(`${row.title} failed: ${fresh.lastRunError}`)
+      } else {
+        toast.success(`${row.title} is checked. New content shows up in the knowledge as it arrives.`)
+      }
+    }, POLL_MS)
+  }
+
+  const askCheckNow = row => (row.type === 'WEB_SCRAPE_INTEGRATION' ? setConfirmingCheck(row) : checkNow(row))
 
   // after adding a website, open it to find its pages
   const onAdded = async url => {
@@ -320,8 +365,12 @@ const IntegrationsPage = () => {
                       </td>
                       <td className='hide-sm muted sm'>{t.still ? '—' : everyText(row.integration.runIntervalMinutes)}</td>
                       <td className='hide-sm muted sm num'>
-                        {t.still ? '—' : formatWhen(row.integration.lastRunAt) || 'Never'}
-                        {!t.still && row.integration.lastRunError && (
+                        {t.still
+                          ? '—'
+                          : checkingId === row.integration.id
+                            ? 'Checking…'
+                            : formatWhen(row.integration.lastRunAt) || 'Never'}
+                        {!t.still && checkingId !== row.integration.id && row.integration.lastRunError && (
                           <div>
                             <span className='badge err' title={row.integration.lastRunError}>
                               Failed
@@ -366,6 +415,17 @@ const IntegrationsPage = () => {
                           )}
                           {canEdit && (
                             <>
+                              {row.integration && row.active && (
+                                <button
+                                  className='mi'
+                                  data-close-menu
+                                  disabled={Boolean(checkingId)}
+                                  onClick={() => askCheckNow(row)}
+                                >
+                                  <RefreshCw className='lucide' />
+                                  Check now
+                                </button>
+                              )}
                               <button className='mi' data-close-menu onClick={() => setEditing(row)}>
                                 <Pencil className='lucide' />
                                 Edit
@@ -405,6 +465,17 @@ const IntegrationsPage = () => {
         onConfirm={checkAll}
         title='Check all integrations now?'
         text={`Gendox checks the ${counts.on} switched-on integrations now instead of waiting for their schedule. Websites are read again too: each page counts against this period’s allowance${
+          budget?.remainingPages != null ? ` (${budget.remainingPages.toLocaleString()} left)` : ''
+        }.`}
+        confirmLabel='Check now'
+        danger={false}
+      />
+      <ConfirmDialog
+        open={Boolean(confirmingCheck)}
+        onClose={() => setConfirmingCheck(null)}
+        onConfirm={() => checkNow(confirmingCheck)}
+        title={`Check ${confirmingCheck?.title ?? 'this website'} now?`}
+        text={`Gendox reads the website’s chosen pages again now instead of waiting for its schedule. Each page counts against this period’s allowance${
           budget?.remainingPages != null ? ` (${budget.remainingPages.toLocaleString()} left)` : ''
         }.`}
         confirmLabel='Check now'
