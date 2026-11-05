@@ -70,6 +70,16 @@ public class IntegrationManager {
     }
 
     /**
+     * Called by Check now on one integration. Like the organization trigger it ignores the
+     * schedule, and it goes through the same pass, so the run is stamped the same way.
+     */
+    public Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> dispatchToIntegrationServices(Integration integration) {
+        return processIntegrations(List.of(integration), false);
+    }
+
+
+
+    /**
      * Called by the manual Reload Content trigger for a single organization.
      * <p>
      * The schedule is deliberately ignored here. A person asking for the content now is

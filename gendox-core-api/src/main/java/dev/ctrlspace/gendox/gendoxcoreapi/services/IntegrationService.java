@@ -356,6 +356,41 @@ public class IntegrationService {
         }
     }
 
+    /**
+     * What Check now needs before it runs in the background: the integration is in this
+     * organization and switched on. Checked synchronously, so the button gets a 404 or a 409
+     * instead of a 202 for a run that never happens.
+     */
+    public Integration validateTrigger(UUID organizationId, UUID id) throws GendoxException {
+        Integration integration = findForOrganization(organizationId, id);
+
+        if (!Boolean.TRUE.equals(integration.getActive())) {
+            throw new GendoxException("INTEGRATION_NOT_ACTIVE",
+                    "Switch the integration on before checking it", HttpStatus.CONFLICT);
+        }
+
+        return integration;
+    }
+
+    @Async
+    @SchedulerLock(name = "integrationManualTrigger-#{#integrationId}", lockAtMostFor = "PT10M", lockAtLeastFor = "PT5S")
+    public void triggerIntegration(UUID integrationId) {
+        try {
+            logger.info("Manually triggering integration: {}", integrationId);
+            Integration integration = getIntegrationById(integrationId);
+            Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> map =
+                    integrationManager.dispatchToIntegrationServices(integration);
+            if (map != null && !map.isEmpty()) {
+                integrationChannel.send(MessageBuilder.withPayload(map).build());
+                logger.info("Integration trigger dispatched for integration: {}", integrationId);
+            } else {
+                logger.info("No updates found for integration: {}", integrationId);
+            }
+        } catch (Exception e) {
+            logger.error("Error triggering integration: {}", integrationId, e);
+        }
+    }
+
 
 }
 

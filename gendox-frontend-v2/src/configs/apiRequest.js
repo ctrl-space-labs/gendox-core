@@ -190,6 +190,9 @@ export default {
 
   integrationsTrigger: organizationId => `${url}organizations/${organizationId}/integrations/trigger`,
 
+  integrationTrigger: (organizationId, integrationId) =>
+    `${url}organizations/${organizationId}/integrations/${integrationId}/trigger`,
+
   integrationSchedule: (organizationId, integrationId) =>
     `${url}organizations/${organizationId}/integrations/${integrationId}/schedule`,
 

@@ -146,6 +146,20 @@ public class IntegrationController {
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_INTEGRATIONS', 'getRequestedOrgIdFromPathVariable')")
+    @PostMapping("/organizations/{organizationId}/integrations/{id}/trigger")
+    @Operation(summary = "Check one integration now",
+            description = "Runs this integration now, whatever its schedule. Asynchronous: returns 202 Accepted, "
+                    + "and the run has finished when the integration's lastRunAt moves.")
+    public ResponseEntity<Void> triggerOneIntegration(@PathVariable UUID organizationId,
+                                                      @PathVariable UUID id) throws GendoxException {
+
+        integrationService.validateTrigger(organizationId, id);
+        integrationService.triggerIntegration(id);
+
+        return ResponseEntity.accepted().build();
+    }
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_INTEGRATIONS', 'getRequestedOrgIdFromPathVariable')")
     @DeleteMapping("/organizations/{organizationId}/integrations/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Remove an integration",
