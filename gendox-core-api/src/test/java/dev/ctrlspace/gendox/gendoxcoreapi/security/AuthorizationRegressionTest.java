@@ -203,7 +203,7 @@ class AuthorizationRegressionTest {
         JwtDTOUserProfileConverter converter = mock(JwtDTOUserProfileConverter.class); JwtDTO dto = new JwtDTO();
         when(converter.jwtDTO(profile)).thenReturn(dto);
         JWTUtils jwtUtils = mock(JWTUtils.class); when(jwtUtils.getAuthorities(dto)).thenReturn(List.of());
-        JwtUserProfileConversionFilter filter = new JwtUserProfileConversionFilter(users, converter, jwtUtils);
+        JwtUserProfileConversionFilter filter = new JwtUserProfileConversionFilter(users, converter, jwtUtils, "backend-client");
         UUID victimId = UUID.randomUUID();
         when(users.getUserProfileByUniqueIdentifier(victimId.toString())).thenReturn(profile);
         Jwt jwt = Jwt.withTokenValue("review-only").header("alg", "RS256").subject(user.toString())

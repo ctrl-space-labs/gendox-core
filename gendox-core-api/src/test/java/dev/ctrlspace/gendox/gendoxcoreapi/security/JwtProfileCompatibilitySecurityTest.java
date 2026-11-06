@@ -51,7 +51,7 @@ class JwtProfileCompatibilitySecurityTest {
     }
 
     JwtUserProfileConversionFilter conversion() {
-        return new JwtUserProfileConversionFilter(users, new JwtDTOUserProfileConverter(), mock(JWTUtils.class, CALLS_REAL_METHODS));
+        return new JwtUserProfileConversionFilter(users, new JwtDTOUserProfileConverter(), mock(JWTUtils.class, CALLS_REAL_METHODS), "backend-client");
     }
 
     @Test void registrationAndProfileConversionPreserveOriginalFieldsAndOrganizationAuthorities() throws Exception {
@@ -112,6 +112,36 @@ class JwtProfileCompatibilitySecurityTest {
         conversion().doFilter(new MockHttpServletRequest(), response, (request, servletResponse) -> reachedApplication.set(true));
         assertEquals(401, response.getStatus()); assertFalse(reachedApplication.get());
         assertInstanceOf(JwtAuthenticationToken.class, SecurityContextHolder.getContext().getAuthentication());
+    }
+
+    /** A profile with another id than the token's subject, like seeded and Discord users. */
+    int profileStatusForOtherId(String storedEmail, java.util.function.Consumer<Jwt.Builder> claims) throws Exception {
+        UserProfile stored = UserProfile.builder().id(UUID.randomUUID().toString()).email(storedEmail)
+                .globalUserRoleType(new Type()).organizations(List.of()).build();
+        when(users.getUserProfileByUniqueIdentifier(login)).thenReturn(stored);
+        Jwt.Builder jwt = Jwt.withTokenValue("test").header("alg", "RS256").subject(subject.toString()).claim("preferred_username", login);
+        claims.accept(jwt);
+        SecurityContextHolder.getContext().setAuthentication(new JwtAuthenticationToken(jwt.build()));
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        conversion().doFilter(new MockHttpServletRequest(), response, new MockFilterChain());
+        return response.getStatus();
+    }
+
+    @Test void tokensTheBackendGotForDiscordUsersAreAccepted() throws Exception {
+        assertEquals(200, profileStatusForOtherId(null, jwt -> jwt.claim("azp", "backend-client")));
+    }
+
+    @Test void aVerifiedEmailProvesASeededAccount() throws Exception {
+        assertEquals(200, profileStatusForOtherId("Seeded@Example.invalid", jwt -> jwt
+                .claim("email", "seeded@example.invalid").claim("email_verified", true)));
+    }
+
+    @Test void identifierCollisionsAreStillRejected() throws Exception {
+        String victim = "victim@example.invalid";
+        assertEquals(401, profileStatusForOtherId(victim, jwt -> jwt.claim("email", victim).claim("email_verified", false)), "unverified email");
+        assertEquals(401, profileStatusForOtherId(victim, jwt -> jwt.claim("email", "attacker@example.invalid").claim("email_verified", true)), "own verified email");
+        assertEquals(401, profileStatusForOtherId(null, jwt -> jwt.claim("email", victim).claim("email_verified", true)), "account without email");
+        assertEquals(401, profileStatusForOtherId(victim, jwt -> jwt.claim("azp", "gendox-pkce-public-client")), "other client");
     }
 
     @Test void missingUsernameDoesNotTriggerAnUnscopedUserLookup() throws Exception {

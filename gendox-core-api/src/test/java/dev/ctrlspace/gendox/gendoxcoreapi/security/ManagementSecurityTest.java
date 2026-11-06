@@ -55,7 +55,7 @@ class ManagementSecurityTest {
                     mock(ProjectService.class), mock(UserInvitationService.class));
         }
         @Bean JwtUserProfileConversionFilter conversionFilter() {
-            return new JwtUserProfileConversionFilter(mock(UserService.class), mock(JwtDTOUserProfileConverter.class), mock(JWTUtils.class));
+            return new JwtUserProfileConversionFilter(mock(UserService.class), mock(JwtDTOUserProfileConverter.class), mock(JWTUtils.class), "backend-client");
         }
         @Bean(name = "delegatedAuthenticationEntryPoint") AuthenticationEntryPoint entryPoint() {
             return (request, response, exception) -> response.sendError(401);
