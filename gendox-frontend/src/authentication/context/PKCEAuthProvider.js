@@ -154,6 +154,12 @@ const PKCEAuthProvider = ({ children, initialAuth }) => {
       }
     } catch (userDataError) {
       console.error('Error occurred while fetching user data:', userDataError)
+      // The API rejects this login: end the Keycloak session, or the next page load would send the same token again
+      if (userDataError.response?.status === 401) {
+        setIsLoggingOut(true)
+        clearAuthState()
+        await userManager.signoutRedirect()
+      }
     } finally {
       setLoading(false)
     }

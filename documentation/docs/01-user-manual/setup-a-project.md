@@ -52,6 +52,13 @@ To configure the Agent:
 
 4. Describe the agent’s role in the **Agent Behavior** section
 
+5. Choose how the agent uses your documents in **Knowledge Search**:
+   - **Always**: it searches the documents before every answer.
+   - **Auto**: it searches when a question needs them.
+   - **Off**: it answers without searching the documents.
+
+6. Optionally add **Skills**: instructions the agent reads when a question needs them. Add one from **Gendox skills**, or write your own with **New skill** (a `SKILL.md` file, the format Claude Code and Codex use).
+
 ![04-gendox-configure-agent.png](./img/04-gendox-configure-agent.png)
 
 ---
@@ -90,6 +97,8 @@ Gendox currently supports text files (e.g., `.txt`, `.md`) and PDFs. You can upl
 3. Start chatting!
 
 ![05-gendox-chat.png](./img/05-gendox-chat.png)
+
+The agent is also available on every page of the app as the **Gendox assistant**: click the Gendox icon at the bottom right. It knows the page you are on, answers from the project's documents, can take you to other pages, and can create, change and run the project's tasks.
 
 ---
 

@@ -21,6 +21,6 @@ public class ProjectAgentCriteria {
     private List<String> projectIdIn = new ArrayList<>();
     private String userId;
     private Boolean privateAgent;
-    private List<UUID> agentIdIn = new ArrayList<>();
+    private List<UUID> agentIdIn;
 
 }

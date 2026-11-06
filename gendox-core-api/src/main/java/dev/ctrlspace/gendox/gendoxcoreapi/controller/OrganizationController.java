@@ -252,7 +252,7 @@ public class OrganizationController {
         }
 
 
-        return userOrganizationService.updateUserRole(request.getUserOrganizationId(), request.getRoleName());
+        return userOrganizationService.updateUserRole(userId, organizationId, request.getRoleName());
 
     }
 

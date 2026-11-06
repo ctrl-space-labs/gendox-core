@@ -1,6 +1,5 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
-
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.EOScriptConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.EOTaskGeometryConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
@@ -69,6 +68,9 @@ public class EarthObservationController {
             );
         }
 
+        if (eoScriptDTO.getId() != null) {
+            throw new GendoxException("NEW_ENTITY_ID_MUST_BE_NULL", "A new entity cannot have an ID", HttpStatus.BAD_REQUEST);
+        }
         // Force taskId from path (not from client)
         eoScriptDTO.setTaskId(taskId);
         eoScriptDTO.setIsLatestVersion(null); // defensive: service decides this
@@ -180,6 +182,9 @@ public class EarthObservationController {
             throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
         }
 
+        if (dto.getId() != null) {
+            throw new GendoxException("NEW_ENTITY_ID_MUST_BE_NULL", "A new entity cannot have an ID", HttpStatus.BAD_REQUEST);
+        }
         dto.setTaskId(taskId);
         EOTaskGeometry entity = eoTaskGeometryConverter.toEntity(dto);
         EOTaskGeometry saved = eoTaskGeometryService.createGeometry(entity);
@@ -203,6 +208,9 @@ public class EarthObservationController {
         Task task = taskService.getTaskById(taskId);
         if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
             throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
+        }
+        if (!taskId.equals(eoTaskGeometryService.getGeometryById(geometryId).getTaskId())) {
+            throw new GendoxException("INVALID_TASK", "Geometry does not belong to the specified task", HttpStatus.BAD_REQUEST);
         }
 
         dto.setId(geometryId);
@@ -229,6 +237,9 @@ public class EarthObservationController {
         Task task = taskService.getTaskById(taskId);
         if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
             throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
+        }
+        if (!taskId.equals(eoTaskGeometryService.getGeometryById(geometryId).getTaskId())) {
+            throw new GendoxException("INVALID_TASK", "Geometry does not belong to the specified task", HttpStatus.BAD_REQUEST);
         }
 
         eoTaskGeometryService.deleteGeometry(geometryId);

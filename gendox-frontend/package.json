@@ -2,7 +2,7 @@
   "name": "gendox-frontend",
   "description": "Gendox Core - Next.js Frontend",
   "license": "AGPL-3.0",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "author": {
     "name": "Ctrl+Space Labs",
     "url": "https://gendox.dev/"
@@ -87,6 +87,7 @@
     "rehype-highlight": "^7.0.2",
     "rehype-katex": "^7.0.0",
     "rehype-raw": "^7.0.0",
+    "rehype-sanitize": "^6.0.0",
     "remark-gfm": "^4.0.1",
     "remark-math": "^6.0.0",
     "showdown": "^2.1.0"

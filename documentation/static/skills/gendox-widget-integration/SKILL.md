@@ -1,6 +1,6 @@
 ---
 name: gendox-widget-integration
-description: Integrate the Gendox AI chat widget into a website. Use when a developer asks to embed the Gendox widget, add a chat assistant to a webpage, wire up local page context, register browser-side tools, or handle widget lifecycle in any frontend framework.
+description: Integrate the Gendox AI chat widget into a website. Use when a developer asks to embed the Gendox widget, add a chat assistant to a webpage, wire up local page context, register browser-side tools (Sync or Async), write SKILL.md files that tell the agent how to use them, or handle widget lifecycle in any frontend framework.
 ---
 
 # Gendox Widget Integration
@@ -80,21 +80,50 @@ Increase `data-gendox-local-context-max-responses` so the iframe waits for your 
 
 ## Register a tool
 
-1. Define the tool in Gendox: **Project → Settings → AI Agent → Tools** (OpenAI-style JSON schema).
-2. Register a browser handler with the same name:
+1. The tool is defined in Gendox, not in the site's code. Give the user an OpenAI-style JSON schema to add in **Project → Settings → AI Agent → Tools → Add Tool**, and the **Client tool execution** to choose:
+   - **Async** (default): for actions (navigate, scroll, fill a form). The agent continues at once; the return value is not sent.
+   - **Sync**: for data the agent needs (cart, order status). The agent waits; the return value is the tool result.
+2. Register a handler with the schema's `name`, inside `script.onload`. It receives the parsed arguments.
 
 ```js
+// Async: an action
 window.gendox.tools.registerTool('navigate_to_section', (args) => {
   const el = document.getElementById(args.sectionId)
   if (!el) return { success: false, error: 'Section not found' }
   el.scrollIntoView({ behavior: 'smooth' })
   return { success: true }
 })
+
+// Sync: the returned object is what the agent receives
+window.gendox.tools.registerTool('get_cart', async () => {
+  const cart = await fetch('/api/cart').then(r => r.json())
+  return { items: cart.items, total: cart.total, currency: cart.currency }
+})
 ```
 
-Validate arguments before acting. Tool results are currently one-way (not returned to the model).
+- Validate arguments before acting.
+- Calls run one at a time, and every handler is awaited (Async too), so keep handlers quick.
+- Sync: return JSON-serializable data; a thrown error is sent as an error result. Gendox waits indefinitely, so add your own timeout to anything that can hang. Don't navigate from a Sync tool.
+- A handler that navigates returns `navigated: true`; the remaining calls then run on the next page.
+- `registerTool` throws if the name is taken, and `removeTool` / `removeLocalContextRequestCallback` if it isn't. Guard them (SPA remounts, React StrictMode).
 
-`removeLocalContextRequestCallback` and `removeTool` **throw** if the name was never registered — only call them after a successful register.
+## Describe the agent's behaviour
+
+Besides **Agent behavior** (the system prompt), an agent can have skills: `SKILL.md` files, in the format Claude Code and Codex use, that it reads when a question needs them. To tell the agent when and how to use the site's tools, write one and have the user add it in **Settings → AI Agent → Skills → New skill** (paste it, or **Upload SKILL.md**):
+
+```markdown
+---
+name: shop-assistant
+description: Use when the user asks about their cart, an order or a product of this shop.
+---
+
+# Shop assistant
+
+1. Before answering about the cart, call `get_cart`.
+2. To show a product, call `open_web_page` with its URL.
+```
+
+`name` is lowercase letters, digits and hyphens. `allowed-tools` may list only built-in Gendox tools; refer to the site's tools in the text.
 
 ## Controlling the widget
 
@@ -112,5 +141,5 @@ window.gendox.widget.updateConfig({  // runtime config push to the iframe
 
 ## Further reference
 
-- **Local context and tools (detail)**: [skills/gendox-widget-integration/references/tools-and-local-context.md](/skills/gendox-widget-integration/references/tools-and-local-context.md)
+- **Local context and tools (detail)**: [references/tools-and-local-context.md](references/tools-and-local-context.md)
 - **Human docs**: [Website Widget docs](https://docs.gendox.dev/website-widget/website-widget-installation)

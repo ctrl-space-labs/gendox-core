@@ -34,6 +34,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.Moderatio
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.MessageLocalContextConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Embedding;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.MessageLocalContext;
@@ -48,6 +49,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.services.CompletionTurnService;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ContentPart;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.CompletionService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentSectionService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.EmbeddingService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.MessageLocalContextService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.MessageService;
@@ -55,6 +57,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.services.OrganizationModelKeyService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.SubscriptionValidationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TrainingService;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import dev.ctrlspace.gendox.spring.batch.services.DeepThinkingBatchService;
 import io.micrometer.observation.annotation.Observed;
@@ -78,6 +81,8 @@ public class EmbeddingsController {
     private DeepThinkingBatchService deepThinkingBatchService;
     private CompletionTurnService completionTurnService;
     private ChatThreadNamingService chatThreadNamingService;
+    private DocumentSectionService documentSectionService;
+    private SecurityUtils securityUtils;
     private TaskExecutor taskExecutor;
 
     // Identifies an anonymous chat session when it answers or checks a waiting turn
@@ -100,6 +105,8 @@ public class EmbeddingsController {
                                 DeepThinkingBatchService deepThinkingBatchService,
                                 CompletionTurnService completionTurnService,
                                 ChatThreadNamingService chatThreadNamingService,
+                                DocumentSectionService documentSectionService,
+                                SecurityUtils securityUtils,
                                 @Qualifier("taskExecutor") TaskExecutor taskExecutor) {
         this.embeddingService = embeddingService;
         this.trainingService = trainingService;
@@ -113,6 +120,8 @@ public class EmbeddingsController {
         this.deepThinkingBatchService = deepThinkingBatchService;
         this.completionTurnService = completionTurnService;
         this.chatThreadNamingService = chatThreadNamingService;
+        this.documentSectionService = documentSectionService;
+        this.securityUtils = securityUtils;
         this.taskExecutor = taskExecutor;
     }
 
@@ -124,7 +133,11 @@ public class EmbeddingsController {
                     "This endpoint calculates and returns the embedding of the text content within the specified section. " +
                     "It also associates the calculated embedding with the section in the database for further analysis.")
     public Embedding getSectionEmbedding(@PathVariable UUID sectionId, @RequestParam String projectId) throws GendoxException, NoSuchAlgorithmException {
-        return trainingService.runTrainingForSection(sectionId, UUID.fromString(projectId));
+        DocumentInstanceSection section = documentSectionService.getSectionById(sectionId);
+        if (!securityUtils.areAllDocumentsInAnyProject(List.of(section.getDocumentInstance().getId()), List.of(UUID.fromString(projectId)))) {
+            throw new GendoxException("INVALID_PROJECT", "Section does not belong to the specified project", HttpStatus.BAD_REQUEST);
+        }
+        return trainingService.runTrainingForSection(section, UUID.fromString(projectId));
     }
 
 
@@ -179,6 +192,15 @@ public class EmbeddingsController {
             throw new GendoxException("MAX_PAGE_SIZE_EXCEED", "Page size can't be more than 5", HttpStatus.BAD_REQUEST);
         }
 
+        securityUtils.requireThreadInProject(message.getThreadId(), UUID.fromString(projectId));
+        if (message.getRole() != null && !"user".equals(message.getRole())) {
+            throw new GendoxException("INVALID_MESSAGE_ROLE", "Search messages must have the user role", HttpStatus.BAD_REQUEST);
+        }
+        if (message.getLocalContexts() != null && !message.getLocalContexts().isEmpty()) {
+            securityUtils.requireDocumentsInProject(message.getLocalContexts().stream()
+                    .map(context -> context == null || context.getDocument() == null ? null : context.getDocument().getId())
+                    .toList(), UUID.fromString(projectId));
+        }
         message.setProjectId(UUID.fromString(projectId));
         message = messageService.createMessage(message);
 
@@ -210,6 +232,8 @@ public class EmbeddingsController {
                                                                     Authentication authentication,
                                                                     HttpServletRequest request) throws Exception {
 
+        securityUtils.requireThreadInProject(completionRequestDTO.getThreadId(), UUID.fromString(projectId));
+        securityUtils.requireDocumentsInProject(completionRequestDTO.getDocumentInstanceIds(), UUID.fromString(projectId));
         if (TOOL_ROLE.equals(completionRequestDTO.getRole())) {
             return postToolResult(completionRequestDTO, UUID.fromString(projectId), request);
         }
@@ -292,7 +316,7 @@ public class EmbeddingsController {
         return respond(toolResult.isStream(), true, question, listener -> completionService.resumeCompletionSearch(turn, listener));
     }
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable') || @securityUtils.isPublicThread(#threadId)")
+    @PreAuthorize("(@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable') && @securityUtils.hasThreadMemberAccess(#threadId)) || @securityUtils.isPublicThread(#threadId)")
     @GetMapping("/threads/{threadId}/completion-status")
     @Operation(summary = "Get the status of a thread's latest chat turn",
             description = "IDLE, GENERATING, WAITING_FOR_TOOLS or FAILED, with the calls a waiting turn needs results for. " +
@@ -339,6 +363,7 @@ public class EmbeddingsController {
         return moderationResponse;
     }
 
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedDocumentIdFromRequestParam')")
     @PostMapping("/messages/moderation/document")
     public Map<Map<String, Boolean>, String> getModerationForDocumentSections(@RequestParam UUID documentId) throws GendoxException {
 

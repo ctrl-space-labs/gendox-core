@@ -262,6 +262,19 @@ const viewDocumentContent = async (threadId, documentId, token) => {
 }
 
 /**
+ * View the original file of a project document (inline preview) as blob.
+ * Use for documents without text sections, such as images.
+ */
+const viewProjectDocumentContent = async (documentId, token) => {
+  return axios.get(apiRequests.viewProjectDocumentContent(documentId), {
+    responseType: 'blob',
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  })
+}
+
+/**
  * Download document bytes as blob.
  * Use for "Download" button.
  */
@@ -292,5 +305,6 @@ export default {
   findDocumentsByCriteria,
   getDocuments,
   viewDocumentContent,
+  viewProjectDocumentContent,
   downloadDocument
 }

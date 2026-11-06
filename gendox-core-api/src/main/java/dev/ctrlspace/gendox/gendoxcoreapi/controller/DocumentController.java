@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentInstanceConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentInstanceSectionWithoutDocumentConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentOnlyConverter;
@@ -34,7 +35,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import io.swagger.v3.oas.annotations.Operation;
 
-
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
@@ -58,6 +58,7 @@ public class DocumentController {
     private QueueProducerService queueProducerService;
 
     private final String documentUploadTopicName;
+    private final SecurityUtils securityUtils;
 
 
     @Autowired
@@ -69,7 +70,7 @@ public class DocumentController {
                               DocumentInstanceSectionWithoutDocumentConverter documentInstanceSectionWithoutDocumentConverter,
                               DocumentOnlyConverter documentOnlyConverter,
                               QueueProducerService queueProducerService,
-                              @Value("${gendox.topics.document-upload}") String documentUploadTopicName) {
+                              @Value("${gendox.topics.document-upload}") String documentUploadTopicName, SecurityUtils securityUtils) {
         this.documentService = documentService;
         this.documentInstanceConverter = documentInstanceConverter;
         this.uploadService = uploadService;
@@ -79,6 +80,7 @@ public class DocumentController {
         this.documentOnlyConverter = documentOnlyConverter;
         this.queueProducerService = queueProducerService;
         this.documentUploadTopicName = documentUploadTopicName;
+        this.securityUtils = securityUtils;
     }
 
 
@@ -208,6 +210,9 @@ public class DocumentController {
             throw new GendoxException("DOCUMENT_INSTANCE_ID_MUST_BE_NULL", "Document instant id is not null", HttpStatus.BAD_REQUEST);
         }
 
+        if (documentInstanceDTO.getRemoteUrl() != null) {
+            throw new GendoxException("DOCUMENT_STORAGE_MANAGED", "Use document upload to store a file", HttpStatus.BAD_REQUEST);
+        }
         DocumentInstance documentInstance = documentInstanceConverter.toEntity(documentInstanceDTO);
 
         if (!organizationId.equals(documentInstanceDTO.getOrganizationId())) {
@@ -252,6 +257,11 @@ public class DocumentController {
         }
 
 
+        DocumentInstance existing = documentService.getDocumentInstanceById(documentId);
+        if ((documentInstanceDTO.getRemoteUrl() != null && !documentInstanceDTO.getRemoteUrl().equals(existing.getRemoteUrl()))
+                || (documentInstanceDTO.getOrganizationId() != null && !documentInstanceDTO.getOrganizationId().equals(existing.getOrganizationId()))) {
+            throw new GendoxException("DOCUMENT_STORAGE_MANAGED", "Document storage and ownership cannot be changed here", HttpStatus.BAD_REQUEST);
+        }
         DocumentInstance documentInstance = documentInstanceConverter.toEntity(documentInstanceDTO);
         documentInstance = documentService.updateDocument(documentInstance);
         return documentInstance;
@@ -293,6 +303,15 @@ public class DocumentController {
             throw new GendoxException("DOCUMENT_ID_MISMATCH", "Document ID in path and Document ID in body are not the same", HttpStatus.BAD_REQUEST);
         }
 
+        DocumentInstanceSection existingSection = documentSectionService.getSectionById(sectionId);
+        if (!documentId.equals(existingSection.getDocumentInstance().getId())) {
+            throw new GendoxException("INVALID_DOCUMENT", "Section does not belong to the specified document", HttpStatus.BAD_REQUEST);
+        }
+
+        if (documentSection.getDocumentSectionMetadata() == null
+                || !existingSection.getDocumentSectionMetadata().getId().equals(documentSection.getDocumentSectionMetadata().getId())) {
+            throw new GendoxException("INVALID_SECTION_METADATA", "Metadata does not belong to this section", HttpStatus.FORBIDDEN);
+        }
 
         documentSection = documentSectionService.updateSection(documentSection);
 
@@ -307,6 +326,12 @@ public class DocumentController {
                     "This operation allows you to modify the order of the sections within the document. " +
                     "Ensure that the ID in the path matches the ID in the provided section details.")
     public void updateSectionsOrder(Authentication authentication, @PathVariable UUID documentId, @RequestBody List<DocumentInstanceSectionOrderDTO> sectionsOrder) throws GendoxException {
+        Set<UUID> ownedMetadata = documentSectionService.getSectionsByDocument(documentId).stream()
+                .map(section -> section.getDocumentSectionMetadata().getId()).collect(java.util.stream.Collectors.toSet());
+        if (sectionsOrder == null || sectionsOrder.stream().anyMatch(order -> order == null
+                || !ownedMetadata.contains(order.getDocumentSectionMetadataId()))) {
+            throw new GendoxException("INVALID_SECTION_METADATA", "Metadata must belong to this document", HttpStatus.FORBIDDEN);
+        }
         documentSectionService.updateSectionsOrder(sectionsOrder);
 
     }
@@ -345,8 +370,11 @@ public class DocumentController {
     @Operation(summary = "Delete document section by ID",
             description = "Delete an existing document section by specifying its unique ID. " +
                     "This operation permanently removes the section and its associated metadata.")
-    public void deleteSection(@PathVariable UUID sectionId) throws GendoxException {
+    public void deleteSection(@PathVariable UUID documentId, @PathVariable UUID sectionId) throws GendoxException {
         DocumentInstanceSection documentSection = documentSectionService.getSectionById(sectionId);
+        if (!documentId.equals(documentSection.getDocumentInstance().getId())) {
+            throw new GendoxException("INVALID_DOCUMENT", "Section does not belong to the specified document", HttpStatus.BAD_REQUEST);
+        }
         documentSectionService.deleteSection(documentSection);
 
     }
@@ -406,6 +434,7 @@ public class DocumentController {
             return ResponseEntity.badRequest().build();
         }
 
+        securityUtils.requireThreadInProject(threadId, projectId);
         DocumentInstance documentInstance = documentService.uploadSingleFile(file, messageAttachment, threadId, organizationId, projectId);
 
         return ResponseEntity.ok(documentInstance);

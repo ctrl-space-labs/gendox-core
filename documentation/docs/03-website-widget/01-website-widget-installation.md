@@ -107,6 +107,8 @@ The Gendox widget uses the **Post Message API** to exchange messages between the
 | gendox.events.chat.message.context.local.request | Event triggered when gendox requests local context from the parent window. This can be the content of the page that the user is viewing, or the text selected, or whatever you want! |
 | gendox.events.chat.message.context.local.response | Gendox is waiting this events from the parent window. Whatever is sent will be included in the local context in the completion message.                                              |
 | gendox.events.chat.message.tool_calls.request    | List of Tools that the Agent wants to be executed in the frontend.                                                                                                                   |
-| gendox.events.chat.message.tool_calls.response   | Not Supported Yet. The responses for the Tools the agent requested. This responses will be provided to the Agent to complete the response.                                           |
+| gendox.events.chat.message.tool_calls.response   | Sent by the parent SDK with the results of Sync tools. Each result is given to the agent, which then continues its answer.                                                          |
+| gendox.events.chat.message.tool_calls.ack        | Sent by the iframe when the chat has processed a tool result (with an `error` if it was rejected), so the parent SDK stops resending it.                                          |
+| gendox.events.chat.message.tool_calls.ready      | Sent by the iframe when it can accept tool results, e.g. after a page reload; the parent SDK then sends any results still pending.                                                |
 
 
