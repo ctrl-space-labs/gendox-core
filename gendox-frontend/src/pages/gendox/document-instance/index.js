@@ -15,9 +15,11 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 
 import SectionCard from 'src/views/pages/documents-components/SectionCard'
 import SectionEdit from 'src/views/pages/documents-components/SectionEdit'
+import DocumentImagePreview from 'src/views/pages/documents-components/DocumentImagePreview'
 import documentService from 'src/gendox-sdk/documentService'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import { localStorageConstants } from 'src/utils/generalConstants'
+import { isImageDoc } from 'src/utils/attachmentsAdapter'
 
 const DocumentSections = () => {
   const dispatch = useDispatch()
@@ -27,6 +29,7 @@ const DocumentSections = () => {
   const document = useSelector(state => state.activeDocument.document)
   const sections = useSelector(state => state.activeDocument.sections)
   const isBlurring = useSelector(state => state.activeDocument.isBlurring)
+  const isImageDocument = document?.id === documentId && isImageDoc(document)
 
   const [editMode, setEditMode] = useState(false)
   const [areAllMinimized, setAreAllMinimized] = useState(false)
@@ -287,7 +290,10 @@ const DocumentSections = () => {
             transition: 'filter 0.3s ease'
           }}
         >
-          <SectionCard ref={sectionCardRef} targetIndex={targetIndex} highlightedSectionId={highlightedSectionId} />
+          {isImageDocument && <DocumentImagePreview documentId={documentId} title={document.title} token={token} />}
+          {(!isImageDocument || sections.length > 0) && (
+            <SectionCard ref={sectionCardRef} targetIndex={targetIndex} highlightedSectionId={highlightedSectionId} />
+          )}
         </ResponsiveCardContent>
       ) : (
         <DragDropContext onDragEnd={handleDragEnd}>

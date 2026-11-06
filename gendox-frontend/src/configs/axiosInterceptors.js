@@ -1,4 +1,5 @@
 import axios from 'axios'
+import apiRequests from 'src/configs/apiRequest'
 
 let interceptorRegistered = false
 
@@ -15,7 +16,8 @@ export const registerAxiosInterceptors = () => {
   axios.interceptors.response.use(
     response => response,
     error => {
-      if (error?.response?.status === 401 && typeof window !== 'undefined') {
+      // A 401 on the profile is handled by PKCEAuthProvider: a reload would send the same rejected token again, forever
+      if (error?.response?.status === 401 && typeof window !== 'undefined' && error.config?.url !== apiRequests.getProfile) {
         // Full page reload (like pressing F5) to reset all app state
         window.location.href = '/'
       }

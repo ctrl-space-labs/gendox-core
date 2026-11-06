@@ -137,6 +137,17 @@ Skills are served as static files at <a href="/skills/" target="_self">/skills/<
 | Cursor / OpenAI Codex | `.agents/skills/<skill-name>/` |
 | Claude Code | `.claude/skills/<skill-name>/` |
 
+For example, for Claude Code (use `.agents/skills` for Cursor or Codex):
+
+```bash
+d=.claude/skills/gendox-widget-integration
+mkdir -p $d/references
+curl -fsSL https://docs.gendox.dev/skills/gendox-widget-integration/SKILL.md -o $d/SKILL.md
+curl -fsSL https://docs.gendox.dev/skills/gendox-widget-integration/references/tools-and-local-context.md -o $d/references/tools-and-local-context.md
+```
+
+For WordPress, also install `gendox-wordpress-integration` (one `SKILL.md`) next to it.
+
 ### Available skills
 
 | Skill | What it covers |

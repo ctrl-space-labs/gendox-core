@@ -71,6 +71,20 @@ Every integration endpoint lives under the organization that owns it, because
 the organization is what the caller's permission is checked against. Reading
 needs `OP_READ_INTEGRATIONS` and everything else `OP_EDIT_INTEGRATIONS`.
 
+### Chat completions
+
+`POST /messages/completions?projectId=…` sends a message to the project's AI Agent. Pass a `threadId` to continue a thread; leave it out to start one. A public agent also accepts requests without authentication.
+
+- **Response**: JSON by default. With `"stream": true` it is a stream of Server-Sent Events: `start`, `delta` (answer and reasoning tokens as they are generated), `message` (each saved message), `tool_calls` (Async tool calls for the page), and finally one of `done`, `waiting_for_tools` or `error`.
+- **Client tools**: with `"clientToolResults": true`, a call to a Sync tool pauses the answer. The response ends with status `WAITING_FOR_TOOLS` and the calls to run. Send each result to the same endpoint:
+
+  ```json
+  { "threadId": "…", "role": "tool", "toolCallId": "…", "value": "{\"total\": 33}", "stream": true }
+  ```
+
+  While other calls still wait, the answer is `202` with the status; the last result continues the answer. An anonymous caller sends the `resumeToken` it received with the waiting status in the `X-Gendox-Completion-Token` header. A new message in the thread cancels the calls still waiting.
+- **Status**: `GET /threads/{threadId}/completion-status` returns `IDLE`, `GENERATING` or `WAITING_FOR_TOOLS`, with the waiting calls for the caller allowed to answer them. Use it to follow an answer after a reconnect.
+
 ## API Associations
 
 The APIs are structured around the relationships between these main objects:

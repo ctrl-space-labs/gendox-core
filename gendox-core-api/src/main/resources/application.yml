@@ -85,10 +85,10 @@ management:
   endpoints:
     web:
       exposure:
-        include: "*"
+        include: "health,prometheus"
   endpoint:
     health:
-      show-details: always
+      show-details: never
   observations:
     key-values:
       application: gendox-core-api

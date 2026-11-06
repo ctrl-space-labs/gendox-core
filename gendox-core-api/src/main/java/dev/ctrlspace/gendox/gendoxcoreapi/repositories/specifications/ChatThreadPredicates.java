@@ -13,7 +13,6 @@ import java.util.UUID;
 public class ChatThreadPredicates {
 
     private static QChatThread qChatThread = QChatThread.chatThread;
-    private static QMessage qMessage = QMessage.message;
 
     public static Predicate build(ChatThreadCriteria criteria) {
         return ExpressionUtils.allOf(
@@ -39,13 +38,12 @@ public class ChatThreadPredicates {
             return null;
         }
 
-        // We use a subquery to select only threadIds that have a count of messages > minMessages
-        return qChatThread.id.in(
-                JPAExpressions.select(qMessage.threadId)
-                        .from(qMessage)
-                        .groupBy(qMessage.threadId)
-                        .having(qMessage.threadId.count().goe(minMessages))
-        );
+        // Counts only the messages of each thread. A thread without messages never matches, even for minMessages 0.
+        QMessage threadMessage = new QMessage("threadMessage");
+        return JPAExpressions.select(threadMessage.count())
+                .from(threadMessage)
+                .where(threadMessage.threadId.eq(qChatThread.id))
+                .goe(Math.max(minMessages, 1L));
     }
 
     private static Predicate threadIdIn(List<UUID> threadIdIn) {

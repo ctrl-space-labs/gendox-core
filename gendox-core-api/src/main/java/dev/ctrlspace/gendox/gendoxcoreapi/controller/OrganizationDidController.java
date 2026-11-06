@@ -20,7 +20,11 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
-@RestController
+/**
+ * Deactivated: without {@code @RestController} it is not registered, so none of these endpoints is served.
+ * The code is kept until it is removed in a later change.
+ */
+@Deprecated(forRemoval = true)
 public class OrganizationDidController {
 
     OrganizationDidService organizationDidService;

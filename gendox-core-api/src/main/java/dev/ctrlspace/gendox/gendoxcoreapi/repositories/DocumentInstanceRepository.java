@@ -70,6 +70,21 @@ public interface DocumentInstanceRepository extends JpaRepository<DocumentInstan
             """, nativeQuery = true)
     boolean areAllDocumentIdsInAnyProject(@Param("documentIds") UUID[] documentIds, @Param("projectIds")  UUID[] projectIds);
 
+    @Query(value = """
+            SELECT COUNT(DISTINCT owned.document_id) = cardinality(CAST(:documentIds AS uuid[]))
+            FROM (
+                SELECT document_id FROM gendox_core.project_documents
+                WHERE project_id = ANY(CAST(:projectIds AS uuid[]))
+                UNION
+                SELECT document_id FROM gendox_core.chat_thread_documents
+                WHERE project_id = ANY(CAST(:projectIds AS uuid[]))
+            ) owned
+            WHERE owned.document_id = ANY(CAST(:documentIds AS uuid[]))
+            """, nativeQuery = true)
+    boolean areAllDocumentIdsInProjectsOrChats(@Param("documentIds") UUID[] documentIds,
+                                              @Param("projectIds") UUID[] projectIds);
+
+
 
     @Modifying
     @Query(nativeQuery = true, value = "DELETE FROM gendox_core.document_instance WHERE id IN :documentIds")

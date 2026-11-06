@@ -11,8 +11,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-@RestController
+
+/**
+ * Deactivated: without {@code @RestController} it is not registered, so none of these endpoints is served.
+ * The code is kept until it is removed in a later change.
+ */
+@Deprecated(forRemoval = true)
 public class ProvenAiWebHookController {
 
     private ProvenAiMessageService provenAiMessageService;

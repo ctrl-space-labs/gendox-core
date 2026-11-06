@@ -88,7 +88,10 @@ Tools are two-sided: define a schema in Gendox, register a handler in the browse
 
 ### Step 1: Define the tool schema in Gendox
 
-Go to **Project → Settings → AI Agent → Tools**, click **Add Tool**, paste an OpenAI-style JSON schema:
+Go to **Project → Settings → AI Agent → Tools**, click **Add Tool**, choose the **Client tool execution** and paste an OpenAI-style JSON schema:
+
+- **Async — continue without the result** (default): for actions such as navigating or scrolling. The agent is told the tool was executed.
+- **Sync — wait for the host result**: for data the agent needs, such as the cart contents. The agent waits until the handler returns, then continues with its result.
 
 ```json
 {
@@ -111,7 +114,27 @@ Go to **Project → Settings → AI Agent → Tools**, click **Add Tool**, paste
 
 ### Step 2: Register the handler in the browser
 
-Use `window.gendox.tools.registerTool(name, handler)`. `handler(args)` receives the **parsed** arguments object (not a JSON string). Return a plain object as the result.
+Use `window.gendox.tools.registerTool(name, handler)`. `handler(args)` receives the **parsed** arguments object (not a JSON string). Return a plain object, or a Promise of one, as the result.
+
+For a **Sync** tool the result is sent to the agent as JSON:
+
+| Handler outcome | Tool result the agent receives |
+|---|---|
+| Returns a value | The value |
+| Returns nothing | `null` |
+| Throws | `{"error":"CLIENT_TOOL_FAILED","message":…}` |
+| No handler registered for the name | `{"error":"CLIENT_TOOL_HANDLER_MISSING",…}` |
+| Returns a value that is not JSON-serializable | `{"error":"CLIENT_TOOL_RESULT_NOT_SERIALIZABLE"}` |
+| The page unloaded while the handler ran | `{"error":"CLIENT_TOOL_OUTCOME_UNKNOWN",…}`; the call is not run again |
+
+Calls run one at a time, in order, and each handler is awaited, Async ones too. A handler that navigates returns `navigated: true`: the SDK stops there and runs the remaining calls when the widget loads on the new page.
+
+```js
+window.gendox.tools.registerTool('get_cart', async () => {
+  const cart = await fetch('/api/cart').then(r => r.json())
+  return { items: cart.items, total: cart.total, currency: cart.currency }
+})
+```
 
 ```js
 window.gendox.tools.registerTool('navigate_to_section', (args) => {
@@ -149,7 +172,7 @@ let intervalId = setInterval(() => {
 
 ### Cleanup
 
-`removeTool` **throws** if the name is not registered. Track registration:
+`removeTool` **throws** if the name is not registered, and `registerTool` if it already is. Track registration:
 
 ```js
 let toolRegistered = false
@@ -178,7 +201,8 @@ window.gendox.tools.removeTool('open_web_page')
 window.gendox.tools.registerTool('open_web_page', myHandler)
 ```
 
-### Current limitations
+### Limitations
 
-- **Tool results are not returned to the agent.** The handler runs, but the return value is not fed back into the model's context. Tool use is currently one-way (fire-and-forget).
+- **No timeout on Sync tools.** The chat waits until the handler returns, so wrap slow work in your own timeout and return an error result when it expires.
+- **Results are saved in the chat thread.** Return only what the agent needs.
 - **Navigation side-effect**: if `open_web_page` navigates the page, the widget script is torn down. The SDK persists remaining queued tool calls in `sessionStorage` and resumes them when the new page reloads the widget.

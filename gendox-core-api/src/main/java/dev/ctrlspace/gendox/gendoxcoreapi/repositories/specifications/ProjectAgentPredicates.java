@@ -14,12 +14,17 @@ public class ProjectAgentPredicates {
 
     public static Predicate build(ProjectAgentCriteria criteria) {
         return ExpressionUtils.allOf(
+                agentIdIn(criteria.getAgentIdIn()),
                 agentName(criteria.getAgentName()),
                 organizationId(criteria.getOrganizationId()),
                 projectIdIn(criteria.getProjectIdIn()),
                 userId(criteria.getUserId()),
                 privateAgent(criteria.getPrivateAgent())
         );
+    }
+
+    private static Predicate agentIdIn(List<UUID> agentIds) {
+        return agentIds == null ? null : qProjectAgent.id.in(agentIds);
     }
 
     private static Predicate agentName(String agentName) {

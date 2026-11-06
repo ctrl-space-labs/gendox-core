@@ -48,7 +48,7 @@ Every page takes its ids in the query string: `?organizationId=…&projectId=…
 | Chat | `/gendox/chat/` | Full-screen chat with the project's agent, with past threads. |
 | Document | `/gendox/document-instance/?…&documentId=…` | Read a document and its sections. |
 | New document | `/gendox/create-document/` | Write a document by hand. |
-| Project settings | `/gendox/project-settings/` | **General**: name, description, training, auto-training. **Members**: invite people and set roles. **AI Agent**: model, behaviour (system prompt), tools, skills, public or private, the website embed snippet. |
+| Project settings | `/gendox/project-settings/` | **General**: name, description, training, auto-training. **Members**: invite people and set roles. **AI Agent**: model, behaviour (system prompt), Knowledge Search (Always, Auto or Off: whether the agent searches the documents before answering), tools (each Async or Sync), skills, public or private, the website embed snippet. |
 | Organization settings | `/gendox/organization-settings/` | **General**: details and plan. **Members**. **Advanced settings**: AI provider keys, API keys, connectors, integrations (Git, S3, API, websites). |
 | Document Insights task | `/gendox/tasks/document-insights/?…&taskId=…` | **ADD QUESTIONS**, **ADD DOCUMENT**, open a document for its prompt and page range, generate answers, open a cell for the full answer, export CSV. |
 | Document Digitization task | `/gendox/tasks/document-digitization/?…&taskId=…` | Add documents, set the prompt and structure per document, generate, read each page's output, export CSV. |

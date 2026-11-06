@@ -43,7 +43,7 @@ public class DocumentContentController {
 
     @PreAuthorize("(" +
             "  @securityUtils.threadHasDocumentInMessageLocalContext(#threadId, #documentId) && " +
-            "  (@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable') " +
+            "  ((@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable') && @securityUtils.hasThreadMemberAccess(#threadId)) " +
             "   || @securityUtils.isPublicThread(#threadId))" +
             ") || @securityUtils.isDocumentCreatedByCurrentUser(#documentId)") // that is because we call this endpoint sometimes before MessageLocalContext created
     @GetMapping("threads/{threadId}/documents/{documentId}/content")
@@ -74,8 +74,34 @@ public class DocumentContentController {
     }
 
 
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedDocumentIdFromPathVariable')")
+    @GetMapping("documents/{documentId}/content")
+    @Operation(summary = "View document content (inline)",
+            description = "Streams the original file of a project document as inline content, " +
+                    "for previews (img/iframe) of documents that have no text sections, such as images.")
+    public ResponseEntity<Resource> viewProjectDocumentContent(@PathVariable UUID documentId) throws GendoxException {
+        logger.debug("Received request to view content for project documentId: {}", documentId);
+        DocumentInstance doc = documentService.getDocumentInstanceById(documentId);
+
+        String remoteUrl = doc.getRemoteUrl();
+        if (!StringUtils.hasText(remoteUrl)) {
+            throw new GendoxException("DOCUMENT_REMOTE_URL_EMPTY", "Document remoteUrl is empty",
+                    org.springframework.http.HttpStatus.BAD_REQUEST);
+        }
+
+        Resource resource = downloadService.openResource(remoteUrl);
+        MediaType mediaType = detectMediaType(doc, resource);
+
+        String filename = safeFilename(resource.getFilename(), doc.getTitle(), "document");
+        return ResponseEntity.ok()
+                .contentType(mediaType)
+                .header(HttpHeaders.CONTENT_DISPOSITION, contentDispositionInline(filename))
+                .body(resource);
+    }
+
+
     @PreAuthorize("@securityUtils.threadHasDocumentInMessageLocalContext(#threadId, #documentId) && " +
-            "(@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable') " +
+            "((@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable') && @securityUtils.hasThreadMemberAccess(#threadId)) " +
             "|| @securityUtils.isPublicThread(#threadId))")
     @GetMapping("threads/{threadId}/documents/{documentId}/download")
     @Operation(summary = "Download document (attachment)",

@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -59,6 +60,10 @@ public class SubscriptionPlansController {
     @PreAuthorize("@securityUtils.hasAuthority('OP_READ_ORGANIZATION_PLAN', 'getRequestedOrgIdFromPathVariable')")
     @PutMapping("/organizations/{organizationId}/organization-plans/{organizationPlanId}/cancel")
     public OrganizationPlan cancelOrganizationPlan(@PathVariable UUID organizationPlanId, @PathVariable UUID organizationId) throws GendoxException {
+        OrganizationPlan organizationPlan = organizationPlanService.getOrganizationPlanById(organizationPlanId);
+        if (!organizationId.equals(organizationPlan.getOrganization().getId())) {
+            throw new GendoxException("INVALID_ORGANIZATION", "Plan does not belong to the specified organization", HttpStatus.BAD_REQUEST);
+        }
         return organizationPlanService.cancelOrganizationPlan(organizationPlanId);
     }
 

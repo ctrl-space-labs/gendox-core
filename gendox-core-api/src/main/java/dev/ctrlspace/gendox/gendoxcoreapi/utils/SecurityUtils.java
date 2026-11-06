@@ -7,9 +7,11 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.OrganizationUserD
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.AccessCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ChatThreadDocumentsRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ChatThreadRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.MessageRepository;
+import dev.ctrlspace.gendox.authentication.ApiKeyAuthenticationToken;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.MessageLocalContextService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectAgentService;
@@ -40,6 +42,8 @@ import java.util.stream.Collectors;
 
 @Component("securityUtils")
 public class SecurityUtils {
+
+    private static final String READ_MEMBERS_AUTHORITY = "OP_READ_DOCUMENT";
 
     private final ChatThreadDocumentsRepository chatThreadDocumentsRepository;
     private final TaskRepository taskRepository;
@@ -74,6 +78,28 @@ public class SecurityUtils {
         this.messageRepository = messageRepository;
     }
 
+
+    public void requireThreadInProject(UUID threadId, UUID projectId) throws GendoxException {
+        if (threadId == null) return;
+        var thread = chatThreadRepository.findById(threadId).orElse(null);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UserProfile profile = authentication != null && authentication.getPrincipal() instanceof UserProfile p ? p : null;
+        boolean readable = profile != null && hasAuthority(profile, "OP_READ_DOCUMENT",
+                AccessCriteria.builder().projectIds(Set.of(projectId.toString())).build())
+                && hasThreadMemberAccess(threadId);
+        if (thread == null || !Boolean.TRUE.equals(thread.getActive()) || !projectId.equals(thread.getProjectId())
+                || (!readable && !(Boolean.TRUE.equals(thread.getPublicThread()) && isPublicProject(projectId.toString())))) {
+            throw new GendoxException("CHAT_THREAD_NOT_FOUND", "Chat thread not found", HttpStatus.NOT_FOUND);
+        }
+    }
+
+    public void requireDocumentsInProject(Collection<UUID> ids, UUID projectId) throws GendoxException {
+        if (ids != null && !ids.isEmpty()
+                && (projectId == null || ids.stream().anyMatch(Objects::isNull) || !documentInstanceRepository.areAllDocumentIdsInProjectsOrChats(
+                        ids.stream().distinct().toArray(UUID[]::new), new UUID[]{projectId}))) {
+            throw new GendoxException("DOCUMENT_NOT_IN_PROJECT", "Documents must belong to the selected project", HttpStatus.FORBIDDEN);
+        }
+    }
 
     public boolean isSuperAdmin() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -164,6 +190,59 @@ public class SecurityUtils {
                 UserNamesConstants.GENDOX_AGENT.equals(
                         userProfile.getGlobalUserRoleType().getName()
                 );
+    }
+
+    /**
+     * Checks that the requested user is the caller, for actions a user may only take on their own account.
+     * A super admin is always allowed.
+     */
+    public boolean isCurrentUser(UUID userId) {
+        if (!(SecurityContextHolder.getContext().getAuthentication().getPrincipal() instanceof UserProfile userProfile)) {
+            return false;
+        }
+
+        if (isSuperAdmin(userProfile)) {
+            return true;
+        }
+
+        return userId.toString().equals(userProfile.getId());
+    }
+
+    /**
+     * Checks that a user search stays inside an organization or project whose members the caller can read,
+     * with the same authority as the organization and project members endpoints. A super admin is always
+     * allowed, so only a super admin can search across all users.
+     */
+    public boolean canSearchUsers(UserCriteria criteria) {
+        if (!(SecurityContextHolder.getContext().getAuthentication().getPrincipal() instanceof UserProfile userProfile)) {
+            return false;
+        }
+
+        if (isSuperAdmin(userProfile)) {
+            return true;
+        }
+
+        if (criteria.isFetchAll()) {
+            return false;
+        }
+
+        String organizationId = criteria.getOrganizationId();
+        String projectId = criteria.getProjectId();
+
+        // Without an organization or a project, the search would cover every user
+        if (organizationId == null && projectId == null) {
+            return false;
+        }
+
+        if (organizationId != null && !canAccessOrganizations(READ_MEMBERS_AUTHORITY, userProfile, Set.of(organizationId))) {
+            return false;
+        }
+
+        if (projectId != null && !canAccessProjects(READ_MEMBERS_AUTHORITY, userProfile, Set.of(projectId))) {
+            return false;
+        }
+
+        return true;
     }
 
     public boolean isOrganizationOwner() throws GendoxException {
@@ -486,6 +565,11 @@ public class SecurityUtils {
         return getRequestedDocumentIdAccessCriteria(documentId);
     }
 
+    /** The ?documentId= of the endpoints that take a single document as a request param. */
+    private AccessCriteria getRequestedDocumentIdFromRequestParam() {
+        return getRequestedDocumentIdAccessCriteria(getCurrentHttpRequest().getParameter(QueryParamNames.DOCUMENT_INSTANCE_ID));
+    }
+
     /** The {taskId} of the path, so a task of another project can't be reached through it. */
     private AccessCriteria getRequestedTaskIdFromPathVariable() {
         AccessCriteria accessCriteria = new AccessCriteria();
@@ -584,12 +668,31 @@ public class SecurityUtils {
         return projectAgentService.isPublicAgent(UUID.fromString(projectId));
     }
 
+    /**
+     * Signed-in users act only on the chat threads they are a member of, the same threads GET /threads lists
+     * for them. API keys work for the whole organization, so they keep the project rule of hasAuthority, and a
+     * super admin is always allowed. Used together with hasAuthority, never instead of it.
+     */
+    public boolean hasThreadMemberAccess(UUID threadId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication instanceof ApiKeyAuthenticationToken) {
+            return true;
+        }
+        if (threadId == null || authentication == null || !(authentication.getPrincipal() instanceof UserProfile userProfile)) {
+            return false;
+        }
+        if (isSuperAdmin(userProfile)) {
+            return true;
+        }
+        return chatThreadRepository.existsByIdAndChatThreadMembers_UserId(threadId, UUID.fromString(userProfile.getId()));
+    }
+
     public boolean isPublicThread(UUID threadId) {
 
         return chatThreadRepository.existsByIdAndPublicThreadIsTrue(threadId);
     }
 
-    /** Whether the caller may read the thread of a message: a member of its project, or anyone when the thread is public. */
+    /** Whether the caller may read the thread of a message: a member of the thread, or anyone when the thread is public. */
     public boolean canReadThreadOfMessage(UUID messageId) {
         Optional<UUID> threadId = messageRepository.findThreadIdById(messageId);
         if (threadId.isEmpty()) {
@@ -607,7 +710,7 @@ public class SecurityUtils {
                 .projectIds(new HashSet<>())
                 .threadId(threadId.get().toString())
                 .documentIds(List.of())
-                .build());
+                .build()) && hasThreadMemberAccess(threadId.get());
     }
 
     public boolean threadHasDocumentInMessageLocalContext(UUID threadId, UUID documentId) {
@@ -677,6 +780,7 @@ public class SecurityUtils {
 
         public static final String THREAD_ID_FROM_PATH_VARIABLE = "getRequestedThreadIdFromPathVariable";
         public static final String DOCUMENT_ID_FROM_PATH_VARIABLE = "getRequestedDocumentIdFromPathVariable";
+        public static final String DOCUMENT_ID_FROM_REQUEST_PARAM = "getRequestedDocumentIdFromRequestParam";
         public static final String DOCUMENT_IDS_FROM_REQUEST_PARAMS = "getRequestedDocumentIdsFromRequestParams";
         public static final String ORG_ID_FROM_DOCUMENT_ID_PATH_VARIABLE = "getRequestedOrgIdFromDocumentIdPathVariable";
 
@@ -719,6 +823,10 @@ public class SecurityUtils {
 
         if (AccessCriteriaGetterFunction.DOCUMENT_ID_FROM_PATH_VARIABLE.equals(getterFunction)) {
             accessCriteria = getRequestedDocumentIdFromPathVariable();
+        }
+
+        if (AccessCriteriaGetterFunction.DOCUMENT_ID_FROM_REQUEST_PARAM.equals(getterFunction)) {
+            accessCriteria = getRequestedDocumentIdFromRequestParam();
         }
 
         if (AccessCriteriaGetterFunction.DOCUMENT_IDS_FROM_REQUEST_PARAMS.equals(getterFunction)) {

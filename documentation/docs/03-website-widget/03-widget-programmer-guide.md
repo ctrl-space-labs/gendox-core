@@ -129,7 +129,7 @@ window.gendox.initializeGendoxChat({
 | Property / method | Description |
 |------------------|-------------|
 | `window.gendox.tools.allTools` | Object mapping tool name → handler function. |
-| `window.gendox.tools.registerTool(name, handler)` | Register a tool. `handler(args)` receives parsed arguments; throw or return a result. |
+| `window.gendox.tools.registerTool(name, handler)` | Register a tool. `handler(args)` receives parsed arguments; throw or return a result (or a Promise). For a Sync tool the result is sent to the agent. |
 | `window.gendox.tools.removeTool(name)` | Unregister a tool by name. |
 
 Tool calls are triggered by the agent; the widget sends `gendox.events.chat.message.tool_calls.request` (see Events section). The SDK auto-registers the default `open_web_page` tool handler unless you disable it with `data-gendox-open-web-page-tool-enabled="false"` on the script tag, or `openWebPageToolEnabled: false` in `initializeGendoxChat(...)`. For full tool-use documentation and payload format, see [Agent Tool Use and Website Tool Support](./02-agent-tool-use-and-website-tool-support.md).
@@ -163,6 +163,9 @@ Communication between parent and iframe uses `window.postMessage`. All Gendox ev
 | `gendox.events.chat.message.new.sent` | Iframe → Parent | User sent a message. |
 | `gendox.events.chat.message.new.response.received` | Iframe → Parent | Completion response received. |
 | `gendox.events.chat.message.tool_calls.request` | Iframe → Parent | Agent requested tool execution; payload is array of tool calls. |
+| `gendox.events.chat.message.tool_calls.response` | Parent → Iframe | Results of Sync tools; payload is an array of `{ threadId, turnId, messageId, toolCallId, value }`, `value` being the JSON result. |
+| `gendox.events.chat.message.tool_calls.ack` | Iframe → Parent | The chat processed a tool result (`payload.toolCallId`); `payload.error` is set when it was rejected. The SDK stops resending it. |
+| `gendox.events.chat.message.tool_calls.ready` | Iframe → Parent | The chat can accept tool results; the SDK sends any still pending. |
 | `gendox.events.embedded.config.update` | Parent → Iframe | Parent sends updated config (e.g. `chatInitialState`, `localContextMaxResponses`, `localContextMaxWaitMs`). |
 
 Always check `event.origin` in listeners to avoid processing messages from untrusted origins.
@@ -419,7 +422,7 @@ window.gendox.tools.registerTool('set_category_filter', function (args) {
 });
 ```
 
-API: `window.gendox.tools.registerTool(name, handler)` — `name` is the tool name (must match the tool defined in Gendox), `handler(args)` receives the parsed arguments object. Return a plain object (or throw) as the tool result. For full payload format and tool definition, see [Agent Tool Use and Website Tool Support](./02-agent-tool-use-and-website-tool-support.md).
+API: `window.gendox.tools.registerTool(name, handler)` — `name` is the tool name (must match the tool defined in Gendox), `handler(args)` receives the parsed arguments object. Return a plain object (or throw) as the tool result. If the tool's **Client tool execution** is **Sync**, the agent waits for this result and continues with it. For full payload format and tool definition, see [Agent Tool Use and Website Tool Support](./02-agent-tool-use-and-website-tool-support.md).
 
 ---
 

@@ -102,6 +102,11 @@ public class JobController {
 
         }
 
+        // the request param must not point to a project other than the authorized one in the path
+        if (projectIdFromRequest != null && !projectIdFromRequest.equals(projectId)) {
+            throw new GendoxException("PROJECT_ID_MISMATCH", "Request param 'projectId' must match the project in the path", HttpStatus.BAD_REQUEST);
+        }
+
         switch (jobName.toUpperCase()) {
             case AsyncExecutionTypes.SPLITTER:
                 jobService.executeSplitter(projectIdFromRequest, timePeriodDTO);

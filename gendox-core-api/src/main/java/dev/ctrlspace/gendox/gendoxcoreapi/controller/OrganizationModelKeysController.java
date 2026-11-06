@@ -5,6 +5,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.OrganizationModelProviderKey;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.OrganizationModelKeyCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.OrganizationModelKeyService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -46,6 +47,9 @@ public class OrganizationModelKeysController {
     public OrganizationModelProviderKey createModelKey(@PathVariable UUID organizationId,
                                                        @RequestBody OrganizationModelProviderKey organizationModelProviderKey) throws GendoxException {
 
+        if (organizationModelProviderKey.getId() != null) {
+            throw new GendoxException("NEW_ENTITY_ID_MUST_BE_NULL", "A new entity cannot have an ID", HttpStatus.BAD_REQUEST);
+        }
         organizationModelProviderKey.setOrganizationId(organizationId);
 
         return organizationModelKeyService.createModelKey(organizationModelProviderKey);
