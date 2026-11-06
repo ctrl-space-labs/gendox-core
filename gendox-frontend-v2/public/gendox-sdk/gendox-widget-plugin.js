@@ -40,8 +40,8 @@
         }
         /* the bubble is the bare Gendox logo, at a launcher icon's size */
         .gendox-chat-closed {
-            width: 2rem;
-            height: 2rem;
+            width: 2.5rem;
+            height: 2.5rem;
         }
         /* the floating look, for the plugin's own container only (a host may give its own one, e.g. a panel) */
         .gendox-chat-container-position.gendox-chat-open {
