@@ -5,7 +5,7 @@ import { Link as LinkIcon, Mail, MailPlus, UserRoundPlus } from 'lucide-react'
 import { useAuth } from 'src/authentication/useAuth'
 import useHasOrgRole from 'src/authentication/hooks/useHasOrgRole'
 import { fetchProjectInvitations, fetchProjectMembersAndRoles } from 'src/store/activeProject/activeProject'
-import { fetchOrganizationMembers, fetchOrganizationPlans } from 'src/store/activeOrganization/activeOrganization'
+import { fetchOrganizationPlans } from 'src/store/activeOrganization/activeOrganization'
 import invitationService from 'src/gendox-sdk/invitationService'
 import projectService from 'src/gendox-sdk/projectService'
 import { hasPlanFeature, planFeatureMessages, planFeatures } from 'src/configs/planFeatures'
@@ -183,7 +183,16 @@ const AgentMembersPage = () => {
   const { projectMembersAndRoles, isMembersLoading, projectInvitations, isInvitationsLoading } = useSelector(
     state => state.activeProject
   )
-  const { organizationMembers, organizationPlans } = useSelector(state => state.activeOrganization)
+  const {
+    organizationMembers: storedMembers,
+    organizationMembersFor,
+    organizationPlans: storedPlans,
+    organizationPlansFor
+  } = useSelector(state => state.activeOrganization)
+  // only this organization's members, for "Add from organization"
+  const organizationMembers = organizationMembersFor === organizationId ? storedMembers : null
+  // only this organization's plan: while another's is still in the store, nothing is assumed
+  const organizationPlans = organizationPlansFor === organizationId ? storedPlans : null
 
   const canManage = useHasOrgRole({ organizationId, roles: ['OP_ADD_PROJECT_MEMBERS'] })
   const canRemove = useHasOrgRole({ organizationId, roles: ['OP_REMOVE_PROJECT_MEMBERS'] })
@@ -230,9 +239,9 @@ const AgentMembersPage = () => {
 
   useEffect(() => {
     if (!organizationId || !projectId) return
+    // loadMembers loads the organization's members too, for their roles
     loadMembers()
     loadInvitations()
-    dispatch(fetchOrganizationMembers({ organizationId, token: getToken() }))
     dispatch(fetchOrganizationPlans({ organizationId, token: getToken() }))
   }, [dispatch, organizationId, projectId, loadMembers, loadInvitations])
 

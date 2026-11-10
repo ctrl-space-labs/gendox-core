@@ -40,7 +40,7 @@ const ThreadMenu = ({ thread, openHref, onDeleted, className = 'menu-x' }) => {
     try {
       const token = getToken()
       await chatThreadService.updateChatThread(organizationId, thread.id, { name }, token)
-      dispatch(fetchThreads({ organizationId, token }))
+      dispatch(fetchThreads({ organizationId, token, force: true }))
       toast.success('Conversation renamed')
       setRenameOpen(false)
     } catch (error) {
@@ -54,7 +54,7 @@ const ThreadMenu = ({ thread, openHref, onDeleted, className = 'menu-x' }) => {
     try {
       const token = getToken()
       await chatThreadService.deleteChatThread(organizationId, thread.id, token)
-      dispatch(fetchThreads({ organizationId, token }))
+      dispatch(fetchThreads({ organizationId, token, force: true }))
       toast.success('Conversation deleted')
       onDeleted?.(thread)
     } catch (error) {

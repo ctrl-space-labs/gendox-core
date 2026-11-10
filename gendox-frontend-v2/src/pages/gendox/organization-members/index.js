@@ -141,7 +141,16 @@ const OrganizationMembersPage = () => {
   const dispatch = useDispatch()
   const { user } = useAuth()
   const { organization, organizationId, projects } = useActiveScope()
-  const { organizationMembers, organizationPlans, isFetchingMembers } = useSelector(state => state.activeOrganization)
+  const {
+    organizationMembers: storedMembers,
+    organizationMembersFor,
+    organizationPlans: storedPlans,
+    organizationPlansFor,
+    isFetchingMembers
+  } = useSelector(state => state.activeOrganization)
+  const organizationMembers = organizationMembersFor === organizationId ? storedMembers : null
+  // only this organization's plan: while another's is still in the store, nothing is assumed
+  const organizationPlans = organizationPlansFor === organizationId ? storedPlans : null
 
   const canInviteRole = useHasOrgRole({ organizationId, roles: ['OP_ADD_USERS'] })
   const canRemove = useHasOrgRole({ organizationId, roles: ['OP_REMOVE_USERS'] })

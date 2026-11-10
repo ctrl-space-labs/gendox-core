@@ -1,9 +1,9 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 import projectService from 'src/gendox-sdk/projectService'
-import organizationService from 'src/gendox-sdk/organizationService'
 import invitationService from 'src/gendox-sdk/invitationService'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import toast from 'react-hot-toast'
+import { fetchOrganizationMembers } from 'src/store/activeOrganization/activeOrganization'
 
 export const fetchProject = createAsyncThunk(
   'activeProject/fetchProject',
@@ -21,6 +21,11 @@ export const fetchProject = createAsyncThunk(
       console.error('Failed to fetch project', error)
       return thunkAPI.rejectWithValue(error.response.data)
     }
+  },
+  {
+    // the guard and the agent pages both ask for the project in the URL as a page opens; one request answers both
+    // (force: a reload after a change, which a request already on its way may predate)
+    condition: ({ projectId, force }, { getState }) => force || getState().activeProject.loadingProjectId !== projectId
   }
 )
 
@@ -55,6 +60,10 @@ export const deleteProject = createAsyncThunk(
 export const fetchProjectMembersAndRoles = createAsyncThunk(
   'activeProject/fetchProjectMembersAndRoles',
   async ({ organizationId, projectId, token }, thunkAPI) => {
+    // The organization's members go into the organization's store, which "Add from organization" reads, so they
+    // load at the same time and on their own: a failure of the agent's members must not leave that list stale
+    const organizationUsersPromise = thunkAPI.dispatch(fetchOrganizationMembers({ organizationId, token })).unwrap()
+    organizationUsersPromise.catch(() => {}) // reported by its own request; awaited below when needed
     try {
       // 1. Fetch project members
       const membersResponse = await projectService.getProjectMembers(organizationId, projectId, token)
@@ -64,9 +73,8 @@ export const fetchProjectMembersAndRoles = createAsyncThunk(
         activeProjectMember: true
       }))
 
-      // 2. Fetch organization users (to get roles)
-      const organizationResponse = await organizationService.getUsersInOrganizationByOrgId(organizationId, token)
-      const organizationUsers = organizationResponse.data
+      // 2. The organization's users, already on their way (for the roles)
+      const organizationUsers = await organizationUsersPromise
 
       // 3. Update each project member with their role (if found)
       const updatedProjectMembers = fetchedProjectMembers.map(member => {
@@ -79,9 +87,10 @@ export const fetchProjectMembersAndRoles = createAsyncThunk(
 
       return updatedProjectMembers
     } catch (error) {
-      toast.error(`${getErrorMessage(error)}`)
+      // a failure of the organization's members was already reported by their own request, and arrives unwrapped
+      if (error?.response) toast.error(`${getErrorMessage(error)}`)
       console.error('Failed to fetch project members and roles', error)
-      return thunkAPI.rejectWithValue(error.response.data)
+      return thunkAPI.rejectWithValue(error?.response?.data ?? error)
     }
   }
 )
@@ -141,6 +150,9 @@ const initialActiveProjectState = {
   isUpdating: false,
   isDeleting: false,
   isBlurring: false,
+  loadingProjectId: null,
+  // the latest fetchProject's id: an earlier answer arriving after a later request (another agent) is dropped
+  latestProjectRequest: null,
   isMembersLoading: false,
   isDeletingMember: false,
   isInvitationsLoading: false
@@ -154,21 +166,33 @@ const activeProjectSlice = createSlice({
     // the project as a PUT returned it, so a save doesn't load it again
     setProjectDetails: (state, action) => {
       state.projectDetails = action.payload
+      // a request for the same project still on its way predates the save; its answer must not undo it
+      if (state.loadingProjectId === action.payload?.id) {
+        state.latestProjectRequest = null
+        state.loadingProjectId = null
+        state.isBlurring = false
+      }
     }
   },
   extraReducers: builder => {
     builder
-      .addCase(fetchProject.pending, state => {
+      .addCase(fetchProject.pending, (state, action) => {
         state.isBlurring = true
+        state.loadingProjectId = action.meta.arg.projectId
+        state.latestProjectRequest = action.meta.requestId
         state.error = null
       })
       .addCase(fetchProject.fulfilled, (state, action) => {
+        if (action.meta.requestId !== state.latestProjectRequest) return
         state.isBlurring = false
+        state.loadingProjectId = null
         state.projectDetails = action.payload.project
         state.projectMembers = action.payload.members
       })
       .addCase(fetchProject.rejected, (state, action) => {
+        if (action.meta.requestId !== state.latestProjectRequest) return
         state.isBlurring = false
+        state.loadingProjectId = null
         state.error = action.payload
       })
       .addCase(updateProject.pending, state => {

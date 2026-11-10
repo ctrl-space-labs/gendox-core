@@ -51,6 +51,12 @@ const initialChatState = {
   threads: null,
   agents: null,
   isLoadingAgentsAndThreads: null,
+  // the organization the threads are loading for, and the latest request's id: only its answer is kept
+  loadingThreadsFor: null,
+  latestThreadsRequest: null,
+  // the organization the agents belong to, and the latest request for them: only its answer is kept
+  agentsFor: null,
+  latestAgentsRequest: null,
   sessions: {}
 }
 
@@ -114,12 +120,12 @@ export const fetchThreads = createAsyncThunk(
   'gendoxChat/fetchThreads',
   async ({ organizationId, token }, { getState, dispatch, rejectWithValue }) => {
     try {
-      // 1. Get agents from the Redux state.
-      let agents = getState().gendoxChat.agents
-      // If agents are not present, dispatch fetchAgents.
+      // 1. Get the organization's agents from the Redux state, or load them. The ones just loaded are used as
+      // returned: the store may meanwhile hold another organization's, from an answer that arrived late.
+      const chat = getState().gendoxChat
+      let agents = chat.agentsFor === organizationId ? chat.agents : null
       if (!agents || agents.length === 0) {
-        await dispatch(fetchAgents({ organizationId, token })).unwrap()
-        agents = getState().gendoxChat.agents
+        agents = await dispatch(fetchAgents({ organizationId, token })).unwrap()
       }
 
       // 2. Extract project IDs from the agents.
@@ -151,6 +157,13 @@ export const fetchThreads = createAsyncThunk(
       console.error('Failed to fetch threads:', error)
       return rejectWithValue(error.message)
     }
+  },
+  // The sidebar and the Conversations page both ask as a page opens: the threads already on their way for the same
+  // organization answer both. A refresh after a change (force) always goes, since a list already on its way may
+  // predate the change.
+  {
+    condition: ({ organizationId, force }, { getState }) =>
+      force || getState().gendoxChat.loadingThreadsFor !== organizationId
   }
 )
 
@@ -615,18 +628,29 @@ const gendoxChatSlice = createSlice({
     }
   },
   extraReducers: builder => {
+    builder.addCase(fetchAgents.pending, (state, action) => {
+      state.latestAgentsRequest = action.meta.requestId
+    })
     builder.addCase(fetchAgents.fulfilled, (state, action) => {
+      if (action.meta.requestId !== state.latestAgentsRequest) return
       state.agents = action.payload
+      state.agentsFor = action.meta.arg.organizationId
     })
     builder.addCase(fetchThreads.fulfilled, (state, action) => {
+      if (action.meta.requestId !== state.latestThreadsRequest) return
       state.threads = action.payload
       state.isLoadingAgentsAndThreads = false
+      state.loadingThreadsFor = null
     })
-    builder.addCase(fetchThreads.pending, state => {
+    builder.addCase(fetchThreads.pending, (state, action) => {
       state.isLoadingAgentsAndThreads = true
+      state.loadingThreadsFor = action.meta.arg.organizationId
+      state.latestThreadsRequest = action.meta.requestId
     })
-    builder.addCase(fetchThreads.rejected, state => {
+    builder.addCase(fetchThreads.rejected, (state, action) => {
+      if (action.meta.requestId !== state.latestThreadsRequest) return
       state.isLoadingAgentsAndThreads = false
+      state.loadingThreadsFor = null
     })
     builder.addCase(loadThread.pending, (state, action) => {
       const session = sessionOf(state, keyOf(action))
@@ -827,7 +851,7 @@ async function _handleThreadPostSend({ threadId, responseThreadId, projectId, or
 
   // reload threads to get the updated one
   // TODO requires performance improvement
-  dispatch(fetchThreads({ organizationId, token }))
+  dispatch(fetchThreads({ organizationId, token, force: true }))
 
   if (isNewThread && finalThreadId && !skipLoad) {
     await dispatch(loadThread({ threadId: finalThreadId, projectId, organizationId, token, chatKey }))

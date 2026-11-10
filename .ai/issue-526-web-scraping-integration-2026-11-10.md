@@ -1,8 +1,12 @@
 # Web Scraping Integration (Firecrawl) — [#526](https://github.com/ctrl-space-labs/gendox-core/issues/526)
 
-The current plan, written 2026-10-13. **Self-contained:** it carries forward everything still true from the revision of 2026-10-02, which it replaces, so nothing has to be read alongside it. The plan as first agreed is kept unchanged in [`issue-526-web-scraping-integration-2026-09-10.md`](issue-526-web-scraping-integration-2026-09-10.md); where the two disagree, this one holds.
+The current plan, written 2026-11-10. **Self-contained:** it carries forward everything still true from the revision of 2026-10-13, which it replaces, so nothing has to be read alongside it. The plan as first agreed is kept unchanged in [`issue-526-web-scraping-integration-2026-09-10.md`](issue-526-web-scraping-integration-2026-09-10.md); where the two disagree, this one holds.
 
-**Status.** The backend is implemented and verified against a live site and against a disposable database. The screen is written into `gendox-frontend` and in use. Two decisions taken since the previous revision reverse what it said, and both are described in place below: **a page's tick is durable again**, and **no interval means every pass of the poller** rather than no schedule at all.
+**Status.** Implemented, in review. The backend is verified against a live site and against a disposable database, and the screen is in use in `gendox-frontend` and in `gendox-frontend-v2`. Three things were added since the previous revision, each described in place below:
+
+- **Firecrawl calls retry rate limits and server errors**, and a rate limit that persists stops the pass instead of failing every remaining page (*Phase 1*, *Phase 3*).
+- **A failed run leaves a trace**: why the integration's last run failed, and when each page last failed (*Phase 2*, *Phase 3*). This answers an open question of the previous revision.
+- **One integration can be checked now**, on its own, without running every integration of the organization (*Phase 4*, *Phase 6*).
 
 The GitHub issues deliberately carry only Goal / Scope / Notes / Relationships. This document is the plan.
 
@@ -42,7 +46,11 @@ Firecrawl calls go through a `RestClient` built from the shared `RestTemplate` b
 
 **Credentials.** Platform key from `gendox.integrations.web-scrape.firecrawl.api-key`, backed by an environment variable like the other provider keys. An organization may override it with its own through `organization_connectors` under connector type `WEB_SCRAPE_FIRECRAWL`, config key exactly `apiKey`. Resolution order: organization connector when active and non-blank, else platform key, else `WEB_SCRAPE_API_KEY_NOT_FOUND`.
 
-Error codes per call: `WEB_SCRAPE_MAP_FAILED`, `WEB_SCRAPE_SCRAPE_FAILED`, `WEB_SCRAPE_CRAWL_FAILED`, `WEB_SCRAPE_PAGE_FAILED` for a page returning `statusCode >= 400` or empty markdown. Non-page links are dropped by suffix. Left out deliberately: retries for `429`/`5xx`, `includePaths`/`excludePaths` filtering (the DTO fields exist and are ignored), and block-page detection in the markdown.
+Error codes per call: `WEB_SCRAPE_MAP_FAILED`, `WEB_SCRAPE_SCRAPE_FAILED`, `WEB_SCRAPE_CRAWL_FAILED`, `WEB_SCRAPE_PAGE_FAILED` for a page returning `statusCode >= 400` or empty markdown, `WEB_SCRAPE_PAGE_NOT_FOUND` for a page that is gone. Non-page links are dropped by suffix. Left out deliberately: `includePaths`/`excludePaths` filtering (the DTO fields exist and are ignored), and block-page detection in the markdown.
+
+**Retries.** Every Firecrawl call — map, crawl start, crawl status, scrape — goes through one wrapper that retries `429` and `5xx` up to `MAX_ATTEMPTS` (3). The wait honours `Retry-After` when Firecrawl sends one, capped at a minute; otherwise it doubles from two seconds. A `429` that outlasts the attempts becomes `WEB_SCRAPE_RATE_LIMITED` with status `429`, so the run can tell *slow down* from *broken*; any other failure keeps the call's own error code with `502`. Auth and credit failures are not retried.
+
+**Constants.** The web-scrape constants are one class, `utils/constants/WebScrapeConstants`, with nested `Config`, `PageStatus` and `ErrorCodes`. Firecrawl's own constants — paths, formats, crawl statuses, poll and retry timings — sit with the adapter in `services/integrations/webScrapeIntegration/utils/constants/FirecrawlConfig`, the way each AI provider keeps its `*Config` beside its adapter.
 
 ## Phase 2 — Schema
 
@@ -70,6 +78,11 @@ A website row holds at most one integration, so a site is either a pushing sourc
 
 **A second migration adds two permissions.** `OP_READ_INTEGRATIONS` and `OP_EDIT_INTEGRATIONS`, granted to `ROLE_ADMIN` and `ROLE_OWNER`, inserted with `WHERE NOT EXISTS` so the migration is safe to re-run. See *Phase 4*, which explains why the integration endpoints stopped borrowing the website permissions.
 
+**A third migration records failures** (`V20261106_174800__Add_integration_last_run_error`), with `ADD COLUMN IF NOT EXISTS` so it is safe to re-run:
+
+- `integrations.last_run_error text` — why the last run failed, or null when it succeeded. A column of `integrations` rather than of the pages, because a run fails as a whole for reasons no page owns: a rejected key, a provider that is down, a rate limit. It is generic like `last_run_at`, and written for every type.
+- `web_scrape_pages.last_failed_at timestamp` — when the page last failed to be read, or null after it is read. `last_scraped_at` cannot carry it: it counts toward the monthly budget, so it is written only on success, and a page that failed today would otherwise show only the date it was last read.
+
 ## Phase 3 — The run
 
 `WebScrapeIntegrationUpdateService implements IntegrationUpdateService`, same shape as `ApiIntegrationUpdateService`.
@@ -91,7 +104,11 @@ The scheduled pass and the Read button call this same method, because they answe
 
 Inside the scrape loop, per page: fetch, store the title when the page gives one, and write a document when **the content changed or the link is missing**. The second half matters because a document deleted elsewhere nulls the link through `ON DELETE SET NULL` while the hash remains; without it the page reports "unchanged" forever and never comes back. Pages are processed oldest-first, so a budget that runs out leaves the freshest pages alone.
 
-**One bad page does not end the pass.** Each page is wrapped so that a `GendoxException` and any other runtime failure both mark that page `FAILED` with a message and carry on, and the page is saved in a `finally`. An exception whose message is blank — a `NullPointerException` says nothing — is recorded by its class name, because the column is read by whoever investigates. Before this, an unexpected failure on page three left pages four onward untouched and the cause only in a log.
+**One bad page does not end the pass.** Each page is wrapped so that a `GendoxException` and any other runtime failure both mark that page `FAILED` with a message and `last_failed_at`, and carry on, and the page is saved in a `finally`. A page that is gone becomes `REMOVED` instead and gets no failure time. A page read successfully clears `last_failed_at`. An exception whose message is blank — a `NullPointerException` says nothing — is recorded by its class name, because the column is read by whoever investigates. Before this, an unexpected failure on page three left pages four onward untouched and the cause only in a log.
+
+**A rate limit is the exception: it ends the pass.** When Firecrawl keeps answering `429` after the retries, carrying on would only fail every remaining page the same way, and mark pages `FAILED` that have nothing wrong with them. So the loop stops at that page, which keeps its status, and the pass ends with `WEB_SCRAPE_RATE_LIMITED` saying how many of how many pages were left for the next run.
+
+**Every run is stamped, with why it failed.** `last_run_at` is written when a run ends, successfully or not, and `last_run_error` is cleared on success or set to the failure's message. `IntegrationManager` does it for the scheduled pass and for the manual triggers, for every type; the three web-scrape actions do it themselves. Recording a failure is itself wrapped, so a failure that cannot be recorded does not end the pass over the other integrations.
 
 The service uploads each page itself through `documentService.uploadSingleFile(...)` — which stores the file, upserts the document and queues it for splitting and embedding — and returns an empty map, which the caller already reads as *no update*.
 
@@ -113,6 +130,7 @@ This closed a gap the previous revision did not have an answer for: **git and s3
 | `PUT` | `…/integrations/{id}/active` | turn on or off |
 | `PUT` | `…/integrations/{id}/schedule` | how often it runs |
 | `POST` | `…/organizations/{organizationId}/integrations/trigger` | run every active integration of the organization, `202` |
+| `POST` | `…/organizations/{organizationId}/integrations/{id}/trigger` | run this one integration now, `202` |
 | `DELETE` | `…/organizations/{organizationId}/integrations/{id}` | remove the source, keep the documents |
 | `GET` | `…/integrations/{integrationId}/web-scrape/pages` | paged list; filters `status`, `isSelected`, `hasContent`, free-text `search` |
 | `PUT` | `…/web-scrape/pages/selection` | `{pageIds, selected}` or `{selectAll:true}` |
@@ -132,6 +150,7 @@ This closed a gap the previous revision did not have an answer for: **git and s3
 - **Select-all is server-side**, a single `UPDATE`. A site can hold thousands of pages. The selection flag is nullable on the wire and a body omitting it is rejected.
 - **The pages list falls back to ordering by `url`** when the caller asks for no order. Postgres rewrites an updated row at the end of the heap, so without it the page a user just ticked moved, and paging could show a row twice or miss it.
 - All three `POST` actions are `@Async` with `@SchedulerLock(name = "webScrapeManualTrigger-{integrationId}")`, so repeated clicks cannot fan out into repeated bills. They bypass the due check but **not** entitlement or budget, and **the checks run in the request thread while the work does not** — an `@Async` method throws after the `202` has gone out, where nothing can surface it.
+- **Checking one integration now** goes through the same pass as the scheduler, with the schedule ignored like the organization trigger, so it is stamped and records failures the same way. The checks run in the request thread — `404` for an integration of another organization, `409` for one that is switched off — and only then the run is handed to an `@Async` method locked per integration (`integrationManualTrigger-{integrationId}`), so two integrations can be checked at once but one cannot be checked twice.
 - The schedule endpoint rejects intervals below a day **for crawled sites only**; the floor is per type, and the types that cost nothing per run have none. Any type refuses an interval below one minute.
 
 **A website and its crawl source are created together.** `POST /organizations/{id}/websites/web-scrape` makes the integration and the row in one transaction, so a crawl source appears in the same list as every other website. A domain that already has a row but no source gains one, keeping the name the user gave it; a domain that already has a source is refused, because one website has one content source and two would make the same page two documents.
@@ -154,7 +173,7 @@ The last one exists because a screen that can only learn the budget by exceeding
 
 ## Phase 6 — The screen
 
-Written into `gendox-frontend` under Advanced settings, and in use.
+Written into `gendox-frontend` under Advanced settings, and in use. `gendox-frontend-v2` has its own Integrations screen with the same picker; what it adds is described at the end of this phase.
 
 **Integrations are one list, websites are another.** A crawl source, a pushing site, an s3 queue and a git repository are the same kind of thing — something that puts content into a project — and they share one table with the columns that are true of all of them: name, type, project, status, last run. Websites keep their own panel for what is about the domain rather than the content: its name, its widget, its api key.
 
@@ -182,6 +201,13 @@ Written into `gendox-frontend` under Advanced settings, and in use.
 
 **Adding asks what it is for, as cards** rather than a dropdown, matching how the product asks for a task's type. Reading a site needs a project to put its documents in, so with none selected that card is not offered and the dialog says why. Git and s3 have no cards yet — [#547](https://github.com/ctrl-space-labs/gendox-core/issues/547).
 
+**In `gendox-frontend-v2`, failures and single checks are shown:**
+
+- A run started from the picker that ends with `lastRunError` says so at once, in a toast with the reason, rather than looking like a run with nothing to do.
+- The integrations list shows *Failed* under the last run, with the reason on hover.
+- A failed page shows when it failed, and the time it was last read stays in its tooltip.
+- Each switched-on integration has *Check now* in its menu. For a crawled site it first asks, with the pages left in this period's allowance, because reading pages spends it; other types run at once. The last-run cell reads *Checking…* until `lastRunAt` moves, then a toast says whether it worked. One request every two seconds, for the integration being checked only; after five minutes it stops waiting and says so.
+
 ## API key removal — [#543](https://github.com/ctrl-space-labs/gendox-core/issues/543)
 
 Found while building the key side of the same screen, and fixed with it. An API key shares its id with a `users` row, so that anything the key creates has an author in `created_by` / `updated_by`; `users` is referenced throughout the schema, so that row cannot simply be deleted. Deleting the key therefore left it orphaned — and when a website still referenced the key, the delete reached Postgres and failed there, so the caller got a constraint violation instead of an answer.
@@ -208,18 +234,24 @@ Found while building the key side of the same screen, and fixed with it. An API 
 - The WordPress handshake, sent with an api key, created the website row and its integration and bound both; sent a second time it returned the same row without writing to it.
 - Removing an integration left its documents in the project and cleared the temporary file-check rows that would otherwise have refused the delete.
 
-Still unwritten: the unit tests for the provider parsing, the update service and the entitlement checks, and the Playwright flow. There is no automated coverage of any of this.
+**Retries, the failure trace and Check now, 2026-11-05.**
+
+- `FirecrawlWebScrapeProviderTest` covers the provider's parsing and the retries: a `429` followed by success is read, and a `429` on every attempt ends as `WEB_SCRAPE_RATE_LIMITED` after exactly three calls. With `WebScrapeProviderUtilsTest`, 11 tests pass.
+- The migration was applied to a development database.
+- Check now was exercised by hand in `gendox-frontend-v2` against a running backend.
+
+Still unwritten: the unit tests for the update service and the entitlement checks, and the Playwright flow.
 
 ## Open questions
 
 - **A type is not asked what it needs.** Creation checks that the type exists and that something runs it, never what that type requires to work: an s3 integration with no queue name and a git integration with no url are both accepted, and fail every pass afterwards with the cause only in a log. A map of type to required fields belongs beside the list of runnable types, and [#547](https://github.com/ctrl-space-labs/gendox-core/issues/547) will need it anyway, since the dialog sends exactly those fields.
 - **Whether an api integration's active flag should be writable at all.** The screen hides the switch because the plugin sets the flag on every connect; the endpoint still accepts it. Hiding a control while the door stays open is a position worth taking deliberately rather than by omission.
-- **A failure leaves no trace at the integration.** A pass that fails writes nothing on the integration itself, so a source that has been failing for a week looks the same as one that has nothing to do. The run is stamped when it ends, successfully or not; what is missing is the distinction.
+- **Manual and scheduled runs of the same integration are not exclusive.** Check now is locked per integration, the organization trigger per organization, and the poller takes no lock, so the same integration can run twice at once from two of them. This was already true between the poller and the organization trigger. A Check now refused by its lock still answers `202`, and the v2 screen then waits until it gives up.
 - **Embed is displayed nowhere and enforced nowhere.** The websites list has always read as an allowlist, yet nothing checks it. The chip was removed rather than left implying a rule that does not exist. Enforcement belongs to #527, and the two changes to that table want to land in a known order.
 - **A second provider needs two things before the UI can offer a choice.** There is no endpoint listing the providers the backend supports, so any list written into the frontend would go stale silently; and each provider needs its own connector type, or a provider could be chosen for which no credentials can be stored. Until then the provider is stated, not selected.
 - **A provider key stored for a test double.** A mock adapter used for load testing appears among the model providers although it ignores any key given to it. The prototype hides providers that take no key, showing one only when a key already exists so that it can be removed. Whether such a double should be selectable at all is a product decision.
 - **Whether discovery honours the target site's `robots.txt`.** A policy question for the team, not only a technical one.
-- **The binding between a website and the key it sends with** is written from the request body on a path that is otherwise about the handshake. The requirement is that a binding changes only where a person meant to change it; the specifics belong in the private tracker rather than in this public repo.
+- **The binding between a website and the key it sends with.** The requirement is that a binding changes only where a person meant to change it; the specifics belong in the private tracker rather than in this public repo.
 
 ## Notes to carry forward
 
@@ -232,7 +264,7 @@ Still unwritten: the unit tests for the provider parsing, the update service and
   - Store `sourceURL` (the requested URL), not the post-redirect `url`. **Not enough on its own:** Map and deep crawl report the same page without and with a trailing slash, which became two rows under the unique key — billed twice, and two identical documents each answering the agent separately. Discovery normalizes before the upsert.
   - A scrape call can succeed for a page that failed: treat `statusCode >= 400` as a failed page.
   - `text/markdown` pages return no title: fall back to the first heading or the file name.
-  - Error bodies are `{"success": false, "error": …}`. Retry rate limits and server errors with backoff; fail fast on auth and credit failures.
+  - Error bodies are `{"success": false, "error": …}`. Rate limits and server errors are retried with backoff (*Phase 1*); auth and credit failures fail fast.
   - Responses can carry a `warning` field; log it.
   - Treat known block-page bodies and empty markdown as failed pages, never as content.
 - **Firecrawl serves cached scrapes.** Content-hash change detection only works if a re-scrape bounds that cache; confirm the controlling parameter before relying on re-scrape to notice an upstream edit.
