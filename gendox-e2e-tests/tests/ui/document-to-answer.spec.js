@@ -10,9 +10,7 @@ test.use({ storageState: sessionOf('testUser1') });
 //
 // Splitting is asked for through the API. In the application it is the Training button,
 // which queues a background job that can take a minute: training.spec.js covers that.
-// FIXME, not finished: upload and sections work, but clicking Send in the chat does not
-// send the question. See NOTES.md.
-test.fixme('document to answer: upload, read the sections, ask in chat', { tag: '@smoke' }, async ({ page, api, workspace }) => {
+test('document to answer: upload, read the sections, ask in chat', { tag: '@smoke' }, async ({ page, api, workspace }) => {
     await page.goto(inProject(workspace, 'home'));
     await page.getByRole('button', { name: 'UPLOAD DOCUMENT' }).click();
     await page.getByText('Maximum file size').waitFor();
@@ -29,6 +27,9 @@ test.fixme('document to answer: upload, read the sections, ask in chat', { tag: 
     await expect(page.getByRole('main').getByText(/least squares/i).first()).toBeVisible();
 
     await page.goto(inProject(workspace, 'chat'));
+    // The chat clears the input and drops the message when the agent is not set yet, so wait
+    // until the header shows the agent before typing.
+    await expect(page.getByText(`${workspace.name} project Agent`).first()).toBeVisible();
     await page.getByRole('textbox', { name: 'Ask anything...' }).fill('What are the drawbacks of least squares?');
     await page.getByRole('button', { name: 'Send' }).click();
 

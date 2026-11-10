@@ -7,10 +7,6 @@ public: no secrets, no absolute paths, no details of unfixed security weaknesses
 ## 2026-11-10
 
 - **Unfinished browser journeys**, marked `test.fixme` so the runs stay green:
-  - `document-to-answer` and `agent-settings`: clicking "Send" in the chat does not send the
-    question in the test, although it worked in an earlier exploratory run. The page shows the
-    "Send" tooltip and no message. Not yet investigated: try pressing Enter, or waiting for
-    the chat to finish loading before typing.
   - `new-workspace`: renaming the project answers 200, but the old name is shown after a
     reload. Not known yet whether the form sends the old name or the page shows stale data.
   - `organization-settings-and-insights`: written up to the "Select Project Documents" dialog
@@ -18,10 +14,20 @@ public: no secrets, no absolute paths, no details of unfixed security weaknesses
     "Generate New", then check the answer cell.
   - `training`: never run. The Training button queues a job that the API picks up on a
     schedule; how long that takes here is not measured.
+- **`document-to-answer` and `agent-settings` run again.** The chat drops a message typed
+  before the agent is set, so both now wait for the agent name in the chat header before
+  typing. After that, both passed in ten suite runs in a row, and alone in 14 and 8 runs.
+  Earlier the same day they had failed: `document-to-answer` with the chat staying on
+  "Generating answer..." while the thread's `completion-status` poll was denied, and
+  `agent-settings` with an empty project name on the first load of the settings page. Neither
+  could be reproduced afterwards, also not with a saved login older than the token lifetime.
+  If one fails again, the run's folder in `test-history/` has the trace and the API log.
 - **`sign-in` is parked too.** It failed in about three runs of eight: after logout, Keycloak
   redirects back to the login page, and the test's next navigation races with that chain
   (`ERR_ABORTED`). Logging in itself is covered on every run by `tests/ui/auth.setup.js`.
 - **Possible application issues seen while writing the tests**, not changed:
+  - Chat: `sendMessage` (`gendoxChat.js`) throws, without a message, when the user or the agent
+    is not set yet, and the input is cleared anyway. The message is lost with no feedback.
   - Project settings crashes when a tab is clicked before the project has loaded.
   - A document written in the editor shows "No sections available" after saving.
 - The seeded user `testuser1@test.com` collected about a hundred `e2e …` organizations while

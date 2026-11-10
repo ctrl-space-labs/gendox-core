@@ -1,7 +1,7 @@
 # Ephemeral environments, smoke tests and agent tooling
 
 **Status: mostly implemented on 2026-11-10, not committed.** The environment, the test setup, the
-history and the agent docs are built and run. Five of the seven browser journeys are unfinished. See
+history and the agent docs are built and run. Three of the seven browser journeys are unfinished. See
 [Implementation status](#implementation-status). It replaces the
 [original plan of 2026-11-06](ephemeral-environments-2026-11-06.md), which is kept as first written.
 
@@ -14,8 +14,8 @@ history and the agent docs are built and run. Five of the seven browser journeys
 | Playwright 1.65, bundled Chromium, one configuration, `setup` / `api` / `ui` projects, npm scripts | Done |
 | Organization per test (`support/workspace.js`) | Done. The 37 API tests run in parallel on it |
 | History reporter and `test-history/` | Done |
-| Smoke set | 13 API tests and 2 browser journeys pass, in about 15 s. Whole suite about 20 s |
-| Browser journeys | Written document, and members and roles pass, and every run logs the four seeded users in through Keycloak. Sign in and out, new workspace, document to answer, agent settings, organization settings and insights, and a training test are written but parked as `fixme`; `gendox-e2e-tests/NOTES.md` says what is left |
+| Smoke set | 13 API tests and 4 browser journeys pass, in about 20 s. Whole suite about 25 s |
+| Browser journeys | Document to answer, agent settings, written document, and members and roles pass, and every run logs the four seeded users in through Keycloak. Sign in and out, new workspace, organization settings and insights, and a training test are written but parked as `fixme`; `gendox-e2e-tests/NOTES.md` says what is left |
 | Agent docs, deletion rule, Claude Code permission prompt | Done |
 
 Differences from the design below:

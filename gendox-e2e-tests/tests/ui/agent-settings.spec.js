@@ -6,9 +6,7 @@ test.use({ storageState: sessionOf('testUser1') });
 
 // The mock model repeats the agent's instructions in its answer, so the chat shows
 // whether a change made in the settings really reaches the agent.
-// FIXME, not finished: the settings part works, but clicking Send in the chat does not
-// send the question. See NOTES.md.
-test.fixme('agent settings: change the instructions, keep them after a reload, see them used in chat', { tag: '@smoke' }, async ({ page, workspace }) => {
+test('agent settings: change the instructions, keep them after a reload, see them used in chat', { tag: '@smoke' }, async ({ page, workspace }) => {
     const behavior = `You answer as the e2e agent ${Date.now().toString(36)}.`;
 
     await page.goto(inProject(workspace, 'project-settings'));
@@ -33,6 +31,9 @@ test.fixme('agent settings: change the instructions, keep them after a reload, s
         .toContainText(workspace.organizationId);
 
     await page.goto(inProject(workspace, 'chat'));
+    // The chat clears the input and drops the message when the agent is not set yet, so wait
+    // until the header shows the agent before typing.
+    await expect(page.getByText(`${workspace.name} project Agent`).first()).toBeVisible();
     await page.getByRole('textbox', { name: 'Ask anything...' }).fill('Who are you?');
     await page.getByRole('button', { name: 'Send' }).click();
     await expect(page.getByText(behavior).first()).toBeVisible({ timeout: 30_000 });

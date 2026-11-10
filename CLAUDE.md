@@ -28,7 +28,7 @@ Two files per topic, no more: **the original, which never changes, and the curre
 
 ### Pending plans
 
-- [Ephemeral environments, smoke tests and agent tooling](.ai/ephemeral-environments-2026-11-09.md) — mostly implemented, not committed; five browser journeys are unfinished. Self-contained: it replaces the [original 2026-11-06 plan](.ai/ephemeral-environments-2026-11-06.md), which is kept unchanged.
+- [Ephemeral environments, smoke tests and agent tooling](.ai/ephemeral-environments-2026-11-09.md) — mostly implemented; three browser journeys are unfinished. Self-contained: it replaces the [original 2026-11-06 plan](.ai/ephemeral-environments-2026-11-06.md), which is kept unchanged.
 
 - [Streaming chat, client tools and knowledge search mode — #519 / #518 / #542](.ai/issue-519-streaming-chat-2026-10-20.md) — implemented, not yet tested end to end. Self-contained: it replaces the [original 2026-10-16 plan](.ai/issue-519-streaming-chat-2026-10-16.md), which is kept unchanged.
 
@@ -76,7 +76,7 @@ A fast way to check that a change did not break the application. It is a tool yo
 cd gendox-e2e-tests
 npm install && npx playwright install chromium   # first time in a checkout
 
-npm run smoke                        # between turns, about 15 seconds
+npm run smoke                        # between turns, about 20 seconds
 npx playwright test documents        # the tests of what you are working on (file name, or -g "title")
 npx playwright test --last-failed    # re-run what failed
 npm test                             # whole suite, at the end of the work

@@ -14,7 +14,7 @@ Run from `gendox-e2e-tests`, against this checkout's environment (see
 
 | When | Command | Time |
 |---|---|---|
-| Between turns: did I break something basic? | `npm run smoke` | about 15 s |
+| Between turns: did I break something basic? | `npm run smoke` | about 20 s |
 | While working on a feature: its own tests | `npx playwright test documents` or `-g "upload"` | seconds |
 | Re-run what just failed | `npx playwright test --last-failed` | seconds |
 | End of the work: no regression | `npm test` | about 20 s |

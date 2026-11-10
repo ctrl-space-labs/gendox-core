@@ -19,7 +19,7 @@ npx playwright install chromium
 
 | Purpose | Command |
 |---|---|
-| Smoke tests, about 15 seconds | `npm run smoke` |
+| Smoke tests, about 20 seconds | `npm run smoke` |
 | Specific tests | `npx playwright test documents` or `npx playwright test -g "upload"` |
 | Re-run what failed | `npx playwright test --last-failed` |
 | Whole suite | `npm test` |
