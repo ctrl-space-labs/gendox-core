@@ -174,7 +174,10 @@ const ApiKeysPage = () => {
   const dispatch = useDispatch()
   const { organization, organizationId } = useActiveScope()
   // who created each key, by name
-  const members = useSelector(state => state.activeOrganization.organizationMembers)
+  // only this organization's members: another's may still be in the store
+  const members = useSelector(state =>
+    state.activeOrganization.organizationMembersFor === organizationId ? state.activeOrganization.organizationMembers : null
+  )
   const creatorOf = apiKey => members?.find(m => m.user?.id === apiKey.createdBy)?.user
   const canEdit = useHasOrgRole({ organizationId, roles: ['OP_EDIT_API_KEYS'] })
   const [keys, setKeys] = useState(null)
@@ -198,7 +201,7 @@ const ApiKeysPage = () => {
   }, [load])
 
   useEffect(() => {
-    if (organizationId && !members?.length) dispatch(fetchOrganizationMembers({ organizationId, token: getToken() }))
+    if (organizationId && !members) dispatch(fetchOrganizationMembers({ organizationId, token: getToken() }))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch, organizationId])
 

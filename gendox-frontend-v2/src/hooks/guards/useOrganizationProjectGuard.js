@@ -41,16 +41,12 @@ const useOrganizationProjectGuard = (authProviderOption, pageConfig) => {
     const candidateOrgId = urlOrgId || localOrgId
     const effectiveOrg = organizations.find(o => o.id === candidateOrgId) || organizations[0]
     window.localStorage.setItem(localStorageConstants.selectedOrganizationId, effectiveOrg.id)
-    dispatch(
-      fetchOrganization({
-        organizationId: effectiveOrg.id,
-        token
-      })
-    )
 
     //////    Projects Validation   //////
     const projects = effectiveOrg.projects
     if (!projects || projects.length === 0) {
+      // creating the first agent still needs the organization
+      dispatch(fetchOrganization({ organizationId: effectiveOrg.id, token }))
       router.push(`/gendox/create-project/?organizationId=${effectiveOrg.id}`)
       return
     }
@@ -65,6 +61,22 @@ const useOrganizationProjectGuard = (authProviderOption, pageConfig) => {
     const candidateProjId = urlProjId || localProjId
     const effectiveProj = projects.find(p => p.id === candidateProjId) || projects[0]
     window.localStorage.setItem(localStorageConstants.selectedProjectId, effectiveProj.id)
+
+    // update the url only if the effective organization or project is different from the original URL.
+    // The new url runs this guard again, which loads them then; loading them now as well loaded both twice.
+    if (urlOrgId !== effectiveOrg.id || urlProjId !== effectiveProj.id) {
+      const slash = redirectPath.endsWith('/') ? '' : '/'
+      const newUrl = `${redirectPath}${slash}?organizationId=${effectiveOrg.id}&projectId=${effectiveProj.id}`
+      router.push(newUrl)
+      return
+    }
+
+    dispatch(
+      fetchOrganization({
+        organizationId: effectiveOrg.id,
+        token
+      })
+    )
     dispatch(
       fetchProject({
         organizationId: effectiveOrg.id,
@@ -72,13 +84,6 @@ const useOrganizationProjectGuard = (authProviderOption, pageConfig) => {
         token
       })
     )
-
-    // update the url only if the effective organization or project is different from the original URL.
-    if (urlOrgId !== effectiveOrg.id || urlProjId !== effectiveProj.id && redirectPath !== '/oidc-callback') {
-      const slash = redirectPath.endsWith('/') ? '' : '/'
-      const newUrl = `${redirectPath}${slash}?organizationId=${effectiveOrg.id}&projectId=${effectiveProj.id}`
-      router.push(newUrl)
-    }
   }, [urlOrgId, urlProjId, user, dispatch, redirectPath])
 }
 

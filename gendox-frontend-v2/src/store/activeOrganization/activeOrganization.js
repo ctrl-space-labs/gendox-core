@@ -21,7 +21,9 @@ export const fetchOrganization = createAsyncThunk(
       toast.error(`Failed to fetch organization by ID status. Error: ${getErrorMessage(error)}`)
       return thunkAPI.rejectWithValue(error.response.data)
     }
-  }
+  },
+  // several parts of a page ask for the organization as it opens; one request answers them
+  { condition: ({ organizationId }, { getState }) => getState().activeOrganization.loading.organization !== organizationId }
 )
 
 export const fetchAiModelProviders = createAsyncThunk(
@@ -62,7 +64,8 @@ export const fetchOrganizationPlans = createAsyncThunk(
       console.error(`Failed to fetch organization plans. Error: ${getErrorMessage(error)}`)
       return thunkAPI.rejectWithValue(error.response.data)
     }
-  }
+  },
+  { condition: ({ organizationId }, { getState }) => getState().activeOrganization.loading.plans !== organizationId }
 )
 
 export const fetchApiKeys = createAsyncThunk(
@@ -207,6 +210,14 @@ const initialActiveOrganizationState = {
   organizationConnectors: null,
   isFetchingMembers: false,
   isBlurring: false,
+  // the organization each request is loading, so the same request is not sent twice at once, and the latest
+  // request's id: an earlier answer arriving after a later request (the user switched organization) is dropped
+  loading: { organization: null, plans: null },
+  latestRequest: { organization: null, plans: null, members: null },
+  // which organization organizationMembers belongs to
+  organizationMembersFor: null,
+  // which organization organizationPlans belongs to
+  organizationPlansFor: null,
   error: null
 }
 
@@ -219,16 +230,22 @@ const activeOrganizationSlice = createSlice({
   },
   extraReducers: builder => {
     builder
-      .addCase(fetchOrganization.pending, state => {
+      .addCase(fetchOrganization.pending, (state, action) => {
         state.isBlurring = true
+        state.loading.organization = action.meta.arg.organizationId
+        state.latestRequest.organization = action.meta.requestId
         state.error = null
       })
       .addCase(fetchOrganization.fulfilled, (state, action) => {
+        if (action.meta.requestId !== state.latestRequest.organization) return
         state.isBlurring = false
+        state.loading.organization = null
         state.activeOrganization = action.payload
       })
       .addCase(fetchOrganization.rejected, (state, action) => {
+        if (action.meta.requestId !== state.latestRequest.organization) return
         state.isBlurring = false
+        state.loading.organization = null
         state.error = action.payload
       })
 
@@ -261,16 +278,26 @@ const activeOrganizationSlice = createSlice({
       })
 
       // For fetching organization plans
-      .addCase(fetchOrganizationPlans.pending, state => {
+      .addCase(fetchOrganizationPlans.pending, (state, action) => {
         state.isBlurring = true
+        state.loading.plans = action.meta.arg.organizationId
+        state.latestRequest.plans = action.meta.requestId
         state.error = null
       })
       .addCase(fetchOrganizationPlans.fulfilled, (state, action) => {
+        if (action.meta.requestId !== state.latestRequest.plans) return
         state.isBlurring = false
+        state.loading.plans = null
         state.organizationPlans = action.payload
+        state.organizationPlansFor = action.meta.arg.organizationId
       })
       .addCase(fetchOrganizationPlans.rejected, (state, action) => {
+        if (action.meta.requestId !== state.latestRequest.plans) return
         state.isBlurring = false
+        state.loading.plans = null
+        // a failed request still answers "no plan known" for that organization, rather than leaving another's
+        state.organizationPlans = {}
+        state.organizationPlansFor = action.meta.arg.organizationId
         state.error = action.payload
       })
 
@@ -318,15 +345,19 @@ const activeOrganizationSlice = createSlice({
       })
 
       // For fetching organization members
-      .addCase(fetchOrganizationMembers.pending, state => {
+      .addCase(fetchOrganizationMembers.pending, (state, action) => {
         state.isFetchingMembers = true // You can add a dedicated flag if needed
+        state.latestRequest.members = action.meta.requestId
         state.error = null
       })
       .addCase(fetchOrganizationMembers.fulfilled, (state, action) => {
+        if (action.meta.requestId !== state.latestRequest.members) return
         state.isFetchingMembers = false
         state.organizationMembers = action.payload
+        state.organizationMembersFor = action.meta.arg.organizationId
       })
       .addCase(fetchOrganizationMembers.rejected, (state, action) => {
+        if (action.meta.requestId !== state.latestRequest.members) return
         state.isFetchingMembers = false
         state.error = action.payload
       })

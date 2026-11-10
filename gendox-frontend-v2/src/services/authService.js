@@ -10,13 +10,10 @@ const userManager = new UserManager({
     ...(localStorageStore ? { userStore: localStorageStore, stateStore: localStorageStore } : {})
 });
 
-userManager.events.addAccessTokenExpiring(() => {
-    console.log('Access token is expiring... Trying to renew...');
-    userManager.signinSilent().then(newUser => {
-        console.log('Successfully renewed access token.');
-    }).catch(err => {
-        console.error('Failed to renew access token:', err);
-    });
+// automaticSilentRenew (configs/auth) renews the token before it expires; a second signinSilent here renewed it twice,
+// and each renewal reloads the profile and every page's data
+userManager.events.addSilentRenewError(err => {
+    console.error('Failed to renew access token:', err);
 });
 
 userManager.events.addUserSignedOut(() => {

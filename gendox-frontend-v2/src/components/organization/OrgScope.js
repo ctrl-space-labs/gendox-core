@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
 import Link from 'next/link'
 import useActiveScope from 'src/hooks/useActiveScope'
-import subscriptionPlanService from 'src/gendox-sdk/subscriptionPlanService'
+import { fetchOrganizationPlans } from 'src/store/activeOrganization/activeOrganization'
 import { getToken } from 'src/components/agent/useAgent'
 import Avatar from 'src/components/ui/Avatar'
 
@@ -21,15 +22,17 @@ export const ORG_TABS = [
  */
 const OrgScope = ({ tab }) => {
   const { organization, organizationId, href } = useActiveScope()
-  const [planName, setPlanName] = useState('')
+  const dispatch = useDispatch()
+  // through the store, so a page that needs the plan as well shares the request
+  const planName = useSelector(state =>
+    state.activeOrganization.organizationPlansFor === organizationId
+      ? state.activeOrganization.organizationPlans?.subscriptionPlan?.name || ''
+      : ''
+  )
 
   useEffect(() => {
-    if (!organizationId) return
-    subscriptionPlanService
-      .getOrganizationPlans(organizationId, getToken())
-      .then(response => setPlanName(response.data?.subscriptionPlan?.name || ''))
-      .catch(() => setPlanName(''))
-  }, [organizationId])
+    if (organizationId) dispatch(fetchOrganizationPlans({ organizationId, token: getToken() }))
+  }, [dispatch, organizationId])
 
   if (!organization) return null
 

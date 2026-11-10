@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
 import toast from 'react-hot-toast'
 import useActiveScope from 'src/hooks/useActiveScope'
 import useHasOrgRole from 'src/authentication/hooks/useHasOrgRole'
@@ -6,6 +7,7 @@ import organizationService from 'src/gendox-sdk/organizationService'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import { getToken, useRefreshProfile } from 'src/components/agent/useAgent'
 import OrgScope from 'src/components/organization/OrgScope'
+import { fetchOrganization } from 'src/store/activeOrganization/activeOrganization'
 import AppLayout from 'src/layouts/AppLayout'
 import Dialog from 'src/components/ui/Dialog'
 import { formatDate } from 'src/components/knowledge/documentUtils'
@@ -36,20 +38,26 @@ const OrganizationSettingsPage = () => {
   const [isDeleting, setIsDeleting] = useState(false)
   const [typed, setTyped] = useState('')
 
+  // the organization comes from the store, where the guard loads it too: one request for both
+  const dispatch = useDispatch()
+  const { activeOrganization: loaded, loading } = useSelector(state => state.activeOrganization)
+  const [askedFor, setAskedFor] = useState(null)
+  const filledFor = useRef(null)
+
   useEffect(() => {
     if (!organizationId) return
-    organizationService
-      .getOrganizationById(organizationId, getToken())
-      .then(response => {
-        setSaved(fieldsOf(response.data))
-        setFields(fieldsOf(response.data))
-        setCreatedAt(response.data?.createdAt ?? null)
-      })
-      .catch(() => {
-        setSaved(fieldsOf(organization))
-        setFields(fieldsOf(organization))
-      })
-  }, [organizationId])
+    dispatch(fetchOrganization({ organizationId, token: getToken() })).finally(() => setAskedFor(organizationId))
+  }, [dispatch, organizationId])
+
+  // fill the form once per organization, when its request has finished, so a later reload doesn't overwrite typing
+  useEffect(() => {
+    if (askedFor !== organizationId || loading.organization === organizationId || filledFor.current === organizationId) return
+    filledFor.current = organizationId
+    const source = loaded?.id === organizationId ? loaded : organization
+    setSaved(fieldsOf(source))
+    setFields(fieldsOf(source))
+    setCreatedAt(loaded?.id === organizationId ? loaded.createdAt ?? null : null)
+  }, [askedFor, loading.organization, loaded, organization, organizationId])
 
   if (!fields) {
     return (

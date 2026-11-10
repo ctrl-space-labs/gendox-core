@@ -169,9 +169,12 @@ const IntegrationPage = () => {
   const [toggling, setToggling] = useState(false)
   // who added it, by name
   const dispatch = useDispatch()
-  const members = useSelector(state => state.activeOrganization.organizationMembers)
+  // only this organization's members: another's may still be in the store
+  const members = useSelector(state =>
+    state.activeOrganization.organizationMembersFor === organizationId ? state.activeOrganization.organizationMembers : null
+  )
   useEffect(() => {
-    if (organizationId && !members?.length) dispatch(fetchOrganizationMembers({ organizationId, token: getToken() }))
+    if (organizationId && !members) dispatch(fetchOrganizationMembers({ organizationId, token: getToken() }))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch, organizationId])
 

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
 import { ArrowUpRight, Sparkles } from 'lucide-react'
 import useActiveScope from 'src/hooks/useActiveScope'
 import subscriptionPlanService from 'src/gendox-sdk/subscriptionPlanService'
@@ -7,6 +8,7 @@ import organizationWebSiteService from 'src/gendox-sdk/organizationWebSiteServic
 import webScrapeService from 'src/gendox-sdk/webScrapeService'
 import integrationService from 'src/gendox-sdk/integrationService'
 import { getToken } from 'src/components/agent/useAgent'
+import { fetchOrganizationPlans } from 'src/store/activeOrganization/activeOrganization'
 import { formatDate } from 'src/components/knowledge/documentUtils'
 import OrgScope from 'src/components/organization/OrgScope'
 import AppLayout from 'src/layouts/AppLayout'
@@ -50,7 +52,10 @@ const Meter = ({ label, used, max, note }) => {
  */
 const PlanPage = () => {
   const { organization, organizationId, projects } = useActiveScope()
-  const [plan, setPlan] = useState(null)
+  const dispatch = useDispatch()
+  // the organization's plan comes from the store, where the page header asks for it too
+  const { organizationPlans, organizationPlansFor } = useSelector(state => state.activeOrganization)
+  const plan = organizationPlansFor === organizationId ? organizationPlans || {} : null
   const [plans, setPlans] = useState([])
   const [members, setMembers] = useState(null)
   const [websites, setWebsites] = useState(null)
@@ -60,10 +65,7 @@ const PlanPage = () => {
   useEffect(() => {
     if (!organizationId) return
     const token = getToken()
-    subscriptionPlanService
-      .getOrganizationPlans(organizationId, token)
-      .then(r => setPlan(r.data))
-      .catch(() => setPlan({}))
+    dispatch(fetchOrganizationPlans({ organizationId, token }))
     subscriptionPlanService
       .getActiveSubscriptionPlans(organizationId, token)
       .then(r => setPlans((r.data?.content ?? r.data ?? []).slice().sort((a, b) => (a.price ?? 0) - (b.price ?? 0))))

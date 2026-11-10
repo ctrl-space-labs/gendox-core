@@ -57,13 +57,20 @@ const useAgent = () => {
   const isValid = isValidOrganizationAndProject(organizationId, projectId, user)
   const project = projectDetails?.id === projectId ? projectDetails : null
 
-  const reload = useCallback(() => {
-    if (isValid) return dispatch(fetchProject({ organizationId, projectId, token: getToken() }))
-  }, [dispatch, isValid, organizationId, projectId])
+  // force: load it again even while a request for it is on its way, which may predate a change just made
+  const load = useCallback(
+    force => {
+      if (isValid) return dispatch(fetchProject({ organizationId, projectId, token: getToken(), force }))
+    },
+    [dispatch, isValid, organizationId, projectId]
+  )
+  const reload = useCallback(() => load(true), [load])
 
+  // the guard loads the project in the URL on every page; ask only when the store doesn't hold it yet
+  const loaded = Boolean(project)
   useEffect(() => {
-    reload()
-  }, [reload])
+    if (!loaded) load(false)
+  }, [load, loaded])
 
   const save = useCallback(
     async ({ project: projectChanges = {}, agent: agentChanges = {} }) => {
