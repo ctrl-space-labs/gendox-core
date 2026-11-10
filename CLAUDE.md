@@ -28,6 +28,8 @@ Two files per topic, no more: **the original, which never changes, and the curre
 
 ### Pending plans
 
+- [End-to-end tests and ephemeral environments: pending work](.ai/e2e-tests-pending-work-2026-11-10.md) — not started; a handover list of what is left after the setup below.
+
 - [Ephemeral environments, smoke tests and agent tooling](.ai/ephemeral-environments-2026-11-09.md) — mostly implemented; three browser journeys are unfinished. Self-contained: it replaces the [original 2026-11-06 plan](.ai/ephemeral-environments-2026-11-06.md), which is kept unchanged.
 
 - [Streaming chat, client tools and knowledge search mode — #519 / #518 / #542](.ai/issue-519-streaming-chat-2026-10-20.md) — implemented, not yet tested end to end. Self-contained: it replaces the [original 2026-10-16 plan](.ai/issue-519-streaming-chat-2026-10-16.md), which is kept unchanged.
