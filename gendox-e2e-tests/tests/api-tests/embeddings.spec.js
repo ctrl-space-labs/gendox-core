@@ -1,83 +1,70 @@
 // @ts-check
-const { test, expect } = require('@playwright/test');
-const keycloak = require('../../page-objects/apis/keycloak');
+const { test, expect, sharedWorkspace, tokenFor } = require('../../support/workspace');
+const documents = require('../../page-objects/apis/documents');
 const embeddings = require('../../page-objects/apis/embeddings');
 const embeddingsProject = require('../../page-objects/apis/embeddingsProject');
 
-// Tests the Embeddings CRUD API, by performign API calls to the API server.
-// Before all tests, an authentication JWT token is obtained from the API server.
+const path = require('path');
+
+const testFile = path.resolve(__dirname, '../../fixtures/least-squares.txt');
+
+// Tests embeddings, search and completions on a project with one document. The project uses
+// the mock models, so no provider key is needed.
 test.describe('Embeddings CRUD API', () => {
+    test.describe.configure({ mode: 'serial' });
+
     let token;
+    let outsiderToken;
+    let projectId;
+    let sectionId;
+
+    const workspace = sharedWorkspace('embeddings');
 
     test.beforeAll(async ({ request }) => {
+        token = workspace.tokens.testUser1;
+        outsiderToken = await tokenFor(request, 'outsider');
+        projectId = workspace.projectId;
 
-        //x-www-form-urlencoded
-        const response = await keycloak.simpleUserLogin(request);
-
-        let body = await response.json();
-        token = body.access_token;
-        expect(response.ok()).toBeTruthy();
+        const uploaded = await documents.uploadDocument(request, token, workspace.organizationId, projectId, testFile);
+        expect(uploaded.ok()).toBeTruthy();
+        const split = await documents.splitDocumentSections(request, token, workspace.organizationId, projectId);
+        expect(split.ok()).toBeTruthy();
+        sectionId = (await split.json())[0].id;
     });
 
    const message = {
-                          messages: "What are the drawbacks of Least Squares method?"
+                          value: "What are the drawbacks of Least Squares method?"
 
                       };
-
-   const criteria =   {
-                          size: '5',
-                          projectId:'dda1148a-2251-4082-b838-6834251f59a0'
-                      };
-
-   const botRequest = {
-                          messages: ["hi"]
-
-                      };
-
-   const completionMessage = {
-                          value: "Least Squares Method"
-
-                      };
-//Scenario: Get embeddings for a botRequest.
-//Given that the user is logged in
-//Given the botRequest as an array of strings of messages.
-//When the the AI model is specified .
-//Then the embeddings for the array of messages will be produced.
-
-test('Get Embeddings', async ({ page, request }) => {
-
-
-        const response = await embeddings.getEmbeddings(request, token, botRequest,{
-                                                        aiModel: 'embed-multilingual-v3.0'});
-
-
-        expect(response.ok()).toBeTruthy();
-        let respBody = await response.json();
-        expect(respBody).toHaveProperty('usage');
-        expect(respBody.data[0]).toHaveProperty('embedding');
-        expect(respBody).toHaveProperty('model');
-        expect(respBody).toHaveProperty('usage');
-
-        await page.pause();
-
-    });
 
 //Scenario: Get embeddings for a project.
 //Given that the user is logged in
 //Given the project ID.
 //Then the embeddings for the given project will be produced.
 
-test('Get Project Embeddings', async ({ page, request }) => {
+test('Get Project Embeddings', { tag: '@smoke' }, async ({ request }) => {
 
-
-        const response = await embeddingsProject.getProjectEmbeddings(request, token,
-                                                'dda1148a-2251-4082-b838-6834251f59a0');
+        const response = await embeddingsProject.getProjectEmbeddings(request, token, projectId);
 
         expect(response.ok()).toBeTruthy();
-        console.log(response);
+        let respBody = await response.json();
+        expect(respBody.length).toBeGreaterThan(0);
+        expect(respBody[0].embeddingVector.length).toBeGreaterThan(0);
 
+    });
 
-        await page.pause();
+//Scenario: Get the embedding of a section.
+//Given that the user is logged in
+//Given a section of the project.
+//Then the embedding of that section will be produced.
+
+test('Get Section Embedding', async ({ request }) => {
+
+        const response = await embeddingsProject.getSectionEmbedding(request, token, projectId, sectionId);
+
+        expect(response.ok()).toBeTruthy();
+        let respBody = await response.json();
+        expect(respBody.embeddingVector.length).toBeGreaterThan(0);
 
     });
 
@@ -87,53 +74,34 @@ test('Get Project Embeddings', async ({ page, request }) => {
 //Scenario: Perform Semantic Search.
 //Given that the user is logged in
 //Given a query(message).
-//Given the project ID and pagebale size.
-//When document sections for the project documents are created.
+//Given the project ID and pageable size.
 //When the project embeddings are created.
-//When the project agent uses embed-multilingual-v3.0 for semantic search model.
-//Then the query will be answered with possible answers based on the existing document sections.
+//Then the sections closest to the query are returned.
 
-test('Cohere Semantic Search', async ({ page, request }) => {
+test('Semantic Search', { tag: '@smoke' }, async ({ request }) => {
 
-
-        const response = await embeddings.semanticSearch(request, token, message,criteria);
-
+        const response = await embeddings.semanticSearch(request, token, message, { projectId, size: '5' });
 
         expect(response.ok()).toBeTruthy();
         let respBody = await response.json();
+        expect(respBody.length).toBeGreaterThan(0);
         respBody.forEach(item => {
             expect(item).toHaveProperty('documentSectionMetadata');
-            expect(item).toHaveProperty('sectionValue');
+            expect(item.sectionValue).toContain('least squares');
         });
-
-        await page.pause();
 
     });
 
-
-//Scenario: Perform Semantic Search.
+//Scenario: Perform Semantic Search in a project the user does not belong to.
 //Given that the user is logged in
-//Given a query(value).
-//Given the project ID and pagebale size.
-//When document sections for the project documents are created.
-//When the project embeddings are created.
-//When the project agent uses text-embedding-ada-002 for semantic search model.
-//Then the query will be answered with possible answers based on the existing document sections.
+//When the user is not a member of the project.
+//Then an access denied error is returned.
 
-test('OpenAI Semantic Search', async ({ page, request }) => {
+test('Outsider Semantic Search', async ({ request }) => {
 
+        const response = await embeddings.semanticSearch(request, outsiderToken, message, { projectId, size: '5' });
 
-        const response = await embeddings.semanticSearch(request, token, message,criteria);
-
-
-        expect(response.ok()).toBeTruthy();
-        let respBody = await response.json();
-        respBody.forEach(item => {
-            expect(item).toHaveProperty('documentSectionMetadata');
-            expect(item).toHaveProperty('sectionValue');
-        });
-
-        await page.pause();
+        expect(response.status()).toBe(404);
 
     });
 
@@ -144,44 +112,18 @@ test('OpenAI Semantic Search', async ({ page, request }) => {
 //Scenario: Perform Semantic Completion.
 //Given that the user is logged in
 //Given a message.
-//Given the project ID and pagebale size.
-//When document sections for the project documents are created.
+//Given the project ID.
 //When the project embeddings are created.
-//When the project agent uses command model for semantic completion.
-//Then semantic completion based on the message and the existing document sections will be performed.
+//Then the project agent answers the message.
 
-test('Cohere Semantic Completion', async ({ page, request }) => {
+test('Semantic Completion', { tag: '@smoke' }, async ({ request }) => {
 
-
-        const response = await embeddings.semanticCompletion(request, token, completionMessage,criteria);
-
+        const response = await embeddings.semanticCompletion(request, token, message, { projectId });
 
         expect(response.ok()).toBeTruthy();
-
-
-        await page.pause();
-
-    });
-
-//Scenario: Perform Semantic Completion.
-//Given that the user is logged in
-//Given a message.
-//Given the project ID and pagebale size.
-//When document sections for the project documents are created.
-//When the project embeddings are created.
-//When the project agent uses gpt models for semantic completion.
-//Then semantic completion based on the message and the existing document sections will be performed.
-
-test('OpenAI Semantic Completion', async ({ page, request }) => {
-
-
-        const response = await embeddings.semanticCompletion(request, token, completionMessage,criteria);
-
-
-        expect(response.ok()).toBeTruthy();
-
-
-        await page.pause();
+        let respBody = await response.json();
+        expect(respBody.messages[0].value).toContain('MOCK GEMINI RESPONSE');
+        expect(respBody.threadId).toBeDefined();
 
     });
 

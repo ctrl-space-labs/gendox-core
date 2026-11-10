@@ -8,28 +8,43 @@ The tests **must** run before each PR to `dev` or `main` branches.
 
 ## Run the tests
 
-The default configuration file is `local.config.json`. 
-To run the tests, you need to setup the database, the backend and the IdP first. Soon an docekr-compose file will be provided to do this. 
+The tests run against this checkout's ephemeral environment. Start it first, as described in
+[its README](../gendox-compose-scripts/ephemeral/README.md): `./init-env.sh` once, then
+`docker compose up -d --wait`.
 
-Install dependencies:
 ```bash
 npm install
+npx playwright install chromium
 ```
 
-Install Playwright Browsers:
-```bash
-npx playwright install
-```
+| Purpose | Command |
+|---|---|
+| Smoke tests, about 15 seconds | `npm run smoke` |
+| Specific tests | `npx playwright test documents` or `npx playwright test -g "upload"` |
+| Re-run what failed | `npx playwright test --last-failed` |
+| Whole suite | `npm test` |
+| List the tests | `npm run list` |
+| Open the last report | `npm run report` |
+| Run interactively | `npx playwright test --ui` |
 
-Then you can run the tests with the following command:
-```bash
-npx playwright test
-```
+These are Playwright's own commands; the `npm run` ones are short aliases defined in
+`package.json`. Smoke tests are the ones tagged `@smoke` in the code.
 
-To start the Playwright UI to run the tests:
-```bash
-npx playwright test --ui
-```
+## Results and history
+
+Every run ends with a short summary and writes to `test-history/` (not in git):
+
+- `STATUS.md`: every test with its tags, last result, last run and last pass, and the recent runs.
+- `runs.jsonl`: one line per run.
+- `<run>/failures.md`: for a failed run, each error with its trace, screenshot and the API log.
+
+[AGENTS.md](AGENTS.md) explains how the suite is built and how to write a test. Coding agents
+maintain it, and leave shorter findings in [NOTES.md](NOTES.md).
+
+## Other environments
+
+`ENV_NAME=LOCAL`, `DEV` or `E2E` selects the older configurations in `config/`. They predate
+the current tests and their seeded users, so expect failures there.
 
 ## Run the tests the DEV environment
 

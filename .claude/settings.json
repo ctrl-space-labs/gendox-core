@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "ask": [
+      "Bash(docker compose down:*)",
+      "Bash(docker-compose down:*)",
+      "Bash(docker compose rm:*)",
+      "Bash(docker volume rm:*)",
+      "Bash(docker volume prune:*)",
+      "Bash(docker system prune:*)",
+      "Bash(docker builder prune:*)",
+      "Bash(docker image prune:*)",
+      "Bash(docker container prune:*)",
+      "Bash(docker rm:*)",
+      "Bash(docker rmi:*)"
+    ]
+  }
+}

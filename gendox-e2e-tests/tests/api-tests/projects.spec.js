@@ -1,44 +1,34 @@
-const {test, expect} = require('@playwright/test');
+const { test, expect, sharedWorkspace, ensureAccess, tokenFor } = require('../../support/workspace');
 const projects = require('../../page-objects/apis/projects');
 const projectUsers = require('../../page-objects/apis/projectUsers');
-const keycloak = require('../../page-objects/apis/keycloak');
-
-const exp = require("constants");
+const seed = require('../../page-objects/apis/seed');
 
 test.describe('Projects CRUD API', () => {
 
-    let token;
+    let adminToken;
+    let editorToken;
+    let readerToken;
+    let outsiderToken;
 
-    test.beforeAll(async ({ request }) => {
-
-        //x-www-form-urlencoded
-        const response = await keycloak.simpleUserLogin(request);
-
-        let body = await response.json();
-        token = body.access_token;
-        expect(response.ok()).toBeTruthy();
+    // Changes go to an organization and project of this file. Reading uses the seeded ones.
+    // testUser3 is in the organization but not in the project, to be added and removed.
+    const workspace = sharedWorkspace('projects', {
+        members: { testUser2: 'ROLE_EDITOR', testUser3: 'ROLE_EDITOR', testUser4: 'ROLE_READER' },
+        projectMembers: ['testUser2', 'testUser4'],
     });
 
+    test.beforeAll(async ({ request }) => {
+        adminToken = await tokenFor(request, 'testUser1');
+        editorToken = await tokenFor(request, 'testUser2');
+        readerToken = await tokenFor(request, 'testUser4');
+        outsiderToken = await tokenFor(request, 'outsider');
+    });
 
-    let newProjectId;
-
-    const updatedProjectData = {
-        id: 'dda1148a-2251-4082-b838-6834251f59a0',
-        name: 'Test Project 1.1',
-        description: 'Test Project 1 for Organization 1',
-        projectAgent: {
-            id: "7d43bc6c-5365-4051-b7ff-f068b4f5b182",
-            semanticSearchModel: {
-                id: "e44d361e-7e40-47e5-a89c-36c0674a7e97",
-            },
-            completionModel: {
-                id: "5e83bfa2-1331-4d9f-aa41-fb804a16796c",
-            },
-            agentName: "test-project-1_1 Agent"
-        }
+    const projectUpdate = async (request, description) => {
+        const response = await projects.getProjectById(request, adminToken, workspace.organizationId, workspace.projectId);
+        expect(response.ok()).toBeTruthy();
+        return { ...(await response.json()), description };
     };
-
-   const projectId = 'dda1148a-2251-4082-b838-6834251f59a0'
 
 
 //Feature: Get Project by ID
@@ -48,62 +38,47 @@ test.describe('Projects CRUD API', () => {
 //  Given the project ID.
 //  Then from the selected project is returned.
 
-    test('Get Project by id', async ({ page, request }) => {
+    test('Get Project by id', { tag: '@smoke' }, async ({ request }) => {
 
-
-
-        const response = await projects.getProjectById(request, token, projectId)
+        const response = await projects.getProjectById(request, adminToken, seed.organization1, seed.project1_1);
 
         expect(response.ok()).toBeTruthy();
         let respBody = await response.json();
-        expect(respBody.id).toBe('dda1148a-2251-4082-b838-6834251f59a0');
+        expect(respBody.id).toBe(seed.project1_1);
         expect(respBody.name).toBe('Test Project 1.1');
-        await page.pause();
 
     });
 
 //Feature: Get All Projects
 
-//  Scenario: Get All Projects by Organization ID.
+//  Scenario: Get the Projects of an Organization.
 //  Given that the user is logged in.
-//  When the criteria given is the organization ID.
-//  Then all the Projects from the selected organization are returned.
+//  When the organization ID is provided.
+//  Then the Projects of the organization are returned.
 
-    test('Get Projects By Organization', async ({ page, request }) => {
+    test('Get Projects By Organization', async ({ request }) => {
 
-        const response = await projects.getProjectByCriteria(request, token, {
-            organizationId: '41ce6db7-70fd-411d-b3d8-f2d5775ed501'
-        })
+        const response = await projects.getProjectsByOrganization(request, adminToken, seed.organization1);
 
         expect(response.ok()).toBeTruthy();
         let respBody = await response.json();
-        expect(respBody.totalElements).toBe(2);
-
         let project1 = respBody.content.find(project => project.name === 'Test Project 1.1');
-
-        respBody.content.forEach(project => {
-            console.log(`Project ${index}:`, project);
-            expect(project.organizationId).toBe('41ce6db7-70fd-411d-b3d8-f2d5775ed501');
-        });
-
-        expect(project1.projectAgent.agentName).toBe("test-project-1_1 Agent");
-        expect(project1.projectAgent.semanticSearchModel.model).toBe("embed-multilingual-v3.0");
+        expect(project1.organizationId).toBe(seed.organization1);
+        expect(project1.projectAgent.agentName).toBe('test-project-1_1 Agent');
 
     });
 
-//  Scenario: Get All without Organization ID as a criterion.
+//  Scenario: Get the Projects of an Organization the user does not belong to.
 //  Given that the user is logged in.
-//  When different criteria is given without the organization ID.
-//  Then a bad request response is returned.
+//  When the user is not a member of the organization.
+//  Then no project is revealed.
 
-    test('Error in missing mandatory criteria', async ({ page, request }) => {
+    test('Outsider Gets Projects By Organization', { tag: '@smoke' }, async ({ request }) => {
 
-        const response = await projects.getProjectByCriteria(request, token, {});
+        const response = await projects.getProjectsByOrganization(request, outsiderToken, seed.organization1);
 
-        expect(response.ok()).toBeFalsy();
-        expect(response.status()).toBe(400);
-        let respBody = await response.json();
-        expect(respBody.metadata[0].field).toBe('projectCriteria');
+        // Access denied is answered as not found, so it does not reveal what exists.
+        expect(response.status()).toBe(404);
 
     });
 
@@ -114,129 +89,90 @@ test.describe('Projects CRUD API', () => {
 //  When the project ID is provided.
 //  Then all the project members from the selected project are returned.
 
-    test('Get Project Members by id', async ({ page, request }) => {
+    test('Get Project Members by id', async ({ request }) => {
 
-            const response = await projectUsers.getProjectMembers(request, token, '19319b2a-6230-4b13-9bb6-a0f02eac183a')
-            expect(response.ok()).toBeTruthy();
-            let respBody = await response.json();
-             if (respBody.length === 0 && response.ok()) {
-                    console.log('The project has no members');
-                } else {
-            console.log('Response Body:', respBody);
-            expect(respBody[0]).toHaveProperty('project');
-            expect(respBody[0].project).toHaveProperty('id', '19319b2a-6230-4b13-9bb6-a0f02eac183a');
-            }
-            await page.pause();
+        const response = await projectUsers.getProjectMembers(request, adminToken, seed.organization1, seed.project1_1);
 
-        });
+        expect(response.ok()).toBeTruthy();
+        let respBody = await response.json();
+        const emails = respBody.map(member => member.user.email);
+        expect(emails).toContain('testuser1@test.com');
 
-//Feature: Add Project Members
+    });
 
-//  Scenario: Add project members with admin rights.
+//Feature: Add and Delete Project Members
+
+//  Scenario: Add and delete project members with admin rights.
 //  Given that the user is logged in.
 //  When the project ID is provided.
 //  When the user ID is provided.
 //  When the user has admin rights.
 //  Then the member is added to the project.
+//  Then the member is removed from the project.
 
-   test('Admin Add Project Members by id', async ({ page, request }) => {
+    test('Admin Add and Delete Project Members by id', async ({ request }) => {
 
-            const response = await projectUsers.addProjectMember(request, token, projectId,
-                                                                                  '2fb9e526-f39f-4959-a51c-8148965bf03f')
-            expect(response.ok()).toBeTruthy();
+        const added = await projectUsers.addProjectMember(request, adminToken, workspace.organizationId, workspace.projectId, seed.testUser3);
+        expect(added.ok()).toBeTruthy();
 
-            await page.pause();
+        const deleted = await projectUsers.deleteProjectMember(request, adminToken, workspace.organizationId, workspace.projectId, seed.testUser3);
+        expect(deleted.ok()).toBeTruthy();
 
-        });
+    });
 
-//Feature: Add Project Members
-
-//  Scenario: Add project members without admin rights.
+//  Scenario: Add project members without the permission.
 //  Given that the user is logged in.
-//  When the project ID is provided.
-//  When the user ID is provided.
-//  When the user does not have admin rights.
-//  Then an unauthorized error occurs.
+//  When the user has only reading rights.
+//  Then an access denied error occurs.
 
-   test('Non-Admin Add Project Members by id', async ({ page, request }) => {
+    test('Reader Add Project Members by id', async ({ request }) => {
 
-            const response = await projectUsers.addProjectMember(request, token, projectId,
-                                                                                  '2fb9e526-f39f-4959-a51c-8148965bf03f')
-            expect(response.ok()).not.toBeTruthy();
+        const response = await projectUsers.addProjectMember(request, readerToken, workspace.organizationId, workspace.projectId, seed.testUser3);
 
-            await page.pause();
+        expect(response.status()).toBe(404);
 
-        });
+    });
 
-//Feature: Delete Project Members
-
-//  Scenario: Delete project members with admin rights.
+//  Scenario: Delete project members without the permission.
 //  Given that the user is logged in.
-//  When the project ID is provided.
-//  When the user ID is provided.
-//  When the user has admin rights.
-//  Then the member is removed to the project.
+//  When the user has editing rights, which do not include removing members.
+//  Then an access denied error occurs.
 
-   test('Admin Delete Project Members by id', async ({ page, request }) => {
+    test('Editor Delete Project Members by id', async ({ request }) => {
 
-            const response = await projectUsers.deleteProjectMember(request, token, projectId,
-                                                                                  '2fb9e526-f39f-4959-a51c-8148965bf03f')
-            expect(response.ok()).toBeTruthy();
+        const response = await projectUsers.deleteProjectMember(request, editorToken, workspace.organizationId, workspace.projectId, seed.testUser1);
 
-            await page.pause();
+        expect(response.status()).toBe(404);
 
-        });
+    });
 
-//Feature: Delete Project Members
-
-//  Scenario: Delete project members without admin rights.
-//  Given that the user is logged in.
-//  When the project ID is provided.
-//  When the user ID is provided.
-//  When the user does not have admin rights.
-//  Then an unauthorized error occurs.
-
-   test('Non-Admin Delete Project Members by id', async ({ page, request }) => {
-
-            const response = await projectUsers.deleteProjectMember(request, token, projectId,
-                                                                                  '2fb9e526-f39f-4959-a51c-8148965bf03f')
-            expect(response.ok()).not.toBeTruthy();
-
-            await page.pause();
-
-        });
-
-//Feature: Create and Delete Project
+//Feature: Create and Deactivate Project
 
 //  Scenario: Create a project.
 //  Given that the user is logged in.
 //  Given the newProjectData.
-//  Then the organization is created.
-//  Given a new project is created.
-//  Then the project will be deleted by its id.
+//  Then the project is created.
+//  Then the project will be deactivated by its id.
 
-     test('Create and Delete Project', async ({ page, request }) => {
+    test('Create and Deactivate Project', async ({ request }) => {
         const newProjectData = {
-                             organizationId: '41ce6db7-70fd-411d-b3d8-f2d5775ed501',
-                             name: 'An example Testing Project',
-                             description: 'Delete Project',
-                         };
+            organizationId: workspace.organizationId,
+            name: 'An example Testing Project',
+            description: 'Delete Project',
+        };
 
-        const response = await projects.createProject(request, token, newProjectData);
+        const response = await projects.createProject(request, adminToken, newProjectData);
 
         expect(response.ok()).toBeTruthy();
         let respBody = await response.json();
         expect(respBody.id).toBeDefined();
         expect(respBody.name).toBe('An example Testing Project');
         expect(respBody.description).toBe('Delete Project');
-//        store the project ID
-        newProjectId = respBody.id;
-        console.log(newProjectId)
 
+        await ensureAccess(request, adminToken, workspace.organizationId, respBody.id);
+        const deactivated = await projects.deactivateProject(request, adminToken, workspace.organizationId, respBody.id);
 
-        const deleteResponse = await projects.deleteProject(request, token, newProjectId);
-
-        await page.pause();
+        expect(deactivated.ok()).toBeTruthy();
 
     });
 
@@ -245,61 +181,52 @@ test.describe('Projects CRUD API', () => {
 
     //Scenario: Update a project where the logged in user is an admin of the corresponding organization.
     //Given that the user is logged in
-    //Given the updatedProjectData
-    //When the existing project data is updated with the updatedProjectData
+    //When the existing project data is updated
     //Then the project will be updated.
 
-    test('Organization Admin Update Project', async ({ page, request }) => {
+    test('Organization Admin Update Project', async ({ request }) => {
 
-            const response = await projects.updateProject(request, token, updatedProjectData, projectId);
+        const update = await projectUpdate(request, 'Updated by an admin');
 
-                    expect(response.ok()).toBeTruthy();
-                    let respBody = await response.json();
-                    expect(respBody.id).toBe('dda1148a-2251-4082-b838-6834251f59a0');
-                    expect(respBody.name).toBe('Test Project 1.1');
-                    expect(respBody.description).toBe('Test Project 1 for Organization 1');
+        const response = await projects.updateProject(request, adminToken, update);
 
-            await page.pause();
+        expect(response.ok()).toBeTruthy();
+        let respBody = await response.json();
+        expect(respBody.id).toBe(workspace.projectId);
+        expect(respBody.description).toBe('Updated by an admin');
 
-
-           });
+    });
 
     //Scenario: Update a project where the logged in user has editing rights the corresponding organization.
     //Given that the user is logged in
-    //Given the updatedProjectData
-    //When the existing project data is updated with the updatedProjectData
+    //When the existing project data is updated
     //Then the project will be updated.
 
-    test('Organization Editor Update Project', async ({ page, request }) => {
+    test('Organization Editor Update Project', async ({ request }) => {
 
-            const response = await projects.updateProject(request, token, updatedProjectData, projectId);
+        const update = await projectUpdate(request, 'Updated by an editor');
 
-                    expect(response.ok()).toBeTruthy();
-                    let respBody = await response.json();
-                    expect(respBody.id).toBe('dda1148a-2251-4082-b838-6834251f59a0');
-                    expect(respBody.name).toBe('Test Project 1.1');
-                    expect(respBody.description).toBe('Test Project 1 for Organization 1');
+        const response = await projects.updateProject(request, editorToken, update);
 
-            await page.pause();
+        expect(response.ok()).toBeTruthy();
+        let respBody = await response.json();
+        expect(respBody.description).toBe('Updated by an editor');
 
-
-           });
+    });
 
     //Scenario: Update a project where the logged in user has reading rights the corresponding organization.
     //Given that the user is logged in
-    //Given the updatedProjectData
-    //When the existing project data is updated with the updatedProjectData
-    //Then the project will not be updated. An unauthorized error is returned.
+    //When the existing project data is updated
+    //Then the project will not be updated. An access denied error is returned.
 
-    test('Organization Reader Update Project', async ({ page, request }) => {
+    test('Organization Reader Update Project', async ({ request }) => {
 
-            const response = await projects.updateProject(request, token, updatedProjectData, projectId);
+        const update = await projectUpdate(request, 'Updated by a reader');
 
-                    expect(response.ok()).not.toBeTruthy();
+        const response = await projects.updateProject(request, readerToken, update);
 
-            await page.pause();
+        expect(response.status()).toBe(404);
 
-
-           });
+    });
 
 });

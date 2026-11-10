@@ -26,6 +26,7 @@ class CustomDocument extends Document {
         </Head>
         <body>
           <Main />
+          <script src='/env-config.js' />
           <NextScript />
         </body>
       </Html>

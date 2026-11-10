@@ -24,6 +24,8 @@ Implementation plans and audits live in `.ai/`, one file per topic, named `<topi
 
 ### Pending plans
 
+- [Ephemeral environments, smoke tests and agent tooling](.ai/ephemeral-environments-2026-11-09.md) — mostly implemented, not committed; five browser journeys are unfinished. Self-contained: it replaces the [original 2026-11-06 plan](.ai/ephemeral-environments-2026-11-06.md), which is kept unchanged.
+
 - [Web Scraping Integration (Firecrawl) — #526](.ai/issue-526-web-scraping-integration-2026-09-10.md) — not started.
 
 ## Common Development Commands
@@ -61,15 +63,22 @@ yarn lint:fix
 ```
 
 ### End-to-End Tests (gendox-e2e-tests)
+
+A fast way to check that a change did not break the application. It is a tool you may use, not a required step: checking in a browser or with direct API calls is fine when that suits the task better. The tests run against this checkout's ephemeral environment (see Docker below). `gendox-e2e-tests/AGENTS.md` explains the suite and how to read its results.
+
 ```bash
 cd gendox-e2e-tests
-npm install
-npx playwright install
-npx playwright test
-npx playwright test --ui
-npx playwright test --project=chromium
-npx playwright test auth.spec.js          # Run a single spec file
+npm install && npx playwright install chromium   # first time in a checkout
+
+npm run smoke                        # between turns, about 15 seconds
+npx playwright test documents        # the tests of what you are working on (file name, or -g "title")
+npx playwright test --last-failed    # re-run what failed
+npm test                             # whole suite, at the end of the work
+npm run list                         # what tests exist
+npm run report                       # the last run, in a browser
 ```
+
+Results of every run, including the errors, traces and API log of failed ones, are kept in `gendox-e2e-tests/test-history/`. Start with `STATUS.md` there.
 
 ### Documentation (documentation)
 ```bash
@@ -90,12 +99,11 @@ docker-compose logs -f gendox-api
 Available compose environments in `gendox-compose-scripts/`:
 - `build-ci-installation/` — CI build (`.env.local`)
 - `dev-ci-installation/` — Development CI (`.env`)
-- `local-development-test/` — **Use this one for agentic development and testing.** A full stack (DB, API, Keycloak, frontend) isolated from your normal local setup: its own Postgres volume and shifted ports (DB 5533, API 8081, Keycloak 8543, frontend 3100), so it can run beside `dev-ci-installation`. See its `README.md`.
-  - Start: `cp env.local.example .env.local` (first time), then `docker compose --env-file .env.local up -d`. `--env-file` is required.
-  - Migrations run only on an empty data directory, so pick up a new migration with `docker compose --env-file .env.local down -v` and `up -d` again.
-  - `keycloak-init/gendox-test-users.sh` adds a test user and a direct-grant client, so tokens can be fetched without a browser (credentials in that script).
+- `ephemeral/` — **Use this one for agentic development and testing.** A full stack (DB, API, Keycloak, frontend), one per checkout or worktree, running beside anything else. It is plain Docker Compose; see its `README.md`.
+  - Once per checkout: `./init-env.sh` writes `.env` with a name (`gendox-eph-<folder>`) and free ports. Then `docker compose up -d --wait` starts it, and applies new migrations on every later run.
+  - After a backend change: `mvn -q package -DskipTests` in `gendox-core-api`, then `docker compose restart api`. After a frontend change: `yarn build` in `gendox-frontend`.
   - Point agents at the `mock-gemini-2.0-flash` model to exercise completions with no API key and no cost.
-- `local-tests-installation/` — Older local e2e file (`docker-compose-with-tests.yml`). Currently broken (healthcheck targets the wrong port); not a basis for testing.
+  - **Always ask the user before deleting an environment** (`docker compose down`), a volume, or anything else, also when it is named `gendox-eph-*` and can be rebuilt. `docker compose stop` keeps the data and needs no question.
 
 ## Architecture Overview
 

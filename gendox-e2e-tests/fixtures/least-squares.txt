@@ -1,0 +1,3 @@
+The least squares method fits a line to a set of points by minimising the sum of the
+squared differences between each point and the line. One of its drawbacks is that it is
+sensitive to outliers, because squaring makes large differences dominate the fit.
