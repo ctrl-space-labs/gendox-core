@@ -18,6 +18,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
@@ -190,8 +191,10 @@ public class UserInvitationService {
 
     /**
      * The names the invitee is shown once they joined: the organization, the agent and who invited them.
-     * The invitation is already accepted by now, so a name that can't be read is left out instead of failing the page.
+     * The invitation is already accepted and saved by now, so a name that can't be read is left out instead of
+     * failing the page. It runs outside a transaction: a failed lookup must not mark one rollback-only and fail on commit.
      */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public Invitation fillAcceptanceNames(Invitation invitation) {
         try {
             Organization organization = organizationService.getById(invitation.getOrganizationId());
@@ -208,10 +211,11 @@ public class UserInvitationService {
                     invitation.setInviterName(inviter.getName());
                 }
             }
-        } catch (GendoxException e) {
+        } catch (Exception e) {
             logger.warn("Could not read the names for invitation {}: {}", invitation.getId(), e.getMessage());
         }
         return invitation;
+
     }
 
 
