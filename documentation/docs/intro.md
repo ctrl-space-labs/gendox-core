@@ -3,124 +3,53 @@ sidebar_position: 0
 id: intro
 slug: /
 title: Introduction
+description: What Gendox is, what you can do with it, and where to start - for people using Gendox, for developers integrating it, and for AI agents reading these docs.
 ---
 
-# Gendox Tutorial Intro
+# Gendox: the Document Intelligence Harness
 
-Let's discover **Gendox in less than 5 minutes**.
+**Gendox turns your documents into knowledge bases, AI agents and structured data, and puts those agents to work on any website.**
 
+Give an agent your files, websites or WordPress content and tell it how to behave. Gendox reads and sections the documents, searches them and cites every answer. Use the agent in the app, on your website, where it can also act on the page (an *agentic website*), or from your own software. Run the same questions over hundreds of documents with tasks.
 
-# Gendox Introduction: Your First Steps
+![An agent's home in Gendox: a chat, its tasks and its knowledge](./01-user-manual/img/v2/agent-home.jpg)
 
-Welcome to **Gendox**, a powerful, no-code tool designed to unlock the potential of Generative AI for your projects. Whether you're looking to create a virtual assistant, automate workflows, or enable smarter customer interactions, Gendox provides the tools to achieve your goals quickly and efficiently.
+## What you can do
 
-This tutorial will guide you through setting up your first project, configuring an AI Agent, uploading data, and integrating external services. Let's get started!
+| You want to… | Use | Start here |
+|---|---|---|
+| Ask questions and get answers with sources | **Chat** with an agent | [Chat with an agent](./01-user-manual/chat.md) |
+| Give an agent knowledge | **Knowledge**: upload files, write documents, read websites, connect WordPress | [Knowledge](./01-user-manual/knowledge.md) |
+| Shape how it answers, give it tools and skills | Agent **Settings** | [Configure the agent](./01-user-manual/configure-the-agent.md) |
+| Ask the same questions of many documents | **Document insights** tasks | [Document Insights](./07-document-insights/01-document-insights.md) |
+| Turn scans into text or structured data | **Digitization** tasks | [Document Digitization](./08-document-digitization/01-document-digitization.md) |
+| Analyse satellite imagery | **Earth observation** tasks | [Earth Observation](./06-earth-observation/02-user-guide.md) |
+| Make your website agentic: an agent that answers and acts on the page | The chat **widget** with tools, or the **WordPress** plugin | [Website Widget](./03-website-widget/01-website-widget-installation.md) |
+| Call the agent from your app | The **API** with an API key | [Gendox API](./02-api/01-gendox-api.md) |
+| Work as a team | **Organizations**, **members** and **roles** | [Invite people](./01-user-manual/invite-user.md) |
 
----
+## Key ideas
 
-## What is Gendox?
+- **Organization**: your team's workspace. Members, agents, API keys and billing belong to it. You can belong to several.
+- **Agent**: an AI assistant with its own knowledge, instructions, model, tools and skills. (In the API and in older pages, an agent and its knowledge are called a **project**.)
+- **Knowledge**: the documents an agent searches. Gendox splits each document into **sections** and cites the sections it used.
+- **Task**: AI work over many documents at once, with results in a table you can review and export.
+- **Public or private**: a public agent answers anyone on a website with its widget; a private agent answers only signed-in members.
 
-Gendox enables organizations to create AI-driven chat agents capable of expert-level conversations. By leveraging Generative AI and your unique data, Gendox transforms your information into powerful, interactive tools tailored to your needs. Here's what you can do with Gendox:
+## Get started in five minutes
 
-- **Train AI Agents** using your documents and customize their behavior.
-- **Manage Projects** for different purposes across various industries.
-- **Integrate Data Sources** like GitHub, AWS S3, and more for seamless data flow.
-- **Engage Naturally** with users through intelligent conversations.
+1. [Register and sign in](./01-user-manual/register.md).
+2. [Create your first agent](./01-user-manual/setup-a-project.md) and give it a document.
+3. [Ask it a question](./01-user-manual/chat.md).
+4. [Find your way around the app](./01-user-manual/workspace-tour.md).
 
----
+## Running Gendox yourself
 
-## Prerequisites
+Gendox is open source. To run it on your own servers or develop it, see the [repository](https://github.com/ctrl-space-labs/gendox-core) and the [Maintenance](./05-maintenance/administrator-guide.md) section, including [local test environments](./05-maintenance/ephemeral-environments.md) and the [end-to-end tests](./05-maintenance/e2e-tests.md).
 
-Before diving into Gendox, ensure you have the following ready:
+## For AI agents reading these docs
 
-1. **Technical Requirements**:
-    - Java JDK 17 or later.
-    - Maven for building the project.
-    - PostgreSQL (v15+) with the `pgvector` extension installed.
-
-2. **Gendox Repository**: Clone the project to your local environment using:
-   ```
-   git clone https://github.com/ctrl-space-labs/gendox-core.git
-   ```
-
-3. **Database Configuration**:
-    - Ensure PostgreSQL is running and the `pgvector` plugin is installed.
-    - Set up the database schema using Flyway:
-      ```
-      cd ./database
-      mvn clean install flyway:migrate -Durl=jdbc:postgresql://localhost:5432/postgres -Duser=[your_user] -Dpassword=[your_pass]
-      ```
-
----
-
-## Create Your First Project
-
-A Gendox project consists of two primary components:
-1. **AI Agent**: The virtual assistant responsible for intelligent interaction.
-2. **Data Pod**: The repository of documents used to train the AI Agent.
-
-### Steps to Create a New Project
-
-1. Navigate to the Gendox homepage.
-2. Click the "+" button in the sidebar to add a new project.
-3. Fill in the project name and description, then click **Submit**.
-4. Select the project from the sidebar to open its configuration page.
-
----
-
-## Configure the AI Agent
-
-Your AI Agent combines the language model, behavior, and knowledge to create intelligent interactions.
-
-### Steps to Configure an AI Agent
-
-1. Open your project.
-2. Access the **Settings**.
-3. Configure the language model, agent role, and other settings.
-4. Save the configuration.
-
-For detailed instructions, check out the [Agent Setup Guide](#).
-
----
-
-## Upload Data to Train the AI
-
-Gendox currently supports text files in formats like `.txt` and `.md`. These files form the knowledge base for your AI Agent.
-
-### Steps to Upload Documents
-
-1. In the project’s page, click **Upload Documents**.
-2. Drag and drop files or use the file picker to select documents.
-3. Click **Upload** to add them to the project’s Data Pod.
-
----
-
-## Train Your AI Agent
-
-Training ensures the AI understands and interacts using your uploaded data.
-
-### Steps to Train Your AI Agent
-
-1. In the project’s **General** tab, click the **Training** button.
-2. Wait for the process to complete. Training time may vary depending on the data size.
-
----
-
-## Interact With Your AI Agent
-
-Once trained, you can start chatting with your AI Agent.
-
-### Steps to Chat With the Agent
-
-1. Navigate to the **Chat** tab in the project’s page.
-2. Select the Agent or chat thread.
-3. Begin your conversation!
-
----
-
-## Explore Integrations
-
-Enhance your project by integrating Gendox with platforms like GitHub, AWS S3, and more. For detailed integration instructions, check the [Integration Guide](./04-integrations/01-integrations-types.md).
+Each page starts with a one-line `description` and is organized as steps and tables, using the exact names of buttons and fields in the app (in **bold**). Navigation is written as *Place → Button*, for example **Settings → Deploy**. An index of every page is at <a href="/llms.txt" target="_self">/llms.txt</a>.
 
 ---
 

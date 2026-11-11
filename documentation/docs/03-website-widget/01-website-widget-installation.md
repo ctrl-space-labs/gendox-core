@@ -7,21 +7,25 @@ Currently, only PUBLIC, existing, manually created projects are supported, with 
 :::
 
 ## Introduction
-The Gendox Chat Widget is the easiest way to integrate an AI chat system into your website, enabling direct integration with popular AI models such as OpenAI ChatGPT, Cohere, LLaMA, and others. This widget allows you to add advanced chatbot capabilities to your platform with minimal setup.
+The Gendox chat widget makes a website **agentic**: one `<script>` tag adds an agent that answers from your knowledge base, cites its sources, and can act on the page through [tools](./02-agent-tool-use-and-website-tool-support.md): filter listings, fill forms, open the right page. It works with every model Gendox supports.
+
+In this example a visitor asks a real estate site for rentals in the centre, and the agent sets the site's own filters with the `fill_fields` tool:
+
+![The widget filtering a real estate website](./img/v2/agentic-website.gif)
 
 ## Getting Started
 To begin using the Gendox Chat Widget, you must first create an account on the Gendox platform. Follow these steps:
-1. **Create a Gendox Account**.
-2. **Create a Project and an Agent** — see [Setup your first project](../01-user-manual/setup-a-project.md).
-3. **Upload documents and train the agent** — see [Setup your first project](../01-user-manual/setup-a-project.md).
-4. **Enable the Public Agent**. _(This step is crucial for the widget to function properly)_. Go to **Project → Settings → AI Agent** and toggle the agent to **Public**.
+1. **Create a Gendox account** — see [Register and sign in](../01-user-manual/register.md).
+2. **Create an agent and give it knowledge** — see [Create your first agent](../01-user-manual/setup-a-project.md) and [Knowledge](../01-user-manual/knowledge.md).
+3. **Make the agent Public** _(required for the widget)_: open the agent's **Settings → Deploy** and choose **Public**.
+4. **Copy the snippet**: on the same **Deploy** tab, choose the widget options and click **Copy** next to **Snippet**. The snippet already contains your `organizationId` and `projectId`.
 
-Once your agent has been created, navigate to the **Gendox webapp homepage**, click on your project, and retrieve the following from the browser's URL parameters:
-- `organizationId`
-- `projectId`.
+![The Deploy tab with the widget snippet and a live preview](./img/v2/agent-deploy.jpg)
+
+The look of the widget (theme, accent and background colours, hello message, suggested questions, disclaimer, branding) is set on the same tab, under **Look and branding**. See [Configure the agent → Deploy](../01-user-manual/configure-the-agent.md#deploy).
 
 ## Installation
-To install the Gendox widget on any website, simply add the following script to the `<head>` section of your webpage:
+Paste the snippet before `</body>` on every page that should show the chat (the `<head>` works too). It looks like this:
 
 ```html
 <script
@@ -71,6 +75,7 @@ The following parameters can be customized by passing them into the script:
 | data-gendox-chat-initial-state | Initial chat window state when widget renders. Allowed values: `open`, `closed`.                                              | `closed`                     | `data-gendox-chat-initial-state="open"`         |
 | data-gendox-local-context-selected-text-enabled | Enable or disable the SDK's automatically registered selected-text local-context callback. Allowed values: `true`, `false`. | `true` | `data-gendox-local-context-selected-text-enabled="false"` |
 | data-gendox-open-web-page-tool-enabled | Enable or disable the SDK's automatically registered `open_web_page` tool handler. Allowed values: `true`, `false`. | `true` | `data-gendox-open-web-page-tool-enabled="false"` |
+| data-gendox-session-resume-timeout-ms | How long (ms) a returning visitor continues the same conversation; after that a new one starts. The Deploy tab's **Continue a conversation for** option sets it. Non-negative integer only. | `600000` (10 minutes) | `data-gendox-session-resume-timeout-ms="86400000"` |
 | data-gendox-local-context-max-responses | Max number of local context responses to wait for per user message. Positive integer only.                          | `1`                          | `data-gendox-local-context-max-responses="2"`   |
 | data-gendox-local-context-max-wait-ms | Max wait time (ms) for local context responses per user message. Non-negative integer only.                            | `200`                        | `data-gendox-local-context-max-wait-ms="1200"`  |
 

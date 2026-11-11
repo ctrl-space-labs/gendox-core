@@ -1,29 +1,43 @@
-# Gendox — Build AI Agents from Your Data. Ship Them Anywhere.
+# Gendox — AI Agents & Document Intelligence Harness
 **by** [Ctrl+Space Labs](https://www.ctrlspace.dev/)
 
-**Gendox** is an open-source platform for building production-ready AI agents from your own data — and embedding them into any website with a single `<script>` tag. Upload your documents and Gendox handles chunking, embeddings, retrieval-augmented generation (RAG), tool calling, and an embeddable chat widget, so you can ship a knowledgeable AI assistant in minutes instead of building a RAG stack from scratch.
+Gendox is an open-source document intelligence platform for building AI knowledge bases, deploying agents and extracting structured data from documents.
 
-Fully open source and self-hostable (Spring Boot + Next.js + PostgreSQL/pgvector), with adapters for **OpenAI, Anthropic, Cohere, Groq, Gemini, Mistral, Ollama** and more.
+As an AI agent harness, it combines document processing, retrieval-augmented generation (RAG), tool calling and batch analysis in a self-hostable platform. Agents answer questions using organizational knowledge, link to source passages and perform actions through configured tools and skills. The same agents are available in the Gendox app, through an embeddable website widget or via the REST API, with a choice of AI providers.
 
-> **Live demo:** [app.gendox.dev](https://app.gendox.dev) · **Docs:** [docs.gendox.dev](https://docs.gendox.dev)
+> **Web app:** [app.gendox.dev](https://app.gendox.dev) · **Documentation:** [docs.gendox.dev](https://docs.gendox.dev) · Open source and self-hostable
 
----
-
-## Main Features
-
-### Upload Documents, Build RAG, and Chat with Your Agent
-
-Upload PDFs, Word docs, spreadsheets, and text files; Gendox automatically splits and embeds them into a searchable pgvector knowledge base. Enable auto-training or click **Training** to create the embeddings, then open the **Chat** panel and ask questions — the agent answers using retrieval-augmented generation grounded in your content. The same agent and knowledge base power all the other features below.
-
-![Upload, build RAG, and chat with your agent](documentation/docs/01-user-manual/img/Gendox-Add_Documents_and_Chat_best.gif)
-
-[Read the setup guide →](documentation/docs/01-user-manual/setup-a-project.md)
+![An agent in Gendox: its chat, its tasks and its knowledge](documentation/docs/01-user-manual/img/v2/agent-home.jpg)
 
 ---
 
-### Set Up Agent Tools and Embed Your AI Agent on Any Website
+## Capabilities
 
-Define tools with **OpenAI-style JSON schemas** (e.g. `open_web_page`, `set_filters`, `fill_form`) so the agent can trigger actions directly on your site. Then embed the ready-to-use chat widget with a single `<script>` tag — no framework required. Control it programmatically via `window.gendox.widget` and react to events via the `postMessage` API.
+| Capability | Description |
+|---|---|
+| **Knowledge bases with cited answers** | Agents search uploaded files, documents from the built-in editor, website content and synced WordPress posts, with links to source passages. |
+| **Agentic websites** | An embeddable widget brings agents to websites. Configured tools let agents filter listings, fill forms and navigate pages. |
+| **Configurable agents** | Each agent has its own instructions, model, reasoning settings, search behavior, tools, skills and access controls. |
+| **Document analysis and extraction** | Batch tasks produce tables of answers with explanations and status flags, or extract text and structured JSON from document pages. |
+| **Multiple AI providers** | Supported providers include OpenAI, Anthropic, Gemini, Mistral, Groq, Cohere, xAI and Ollama, with options for Gendox-provided access or organization-supplied API keys. |
+
+---
+
+## Knowledge bases with cited answers
+
+An agent's knowledge can include PDFs, Word documents, Excel spreadsheets, CSV files, Markdown, images, documents written in the built-in editor and content imported from websites or WordPress. Gendox splits documents into sections and stores their embeddings in PostgreSQL/pgvector. Retrieval-augmented generation uses relevant passages to inform answers, with **sources** available for review.
+
+![Asking an agent and opening the sources of its answer](documentation/docs/01-user-manual/img/v2/chat-ask-and-sources.gif)
+
+[Knowledge →](documentation/docs/01-user-manual/knowledge.md) · [Chat →](documentation/docs/01-user-manual/chat.md)
+
+---
+
+## Agentic websites
+
+The Gendox chat widget embeds an agent on a website with a single script tag. The agent can answer from its knowledge base, read text selected by a visitor and call **tools implemented by the host website**. In this example, a visitor asks a real estate website's agent for rentals in the city centre, and the agent applies the site's filters:
+
+![The Gendox widget filtering a real estate website](documentation/docs/03-website-widget/img/v2/agentic-website.gif)
 
 ```html
 <script
@@ -31,126 +45,103 @@ Define tools with **OpenAI-style JSON schemas** (e.g. `open_web_page`, `set_filt
   src="https://app.gendox.dev/gendox-sdk/gendox-widget-plugin.js"
   data-gendox-src="https://app.gendox.dev"
   data-organization-id="YOUR_ORG_ID"
-  data-project-id="YOUR_PROJECT_ID">
+  data-project-id="YOUR_AGENT_ID">
 </script>
 ```
 
-<!-- Replace the placeholder below with a screen recording: add a tool in Settings → AI Agent → Tools, then show the widget on a sample page executing the tool. -->
-![Set up agent tools and embed on a website](documentation/docs/03-website-widget/img/feature-embed-agent.gif)
+The agent's **Settings → Deploy** provides a deployment snippet, appearance controls and a live preview. The **Gendox WP AI Agent** plugin adds the widget to WordPress and keeps selected posts and pages in sync with the agent's knowledge. Other applications can access the agent through the REST API.
 
-[Widget installation guide →](documentation/docs/03-website-widget/01-website-widget-installation.md) · [Tool use & front-end actions →](documentation/docs/03-website-widget/02-agent-tool-use-and-website-tool-support.md)
-
----
-
-### Document Insights
-
-Upload a batch of documents, define the questions that matter to you, and let AI answer them across every document at once. Results appear in a **spreadsheet-style matrix** — one row per document, one column per question — with short answer values, detailed explanations, status flags (OK, Warning, Issue…), per-document summaries, and full **CSV export**.
-
-![Document Insights](documentation/docs/07-document-insights/img/document-insights/document-insights.gif)
-
-[Document Insights guide →](documentation/docs/07-document-insights/01-document-insights.md)
+[Website widget →](documentation/docs/03-website-widget/01-website-widget-installation.md) · [Website tools →](documentation/docs/03-website-widget/02-agent-tool-use-and-website-tool-support.md) · [WordPress →](documentation/docs/03-website-widget/04-wordpress-plugin.md)
 
 ---
 
-### Document Digitization
+## Configurable agents
 
-Turn scanned PDFs and office files into clean, machine-readable output **page by page** using vision-capable LLMs — no traditional OCR needed. Add an optional **JSON schema (Structure)** to extract structured data in a single pass, then export all results to CSV. Supports PDFs, Word, Excel, PowerPoint, and more.
+Each agent has its own instructions, model and knowledge. Search settings control when documents are retrieved and how many passages inform an answer. Optional moderation checks screen incoming questions. **Tools** support built-in document operations and actions in connected websites or applications. **Skills**, defined in `SKILL.md` files, provide additional instructions that the agent loads when relevant to a request.
 
-![Document Digitization](documentation/docs/08-document-digitization/img/digitization-task-demo.png)
+![Agent settings: model, thinking effort and knowledge search](documentation/docs/01-user-manual/img/v2/agent-model-and-search.jpg)
 
-[Document Digitization guide →](documentation/docs/08-document-digitization/01-document-digitization.md)
+Inside the app, the current agent also serves as the **Gendox assistant**. It uses the current page as context and can read, create and run the agent's tasks.
 
----
-
-## Technologies Used
-
-### Backend
-- **Spring Boot 3** — Java application framework
-- **Java 25** — Virtual threads (structured concurrency)
-- **Spring AI** — AI provider abstraction layer
-- **Maven** — Build and dependency management
-
-### Frontend
-- **Next.js 15** — React framework (static export)
-- **Material-UI 5** — Component library and theming
-- **Redux Toolkit** — State management
-
-### Database & Infrastructure
-- **PostgreSQL 18 + pgvector** — Relational database with vector similarity search
-- **Flyway** — Database schema migrations
-- **Keycloak** — OAuth2/OIDC authentication
+[Configure the agent →](documentation/docs/01-user-manual/configure-the-agent.md)
 
 ---
 
-## Getting Started
+## Document Insights
 
-The easiest way to run Gendox locally is with Docker Compose. All services — API, frontend, database, and Keycloak — start from a single command.
+Document Insights applies a shared set of questions to a batch of documents. Results appear in a table with one row per document and one column per question. Each answer includes a short value, an explanation and a status flag, from *Looks fine* to *Critical issue*. Questions support written responses, Yes/No decisions, choices and ratings, with reference documents such as contract templates available as context. Results include document summaries and can be exported to CSV.
 
-### Prerequisites
+![Browsing the answers of an invoice categorization task](documentation/docs/07-document-insights/img/v2/insights-browse-answers.gif)
 
-- [Docker](https://docs.docker.com/get-docker/) with Docker Compose
+[Document Insights →](documentation/docs/07-document-insights/01-document-insights.md)
 
-### Clone the Repository
+---
+
+## Document Digitization
+
+Document Digitization extracts text from scans, PDFs and office files **page by page**. Vision models can interpret page images containing stamps, handwriting and tables, while text-based processing is available for digital documents. An optional JSON schema defines the fields to extract as structured data. Results can be reviewed per page and exported to CSV.
+
+![Reading the structured result of a digitized document](documentation/docs/08-document-digitization/img/v2/digitization-read-results.gif)
+
+[Document Digitization →](documentation/docs/08-document-digitization/01-document-digitization.md)
+
+---
+
+## Additional features
+
+- **Earth Observation (SeaScope)**: a satellite imagery analysis workspace combining Google Earth Engine, an interactive map and an agent that writes and runs analysis code. [Guide →](documentation/docs/06-earth-observation/02-user-guide.md)
+- **Teams**: organizations, members and roles, private and public agents, API keys. [Invite people →](documentation/docs/01-user-manual/invite-user.md)
+- **Integrations**: knowledge synchronization with websites, WordPress, Git repositories and S3 buckets. [Integrations →](documentation/docs/04-integrations/01-integrations-types.md)
+
+---
+
+## Technology stack
+
+| Part | Stack |
+|---|---|
+| API | Java 25 (virtual threads), Spring Boot 3.5, Spring AI, Spring Batch, QueryDSL, Maven |
+| Web app (`gendox-frontend-v2`) | Next.js 15 (static export), React 19, Redux Toolkit, its own design system |
+| Data | PostgreSQL + pgvector, Flyway migrations |
+| Sign-in | Keycloak (OAuth2 / OIDC) |
+| Tests | Playwright end-to-end suite (`gendox-e2e-tests`) |
+| Docs | Docusaurus (`documentation`) |
+
+---
+
+## Local deployment
+
+The **ephemeral environment** provides a local development stack with a database, API, Keycloak and web app managed by Docker Compose. It includes seeded test users and mock models that require no API key.
+
+Prerequisites are Docker with Compose, Java 25 with Maven, and Node.js with Yarn.
 
 ```bash
 git clone https://github.com/ctrl-space-labs/gendox-core.git
 cd gendox-core
+(cd gendox-core-api && mvn -q package -DskipTests)
+(cd gendox-frontend-v2 && yarn install && yarn build)
+cd gendox-compose-scripts/ephemeral
+./init-env.sh
+docker compose up -d --wait
 ```
 
-### Configure environment variables
+`init-env.sh` selects free ports and writes them to `.env`; the web app runs at `http://localhost:31NN`. Real model access requires a provider key (`OPENAI_KEY`, `ANTHROPIC_KEY`, `GEMINI_KEY`, …) in `.env` and another `docker compose up -d --wait` to apply the configuration.
 
-An example environment file is committed at `gendox-compose-scripts/dev-ci-installation/env.local.example`. Copy it to `.env.local` in the same folder (`.env*` files are git-ignored so your secrets stay local):
-
-```bash
-cd gendox-compose-scripts/dev-ci-installation
-cp env.local.example .env.local
-```
-
-The file contains working defaults for all infrastructure (database, Keycloak, ports), so the stack starts without any further changes. To get AI responses, open `.env.local` and set at least one provider key:
-
-```bash
-OPENAI_KEY=sk-...        # OpenAI
-GROQ_KEY=gsk_...         # Groq (free tier available)
-COHERE_KEY=...           # Cohere
-# ANTHROPIC_KEY, GEMINI_KEY, MISTRAL_KEY, VOYAGE_KEY also supported
-```
-
-> The platform starts and the UI is fully usable without any AI key — you only need one when sending your first chat message.
-
-### Start the stack
-
-```bash
-docker compose up -d
-```
-
-| Service | URL |
-|---------|-----|
-| Frontend | http://localhost:3000 |
-| API | http://localhost:8080/gendox/api/v1 |
-| Keycloak | https://localhost:8443 |
-| Database | localhost:5433 |
-
-For other environments see `gendox-compose-scripts/` (`build-ci-installation/`, `ephemeral/`).
+Details: [Local test environments](documentation/docs/05-maintenance/ephemeral-environments.md) · [End-to-end tests](documentation/docs/05-maintenance/e2e-tests.md). Other setups are in `gendox-compose-scripts/`.
 
 ---
 
-## For AI Coding Assistants
+## For AI coding assistants
 
-If you are an AI coding agent (Cursor, Claude Code, OpenAI Codex, etc.) helping a developer integrate Gendox, use the Agent Skills at [docs.gendox.dev/skills/](https://docs.gendox.dev/skills/). Copy the relevant skill folder into `.agents/skills/` (Cursor/Codex) or `.claude/skills/` (Claude Code) in the consumer project. See the [AI coding assistants section in the docs](https://docs.gendox.dev/#for-ai-coding-assistants) for the full skill catalog and install instructions.
+The [Agent Skills catalog](https://docs.gendox.dev/skills/) provides integration instructions for AI coding assistants. Skill folders can be installed in a consuming project's `.agents/skills/` directory for Cursor and Codex, or `.claude/skills/` for Claude Code. The [documentation index](https://docs.gendox.dev/llms.txt) provides a structured overview of the guides and references.
 
 ---
 
-## Join the Community
+## Community
 
-Gendox is built in the open and contributions are very welcome.
+Gendox is built in the open and contributions are welcome.
 
-### How to Contribute
-
-Get in touch by sending an email to [contact@ctrlspace.dev](mailto:contact@ctrlspace.dev).
-
-### Report Issues
-
-Found a bug or have a suggestion? Please [create an issue](https://github.com/ctrl-space-labs/gendox-core/issues).
+- **Contributions**: [contact@ctrlspace.dev](mailto:contact@ctrlspace.dev).
+- **Bug reports and feature requests**: [GitHub issues](https://github.com/ctrl-space-labs/gendox-core/issues).
 
 ---
 

@@ -1,95 +1,56 @@
-# Gendox Registration 
-On Gendox you can register either manually or by accepting another gendox uwser's invitation to a project.
+---
+sidebar_position: 1
+title: Register and sign in
+description: Create a Gendox account, either on your own or by accepting an invitation, verify your email, and sign in.
+---
 
-## Registration via Invitation
-### Accept Invitation
+# Register and sign in
 
-To register to gendox via invitation another gendox user must send to your email address an invitation to a project. When you click to open the email you will view the invitation. In order to be directed to the gendox environment you will need to click **Accept Invitation**.
+You can join Gendox in two ways:
 
-![06-gendox-invitation-2.png](./img/07-gendox-invitation-2.png)
+- **On your own**: create an account, then create your own organization and first agent.
+- **By invitation**: someone in an existing organization invites you by email. You join their organization and can use the agents they gave you access to.
 
-### Registration
+---
 
-When you click the Accept Invitation you will be directed to the Gendox login page. You will need to create an account on Gendox to proceed. To create a new account click on **Create an account**.
+## Create an account
 
-![9-gendox-registration.png](./img/9-gendox-registration.png)
+1. Open Gendox. You land on the sign-in page.
+2. Click **Create an account**.
 
-To register with gendox you will need to fill in:
-- Your email address
-- A password
-- Your first name
-- Your last name
-- Accept the terms and conditions.
-After filling in the necessary information click on **CREATE AN ACCOUNT**.
+![The Gendox sign-in page](./img/v2/login.jpg)
 
-![10-gendox-registration.png](./img/10-gendox-registration.png)
+3. Fill in your **Email**, a **Password** (twice), your **First name** and **Last name**.
+4. Submit the form.
 
-You will also be prompted to verify your email address to activate your account.
+![The Create Account form](./img/v2/register.jpg)
 
-![11-gendox-verification-a.png](./img/11-gendox-verification-a.png)
+5. Gendox sends you an email to verify your address. Open it and click the link.
 
-In your email inbox you receive see an email like the following:
+![The verification email](./img/13-gendox-verification-c.png)
 
-![13-gendox-verification-c.png](./img/13-gendox-verification-c.png)
+After verifying, you are signed in. If you registered on your own, Gendox now asks you to name your organization: continue with [Create your first agent](./setup-a-project.md).
 
-When you open it, you will see a link to verify your email. This will redirect you to the Gendox homepage.
+---
 
-![12-gendox-verification-b.png](./img/12-gendox-verification-b.png)
+## Accept an invitation
 
-When you click on the link you will be logged to Gendox and you can now view the project you were invited to. Also, you can view the Gendox Homepage.
+When someone invites you, you receive an email with an **Accept Invitation** link. The link is valid for 30 days.
 
-![14-gendox-homepage.png](./img/14-gendox-homepage.png)
+![An invitation email](./img/07-gendox-invitation-2.png)
 
-###  Multiple Project Invitations
-It is important to note that an invitation is only valid for the project you are invited to the specific project not the whole organization. Hence, if you are invited to multiple projects you will need to repeat the process described above to become a member of all the projects. Otherwise, you will not be able to access them. 
+1. Click **Accept Invitation**.
+2. If you don't have an account yet, click **Create an account** on the sign-in page and register with **the same email address the invitation was sent to**. Then verify your email.
+3. If you already have an account, sign in.
 
-###  Manual Registration
+You then see the organization you were invited to, with the agents you were given access to. If you belong to several organizations, switch between them from the account menu at the bottom of the sidebar (see [The workspace](./workspace-tour.md#account-menu)).
 
-If you are not invited to join a project in gendox you will need to fill in you information to register as described in [here](#registration). In this case you will only need to verify your email. Also when you register a default project and organization is created for your user.
+> An invitation gives access to **one agent**, or adds you to the organization with a role. To use more agents, ask an admin to add you to them (see [Invite people](./invite-user.md)).
 
-##  Getting Started with Gendox
-###   Gendox Homepage
+---
 
-By observing the homepage, on the top right, you can view the organization you are in and the switch from dark to light mode. If you registered manually you will see the default organization and project that have been created for your project.
+## Sign in and out
 
-![15-gendox-homepage.png](./img/15-gendox-homepage.png)
-
-On the center of the page, you can see the current project you are in, and the documents contained in the current project.
-
-![16-gendox-homepage.png](./img/16-gendox-homepage.png)
-
-On the sidebar on the left, you can view the current organization’s projects and the chat button, to start chatting with AI agents. 
-
-![17-gendox-homepage.png](./img/17-gendox-homepage.png)
-
-###   AI Agent Chat
-When you click on chat you will be redirected to the chat menu. On the sidebar on the left,
-you can view the current organization’s agents and under chats the chat threads you have
-created.
-
-![18-gendox-chat-1.png](./img/18-gendox-chat-1.png)
-
-To start chatting with an AI agent select one by clicking on them. The chat menu will then
-appear. You can write your message and send it by pressing **SEND**.
-
-![19-gendox-chat-2.png](./img/19-gendox-chat-2.png)
-
-After the message is sent you will also see the AI agent’s answer.
-
-The AI agent uses the project’s documents as it has been trained on them to answer. You
-can view the documents that were used in forming the answer received by clicking on the
-information tooltip.
-
-![20-gendox-chat-tooltip.png](./img/20-gendox-chat-tooltip.png)
-
-By pressing the button, you can now see the titles of the documents that were used. You
-can also click on them. When you click on a document tittle a new tab opens with the
-document.
-
-![21-gendox-chat-sections.png](./img/21-gendox-chat-sections.png)
-
-You can now view the document. It is important to know that the document is in an internal
-Gendox document, and not the original PDF document that was uploaded. Future Gendox
-versions will also support viewing the original PDF document when you copen documents.
-
-![22-gendox-chat-document.png](./img/22-gendox-chat-document.png)
+- **Sign in**: enter your email and password on the sign-in page and click **Login**. **Forgot Password?** sends you a reset link.
+- **Sign out**: open the account menu at the bottom of the sidebar and click **Sign out**.
+- **Password and two-step verification**: open **Profile** from the account menu, then **Password and two-step verification**. See [Organization and account](./organization-and-account.md#your-profile).

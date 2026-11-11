@@ -1,115 +1,85 @@
-# Setup your first project
+---
+sidebar_position: 2
+title: Create your first agent
+description: Create an organization and your first AI agent, give it knowledge, and ask it a question. The steps a new Gendox user follows after signing in for the first time.
+---
 
-import uploadAndChatVideo from './img/Gendox-Add_Documents_and_Chat_best.mp4';
+# Create your first agent
 
-A Gendox Project combines two basic components:
-- AI Agents
-- A collection of files the agent learns from
+import onboardingDemo from './img/v2/onboarding.gif';
 
-An AI Agent is a virtual assistant that can help you, trained on the content you upload in each project.
+An **agent** is an AI assistant that answers from the knowledge you give it and shows where each answer comes from. Every agent belongs to an **organization**: your team's workspace, where members, agents and billing live.
+
+This page takes you from your first sign-in to your first answer, in about two minutes.
 
 ## Quick demo
 
-<video controls autoPlay muted playsInline loop width="100%">
-  <source src={uploadAndChatVideo} type="video/mp4" />
-  Your browser does not support the video tag.
-</video>
-
-Upload a document, then open **Chat** and ask the agent questions grounded in your files.
+<img src={onboardingDemo} alt="Creating an organization, creating an agent and uploading its first document" width="100%" />
 
 ---
 
-## Create a new project
+## 1. Name your organization
 
-1. After your first login, Gendox will ask you to name your **Organization**. This is your main account — where you can also invite other users to collaborate.
+The first time you sign in, Gendox asks for an organization name. Use your company or team name; you can change it later.
 
-2. You’ll then be prompted to create your **first project**. Just give it a name and click **SUBMIT** — you're ready to go!
+1. Type the **Organization name**.
+2. Optionally open **Add invoice details** to fill in your company's legal details.
+3. Click **Create organization**.
 
-3. Later, you can create additional projects anytime by clicking the **"+"** button in the sidebar:
-   ![01-gendox-create-project.png](./img/01-gendox-create-project.png)
+![The Welcome screen asks for an organization name](./img/v2/create-org.jpg)
 
-4. In the sidebar, click the project's name to enter the project's page.
-
----
-
-## Setup the AI Agent
-
-An AI Agent is made up of:
-- The underlying LLM
-- Role/Behavior definition
-- Knowledge (your uploaded files)
-
-Each project comes with one AI Agent created automatically.
-
-To configure the Agent:
-
-1. Click the **Project Settings wheel** button in the project's page:
-   ![03-gendox-project-settings.png](./img/03-gendox-project-settings.png)
-
-2. Go to the **Agent** tab
-
-3. Select your preferred **LLM**
-
-4. Describe the agent’s role in the **Agent Behavior** section
-
-5. Choose how the agent uses your documents in **Knowledge Search**:
-   - **Always**: it searches the documents before every answer.
-   - **Auto**: it searches when a question needs them.
-   - **Off**: it answers without searching the documents.
-
-6. Optionally add **Skills**: instructions the agent reads when a question needs them. Add one from **Gendox skills**, or write your own with **New skill** (a `SKILL.md` file, the format Claude Code and Codex use).
-
-![04-gendox-configure-agent.png](./img/04-gendox-configure-agent.png)
+> Were you invited by someone? Open the link in the invitation email instead. You then join their organization and skip this step. See [Register](./register.md).
 
 ---
 
-## Upload data
+## 2. Create the agent
 
-Gendox currently supports text files (e.g., `.txt`, `.md`) and PDFs. You can upload any file you want the agent to learn from.
+1. **Name**: the name people see when they chat, for example *Support Assistant*.
+2. **What is it for?** (optional): one sentence about its job. Visitors see it in the website widget.
+3. **Process new documents automatically**: leave it on. Documents you add are then read and ready to cite within a short time.
+4. Click **Create agent**.
 
-1. In the project page, click the **Upload Documents** button:
-   ![02-gendox-upload-documents.png](./img/02-gendox-upload-documents.png)
-
-2. Drag and drop your files, or click **Choose Files** to browse from your computer
-
-3. Click **Upload** to upload them
+![The Create an agent form](./img/v2/create-agent.jpg)
 
 ---
 
-## Train the AI Agent
+## 3. Give it something to answer from
 
-1. In the **General** tab of your project, click the **Training** button
+An agent answers only as well as its knowledge. Choose where its first knowledge comes from and click **Continue**:
 
-2. Wait a few minutes for training to complete
+| Choice | What happens |
+|---|---|
+| **Upload files** | Opens the upload window. PDF, Word, Excel, CSV, text, Markdown or JPG. |
+| **Read a website** | Gendox lists the pages of a site and you pick which ones to read. |
+| **Connect WordPress** | Your WordPress posts and pages stay in sync with the agent. |
+| **Write it** | Type or paste a document directly in Gendox. |
 
-![04.1-gendox-start-training.png](./img/04.1-gendox-start-training.png)
+![Support Assistant is ready: choose the first knowledge](./img/v2/first-knowledge.jpg)
 
-> 💡 If you are uploading files automatically through an API or integration, enabling **Auto Training** will re-train the agent every ~1 hour. You might want to disable this during the initial setup if you plan to upload many files in a short time.
+You can also click **Skip for now** and add knowledge later from **Knowledge** in the sidebar.
 
----
+When a file is uploaded, the window shows it as **Uploaded**. Close it: the document now shows **Processing** in the list, and turns **Ready** once it has been split into sections the agent can cite.
 
-## Chat with the agent
+![A file uploaded to the agent's knowledge](./img/v2/uploaded.jpg)
 
-1. In the sidebar, click the **Chat** button
-
-2. In the chat window, select the Agent or a previous thread
-
-3. Start chatting!
-
-![05-gendox-chat.png](./img/05-gendox-chat.png)
-
-The agent is also available on every page of the app as the **Gendox assistant**: click the Gendox icon at the bottom right. It knows the page you are on, answers from the project's documents, can take you to other pages, and can create, change and run the project's tasks.
+See [Knowledge](./knowledge.md) for every way to add and manage documents.
 
 ---
 
-## Document analytics tasks
+## 4. Ask your first question
 
-On the project home page, click **CREATE NEW TASK** to run structured batch workflows on your documents — beyond one-off chat.
+Click **New chat** at the top of the sidebar, type a question and press **Enter**. The agent answers from its documents and lists its **Sources** under the answer.
 
-| Task type | What it does |
-|-----------|--------------|
-| **Get insights from multiple documents** | Define questions once and get answers across every document in a spreadsheet-style matrix. |
-| **Digitize scanned documents page-by-page** | Turn scanned PDFs and office files into clean, machine-readable output. |
+See [Chat with an agent](./chat.md).
 
-For a full walkthrough, see [Document Insights](../07-document-insights/01-document-insights.md) (contract cross-check example) and [Document Digitization](../08-document-digitization/01-document-digitization.md).
+---
 
+## What next
+
+| To… | Read |
+|---|---|
+| Find your way around the app | [The workspace](./workspace-tour.md) |
+| Change how the agent behaves, which model it uses, and its tools and skills | [Configure the agent](./configure-the-agent.md) |
+| Put the agent on your website | [Configure the agent → Deploy](./configure-the-agent.md#deploy) and [Website Widget](../03-website-widget/01-website-widget-installation.md) |
+| Ask the same questions of many documents | [Tasks](./tasks.md) |
+| Invite your team | [Invite people](./invite-user.md) |
