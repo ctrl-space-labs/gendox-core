@@ -5,11 +5,15 @@ import FileTile from 'src/components/ui/FileTile'
 // the splitter names untitled sections "Default Title"
 const sectionTitleOf = source => (source.sectionTitle === 'Default Title' ? null : source.sectionTitle)
 
-const Source = ({ source, documentHref }) => {
+const Source = ({ source, documentHref, sameTab }) => {
   const sectionTitle = sectionTitleOf(source)
   const href = source.externalUrl || (documentHref ? documentHref(source) : null)
   const Tag = href ? 'a' : 'div'
-  const linkProps = href ? { href, target: '_blank', rel: 'noopener noreferrer' } : {}
+  const linkProps = !href
+    ? {}
+    : sameTab && !source.externalUrl
+      ? { href }
+      : { href, target: '_blank', rel: 'noopener noreferrer' }
 
   return (
     <Tag className='src' {...linkProps} title={sectionTitle || undefined}>
@@ -34,8 +38,9 @@ const Source = ({ source, documentHref }) => {
  * The sources of one answer: the passages the agent used, then the ones it found but did not use.
  * @param metadata - GET threads/{t}/message-metadata/{m}
  * @param documentHref - (source) => link to the document inside the app; without it, documents show as quotes
+ * @param sameTab - documents open in place rather than in a new browser tab (in the dock, a link opens a tab)
  */
-const ChatSources = ({ isLoading, metadata, documentHref }) => {
+const ChatSources = ({ isLoading, metadata, documentHref, sameTab = false }) => {
   if (isLoading) {
     return (
       <div className='gc-loading' style={{ padding: 32 }}>
@@ -62,7 +67,7 @@ const ChatSources = ({ isLoading, metadata, documentHref }) => {
           </div>
           <div className='src-list'>
             {used.map((source, index) => (
-              <Source key={`used-${index}`} source={source} documentHref={documentHref} />
+              <Source key={`used-${index}`} source={source} documentHref={documentHref} sameTab={sameTab} />
             ))}
           </div>
         </>
@@ -79,7 +84,7 @@ const ChatSources = ({ isLoading, metadata, documentHref }) => {
           </div>
           <div className='src-list dim'>
             {more.map((source, index) => (
-              <Source key={`more-${index}`} source={source} documentHref={documentHref} />
+              <Source key={`more-${index}`} source={source} documentHref={documentHref} sameTab={sameTab} />
             ))}
           </div>
         </>

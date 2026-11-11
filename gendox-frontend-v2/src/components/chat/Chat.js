@@ -95,6 +95,7 @@ const greetingTime = () => {
  * @param attach - attach files and images
  * @param deep - the Deep thinking switch
  * @param sources - the sources button under each answer
+ * @param onOpenSources(threadId, answer) - where an answer's sources open instead of the sheet (the agent home: a tab)
  * @param documentHref - (source) => link to a document inside the app; without it, documents show as quotes
  * @param poweredBy - true | 'small'; the agent's branding can make it small or take it away
  * @param chatSettings - the look to show instead of the agent's saved one (Deploy's live preview)
@@ -111,6 +112,7 @@ const Chat = ({
   attach = true,
   deep = true,
   sources = true,
+  onOpenSources,
   documentHref = null,
   footnote = 'Answers cite their sources. AI can make mistakes.',
   poweredBy = false,
@@ -383,6 +385,7 @@ const Chat = ({
     : {}
 
   const openSources = answer => {
+    if (onOpenSources) return onOpenSources(threadId, answer)
     dispatch(fetchMessageMetadata({ thread: currentThread, message: answer, token, chatKey }))
     setSourcesMessageId(answer.messageId)
   }
