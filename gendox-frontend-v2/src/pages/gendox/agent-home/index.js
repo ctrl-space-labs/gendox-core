@@ -29,7 +29,7 @@ import Menu from 'src/components/ui/Menu'
  *   /gendox/document-instance?documentId=&sectionId=
  *   /gendox/tasks/document-insights?taskId=&doc=&q=
  *   /gendox/tasks/document-digitization?taskId=&doc=
- *   /sources?threadId=&messageId=           the sources of one answer; one such tab, reused for the next answer
+ *   /sources?threadId=&messageId=           the sources of one answer; one such tab per chat, reused for its next answer
  * Earth observation is a workspace of its own windows, so it opens as a full page.
  */
 const PAGES = {
@@ -136,9 +136,12 @@ const AgentHomePage = () => {
 
         return
       }
-      // one Sources tab: another answer's sources replace the ones on screen, in the same place
+      // one Sources tab per chat: the chat's next answer's sources replace the ones on screen, in the same place
       if (path === '/sources') {
-        const shown = dockRef.current?.urls().find(u => pathOf(u) === '/sources' && u !== url)
+        const threadId = new URLSearchParams(url.split('?')[1]).get('threadId')
+        const shown = dockRef.current
+          ?.urls()
+          .find(u => pathOf(u) === '/sources' && u !== url && new URLSearchParams(u.split('?')[1]).get('threadId') === threadId)
         if (shown) dockRef.current.rename(shown, url)
       }
       dockRef.current?.open(url, { near: NEAR[path.startsWith('/chat/') ? 'chat' : path] ?? [] })

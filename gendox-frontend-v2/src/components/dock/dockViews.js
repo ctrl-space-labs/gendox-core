@@ -93,6 +93,15 @@ export const DockScreen = ({ children }) => {
   )
 }
 
+// a chat's name: its thread's, else its first question (threads are named "Chat Thread" until someone renames them)
+const chatTitleOf = currentThread => {
+  // the optimistic first message has no role yet
+  const firstQuestion = currentThread?.messages?.find(m => !m.role || m.role.toUpperCase() === 'USER')?.message
+  const named = currentThread?.thread?.threadName
+
+  return ((named && named !== 'Chat Thread' ? named : firstQuestion) || '').replace(/\s+/g, ' ').trim()
+}
+
 /** A chat tab: its own chat in the store (chatKey), named after the thread or its first question */
 export const DockChat = ({ chatKey, threadId }) => {
   const tab = useDockTab()
@@ -112,13 +121,9 @@ export const DockChat = ({ chatKey, threadId }) => {
     }
   })
 
-  // the optimistic first message has no role yet
-  const firstQuestion = currentThread?.messages?.find(m => !m.role || m.role.toUpperCase() === 'USER')?.message
-  // threads are named "Chat Thread" until someone renames them; the first question says more
-  const named = currentThread?.thread?.threadName
-  const title = (named && named !== 'Chat Thread' ? named : firstQuestion) || 'New chat'
+  const title = chatTitleOf(currentThread) || 'New chat'
   useEffect(() => {
-    tab.setTitle(short(title.replace(/\s+/g, ' ').trim() || 'New chat'))
+    tab.setTitle(short(title))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [title])
 
@@ -135,17 +140,27 @@ export const DockChat = ({ chatKey, threadId }) => {
 
 export const sourcesUrlOf = (threadId, messageId) => `/sources?${new URLSearchParams({ threadId, messageId })}`
 
-/** The sources of one answer in a tab of their own, beside the chat; a document opens in a tab at the passage */
+/**
+ * The sources of one answer in a tab of their own, beside the chat; a document opens in a tab at the passage.
+ * Each chat has one, reused for its next answer's sources, and named after the chat.
+ */
 export const DockSources = () => {
   const tab = useDockTab()
   const { query } = useView()
   const { href } = useActiveScope()
   const { threadId, messageId } = query
   const [metadata, setMetadata] = useState(null)
+  const chatTitle = useSelector(state =>
+    chatTitleOf(Object.values(state.gendoxChat.sessions).find(s => s.currentThread?.threadId === threadId)?.currentThread)
+  )
+
+  useEffect(() => {
+    tab.setTitle(chatTitle ? short(`Sources · ${chatTitle}`) : 'Sources')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatTitle])
 
   // the tab is reused for the next answer's sources, so it loads again when its URL changes
   useEffect(() => {
-    tab.setTitle('Sources')
     if (!threadId || !messageId) return
     let current = true
     setMetadata(null)
