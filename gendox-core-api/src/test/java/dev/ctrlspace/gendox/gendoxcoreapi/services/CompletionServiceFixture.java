@@ -119,10 +119,12 @@ abstract class CompletionServiceFixture {
         });
         when(messageService.getPreviousMessages(any(), anyInt())).thenAnswer(invocation -> new ArrayList<>());
 
-        service = new CompletionService(null, mock(ProjectService.class), new MessageAiMessageConverter(), embeddingService,
-                mock(ProjectAgentRepository.class), templateRepository, typeService, aiModelUtils, mock(ProjectAgentService.class),
+        CompletionRuntimeContextResolver contextResolver = new CompletionRuntimeContextResolver(templateRepository, typeService,
+                embeddingService, mock(DocumentUtils.class), mapper, aiModelService, aiToolRegistry, mock(SkillService.class));
+        service = new CompletionService(null, mock(ProjectService.class), new MessageAiMessageConverter(),
+                mock(ProjectAgentRepository.class), typeService, aiModelUtils, mock(ProjectAgentService.class),
                 trainingService, organizationModelKeyService, messageService, auditLogsService,
-                mock(DocumentUtils.class), mapper, aiModelService, aiToolRegistry, mock(SkillService.class));
+                mapper, aiToolRegistry, contextResolver);
         ReflectionTestUtils.setField(service, "self", service);
         ReflectionTestUtils.setField(service, "completionTurnService", completionTurnService);
         ReflectionTestUtils.setField(service, "messageLocalContextService", mock(MessageLocalContextService.class));
