@@ -25,7 +25,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -64,9 +63,11 @@ public class JwtUserRegistrationFilter extends OncePerRequestFilter {
             Jwt jwt = (Jwt) jwtAuth.getPrincipal();
 
             String email = jwt.getClaimAsString("preferred_username");
-            Optional<User> userOptional = userService.getOptionalUserByUniqueIdentifier(email);
+            // A cached profile proves the user is registered, so only the first request of a user reaches the database
+            boolean registered = userService.isUserProfileCached(email)
+                    || userService.getOptionalUserByUniqueIdentifier(email).isPresent();
             // first login, create user
-            if (userOptional.isEmpty()) {
+            if (!registered) {
                 logger.info("User with email {} not found in the database, registering a new user!", email);
                 User user = new User();
                 user.setId(UUID.fromString(jwt.getClaim("sub")));

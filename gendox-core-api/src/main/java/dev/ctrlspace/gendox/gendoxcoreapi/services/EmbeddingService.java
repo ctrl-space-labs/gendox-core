@@ -419,9 +419,8 @@ public class EmbeddingService {
 
         List<DocumentInstanceSection> allSections = documentSectionService.getSectionsBySectionsIn(projectId, sectionsDistances.keySet());
 
-        return allSections
+        return documentInstanceSectionWithDocumentConverter.toDTOs(allSections)
                 .stream()
-                .map(section -> documentInstanceSectionWithDocumentConverter.toDTO(section))
                 .peek(sectionDTO -> sectionDTO.setDistanceFromQuestion(sectionsDistances.get(sectionDTO.getId())))
                 .peek(sectionDTO -> sectionDTO.setDistanceModelName(project.getProjectAgent().getSemanticSearchModel().getName()))
                 .sorted(Comparator.comparing(DocumentInstanceSectionDTO::getDistanceFromQuestion))

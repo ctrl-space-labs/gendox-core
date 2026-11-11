@@ -16,6 +16,7 @@ import java.util.UUID;
 @Repository
 public interface AiModelRepository extends JpaRepository<AiModel, UUID>, QuerydslPredicateExecutor<AiModel> {
 
+    @EntityGraph(attributePaths = { "aiModelProvider", "modelTierType", "aiModelType", "apiType" })
     Optional<AiModel> findByName(@Param("name") String name);
 
 //    AiModel findAiModelByName
