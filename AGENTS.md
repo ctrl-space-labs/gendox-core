@@ -30,7 +30,9 @@ Implementation plans and audits live in `.ai/`, one file per topic, named `<topi
 
 - [Ephemeral environments, smoke tests and agent tooling](.ai/ephemeral-environments-2026-11-09.md) — environment setup implemented; current smoke selection is in the coverage plan above. Self-contained: it replaces the [original 2026-11-06 plan](.ai/ephemeral-environments-2026-11-06.md), which is kept unchanged.
 
-- [Web Scraping Integration (Firecrawl) — #526](.ai/issue-526-web-scraping-integration-2026-09-10.md) — not started.
+- [Streaming chat, client tools and knowledge search mode — #519 / #518 / #542](.ai/issue-519-streaming-chat-2026-10-20.md) — implemented, not yet tested end to end. Self-contained: it replaces the [original 2026-10-16 plan](.ai/issue-519-streaming-chat-2026-10-16.md), which is kept unchanged.
+
+- [Web Scraping Integration (Firecrawl) — #526](.ai/issue-526-web-scraping-integration-2026-11-10.md) — implemented, in review; the backend is verified end to end, and the screen is in `gendox-frontend` and `gendox-frontend-v2`. Self-contained: it replaces the revision of 2026-10-13. The [original 2026-09-10 plan](.ai/issue-526-web-scraping-integration-2026-09-10.md) is kept unchanged as first written.
 
 ## Common Development Commands
 

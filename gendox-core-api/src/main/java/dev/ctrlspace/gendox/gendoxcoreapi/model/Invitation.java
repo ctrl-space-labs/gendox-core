@@ -71,6 +71,15 @@ public class Invitation {
     @Transient
     private String invitationLink;
 
+    @Transient
+    private String organizationName;
+
+    @Transient
+    private String agentName;
+
+    @Transient
+    private String inviterName;
+
 
     public UUID getId() {
         return id;
@@ -182,6 +191,30 @@ public class Invitation {
 
     public void setInvitationLink(String invitationLink) {
         this.invitationLink = invitationLink;
+    }
+
+    public String getOrganizationName() {
+        return organizationName;
+    }
+
+    public void setOrganizationName(String organizationName) {
+        this.organizationName = organizationName;
+    }
+
+    public String getAgentName() {
+        return agentName;
+    }
+
+    public void setAgentName(String agentName) {
+        this.agentName = agentName;
+    }
+
+    public String getInviterName() {
+        return inviterName;
+    }
+
+    public void setInviterName(String inviterName) {
+        this.inviterName = inviterName;
     }
 
     @Override

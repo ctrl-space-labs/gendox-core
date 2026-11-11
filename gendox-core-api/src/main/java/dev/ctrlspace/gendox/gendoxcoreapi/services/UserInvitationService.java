@@ -6,9 +6,12 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.Organization;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.InvitationCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.InvitationRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.InvitationPredicate;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import jakarta.mail.MessagingException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -32,6 +35,7 @@ import java.util.UUID;
 @Transactional(rollbackFor = Exception.class)
 public class UserInvitationService {
 
+    Logger logger = LoggerFactory.getLogger(UserInvitationService.class);
 
     private InvitationRepository invitationRepository;
     private TypeService typeService;
@@ -42,6 +46,7 @@ public class UserInvitationService {
     private EmailService emailService;
     private TemplateEngine templateEngine;
     private SubscriptionValidationService subscriptionValidationService;
+    private ProjectRepository projectRepository;
 
     @Value("${gendox.domains.frontend}")
     private String frontendDomain;
@@ -65,7 +70,8 @@ public class UserInvitationService {
                                  ProjectMemberService projectMemberService,
                                  EmailService emailService,
                                  TemplateEngine templateEngine,
-                                 SubscriptionValidationService subscriptionValidationService) {
+                                 SubscriptionValidationService subscriptionValidationService,
+                                 ProjectRepository projectRepository) {
         this.invitationRepository = invitationRepository;
         this.typeService = typeService;
         this.userOrganizationService = userOrganizationService;
@@ -75,6 +81,7 @@ public class UserInvitationService {
         this.emailService = emailService;
         this.templateEngine = templateEngine;
         this.subscriptionValidationService = subscriptionValidationService;
+        this.projectRepository = projectRepository;
     }
 
     public Optional<Invitation> getOptionalInvitationById(UUID id) {
@@ -102,7 +109,7 @@ public class UserInvitationService {
     }
 
 
-    public Invitation inviteUser(String inviteeEmail, UUID inviterUserId, String inviterEmail, String organizationId, String projectId,  String userRoleName) throws GendoxException, MessagingException {
+    public Invitation inviteUser(String inviteeEmail, UUID inviterUserId, String inviterEmail, String organizationId, String projectId, String userRoleName) throws GendoxException, MessagingException {
 
         Optional<User> inviteeUser = userService.getOptionalByEmail(inviteeEmail);
         if (inviteeUser.isPresent() &&
@@ -181,12 +188,38 @@ public class UserInvitationService {
     }
 
 
+    /**
+     * The names the invitee is shown once they joined: the organization, the agent and who invited them.
+     * The invitation is already accepted by now, so a name that can't be read is left out instead of failing the page.
+     */
+    public Invitation fillAcceptanceNames(Invitation invitation) {
+        try {
+            Organization organization = organizationService.getById(invitation.getOrganizationId());
+            if (organization != null) {
+                invitation.setOrganizationName(organization.getName());
+            }
+            if (invitation.getProjectId() != null) {
+                projectRepository.findById(invitation.getProjectId())
+                        .ifPresent(project -> invitation.setAgentName(project.getName()));
+            }
+            if (invitation.getInviterUserId() != null) {
+                User inviter = userService.getById(invitation.getInviterUserId());
+                if (inviter != null) {
+                    invitation.setInviterName(inviter.getName());
+                }
+            }
+        } catch (GendoxException e) {
+            logger.warn("Could not read the names for invitation {}: {}", invitation.getId(), e.getMessage());
+        }
+        return invitation;
+    }
+
 
     private void sendInvitationEmail(String inviterEmail, Invitation invitation, Organization organization) throws MessagingException {
         String emailHTML = getInvitationEmailContent(invitation, inviterEmail, organization.getName());
         String emailPlainText = getInvitationPlainTextEmailContent(invitation, inviterEmail, organization.getName());
 
-         emailService.sendEmail(invitation.getInviteeEmail(), "Invitation to Gendox Organization", emailHTML, emailPlainText);
+        emailService.sendEmail(invitation.getInviteeEmail(), "Invitation to Gendox Organization", emailHTML, emailPlainText);
     }
 
     private String getInvitationEmailContent(Invitation invitation, String inviterEmail, String organizationName) {
@@ -197,7 +230,7 @@ public class UserInvitationService {
         context.setVariable("subtitle", "Invitation to Gendox Organization!");
         context.setVariable("InviterEmail", inviterEmail);
         context.setVariable("organizationName", organizationName);
-        context.setVariable("invitationLink", String.format(frontendDomain+acceptUrlTemplate, invitation.getInviteeEmail(), invitation.getToken()));
+        context.setVariable("invitationLink", String.format(frontendDomain + acceptUrlTemplate, invitation.getInviteeEmail(), invitation.getToken()));
         // Convert the Instant to a ZonedDateTime
         ZonedDateTime zonedDateTime = invitation.getExpiresAt().atZone(ZoneId.of("UTC"));
 
@@ -219,11 +252,10 @@ public class UserInvitationService {
         Context context = new Context();
         context.setVariable("organizationName", organizationName);
         context.setVariable("inviterEmail", inviterEmail);
-        context.setVariable("invitationLink", String.format(frontendDomain+acceptUrlTemplate, invitation.getInviteeEmail(), invitation.getToken()));
+        context.setVariable("invitationLink", String.format(frontendDomain + acceptUrlTemplate, invitation.getInviteeEmail(), invitation.getToken()));
 
         return templateEngine.process("emails/invitationToOrganizationText.txt", context);
     }
-
 
 
 }
