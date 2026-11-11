@@ -53,9 +53,9 @@ const updateOrganization = async (request, token, organizationData, organization
 }
 
 
-const deleteOrganization = async (request, token, organizationId ) => {
+const deactivateOrganization = async (request, token, organizationId ) => {
 
-    const response = await request.delete(`${config.gendox.contextPath}/organizations/${organizationId}`, {
+    const response = await request.put(`${config.gendox.contextPath}/organizations/${organizationId}/deactivate`, {
         headers: {
             'Authorization': 'Bearer ' + token,
             'Content-Type': 'application/json'
@@ -70,5 +70,5 @@ module.exports = {
     getOrganizationByCriteria,
     createOrganization,
     updateOrganization,
-    deleteOrganization
+    deactivateOrganization
 }

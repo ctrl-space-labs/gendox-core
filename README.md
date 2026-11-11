@@ -130,7 +130,7 @@ docker compose up -d
 | Keycloak | https://localhost:8443 |
 | Database | localhost:5433 |
 
-For other environments see `gendox-compose-scripts/` (`build-ci-installation/`, `local-tests-installation/`).
+For other environments see `gendox-compose-scripts/` (`build-ci-installation/`, `ephemeral/`).
 
 ---
 

@@ -1,14 +1,20 @@
 {
   "name": "gendox-e2e-tests",
   "version": "1.0.0",
-  "description": "",
+  "description": "End-to-end tests for Gendox, written with Playwright",
   "main": "index.js",
-  "scripts": {},
+  "scripts": {
+    "test": "playwright test",
+    "smoke": "playwright test --config playwright.smoke.config.js",
+    "list": "playwright test --list",
+    "ui": "playwright test --ui",
+    "report": "playwright show-report"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@playwright/test": "^1.40.1",
+    "@playwright/test": "1.65.0",
     "@types/node": "^20.10.4"
   },
   "dependencies": {

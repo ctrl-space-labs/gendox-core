@@ -8,28 +8,80 @@ The tests **must** run before each PR to `dev` or `main` branches.
 
 ## Run the tests
 
-The default configuration file is `local.config.json`. 
-To run the tests, you need to setup the database, the backend and the IdP first. Soon an docekr-compose file will be provided to do this. 
+The tests run against this checkout's ephemeral environment. Start it first, as described in
+[its README](../gendox-compose-scripts/ephemeral/README.md): `./init-env.sh` once, then
+`docker compose up -d --wait`.
 
-Install dependencies:
 ```bash
 npm install
+npx playwright install chromium
 ```
 
-Install Playwright Browsers:
+| Purpose | Command |
+|---|---|
+| Smoke tests, 60-second maximum on a ready stack | `npm run smoke` |
+| Specific tests | `npx playwright test documents` or `npx playwright test -g "upload"` |
+| Re-run what failed | `npx playwright test --last-failed` |
+| Whole suite | `npm test` |
+| List the tests | `npm run list` |
+| Open the last report | `npm run report` |
+| Run interactively | `npm run ui` |
+
+These are Playwright's own commands; the `npm run` ones are short aliases defined in
+`package.json`. Smoke tests are the ones tagged `@smoke` in the code. The smoke configuration
+adds a 60-second global timeout, includes fresh browser logins, and uses no retries. Stack
+boot and builds happen before that budget. Smoke has no skipped scenarios.
+
+Smoke scenarios run independently with test-scoped organizations and can be distributed:
+
 ```bash
-npx playwright install
+npm run smoke -- --workers=8
+npm run smoke -- --shard=1/2
+npm run smoke -- --shard=2/2
+npm run smoke -- -g "knowledge pipeline"   # this case also works alone
 ```
 
-Then you can run the tests with the following command:
+Use separate CI checkouts for concurrently running shards; the normal report/history files
+are shared within a checkout. Keep setup dependencies enabled. `npm test` includes smoke
+and the broader regression cases, including background jobs and the deterministic streaming
+contract project. Browser UI mode can hide other projects: enable `setup`, `api`, and `ui`
+in its project filter, then run the four setup logins before browser cases.
+
+Useful filters:
+
 ```bash
-npx playwright test
+npx playwright test --grep @p1
+npx playwright test --grep @p2
+npx playwright test --project=streaming-contract
+npx playwright test --grep-invert @background
 ```
 
-To start the Playwright UI to run the tests:
-```bash
-npx playwright test --ui
-```
+The `streaming-contract` project uses a local API fixture rather than the running backend.
+All other API/browser projects use the real ephemeral stack with mock models. Background
+jobs may take several minutes and never enter smoke. `E2E_UI_WORKERS` controls browser
+concurrency (default four), independently of the total `E2E_WORKERS` limit (default eight).
+
+`npm run report` displays the most recent invocation, including filtered invocations. Run
+`npm test` before opening it to see the complete report. Persistent run summaries are below.
+
+[Coverage plan and remaining journeys](../.ai/e2e-coverage-2026-11-11.md) records the review,
+smoke coverage, priorities and service requirements for the full application suite.
+
+## Results and history
+
+Every run ends with a short summary and writes to `test-history/` (not in git):
+
+- `STATUS.md`: every test with its tags, last result, last run and last pass, and the recent runs.
+- `runs.jsonl`: one line per run.
+- `<run>/failures.md`: for a failed run, each error with its trace, screenshot and the API log.
+
+[AGENTS.md](AGENTS.md) explains how the suite is built and how to write a test. Coding agents
+maintain it, and leave shorter findings in [NOTES.md](NOTES.md).
+
+## Other environments
+
+`ENV_NAME=LOCAL`, `DEV` or `E2E` selects the older configurations in `config/`. They predate
+the current tests and their seeded users, so expect failures there.
 
 ## Run the tests the DEV environment
 

@@ -1,0 +1,2 @@
+# Agents append to this file in parallel worktrees: keep both sides instead of conflicting.
+gendox-e2e-tests/NOTES.md merge=union
