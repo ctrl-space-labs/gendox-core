@@ -105,7 +105,7 @@ Available compose environments in `gendox-compose-scripts/`:
 - `dev-ci-installation/` — Development CI (`.env`)
 - `ephemeral/` — **Use this one for agentic development and testing.** A full stack (DB, API, Keycloak, frontend), one per checkout or worktree, running beside anything else. It is plain Docker Compose; see its `README.md`.
   - Once per checkout: `./init-env.sh` writes `.env` with a name (`gendox-eph-<folder>`) and free ports. Then `docker compose up -d --wait` starts it, and applies new migrations on every later run.
-  - After a backend change: `mvn -q package -DskipTests` in `gendox-core-api`, then `docker compose restart api`. After a frontend change: `yarn build` in `gendox-frontend`.
+  - After a backend change: `mvn -q package -DskipTests` in `gendox-core-api`, then `docker compose restart api`. After a frontend change: `yarn build` in `gendox-frontend-v2`, the frontend this stack serves.
   - Point agents at the `mock-gemini-2.0-flash` model to exercise completions with no API key and no cost.
   - **Always ask the user before deleting an environment** (`docker compose down`), a volume, or anything else, also when it is named `gendox-eph-*` and can be rebuilt. `docker compose stop` keeps the data and needs no question.
 
