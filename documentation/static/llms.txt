@@ -1,0 +1,63 @@
+# Gendox
+
+> Gendox is an open-source document intelligence platform for building AI knowledge bases, deploying agents and extracting structured data from documents. It combines document processing, retrieval-augmented generation (RAG), tool calling and batch analysis in a self-hostable platform.
+
+Developed by Ctrl+Space Labs, Gendox provides an AI agent harness that connects large language models (LLMs) to organizational knowledge, tools and document workflows.
+
+- **Knowledge bases and RAG:** Gendox processes uploaded documents and content from websites, WordPress, Git repositories and AWS S3. Semantic search retrieves relevant passages for AI answers with source citations.
+- **AI agents and agentic websites:** Agents run in the Gendox app, through an embeddable chat widget or WordPress plugin, or via the REST API. Configured website tools let agents filter listings, fill forms and navigate pages. Each agent has its own instructions, knowledge, model and tools, plus skills defined in SKILL.md files.
+- **Document Insights:** Batch document analysis applies shared questions to multiple files, producing a table of answers with explanations, status flags, document summaries and CSV export.
+- **Document Digitization:** Page-by-page processing extracts text or structured JSON from scans, PDFs and office files. Vision models support page images, including handwriting and tables; JSON schemas define extraction fields.
+- **Deployment and model choice:** Gendox supports self-hosting and providers including OpenAI, Anthropic, Gemini, Mistral, Groq, Cohere, xAI and Ollama. Organizations can configure their own provider API keys.
+- **Earth Observation (SeaScope):** A satellite imagery analysis workspace integrates Google Earth Engine, an interactive map and an AI agent that writes and runs analysis code.
+
+Official resources: [documentation](https://docs.gendox.dev/), [web app](https://app.gendox.dev/), [source code](https://github.com/ctrl-space-labs/gendox-core), [Ctrl+Space Labs](https://www.ctrlspace.dev/).
+
+Terminology: an organization contains members and agents. An agent has its own knowledge, instructions, model, tools and skills. The API uses "project" for an agent and its knowledge. A task runs document analysis, digitization or Earth observation work.
+
+Pages use the exact names of buttons and fields in the app, in bold, and write navigation as "Place → Button".
+
+## Example use cases
+
+- [Customer support chatbots](/website-widget/website-widget-installation): A website agent answers product and policy questions from manuals, help articles and company documents, with links to source passages.
+- [Internal knowledge assistants](/user-manual/chat): Teams ask questions across policies, procedures and technical documentation, then open the cited passages to check the answers.
+- [Contract review](/document-insights/document-insights): A review task compares contracts against a reference template, identifies missing clauses and summarizes findings in a table with explanations and status flags.
+- [Invoice data extraction](/document-digitization/document-digitization): A digitization task extracts invoice numbers, dates, suppliers, totals and line items from scanned invoices into structured JSON, with CSV export.
+- [AI agents for real estate websites](/website-widget/agent-tool-use-and-website-tool-support): A website agent translates a visitor's rental requirements into listing filters and helps fill enquiry forms through tools implemented by the website.
+- [Satellite imagery analysis](/earth-observation/user-guide): SeaScope combines an AI agent, a code editor and a map to develop Google Earth Engine scripts and inspect analysis layers for an area of interest.
+
+## User manual
+
+- [Introduction](/): what Gendox is and where to start
+- [Register and sign in](/user-manual/register): create an account, accept an invitation, sign in
+- [Create your first agent](/user-manual/setup-a-project): organization, agent wizard, first knowledge, first question
+- [The workspace](/user-manual/workspace-tour): sidebar, agent switcher, agent home windows, search, account menu, Gendox assistant
+- [Knowledge](/user-manual/knowledge): upload, write, websites, WordPress, processing and document states
+- [Chat with an agent](/user-manual/chat): asking, sources, attachments, Deep thinking, conversations
+- [Configure the agent](/user-manual/configure-the-agent): Behavior, Tools, Skills, Deploy, Members, General
+- [Tasks](/user-manual/tasks): create, run, stop, export, duplicate tasks; the assistant and tasks
+- [Invite people](/user-manual/invite-user): roles, inviting to an agent or the organization
+- [Organization and account](/user-manual/organization-and-account): organization settings, API keys, model providers, integrations, profile
+
+## Tasks
+
+- [Document Insights](/document-insights/document-insights): questions over many documents, table of answers, flags, CSV
+- [Document Digitization](/document-digitization/document-digitization): page-by-page text or JSON from scans and files
+- [Earth Observation user guide](/earth-observation/user-guide): the SeaScope workspace
+
+## Integrate
+
+- [Gendox API](/api/gendox-api): REST API
+- [Website widget](/website-widget/website-widget-installation): embed the chat widget
+- [Agent tool use](/website-widget/agent-tool-use-and-website-tool-support): client-side tools
+- [Widget programmer guide](/website-widget/widget-programmer-guide)
+- [WordPress plugin](/website-widget/wordpress-plugin)
+- [Import data integrations](/integrations/integrations-types): Git and AWS S3
+- [Agent Skills for coding assistants](/skills/)
+
+## Maintenance
+
+- [Administrator guide](/maintenance/administrator-guide)
+- [Database maintenance](/maintenance/database-maintenance)
+- [Local test environments](/maintenance/ephemeral-environments)
+- [End-to-end tests](/maintenance/e2e-tests)

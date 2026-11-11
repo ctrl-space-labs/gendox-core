@@ -2,58 +2,71 @@
 sidebar_position: 1
 id: document-digitization
 title: Document Digitization
+description: Turn scanned documents, PDFs and office files into clean text, page by page, with vision AI instead of OCR. Optionally extract structured JSON with a schema, read every page's result, and export to CSV.
 ---
 
 # Document Digitization
 
-**Document Digitization** turns scanned PDFs and office files into clean, machine-readable output **page by page**, using vision-capable LLMs instead of traditional OCR. Add an optional **JSON schema** to extract structured data in a single pass, then export all results to CSV.
+import digitizationDemo from './img/v2/digitization-read-results.gif';
 
-Supported input formats: PDF, Word (.docx/.doc), Excel (.xlsx/.xls), PowerPoint (.pptx), plain text, Markdown, CSV, and more.
+**Document Digitization** turns scanned PDFs and office files into clean, machine-readable text **page by page**. Each page is read by a vision-capable AI model instead of traditional OCR, so it copes with stamps, handwriting, tables and old print. Add an **output structure** (a JSON schema) to extract the same fields from every page, then export everything to CSV.
 
-![Document Digitization — overview](./img/digitization-task-demo.png)
+Supported input: PDF, Word, Excel, PowerPoint, plain text, Markdown, CSV and more.
 
----
+## Quick demo
 
-## Creating a Document Digitization Task
+Reading the results of a digitized document: every page turned into structured JSON, in the rendered view and as source.
 
-1. Open your project and click **"+"** next to **Tasks** in the sidebar (or from the project home page).
-2. Choose **"Digitize scanned documents page-by-page"** as the task type.
-3. Give the task a name and (optionally) a description, then click **Create**.
+<img src={digitizationDemo} alt="Reading the results of a Digitization task" width="100%" />
 
 ---
 
-## Adding Documents
+## Create the task
 
-On the task page, click **Add Document** and upload the files you want to digitize. Each document row shows its current status:
+1. Open **Tasks** in the sidebar and click **Digitization** (or **New task** → **Digitization**).
+2. Give it a **Name**.
+3. Choose **Read each page from**:
+
+| Option | Best for |
+|---|---|
+| **An image of the page** | Scans, stamps, handwriting and tables. Each page is rendered as an image for a vision model. |
+| **The text in the file** | Digital PDFs and office files. Faster and cheaper; images and icons are ignored. |
+
+4. Optionally add **Extra instructions** and choose a **Model** under **Instructions and model**.
+5. Click **Create task**.
+
+![The New task window for Digitization](./img/v2/digitization-new-task.jpg)
+
+---
+
+## Add documents
+
+Click **Add documents** and upload files, or pick documents already in the agent's knowledge. Each document shows a status:
 
 | Status | Meaning |
-|--------|---------|
-| Not Digitized | No results yet. |
-| Generating… | Batch job is currently running. |
-| Digitized | All pages have been processed. |
-| Unsupported Format | File type cannot be processed. |
-| No Prompt | A prompt is required before generating. |
+|---|---|
+| **Not digitized** | No pages done yet. |
+| **Digitizing** | The task is reading its pages now. |
+| **N pages missing** | Some pages are done, others are not. |
+| **Digitized** | Every page is done. |
+| **Can't be digitized** | The file format isn't supported. |
+
+![A Digitization task](./img/v2/digitization-task.jpg)
 
 ---
 
-## Configuring a Document
+## Tell it what to extract
 
-Click on a document row to open its detail panel and configure two settings:
+Click a document, then **Instructions**:
 
-### Prompt
+- **Instructions**: how to read each page of this document, in plain language. For example: *This is the Greek constitution. For every article, give the article number and its text. For persons, give the name and the area they come from.* Leave it empty to get the page as clean Markdown.
+- **Output structure**: Markdown or a **JSON schema** the AI fills in for every page. Leave it empty to keep the page's own layout.
+- **Pages**: **All pages**, or **Only** a range *from*–*to*.
 
-Write a plain-language instruction telling the AI what to do with each page. If left empty, the default prompt produces clean **Markdown text** from the page content.
+![Instructions and output structure of a document](./img/v2/digitization-instructions.jpg)
 
-**Example prompts:**
-- *"Extract all invoice line items and totals."*
-- *"Summarise this page in 3 bullet points."*
-- *"Transcribe the handwritten text as accurately as possible."*
+Example schema for invoices:
 
-### Structure (optional)
-
-Paste a **JSON Schema** here if you want the output to be structured JSON instead of free text. The AI will return a structured object conforming to your schema for each page.
-
-**Example schema for invoice extraction:**
 ```json
 {
   "type": "object",
@@ -78,45 +91,46 @@ Paste a **JSON Schema** here if you want the output to be structured JSON instea
 
 ---
 
-## Page Input Mode
+## Digitize
 
-When adding a document you can choose how each page is sent to the model:
+Click **Digitize missing pages** and confirm. Pages already done are kept.
 
-| Mode | When to use |
-|------|-------------|
-| **Use Printed Pages** (render to image) | Best for scanned documents, forms, or anything where layout and visual context matter. Each page is rendered as an image and sent to a vision-capable model. |
-| **Use Extracted Text** | Best for digitally created PDFs or Office files where text can be extracted directly. Faster and cheaper than image rendering. |
+| Option | Behaviour |
+|---|---|
+| **Digitize missing pages** | Reads every page that isn't done yet. |
+| **Digitize selected (N)** | Tick documents first: reads their missing pages. |
+| **Digitize everything again** (arrow menu) | Reads every page again and replaces its text. Can't be undone. |
+| **Digitize again** (in a document's panel) | Reads that document again. |
 
----
-
-## Running Generation
-
-Use the **Generate** button and choose a mode:
-
-| Mode | Behaviour |
-|------|-----------|
-| **Generate New** | Process only documents that have no results yet. |
-| **Generate All** | Re-process all documents (overwrites existing results). |
-| **Generate Selected** | Process only the checked documents. |
-
-Generation runs as a background batch job — one LLM call per page, in parallel. A progress indicator appears while the job is running; click **Stop** to cancel.
+The task runs in the background, one AI call per page, in parallel. A progress bar shows **Digitizing**; **Stop** ends it early.
 
 ---
 
-## Reviewing Results
+## Read the results
 
-Click a document row to open the **page preview panel**, where you can scroll through each page and inspect the digitized output side by side with the original.
+Click a document to open it beside the list, on the **Result** tab:
+
+- Jump to a **Page**, or click a page number on the left.
+- **Rendered** shows formatted Markdown or JSON; **Source** shows the raw output.
+- **Find in the result** searches the text of every page.
+- The copy button copies a page's result.
+- **Use the whole width** (expand icon) gives the reader the full screen.
+
+![The JSON result of one page](./img/v2/digitization-result-json.jpg)
+
+**Open in Knowledge** opens the original document in the agent's knowledge.
 
 ---
 
-## Exporting to CSV
+## Export
 
-Click **Export** in the task header to download all results as a CSV file, with one row per page and columns for the page number, raw output, and (if structured) the extracted JSON fields.
+**CSV** in a document's panel exports its pages: one row per page, with the page number and its output.
 
 ---
 
 ## Tips
 
-- Use the **Structure** field together with a targeted prompt to extract the same fields from hundreds of documents in one job.
-- Start with **Generate Selected** on a couple of test documents to verify your prompt and schema before running the full batch.
-- If a page is blank or contains only images with no relevant text, add instructions for that case in your prompt (e.g. *"If the page contains no useful content, return an empty object."*).
+- Try **Digitize selected** on one or two documents to check your instructions and schema before running a large batch.
+- For pages with nothing useful, say what to return in the instructions, e.g. *If the page has no article, return an empty array.*
+- Use **The text in the file** for born-digital PDFs: it is faster and cheaper.
+- To make digitized text answerable in chat, you can also turn on **Read scanned pages with AI** for the agent's knowledge ([Configure the agent → General](../01-user-manual/configure-the-agent.md#general)).

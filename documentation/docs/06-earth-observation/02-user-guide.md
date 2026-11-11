@@ -22,6 +22,16 @@ SeaScope is an Earth Observation workspace with three panels:
 
 ---
 
+## 0) Open the workspace
+
+1. Open **Tasks** in the sidebar.
+2. Click **Earth observation** (or **New task** → **Earth observation**), give the task a name and click **Create task**.
+3. Open the task from the list. The workspace opens in its own layout.
+
+To bill Earth Engine usage to your own Google Cloud project, set it up under **Organization settings → Connected services → Google Earth Engine** ([GEE project setup](./05-gee-project-setup.md)). Without one, tasks run on a shared, rate-limited tier. See [Tasks](../01-user-manual/tasks.md) for everything tasks have in common.
+
+---
+
 ## 1) Sign in with Google Earth Engine (GEE)
 
 When you open the workspace, SeaScope prompts you to authenticate with Google so it can run GEE scripts **in your browser**.
@@ -107,6 +117,7 @@ SeaScope overlays GEE result layers on top of a standard base map.
 Common actions:
 
 - **Toggle layers** on/off to compare outputs.
+- Open the **legend** card to see each visible layer's palette, and the approximate value of each layer under the cursor. On phones the legend starts folded.
 - **Zoom** and **pan** to inspect local detail.
 - Use any **“zoom to” / “center”** actions triggered by the script or tools.
 

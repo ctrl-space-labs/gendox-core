@@ -9,7 +9,7 @@ import {themes as prismThemes} from 'prism-react-renderer';
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: 'Gendox',
-  tagline: 'RAG enabled AI Agent Platform',
+  tagline: 'The Document Intelligence Harness',
   favicon: 'img/gendoxLogo.svg',
 
   // Set the production url of your site here
