@@ -113,6 +113,7 @@ public class UserProfileConverter {
                             .displayName(firstOrgDto.getDisplayName())
                             .phone(firstOrgDto.getOrgPhone())
                             .address(firstOrgDto.getAddress())
+                            .planName(firstOrgDto.getOrgPlanName())
                             .authorities(authorities)
                             .projects(projects)
                             .projectAgents(agents)

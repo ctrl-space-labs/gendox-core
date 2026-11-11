@@ -24,7 +24,7 @@ public class OrganizationUserDTO {
     Set<String> authorities; //include roles and permissions
     List<ProjectOrganizationDTO> projects = new ArrayList<>();
     List<ProjectAgentDTO> projectAgents = new ArrayList<>();
-
+    private String planName;
 
     private Instant createdAt;
     private Instant updatedAt;
