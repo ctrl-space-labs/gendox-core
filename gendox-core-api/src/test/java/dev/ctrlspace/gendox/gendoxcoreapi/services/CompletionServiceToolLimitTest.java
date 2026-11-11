@@ -8,6 +8,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.U
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.AiToolRegistry;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.MessageAiMessageConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.ToolsHandlerAdvice;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiTools;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AuditLogs;
@@ -53,9 +54,11 @@ class CompletionServiceToolLimitTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        completionService = new CompletionService(null, null, messageAiMessageConverter, null, null, null, typeService,
-                aiModelUtils, null, null, null, messageService, auditLogsService, null, objectMapper, aiModelService,
-                aiToolRegistry, new SkillService(null, null, null, null, null));
+        CompletionRuntimeContextResolver contextResolver = new CompletionRuntimeContextResolver(null, typeService, null, null,
+                objectMapper, aiModelService, aiToolRegistry, new SkillService(null, null, null, null, null));
+        completionService = new CompletionService(null, null, messageAiMessageConverter, null, typeService,
+                aiModelUtils, null, null, null, messageService, auditLogsService, objectMapper,
+                aiToolRegistry, contextResolver, new ToolExecutionService(aiToolRegistry, objectMapper, new ToolsHandlerAdvice()));
 
         Type apiType = new Type();
         apiType.setName("TEST_API");
