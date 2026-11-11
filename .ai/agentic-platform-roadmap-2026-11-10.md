@@ -185,6 +185,9 @@ Two tickets, as decided in review:
 
 - **CODE-1 Browser sandbox (#522).** The agent writes JavaScript; it runs in the chat's browser as a `CLIENT` tool, in an iframe with an opaque origin and a CSP that allows no network. No credential enters the box; data goes in and out by message. The Earth Engine sandbox is the precedent. Python through Pyodide is a follow-up. Waits for APP-1.
 - **CODE-2 Terminal (new ticket).** The agent runs commands and reads and writes files in a server sandbox (decision D3; requirements in section 7). The tool contract is written so a local runner can implement it later.
+  - **Open question:** how a box is isolated. Proposal: containers under gVisor (section 7).
+  - **Commands are named tasks.** Every command carries a short description in plain words, written by the agent. A command can run in the background while the turn continues, and can be stopped.
+  - **v2:** the workspace lists running and finished commands, under the name "Commands", with the description, the duration and a stop button; opening one shows the command, its output and the exit code.
 - **CODE-3 Local terminal in a desktop shell.** Later (decision D4). The shell registers the CODE-2 tools as `CLIENT` tools; every command asks.
 
 ### ARTIFACTS — rendered output and files (#523, #524)
@@ -270,7 +273,7 @@ Where parallel branches would collide:
 |---|---|---|
 | D1 | Extension boundary | **Agreed.** MCP for tools. Native adapters only for transports (Slack, Teams, Discord, mail) and knowledge sync. No plugin SDK. |
 | D2 | Whose credentials | **Decided.** The organization's by default; a project may override. No user-level connections. Access to the agent is access to its connections. |
-| D3 | Where code runs | **Decided, in two parts.** Browser sandbox for JavaScript (CODE-1). Terminal in a server sandbox first (CODE-2); a local runner later with the desktop shell (CODE-3). |
+| D3 | Where code runs | **Decided, in two parts.** Browser sandbox for JavaScript (CODE-1). Terminal in a server sandbox first (CODE-2), self-hosted; how a box is isolated is open, with gVisor proposed. A local runner later with the desktop shell (CODE-3). |
 | D4 | Desktop shell | **Agreed.** Later. |
 | D5 | Split `CompletionService` | **Agreed.** Resolver and tool execution move out; the loop and chat entry points stay. |
 | D6 | Access to synced documents | **Agreed.** Ownership sits with the agent; access to the agent is access to its documents. |
@@ -288,10 +291,30 @@ Where parallel branches would collide:
 
 Triggers, channels and decision support all need a terminal that is there when no one is, which only the server
 gives. The requirement for it: a separate runner, never the API's own host; one short-lived box per thread; no
-network by default; no Gendox credentials inside; files in and out as artifacts. Whether the runner is a hosted
-sandbox service or self-hosted (needed for on-premise installs) is the remaining choice and belongs to the CODE-2
-plan. The local runner then arrives with the desktop shell as the same tools, run as `CLIENT` tools with a yes per
-command.
+network by default; no Gendox credentials inside; files in and out as artifacts. The local runner then arrives with
+the desktop shell as the same tools, run as `CLIENT` tools with a yes per command.
+
+**The runner — open question, answered in the CODE-2 plan. Self-hosted in every case; the proposal is containers
+under gVisor.** What the proposal means:
+
+- **The contract.** The API calls a runner service over HTTP with six calls: create a box, run a command, stop it,
+  write a file, read a file, delete the box. The API never talks to Docker or Kubernetes, so what is behind the
+  runner can change without touching Gendox.
+- **Three kinds of container.** The API (unchanged). The runner service: its own container, new in the Compose file.
+  The boxes: one container per thread, started by the runner, run under gVisor.
+- **Where gVisor is set up.** On the VM that hosts the runner: installed once and registered with that VM's Docker
+  as a runtime. It is not part of an image. The runner names it as the runtime of each box; one setting chooses the
+  runtime, so a developer machine without gVisor falls back to plain containers.
+- **Hosts.** In production the runner and its boxes sit on a VM apart from the API and the database, because the
+  runner controls Docker on its host. On a developer machine everything is one Compose stack.
+- **When gVisor cannot be installed.** Only the runner needs a host that allows it; the API may stay on a managed
+  container service, with the runner on one plain Linux VM. Where no VM is allowed, a cloud driver starts one
+  managed task per box (for example a Fargate task), and the cloud isolates each task. Plain hardened containers
+  share the host's kernel: acceptable only on a dedicated VM and where everyone who can reach the agents is
+  trusted, not for public agents or shared hosting.
+- **Later, with no new contract.** A Kubernetes driver in the same runner (a pod per box, gVisor or Kata as its
+  runtime) when one host is not enough or a customer runs Kubernetes. A small VM per box only if a customer
+  requires it. An open-source sandbox platform is judged again at that point.
 
 ## 8. The decision-support ticket (draft, not created)
 
@@ -318,7 +341,7 @@ Operators watch many data sources in one workspace, are told which one needs att
 
 ## 9. How to run this
 
-1. Review the workstreams (section 5) and the architecture map. D1–D7 are settled; the one choice left is hosted or self-hosted runner, made in the CODE-2 plan.
+1. Review the workstreams (section 5) and the architecture map. D1–D7 are settled. One question is open and is answered in the CODE-2 plan: how the runner isolates a box (proposal: gVisor).
 2. Per workstream, a plan file in `.ai/` with its contract (tables, endpoints, events, files owned), reviewed before code. Tickets are created only when asked, with `needs-review`.
 3. CORE was implemented by one agent and reviewed line by line. It is done.
 4. Phase 1 workstreams run as parallel agents, one branch each, verified on the branch's ephemeral stack (`gendox-compose-scripts/ephemeral`) with the unit tests and the API tests of `gendox-e2e-tests`, merged in dependency order.
