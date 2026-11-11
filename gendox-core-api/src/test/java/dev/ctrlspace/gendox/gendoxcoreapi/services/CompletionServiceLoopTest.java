@@ -10,7 +10,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.U
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.CompletionDelta;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.ToolExecutionContext;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxRuntimeException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiTools;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AuditLogs;
@@ -217,16 +216,21 @@ class CompletionServiceLoopTest extends CompletionServiceFixture {
         assertEquals("{\"error\":{\"code\":\"MISSING_ARGUMENT\"}}", sentMessages.get(1).getLast().getContent());
     }
 
-    /** Today's behaviour; CORE-4 turns it into an error result the model can read. */
     @Test
-    void aToolThatIsNotOfferedEndsTheTurnWithAnError() throws Exception {
+    void aToolThatIsNotOfferedGetsAnErrorResultAndTheTurnContinues() throws Exception {
         agent.getAiTools().add(tool("lookup", null));
         respondWithToolCall("invented");
+        respondWithAnswer();
 
-        GendoxRuntimeException error = assertThrows(GendoxRuntimeException.class,
-                () -> service.getCompletion(question, List.of(), project, null));
+        List<Message> messages = service.getCompletion(question, List.of(), project, null);
 
-        assertEquals("AI_TOOL_NOT_FOUND", error.getMessageCode());
+        assertEquals(List.of("assistant", "tool", "assistant"), roles(messages));
+        assertEquals("call", messages.get(1).getToolCallId());
+        JsonNode error = mapper.readTree(messages.get(1).getValue());
+        assertEquals("AI_TOOL_NOT_FOUND", error.get("errorCode").asText());
+        assertEquals("Tool invented is not available. Available tools: lookup", error.get("errorMessage").asText());
+        // the model reads the error in its next call
+        assertEquals(messages.get(1).getValue(), sentMessages.get(1).getLast().getContent());
         verify(aiToolRegistry, never()).execute(any(), any(), any());
     }
 
@@ -328,6 +332,7 @@ class CompletionServiceLoopTest extends CompletionServiceFixture {
     @Test
     void aCallerWithACancellationTokenGetsTwentyRoundsAndItsToolsGetTheToken() throws Exception {
         agent.getAiTools().add(tool("lookup", null));
+        when(aiToolRegistry.supports("lookup")).thenReturn(true);
         CancellationToken token = new CancellationToken(() -> false);
         CompletionRuntimeOverridesDTO overrides = CompletionRuntimeOverridesDTO.builder().cancellationToken(token).build();
         for (int i = 0; i < 25; i++) {

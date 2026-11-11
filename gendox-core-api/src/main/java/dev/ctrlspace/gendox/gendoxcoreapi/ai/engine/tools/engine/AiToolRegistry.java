@@ -12,6 +12,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import io.micrometer.observation.annotation.Observed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -57,12 +58,8 @@ public class AiToolRegistry {
                 Optional.ofNullable(context.parentMessage()).map(m -> m.getThreadId()).orElse(null));
 
         if (handler == null) {
-            // TODO: think what to do with tools that are just passed in the browsers, and no execution is needed by BE
-            // This supports only Frontend actions that do not require BE execution.
-            // The tools are custom jsons in the agent's settings
-            ObjectNode result = objectMapper.createObjectNode();
-            result.put("status", "executed");
-            return result;
+            // Tools without a handler run on the client; ToolExecutionService never sends them here
+            throw new GendoxRuntimeException(HttpStatus.BAD_REQUEST, "AI_TOOL_NOT_FOUND", "No handler for tool " + toolName);
         }
 
         JsonNode parametersSchema = safeSchema(handler);

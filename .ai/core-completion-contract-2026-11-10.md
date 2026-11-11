@@ -2,7 +2,7 @@
 
 Plan for the CORE workstream of the [agentic platform roadmap](agentic-platform-roadmap-2026-11-10.md).
 
-**Status:** CORE-1 and CORE-3 are done. CORE-2 and CORE-4 are not started.
+**Status:** all four tasks are done.
 
 **Goal:** make `CompletionService` smaller and pin its behaviour with tests, so the workstreams that follow add tools,
 channels and triggers without editing the loop. Three of the four tasks change no behaviour.
@@ -22,7 +22,7 @@ channels and triggers without editing the loop. Three of the four tasks change n
 | Tool execution: `handleToolExecution` | 80 | Moves (CORE-2) |
 | Fields, constructor, imports | 125 | Shrinks |
 
-Expected size afterwards: about 540 lines. The first estimate was 450; after CORE-3 the file has 621 lines, and CORE-2 moves about 80 more.
+Size afterwards: 533 lines (the first estimate was 450). CORE-3 took it from 966 to 621 and CORE-2 to 533.
 
 Existing tests around it:
 
@@ -149,6 +149,14 @@ What this class is for later, without building it now:
 
 Done when: all tests pass, and the diff of `CompletionService` is deletions plus the call.
 
+As written:
+
+- The body of `handleToolExecution` moved as it was. The one change inside it: a tool without a handler gets `{"status":"executed"}` here and no longer goes through the registry.
+- `AiToolRegistry.execute` without a handler is now an error (`AI_TOOL_NOT_FOUND`). Nothing else calls it without one.
+- `CompletionService` gained the field, its constructor wiring and the call, and lost both `handleToolExecution` methods.
+- One loop test changed: its tool now has a handler, because the test is about handlers receiving the cancellation token, and a tool without a handler no longer reaches the registry.
+- `ToolExecutionServiceTest` covers the three outcomes and the listener call.
+
 ## CORE-4 — a tool that is not offered
 
 The one behaviour change.
@@ -156,6 +164,12 @@ The one behaviour change.
 - **Today:** when the model calls a tool name that is not among the offered tools, the turn ends with `AI_TOOL_NOT_FOUND` and the user gets an error.
 - **After:** the call gets a tool result with that error code and the names of the offered tools, in the same error shape `ToolsHandlerAdvice` gives a failed tool. The model reads it and corrects itself or answers. The round counts toward the limit.
 - **Where:** `ToolExecutionService`, a few lines. The CORE-1 test for this case is updated in the same commit.
+
+As written:
+
+- The result is built by `ToolsHandlerAdvice`, the same call a failed tool goes through, so the shape is the same without new code. Its message is `Tool <name> is not available. Available tools: <names, sorted>`.
+- Nothing runs for such a call, also when Gendox has a handler of that name: being offered is checked before anything else. The other calls of the same message still run.
+- The mock model never invents a tool name, so this is checked by unit tests only, not on the stack.
 
 ## Verification
 
