@@ -2,7 +2,7 @@
 
 Plan for the CORE workstream of the [agentic platform roadmap](agentic-platform-roadmap-2026-11-10.md).
 
-**Status:** CORE-1 is written and passes on the unchanged code. CORE-3, CORE-2 and CORE-4 are not started.
+**Status:** CORE-1 and CORE-3 are done. CORE-2 and CORE-4 are not started.
 
 **Goal:** make `CompletionService` smaller and pin its behaviour with tests, so the workstreams that follow add tools,
 channels and triggers without editing the loop. Three of the four tasks change no behaviour.
@@ -22,7 +22,7 @@ channels and triggers without editing the loop. Three of the four tasks change n
 | Tool execution: `handleToolExecution` | 80 | Moves (CORE-2) |
 | Fields, constructor, imports | 125 | Shrinks |
 
-Expected size afterwards: about 450 lines, with the loop readable on one screen and a half.
+Expected size afterwards: about 540 lines. The first estimate was 450; after CORE-3 the file has 621 lines, and CORE-2 moves about 80 more.
 
 Existing tests around it:
 
@@ -90,11 +90,16 @@ CompletionRuntimeContext runtimeContext = contextResolver.resolve(message, neare
 
 Details:
 
-- **`toolName`** (the function name inside a tool's JSON) is needed by the loop file (`chatTools`), the resolver and the tool execution. It becomes one static helper next to `AiTools`; today it exists twice in slightly different forms.
+- **`toolName`** (the function name inside a tool's JSON) is needed by the loop file (`chatTools`) and the resolver. It stays one instance method, on the resolver, and `chatTools` calls it there. A static helper would have needed its own `ObjectMapper` and logger for no gain. The tool execution reads the name its own way (it fails on a schema that is not JSON) and is left for CORE-2.
 - **Dependencies that move with the code** leave `CompletionService`'s constructor: the template repository, `DocumentUtils`, `AiModelService`, `SkillService`, `EmbeddingService`. Nothing else is removed from the constructor in this task.
 - **Tests:** `CompletionServiceSkillsTest` tests methods that move, so it becomes `CompletionRuntimeContextResolverTest` with the same cases. The other test classes change only how the service is constructed.
 
 Done when: all tests pass, and the diff of `CompletionService` is deletions plus the one call.
+
+As written: the moved methods are unchanged apart from three signatures (`resolve` is public, `toolName` is public,
+`convertToAiModelTextQuestion` is private). `CompletionService` went from 966 to 621 lines and gained six lines: the
+resolver field, its constructor parameter and assignment, the `resolve` call, the `toolName` call and a comment. Checked
+with the unit tests and with the API tests on the ephemeral stack, which gave the same result as before the move.
 
 ## CORE-2 — tool execution in one class
 
@@ -155,7 +160,8 @@ The one behaviour change.
 ## Verification
 
 - `mvn test` for the backend.
-- In `local-development-test` with the mock model, after `mvn package` and a rebuild of the whole stack: a chat answer, a chat turn with a search, a client tool that waits and resumes through the API, a deep thinking run, one Document Insights run and one Digitization run.
+- On this checkout's ephemeral stack (`gendox-compose-scripts/ephemeral`), after `mvn package` and a restart of the API: the API project of `gendox-e2e-tests`, which covers a chat answer, a chat turn with a search, Document Insights and Digitization with the mock model. Two of its tests fail before CORE for reasons in the stack's database and are not counted.
+- By hand, because no test covers them: a client tool that waits and resumes through the API, and a deep thinking run.
 
 ## Files
 
@@ -174,7 +180,7 @@ No migration, no API change, no frontend change.
 
 1. **Where a tool's own access rule is checked.** The task tools call `requireProjectMember` inside `execute`. With approval, the order matters: access first, then the question to the user, then the run. An optional `checkAccess` on `AiToolHandler`, called by `ToolExecutionService` before anything else, fixes the order in one place. It belongs to the APPR-1 plan, not to CORE.
    - **The rule itself is not written again.** `checkAccess` names an operation (the same `OP_*` names `@PreAuthorize` uses) and the project or organization it applies to, and `ToolExecutionService` asks `SecurityUtils.can` for the answer. `requireProjectMember` already works this way; the hook moves that call to one place and adds no second kind of check.
-2. **`toolName` location:** a static method, so the `AiTools` entity gains no property and the API's JSON stays as it is. The class it sits on is chosen in CORE-3, the first task that needs it in two files.
+2. **`toolName` location:** on `CompletionRuntimeContextResolver`, as a method of that class. The `AiTools` entity gains no property and the API's JSON stays as it is. A static method was the first idea; the instance method needed no new code.
 
 ## Noticed while reading, not part of CORE
 

@@ -53,9 +53,11 @@ class CompletionServiceToolLimitTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        completionService = new CompletionService(null, null, messageAiMessageConverter, null, null, null, typeService,
-                aiModelUtils, null, null, null, messageService, auditLogsService, null, objectMapper, aiModelService,
-                aiToolRegistry, new SkillService(null, null, null, null, null));
+        CompletionRuntimeContextResolver contextResolver = new CompletionRuntimeContextResolver(null, typeService, null, null,
+                objectMapper, aiModelService, aiToolRegistry, new SkillService(null, null, null, null, null));
+        completionService = new CompletionService(null, null, messageAiMessageConverter, null, typeService,
+                aiModelUtils, null, null, null, messageService, auditLogsService, objectMapper,
+                aiToolRegistry, contextResolver);
 
         Type apiType = new Type();
         apiType.setName("TEST_API");

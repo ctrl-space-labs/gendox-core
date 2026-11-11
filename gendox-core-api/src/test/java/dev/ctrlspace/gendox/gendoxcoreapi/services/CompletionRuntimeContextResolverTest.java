@@ -24,13 +24,13 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class CompletionServiceSkillsTest {
+class CompletionRuntimeContextResolverTest {
 
     @Mock private AiToolRegistry aiToolRegistry;
     @Mock private AgentSkillRepository agentSkillRepository;
     @Mock private TypeService typeService;
 
-    private CompletionService completionService;
+    private CompletionRuntimeContextResolver resolver;
     private final ProjectAgent agent = new ProjectAgent();
 
     private static AiTools tool(String name) {
@@ -45,8 +45,8 @@ class CompletionServiceSkillsTest {
 
     @BeforeEach
     void setUp() {
-        completionService = new CompletionService(null, null, null, null, null, null, typeService, null, null, null,
-                null, null, null, null, new ObjectMapper(), null, aiToolRegistry, new SkillService(null, agentSkillRepository, aiToolRegistry, null, typeService));
+        resolver = new CompletionRuntimeContextResolver(null, typeService, null, null, new ObjectMapper(), null, aiToolRegistry,
+                new SkillService(null, agentSkillRepository, aiToolRegistry, null, typeService));
         agent.setId(UUID.randomUUID());
         agent.setAiTools(new ArrayList<>(List.of(tool("advanced_search"))));
         lenient().when(aiToolRegistry.getDefinition(anyString()))
@@ -66,13 +66,13 @@ class CompletionServiceSkillsTest {
 
     @Test
     void anAgentWithoutSkillsGetsOnlyItsOwnTools() {
-        assertEquals(List.of("advanced_search"), names(completionService.resolveAvailableTools(agent, null, List.of())));
+        assertEquals(List.of("advanced_search"), names(resolver.resolveAvailableTools(agent, null, List.of())));
         verifyNoInteractions(aiToolRegistry);
     }
 
     @Test
     void skillsBringReadSkillAndTheirToolsAndTheAgentsOwnToolWins() {
-        List<AiTools> tools = completionService.resolveAvailableTools(agent, null,
+        List<AiTools> tools = resolver.resolveAvailableTools(agent, null,
                 List.of(skill("gendox-assistant", "run_task, advanced_search, list_tasks")));
 
         assertEquals(List.of("advanced_search", "read_skill", "list_tasks", "run_task"), names(tools));
@@ -84,7 +84,7 @@ class CompletionServiceSkillsTest {
     @Test
     void aSkillWithoutToolsStillBringsReadSkill() {
         assertEquals(List.of("advanced_search", "read_skill"),
-                names(completionService.resolveAvailableTools(agent, null, List.of(skill("info-card", null)))));
+                names(resolver.resolveAvailableTools(agent, null, List.of(skill("info-card", null)))));
     }
 
     @Test
@@ -95,21 +95,21 @@ class CompletionServiceSkillsTest {
         CompletionRuntimeOverridesDTO taskRun = CompletionRuntimeOverridesDTO.builder().completionModelName("m").build();
         CompletionRuntimeOverridesDTO subAgent = CompletionRuntimeOverridesDTO.builder().systemPrompt("You summarise.").build();
 
-        assertEquals(skills, completionService.skillsFor(agent, null, taskRun));
-        assertEquals(skills, completionService.skillsFor(agent, null, null));
-        assertEquals(List.of(), completionService.skillsFor(agent, null, subAgent));
-        assertEquals(List.of(), completionService.skillsFor(null, null, taskRun));
+        assertEquals(skills, resolver.skillsFor(agent, null, taskRun));
+        assertEquals(skills, resolver.skillsFor(agent, null, null));
+        assertEquals(List.of(), resolver.skillsFor(agent, null, subAgent));
+        assertEquals(List.of(), resolver.skillsFor(null, null, taskRun));
     }
 
     @Test
     void theHeaderGoesAtTheEndOfTheSystemPromptAndIsStable() {
         List<AgentSkill> skills = List.of(skill("gendox-assistant", null));
 
-        String prompt = completionService.appendSkillsHeader("You are helpful.", skills);
+        String prompt = resolver.appendSkillsHeader("You are helpful.", skills);
 
         assertTrue(prompt.startsWith("You are helpful.\n\n## Skills"));
         assertTrue(prompt.contains("---\nname: gendox-assistant\ndescription: When gendox-assistant.\n---"));
-        assertEquals(prompt, completionService.appendSkillsHeader("You are helpful.", skills));
-        assertEquals("You are helpful.", completionService.appendSkillsHeader("You are helpful.", List.of()));
+        assertEquals(prompt, resolver.appendSkillsHeader("You are helpful.", skills));
+        assertEquals("You are helpful.", resolver.appendSkillsHeader("You are helpful.", List.of()));
     }
 }
