@@ -15,9 +15,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
-import java.util.Collection;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -36,6 +34,7 @@ public class ProjectService {
     private TypeService typeService;
     private AuditLogsService auditLogsService;
     private SubscriptionValidationService subscriptionValidationService;
+    private ProjectDocumentService projectDocumentService;
 
 
     @Autowired
@@ -46,7 +45,8 @@ public class ProjectService {
                           UserOrganizationService userOrganizationService,
                           TypeService typeService,
                           AuditLogsService auditLogsService,
-                          SubscriptionValidationService subscriptionValidationService) {
+                          SubscriptionValidationService subscriptionValidationService,
+                          ProjectDocumentService projectDocumentService) {
         this.projectRepository = projectRepository;
         this.projectAgentService = projectAgentService;
         this.projectConverter = projectConverter;
@@ -55,6 +55,7 @@ public class ProjectService {
         this.typeService = typeService;
         this.auditLogsService = auditLogsService;
         this.subscriptionValidationService = subscriptionValidationService;
+        this.projectDocumentService = projectDocumentService;
     }
 
     public Project getProjectById(UUID id) throws GendoxException {
@@ -79,6 +80,21 @@ public class ProjectService {
             throw new GendoxException("Pageable cannot be null", "pageable.null", HttpStatus.BAD_REQUEST);
         }
         return projectRepository.findAll(ProjectPredicates.build(criteria), pageable);
+    }
+
+    /**
+     * Fills the document and member counts of a page of projects (the agent list): one grouped query per count,
+     * never one per project. A project without documents or members gets 0.
+     */
+    public Page<Project> fillCounts(Page<Project> projects) {
+        Set<UUID> projectIds = projects.stream().map(Project::getId).collect(Collectors.toSet());
+        Map<UUID, Long> documents = projectDocumentService.countDocumentsByProject(projectIds);
+        Map<UUID, Long> members = projectMemberService.countMembersByProject(projectIds);
+        projects.forEach(project -> {
+            project.setDocumentCount(documents.getOrDefault(project.getId(), 0L));
+            project.setMemberCount(members.getOrDefault(project.getId(), 0L));
+        });
+        return projects;
     }
 
     private void validateProjectName(String name) throws GendoxException {

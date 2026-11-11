@@ -64,11 +64,18 @@ public class Project {
     @Schema(hidden = true)
     @JsonBackReference(value = "project")
     @OneToMany(mappedBy = "project")
-    private List<ProjectDocument> projectDocuments ;
+    private List<ProjectDocument> projectDocuments;
 
     @Basic
     @Column(name = "auto_training")
     private Boolean autoTraining;
+
+    // only the agent list asks for them (withCounts); elsewhere they stay null
+    @Transient
+    private Long documentCount;
+
+    @Transient
+    private Long memberCount;
 
 
     public UUID getId() {
@@ -173,6 +180,22 @@ public class Project {
 
     public void setAutoTraining(Boolean autoTraining) {
         this.autoTraining = autoTraining;
+    }
+
+    public Long getDocumentCount() {
+        return documentCount;
+    }
+
+    public void setDocumentCount(Long documentCount) {
+        this.documentCount = documentCount;
+    }
+
+    public Long getMemberCount() {
+        return memberCount;
+    }
+
+    public void setMemberCount(Long memberCount) {
+        this.memberCount = memberCount;
     }
 
     @Override

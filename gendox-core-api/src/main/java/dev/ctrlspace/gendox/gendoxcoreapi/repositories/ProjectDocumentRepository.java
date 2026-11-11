@@ -46,6 +46,10 @@ public interface ProjectDocumentRepository extends JpaRepository<ProjectDocument
             value = "DELETE FROM gendox_core.project_documents pd WHERE pd.document_id = :documentId AND pd.project_id = :projectId")
     void deleteByDocumentIdAndProjectId(@Param("documentId") UUID documentId, @Param("projectId") UUID projectId);
 
+    // [projectId, count] for each project that has documents; one query for a page of the agent list
+    @Query("SELECT pd.project.id, COUNT(pd) FROM ProjectDocument pd WHERE pd.project.id IN :projectIds GROUP BY pd.project.id")
+    List<Object[]> countGroupedByProjectIds(@Param("projectIds") Set<UUID> projectIds);
+
 
 
 }

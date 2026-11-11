@@ -10,8 +10,10 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.querydsl.QuerydslPredicateExecutor;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 public interface ProjectMemberRepository extends JpaRepository<ProjectMember, UUID>, QuerydslPredicateExecutor<ProjectMember> {
@@ -35,5 +37,10 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMember, UU
     long countByUserId(UUID userId);
 
     List<ProjectMember> findByUserIdAndProject_OrganizationId(UUID userId, UUID organizationId);
+
+    // [projectId, count] of the people in each project, without the agents' own users, as the Members screen lists them
+    @Query("SELECT pm.project.id, COUNT(pm) FROM ProjectMember pm " +
+            "WHERE pm.project.id IN :projectIds AND pm.user.userType.name <> 'GENDOX_AGENT' GROUP BY pm.project.id")
+    List<Object[]> countGroupedByProjectIds(@Param("projectIds") Set<UUID> projectIds);
 
 }
