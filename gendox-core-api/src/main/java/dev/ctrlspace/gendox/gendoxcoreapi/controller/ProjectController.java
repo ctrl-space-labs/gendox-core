@@ -91,7 +91,9 @@ public class ProjectController {
     @Operation(summary = "Get all projects",
             description = "Retrieve a list of all projects based on the provided criteria. The user must have the necessary permissions to access these projects.")
 
-    public Page<Project> getAllProjects(@Valid ProjectCriteria criteria, @PathVariable("organizationId") String organizationId, Pageable pageable, Authentication authentication) throws GendoxException {
+    public Page<Project> getAllProjects(@Valid ProjectCriteria criteria, @PathVariable("organizationId") String organizationId, Pageable pageable,
+                                        @RequestParam(value = "withCounts", defaultValue = "false") boolean withCounts,
+                                        Authentication authentication) throws GendoxException {
         // override requested org id with the path variable
         criteria.setOrganizationId(organizationId);
         criteria.setIsActive(true);
@@ -122,7 +124,12 @@ public class ProjectController {
 
         }
 
-        return projectService.getAllProjects(criteria, pageable);
+        Page<Project> projects = projectService.getAllProjects(criteria, pageable);
+        // only the agent list asks for the counts, and only signed-in users get them
+        if (withCounts && authentication instanceof GendoxAuthenticationToken) {
+            projectService.fillCounts(projects);
+        }
+        return projects;
     }
 
 

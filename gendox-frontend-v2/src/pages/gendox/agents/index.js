@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Cpu, Library, MessageSquareText, Plus, Search, SearchX, Settings, Wrench } from 'lucide-react'
+import { Cpu, FileText, Library, MessageSquareText, Plus, Search, SearchX, Settings, Users, Wrench } from 'lucide-react'
 import useActiveScope from 'src/hooks/useActiveScope'
 import useHasOrgRole from 'src/authentication/hooks/useHasOrgRole'
 import projectService from 'src/gendox-sdk/projectService'
@@ -10,8 +10,12 @@ import Avatar from 'src/components/ui/Avatar'
 import Empty from 'src/components/ui/Empty'
 import { formatDate } from 'src/components/knowledge/documentUtils'
 
-// The organization's agents the user belongs to. Visibility, model and tools come from GET organizations/{o}/projects.
-// Document and member counts wait for that list to carry them: asking each agent would cost two requests per card.
+// The organization's agents the user belongs to. Visibility, model, tools and the document and member counts come
+// from GET organizations/{o}/projects?withCounts=true: one request for the page, the counts in two grouped queries.
+
+// below this many documents, an agent's card suggests adding knowledge
+const FEW_DOCUMENTS = 3
+
 const AgentsPage = () => {
   const { organization, organizationId, projects, href } = useActiveScope()
   const canCreate = useHasOrgRole({ organizationId, roles: ['OP_CREATE_PROJECT'] })
@@ -22,7 +26,7 @@ const AgentsPage = () => {
     if (!organizationId) return
     let current = true
     projectService
-      .getProjectsByOrganization(organizationId, getToken())
+      .getProjectsByOrganization(organizationId, getToken(), { size: 100, withCounts: true })
       .then(response => {
         const list = response.data?.content ?? response.data ?? []
         if (current) setDetails(Object.fromEntries(list.map(p => [p.id, p])))
@@ -66,6 +70,8 @@ const AgentsPage = () => {
           const agent = details?.[p.id]?.projectAgent
           const loading = details === null
           const tools = agent?.aiTools?.length ?? 0
+          const documents = details?.[p.id]?.documentCount
+          const members = details?.[p.id]?.memberCount
 
           return (
             <div className='card agent' key={p.id}>
@@ -88,9 +94,26 @@ const AgentsPage = () => {
               <p className='muted sm clamp2' style={{ minHeight: 40 }}>
                 {p.description || <span className='faint'>No description</span>}
               </p>
+              {documents != null && documents < FEW_DOCUMENTS && (
+                <Link className='faint sm' href={href('/gendox/knowledge', { projectId: p.id })}>
+                  {documents === 0 ? 'No knowledge yet' : 'Little knowledge'}: add documents so it answers from them →
+                </Link>
+              )}
               <div className='stats'>
                 {agent ? (
                   <>
+                    {documents != null && (
+                      <span>
+                        <FileText className='lucide' />
+                        {documents} {documents === 1 ? 'document' : 'documents'}
+                      </span>
+                    )}
+                    {members != null && (
+                      <span>
+                        <Users className='lucide' />
+                        {members} {members === 1 ? 'member' : 'members'}
+                      </span>
+                    )}
                     <span>
                       <Wrench className='lucide' />
                       {tools} {tools === 1 ? 'tool' : 'tools'}
