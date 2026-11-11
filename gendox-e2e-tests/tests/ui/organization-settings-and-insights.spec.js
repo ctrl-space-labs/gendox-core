@@ -1,0 +1,34 @@
+const { test, expect } = require('../../support/workspace');
+const { sessionOf } = require('../../support/login');
+const { inProject, apiResponse, expectOk } = require('../../support/app');
+const { upload, createTask } = require('../../support/domain');
+
+test.use({ storageState: sessionOf('testUser1') });
+test('Document Insights: select a document, add a question and generate a persisted answer', { tag: ['@p1', '@background'] }, async ({ page, api, workspace: w }) => {
+    test.setTimeout(240_000);
+    await upload(api, w);
+    const task = await createTask(api, w, 'DOCUMENT_INSIGHTS', 'Browser insights');
+    await page.goto(inProject(w, 'tasks/document-insights') + `&taskId=${task.id}`);
+    await expect(page.getByRole('heading', { name: 'Browser insights', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Add Document', exact: true }).click();
+    const selection = page.getByRole('dialog');
+    await selection.getByRole('row', { name: /least-squares/ }).getByRole('checkbox').check();
+    await selection.getByRole('button', { name: 'Confirm Selection' }).click();
+    await page.getByRole('button', { name: 'Add Questions', exact: true }).click();
+    const question = page.getByRole('dialog');
+    await question.getByRole('textbox', { name: 'Column name' }).fill('Description');
+    await question.getByRole('combobox').filter({ hasText: 'Auto' }).click();
+    await page.getByRole('option', { name: 'Written answer', exact: true }).click();
+    await question.getByRole('textbox', { name: 'Question', exact: true }).fill('What is least squares?');
+    await question.getByRole('button', { name: 'Save Questions' }).click();
+    await expect(question).not.toBeVisible();
+    await page.getByRole('button', { name: 'Generate New', exact: true }).click();
+    const confirm = page.getByRole('dialog');
+    const started = apiResponse(page, 'POST', /\/execute$/);
+    await confirm.getByRole('button', { name: 'Generate New', exact: true }).click();
+    await expectOk(await started);
+    await expect(page.getByText('Mock insight', { exact: true }).first()).toBeVisible({ timeout: 180_000 });
+    await page.reload();
+    await page.getByText('Mock insight', { exact: true }).first().click();
+    await expect(page.getByRole('dialog').getByText(/MOCK GEMINI RESPONSE/).first()).toBeVisible();
+});

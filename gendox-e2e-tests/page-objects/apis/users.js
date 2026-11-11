@@ -11,7 +11,6 @@ const getUsersbyCriteria = async (request, token, criteria) => {
                 'Content-Type': 'application/json'
             }
         });
-       const responseBody =  JSON.parse(await response.text())
         return response;
 }
 
@@ -26,11 +25,23 @@ const getUserById = async (request, token, userId) => {
     return response;
 }
 
-const getUserProfileById = async (request, token, userId) => {
-    const response = await request.get(`${config.gendox.contextPath}/profile/${userId}`, {
+const getUserProfile = async (request, token) => {
+    const response = await request.get(`${config.gendox.contextPath}/profile`, {
         headers: {
             'Authorization': 'Bearer ' + token,
             'Content-Type': 'application/json'
+        }
+    });
+    return response;
+};
+
+/**
+ * Makes the API read the caller's profile, with its organizations and projects, again.
+ */
+const clearProfileCache = async (request, token) => {
+    const response = await request.delete(`${config.gendox.contextPath}/profile/caches`, {
+        headers: {
+            'Authorization': 'Bearer ' + token
         }
     });
     return response;
@@ -64,6 +75,7 @@ module.exports = {
     getUserById,
     createUser,
     updateUser,
-    getUserProfileById,
+    getUserProfile,
+    clearProfileCache,
     getUsersbyCriteria
 }
