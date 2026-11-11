@@ -7,7 +7,7 @@
 #
 # The name and ports come from .env, so nothing starts without one. Code is
 # mounted from this checkout: the API jar from gendox-core-api/target and the
-# frontend from gendox-frontend/out. See README.md.
+# frontend from gendox-frontend-v2/out. See README.md.
 # ===========================================================================
 
 x-ephemeral-labels: &ephemeral-labels
@@ -177,7 +177,7 @@ services:
     image: nginx:alpine
     labels: *ephemeral-labels
     volumes:
-      - ../../gendox-frontend/out:/usr/share/nginx/html:ro
+      - ../../gendox-frontend-v2/out:/usr/share/nginx/html:ro
     configs:
       - source: frontend-nginx
         target: /etc/nginx/conf.d/default.conf

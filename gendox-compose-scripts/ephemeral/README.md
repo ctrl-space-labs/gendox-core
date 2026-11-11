@@ -33,11 +33,11 @@ starts, so a worktree cannot start on top of another checkout's environment.
 | Changed | Run | Time |
 |---|---|---|
 | Backend | `mvn -q package -DskipTests` in `gendox-core-api`, then `docker compose restart api && docker compose up -d --wait` | about 25 s |
-| Frontend | `yarn build` in `gendox-frontend` (first `yarn install` in a new worktree) | about 35 s |
+| Frontend | `yarn build` in `gendox-frontend-v2` (first `yarn install` in a new worktree) | about 35 s |
 | Migrations | `docker compose up -d --wait` | a few seconds |
 | Keycloak themes | `docker compose up -d --wait --build keycloak` | about a minute |
 
-The API runs the jar in `gendox-core-api/target`, and nginx serves `gendox-frontend/out`, both
+The API runs the jar in `gendox-core-api/target`, and nginx serves `gendox-frontend-v2/out`, both
 mounted from this checkout. A new frontend build is live at once. The e2e tests warn when
 either is older than its sources.
 
