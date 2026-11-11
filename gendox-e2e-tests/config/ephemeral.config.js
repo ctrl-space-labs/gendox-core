@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const dotenv = require('dotenv');
 const { devices } = require('@playwright/test');
+const frontend = require('./frontend');
 
 /**
  * The default configuration: this checkout's ephemeral environment, see
@@ -25,6 +26,9 @@ const url = (override, port) => {
 
 const apiBaseURL = url('E2E_API_BASE_URL', 'EPH_API_PORT');
 const frontendURL = url('E2E_FRONTEND_URL', 'EPH_FRONTEND_PORT');
+const streamingPort = frontend.version === 'v2' ? Number(process.env.E2E_STREAMING_PORT || (Number(stack.EPH_FRONTEND_PORT || 3100) + 32000)) : 3520;
+if (frontend.version === 'v2') process.env.E2E_STREAMING_PORT = String(streamingPort);
+const streamingURL = `http://127.0.0.1:${streamingPort}`;
 const keycloakURL = process.env.E2E_KEYCLOAK_URL || `${url('E2E_KEYCLOAK_URL', 'EPH_KEYCLOAK_PORT')}/idp`;
 
 process.env.E2E_RUN_ID ||= require('crypto').randomUUID();
@@ -65,26 +69,30 @@ const ephemeralConfig = {
         {
             name: 'ui',
             workers: process.env.E2E_UI_WORKERS ? Number(process.env.E2E_UI_WORKERS) : 4,
-            testMatch: ['ui/**/*.spec.js', 'smoke/ui.spec.js', 'regression/**/*.ui.spec.js'],
+            testMatch: frontend.version === 'v2'
+                ? ['v2/ui/**/*.spec.js', 'v2/smoke/**/*.spec.js', 'v2/regression/**/*.spec.js']
+                : ['ui/**/*.spec.js', 'smoke/ui.spec.js', 'regression/**/*.ui.spec.js']
+                    .map(pattern => path.resolve(__dirname, '../tests', pattern)),
             dependencies: ['setup'],
             use: { ...browser, baseURL: frontendURL },
         },
         {
             name: 'streaming-contract',
-            testDir: path.resolve(__dirname, '../tests/chat-streaming'),
+            testDir: path.resolve(__dirname, frontend.version === 'v2' ? '../tests/v2/streaming' : '../tests/chat-streaming'),
             testMatch: '**/*.spec.js',
             testIgnore: [],
             fullyParallel: false,
             workers: 1,
-            use: { ...browser, baseURL: 'http://127.0.0.1:3520' },
+            use: { ...browser, baseURL: streamingURL },
         },
     ],
     webServer: {
-        command: 'node fixtures/chat-streaming-server.cjs',
-        url: 'http://127.0.0.1:3520/__state',
+        command: frontend.version === 'v2' ? 'node fixtures/v2/chat-streaming-server.cjs' : 'node fixtures/chat-streaming-server.cjs',
+        url: `${streamingURL}/__state`,
         reuseExistingServer: false,
     },
     frontendURL,
+    metadata: { frontend: frontend.version },
     authDir,
     gendox: {
         contextPath: '/gendox/api/v1',

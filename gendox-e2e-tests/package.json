@@ -5,7 +5,11 @@
   "main": "index.js",
   "scripts": {
     "test": "playwright test",
+    "test:v1": "E2E_FRONTEND=v1 playwright test",
+    "test:v2": "E2E_FRONTEND=v2 playwright test",
     "smoke": "playwright test --config playwright.smoke.config.js",
+    "smoke:v1": "E2E_FRONTEND=v1 playwright test --config playwright.smoke.config.js",
+    "smoke:v2": "E2E_FRONTEND=v2 playwright test --config playwright.smoke.config.js",
     "list": "playwright test --list",
     "ui": "playwright test --ui",
     "report": "playwright show-report"

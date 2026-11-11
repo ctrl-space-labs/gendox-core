@@ -95,14 +95,15 @@ module.exports = async (config) => {
             'then in gendox-compose-scripts/ephemeral: docker compose restart api && docker compose up -d --wait');
     }
 
-    const frontendDir = path.join(repoRoot, 'gendox-frontend-v2');
+    const frontend = require('../config/frontend');
+    const frontendDir = frontend.root;
     const frontendSources = Math.max(
         newestIn(path.join(frontendDir, 'src')),
         newestIn(path.join(frontendDir, 'public')),
         mtime(path.join(frontendDir, 'package.json')),
     );
     if (frontendSources > mtime(path.join(frontendDir, 'out/index.html'))) {
-        warnings.push('Frontend sources are newer than the build. In gendox-frontend-v2: yarn build');
+        warnings.push(`Frontend sources are newer than the build. In ${frontend.directory}: yarn build`);
     }
 
     for (const warning of warnings) {
