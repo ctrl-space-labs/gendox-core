@@ -3,6 +3,10 @@ package dev.ctrlspace.gendox.gendoxcoreapi.repositories;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Organization;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.UserOrganization;
+import com.querydsl.core.types.Predicate;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -14,6 +18,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface UserOrganizationRepository extends JpaRepository<UserOrganization, UUID>, QuerydslPredicateExecutor<UserOrganization> {
+
+    @EntityGraph(attributePaths = {"user", "user.userType", "organization", "role"})
+    Page<UserOrganization> findAll(Predicate predicate, Pageable pageable);
 
     public List<UserOrganization> findByUserId(UUID userId);
 
