@@ -5,7 +5,7 @@ WORKDIR /app
 
 # # Copy dependency files and install dependencies
 COPY package.json yarn.lock ./
-RUN yarn install
+RUN --mount=type=cache,id=gendox-yarn,target=/usr/local/share/.cache/yarn yarn install
 
 # # Copy dependency files and install dependencies with increased timeout for slow connections (g)
 # COPY package.json yarn.lock ./
@@ -35,7 +35,7 @@ ENV NEXT_PUBLIC_PROVEN_AI_URL=${NEXT_PUBLIC_PROVEN_AI_URL}
 ENV NEXT_PUBLIC_GEE_CLIENT_ID=${NEXT_PUBLIC_GEE_CLIENT_ID}
 
 # Build and export the static site
-RUN yarn build
+RUN --mount=type=cache,id=gendox-next,target=/app/.next/cache yarn build
 
 # Stage 2: Serve the static files using Nginx
 FROM nginx:alpine

@@ -5,3 +5,5 @@ node_modules/
 /playwright/.cache/
 /.env
 /.env*
+/test-history/
+/.auth/

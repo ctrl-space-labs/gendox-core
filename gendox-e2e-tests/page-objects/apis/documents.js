@@ -1,32 +1,42 @@
 const config = require('../../tests.config');
 const fs = require('fs');
-//npm install form-data
-const FormData = require('form-data');
+const path = require('path');
 
-const uploadDocuments = async (request, token, uploadParams) => {
-const formData = new FormData();
-   console.log(uploadParams);
-   formData.append('projectId', uploadParams.projectId);
-    formData.append('organizationId', uploadParams.organizationId);
-    formData.append('file', fs.createReadStream(uploadParams.file));
+const documentsPath = (organizationId, projectId) =>
+    `${config.gendox.contextPath}/organizations/${organizationId}/projects/${projectId}/documents`;
 
-// projectId, organizationId, file
-    const response = await request.post(`${config.gendox.contextPath}/documents/upload`, formData, {
+const uploadDocument = async (request, token, organizationId, projectId, filePath) => {
+
+    const response = await request.post(`${documentsPath(organizationId, projectId)}/upload`, {
         headers: {
-//             ...formData.getHeaders(),
-            'Authorization': 'Bearer ' + token,
-            'Content-Type': 'multipart/form-data; boundary=' + formData.getBoundary()
-//            'Content-Type':'multipart/form-data'
-
-}
+            'Authorization': 'Bearer ' + token
+        },
+        multipart: {
+            file: {
+                name: path.basename(filePath),
+                mimeType: 'text/plain',
+                buffer: fs.readFileSync(filePath)
+            }
+        }
     });
     return response;
 }
 
-const splitDocumentSections = async (request, token, criteria) => {
-    let params = new URLSearchParams(criteria).toString();// Pass projectId as an object
+const getProjectDocuments = async (request, token, organizationId, projectId) => {
 
-    const response = await request.post(`${config.gendox.contextPath}/documents/split?${params}`, {
+    const response = await request.get(documentsPath(organizationId, projectId), {
+        headers: {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+        }
+    });
+    return response;
+}
+
+const splitDocumentSections = async (request, token, organizationId, projectId) => {
+    let params = new URLSearchParams({ projectId }).toString();
+
+    const response = await request.post(`${documentsPath(organizationId, projectId)}/split?${params}`, {
         headers: {
             'Authorization': 'Bearer ' + token,
             'Content-Type': 'application/json'
@@ -36,9 +46,9 @@ const splitDocumentSections = async (request, token, criteria) => {
     return response;
 }
 
-const createDocumentInstance = async (request, token, documentInstanceData ) => {
+const createDocumentInstance = async (request, token, projectId, documentInstanceData ) => {
 
-    const response = await request.post(`${config.gendox.contextPath}/documents`, {
+    const response = await request.post(documentsPath(documentInstanceData.organizationId, projectId), {
         headers: {
             'Authorization': 'Bearer ' + token,
             'Content-Type': 'application/json'
@@ -56,15 +66,15 @@ const updateDocumentInstance = async (request, token, documentInstanceData, docu
             'Authorization': 'Bearer ' + token,
             'Content-Type': 'application/json'
         },
-        data: organizationData
+        data: documentInstanceData
     });
     return response;
 }
 
 
-const deleteDocumentInstance = async (request, token, documentInstanceId ) => {
+const deleteDocumentInstance = async (request, token, organizationId, projectId, documentInstanceId ) => {
 
-    const response = await request.delete(`${config.gendox.contextPath}/documents/${documentInstanceId}`, {
+    const response = await request.delete(`${documentsPath(organizationId, projectId)}/${documentInstanceId}`, {
         headers: {
             'Authorization': 'Bearer ' + token,
             'Content-Type': 'application/json'
@@ -75,7 +85,8 @@ const deleteDocumentInstance = async (request, token, documentInstanceId ) => {
 }
 
 module.exports = {
-    uploadDocuments,
+    uploadDocument,
+    getProjectDocuments,
     splitDocumentSections,
     createDocumentInstance,
     updateDocumentInstance,

@@ -1,0 +1,36 @@
+# Applied after docker-local in the throwaway stacks of gendox-compose-scripts/ephemeral.
+logging:
+  level:
+    dev.ctrlspace: INFO
+    org.springframework.security: INFO
+
+spring:
+  datasource:
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 2
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${EPHEMERAL_KEYCLOAK_URL}/realms/gendox-idp-prod
+          jwk-set-uri: ${EPHEMERAL_KEYCLOAK_URL}/realms/gendox-idp-prod/protocol/openid-connect/certs
+
+keycloak:
+  base-url: ${EPHEMERAL_KEYCLOAK_URL}
+  token-uri: ${EPHEMERAL_KEYCLOAK_URL}/realms/gendox-idp-prod/protocol/openid-connect/token
+
+gendox:
+  domains:
+    frontend: ${EPHEMERAL_FRONTEND_URL}
+  domain:
+    base-url: ${EPHEMERAL_API_URL}
+
+management:
+  # No mail server here, and the check would otherwise report the whole API as down.
+  health:
+    mail:
+      enabled: false
+  tracing:
+    sampling:
+      probability: 0.0
