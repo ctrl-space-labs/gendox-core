@@ -136,6 +136,9 @@ workers and each isolated browser case remain parallelizable.
   parallel case's organization while that case is still creating its first project.
 - **V2 selectors.** No `data-testid` attributes were added. Preserve role/label locators;
   if a new one is necessary, document exactly which element and why.
+- **V2 upload completion.** A successful upload response can arrive before the dialog
+  marks the file Uploaded. Wait for that visible state, then close and assert the dialog
+  is gone before interacting with the knowledge list behind it.
 - **Stale profile.** The API caches each user's organizations and projects. The seeded
   users act in many tests at once, and right after a change a user can still get the old
   state. After creating an organization or project, or adding a member, call

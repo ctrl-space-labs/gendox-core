@@ -85,7 +85,9 @@ test.describe('V2 browser smoke', { tag: '@smoke' }, () => {
         const uploaded = apiResponse(page, 'POST', /\/documents\/upload$/);
         await dialog.locator('input[type=file]').setInputFiles(textFile);
         await expectOk(await uploaded);
+        await expect(dialog.getByText('Uploaded', { exact: true })).toBeVisible();
         await dialog.getByRole('button', { name: 'Close', exact: true }).last().click();
+        await expect(dialog).toHaveCount(0);
         await expect(page.getByRole('row', { name: /least-squares/ })).toBeVisible();
         await expectOk(await documents.splitDocumentSections(api, w.ownerToken, w.organizationId, w.projectId));
         await expectOk(await embeddings.getProjectEmbeddings(api, w.ownerToken, w.projectId));
