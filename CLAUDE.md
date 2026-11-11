@@ -28,7 +28,7 @@ Two files per topic, no more: **the original, which never changes, and the curre
 
 ### Pending plans
 
-- [Application e2e coverage](.ai/e2e-coverage-2026-11-11.md) — current smoke selection and prioritized full-suite backlog.
+- [Application e2e coverage for v2](.ai/e2e-v2-coverage-2026-11-11.md) — current frontend selection, browser coverage and blocked cases; the original v1 plan remains unchanged.
 
 - [End-to-end tests and ephemeral environments: pending work](.ai/e2e-tests-pending-work-2026-11-10.md) — historical setup handover; current test scope is in the coverage plan above.
 
