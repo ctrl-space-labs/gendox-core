@@ -42,52 +42,57 @@ import java.time.Instant;
                         @ColumnResult(name = "agent_created_at", type = Instant.class),
                         @ColumnResult(name = "agent_updated_at", type = Instant.class),
                         @ColumnResult(name = "org_created_at", type = Instant.class),
-                        @ColumnResult(name = "org_updated_at", type = Instant.class)
+                        @ColumnResult(name = "org_updated_at", type = Instant.class),
+                        @ColumnResult(name = "org_plan_name", type = String.class)
                 }
         )
 )
 @NamedNativeQuery(
         name = "UserOrganizationProjectAgent.findRawUserProfileById",
         query = """
-        SELECT distinct u.id,
-               u.email,
-               u.first_name,
-               u.last_name,
-               u.user_name,
-               u.phone,
-               ut.name as user_type_name,
-               u.users_type_id,
-               u.name,
-               o.id as org_id,
-               o.name as org_name,
-               o.display_name,
-               o.phone as org_phone,
-               o.address,
-               rt.id as org_role_id,
-               rt.name as org_role_name,
-               p.id as project_id,
-               p.name as project_name,
-               p.description as project_description,
-               p.created_at as project_created_at,
-               p.updated_at as project_updated_at,
-               pa.id as agent_id,
-               au.id as agent_user_id,
-               pa.agent_name,
-               pa.created_at as agent_created_at,
-               pa.updated_at as agent_updated_at,
-               o.created_at as org_created_at,
-               o.updated_at as org_updated_at
-        FROM gendox_core.users u
-            inner join gendox_core.types ut on ut.id = u.users_type_id
-            left join gendox_core.user_organization uo on u.id = uo.user_id
-            left join gendox_core.types rt on rt.id = uo.organization_role_id
-            left join gendox_core.organizations o ON uo.organization_id = o.id
-            left join gendox_core.project_members pm on u.id = pm.user_id
-            left join gendox_core.projects p ON pm.project_id = p.id and p.organization_id = o.id
-            left join gendox_core.project_agent pa ON p.id = pa.project_id
-            left join gendox_core.users au ON au.id = pa.user_id
-        WHERE u.id = :userId
-    """,
+                    SELECT distinct u.id,
+                           u.email,
+                           u.first_name,
+                           u.last_name,
+                           u.user_name,
+                           u.phone,
+                           ut.name as user_type_name,
+                           u.users_type_id,
+                           u.name,
+                           o.id as org_id,
+                           o.name as org_name,
+                           o.display_name,
+                           o.phone as org_phone,
+                           o.address,
+                           rt.id as org_role_id,
+                           rt.name as org_role_name,
+                           p.id as project_id,
+                           p.name as project_name,
+                           p.description as project_description,
+                           p.created_at as project_created_at,
+                           p.updated_at as project_updated_at,
+                           pa.id as agent_id,
+                           au.id as agent_user_id,
+                           pa.agent_name,
+                           pa.created_at as agent_created_at,
+                           pa.updated_at as agent_updated_at,
+                           o.created_at as org_created_at,
+                           o.updated_at as org_updated_at,
+                           sp.name as org_plan_name
+                    FROM gendox_core.users u
+                        inner join gendox_core.types ut on ut.id = u.users_type_id
+                        left join gendox_core.user_organization uo on u.id = uo.user_id
+                        left join gendox_core.types rt on rt.id = uo.organization_role_id
+                        left join gendox_core.organizations o ON uo.organization_id = o.id
+                        left join gendox_core.project_members pm on u.id = pm.user_id
+                        left join gendox_core.projects p ON pm.project_id = p.id and p.organization_id = o.id
+                        left join gendox_core.project_agent pa ON p.id = pa.project_id
+                        left join gendox_core.users au ON au.id = pa.user_id
+                        left join gendox_core.organization_plan op ON op.organization_id = o.id
+                            and op.start_date <= now() and op.end_date >= now()
+                        left join gendox_core.subscription_plans sp ON sp.id = op.subscription_plan_id
+                    WHERE u.id = :userId
+                """,
         resultSetMapping = "UserOrganizationProjectAgentMapping"
 )
 @Entity
@@ -121,4 +126,5 @@ public class UserOrganizationProjectAgentDTO {
     private Instant agentUpdatedAt;
     private Instant orgCreatedAt;
     private Instant orgUpdatedAt;
+    private String orgPlanName;
 }

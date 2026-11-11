@@ -196,7 +196,8 @@ const UserProfilePage = () => {
                         {o.name} {current && <span className='badge accent'>Current</span>}
                       </div>
                       <div className='faint sm'>
-                        {roleTitle(roleInOrganization(o))} · {o.projects?.length ?? 0}{' '}
+                        {/* no active plan means the free plan */}
+                        {roleTitle(roleInOrganization(o))} · {o.planName || 'Free Plan'} · {o.projects?.length ?? 0}{' '}
                         {o.projects?.length === 1 ? 'agent' : 'agents'}
                       </div>
                     </div>
