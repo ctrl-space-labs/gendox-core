@@ -176,6 +176,15 @@ public class UserService implements UserDetailsService {
         return userProfileConverter.toDTO(rawUser);
     }
 
+    /**
+     * True while the profile of this identifier is cached, which also means that the user exists.
+     * Uses the same cache key as {@link #evictUserProfileByUniqueIdentifier(String)}.
+     */
+    public boolean isUserProfileCached(String userIdentifier) {
+        Cache cache = cacheManager.getCache("UserProfileByIdentifier");
+        return cache != null && cache.get("UserService:getUserProfileByUniqueIdentifier:" + userIdentifier) != null;
+    }
+
     public void evictUserProfileByUniqueIdentifier(String userIdentifier) {
         // Evict the cache entry for the user
         Cache cache = cacheManager.getCache("UserProfileByIdentifier");
