@@ -97,6 +97,22 @@ The combined run contains 83 passing API cases and the two unchanged database fa
 four passing logins, 30 passing v2 browser cases and the blocked Sources case, plus three
 passing v2 streaming contracts. The only browser failure reaches the real metadata endpoint
 and receives HTTP 500; it is not a missing v2 locator or an expected-failure assertion.
-The final HTML report is the complete combined invocation.
+The HTML report is the complete combined invocation.
+
+### Validation after merging the latest v2 completion changes
+
+The merged backend was rebuilt and restarted before these checks. The upload smoke case
+now waits for the visible Uploaded state and for its dialog to close before opening the
+document; this removes a test interaction race without changing application behavior.
+
+| Check | Result | Duration |
+|---|---|---|
+| Completion/runtime/tool/mock adapter unit tests | 49 passed | Unit tests |
+| `npm run smoke` | 19 passed, no skips/retries | 14 s |
+| `npm test` | 120 passed, 3 failed; no skips/retries | 64 s |
+
+The three failures are the same documented source-metadata API/browser and task-filtering
+HTTP 500 responses. No additional failures remain after integrating the completion changes.
+
 Persistent local reports include traces and API logs; generated reports, sessions and
 environment secrets remain ignored. No push or tracker ticket is part of this work.
