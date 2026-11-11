@@ -10,18 +10,14 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.Completio
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.ModerationResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.AiToolRegistry;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.ToolExecutionContext;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.CompletionDelta;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.AdvancedSearchTool;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.MessageAiMessageConverter;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.CompletionTurn.PendingCall;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxRuntimeException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectAgentRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.AiModelUtils;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.CancellationToken;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import io.micrometer.observation.annotation.Observed;
 import org.jetbrains.annotations.Nullable;
@@ -72,6 +68,7 @@ public class CompletionService {
 
     private ObjectMapper objectMapper;
     private CompletionRuntimeContextResolver contextResolver;
+    private ToolExecutionService toolExecutionService;
 
     /** Tool rounds a completion may take before it must answer; deep thinking gets 20. Skill work (read a skill, look, then change) needs more than a few. */
     @Value("${gendox.agents.max-tool-iterations:12}")
@@ -106,7 +103,8 @@ public class CompletionService {
                              AuditLogsService auditLogsService,
                              ObjectMapper objectMapper,
                              AiToolRegistry aiToolRegistry,
-                             CompletionRuntimeContextResolver contextResolver) {
+                             CompletionRuntimeContextResolver contextResolver,
+                             ToolExecutionService toolExecutionService) {
         this.self = self;
         this.projectService = projectService;
         this.messageAiMessageConverter = messageAiMessageConverter;
@@ -120,6 +118,7 @@ public class CompletionService {
         this.objectMapper = objectMapper;
         this.aiToolRegistry = aiToolRegistry;
         this.contextResolver = contextResolver;
+        this.toolExecutionService = toolExecutionService;
     }
 
     private CompletionResponse getCompletionForMessages(List<AiModelMessage> aiModelMessages, String agentRole, AiModel aiModel,
@@ -414,18 +413,9 @@ public class CompletionService {
 
                 // Execute all tools. CLIENT tools the client will answer are left pending, unless this is the last allowed call.
                 boolean canWaitForClient = listener.waitsForClientTools() && iteration + 1 < maxIterations;
-                List<PendingCall> pendingCalls = new ArrayList<>();
-                List<AiModelMessage> toolResponseMessages = handleToolExecution(
-                        completionResponseMessage,
-                        previousMessages,
-                        runtimeContext.project(),
-                        runtimeContext.agent(),
-                        runtimeContext.availableTools(),
-                        runtimeContext.cancellationToken(),
-                        listener,
-                        canWaitForClient,
-                        pendingCalls
-                );
+                ToolExecutionService.ToolRound round = toolExecutionService.run(completionResponseMessage, previousMessages,
+                        runtimeContext, listener, canWaitForClient);
+                List<AiModelMessage> toolResponseMessages = round.results();
 
                 // Save tool response messages.
                 toolResponseMessages.forEach(toolResponseMessage -> {
@@ -440,8 +430,8 @@ public class CompletionService {
                 });
 
                 // The turn stops here until the client posts the results (or they time out)
-                if (!pendingCalls.isEmpty()) {
-                    CompletionTurn turn = completionTurnService.suspend(message, completionResponseMessage, pendingCalls, iteration + 1);
+                if (!round.pending().isEmpty()) {
+                    CompletionTurn turn = completionTurnService.suspend(message, completionResponseMessage, round.pending(), iteration + 1);
                     listener.onWaitingForTools(turn);
                     return allResponseMessages;
                 }
@@ -538,84 +528,6 @@ public class CompletionService {
             return overrides.getFirstToolChoice();
         }
         return "auto";
-    }
-
-    /**
-     * executes the tools that requested by the agent in the completion response.
-     * returns a list of messages that contains the result of the tool execution.
-     *
-     * If the tool execution type is "backend" then it executed the function calling
-     * if the execution is for the "frontend" then it just returns the message for the frontend to handle it.
-     *
-     * @param completionResponseMessage
-     * @param project
-     * @param agent
-     * @param availableTools
-     * @return
-     */
-    private List<AiModelMessage> handleToolExecution(Message completionResponseMessage, List<AiModelMessage> parentPreviousMessages, @Nullable Project project, @Nullable ProjectAgent agent, List<AiTools> availableTools, @Nullable CancellationToken cancellationToken) {
-        return handleToolExecution(completionResponseMessage, parentPreviousMessages, project, agent, availableTools, cancellationToken,
-                CompletionListener.none(), false, new ArrayList<>());
-    }
-
-    /**
-     * @param canWaitForClient whether CLIENT tools are left for the client to answer
-     * @param pendingCalls     receives the CLIENT calls left for the client; they get no tool message here
-     */
-    private List<AiModelMessage> handleToolExecution(Message completionResponseMessage, List<AiModelMessage> parentPreviousMessages, @Nullable Project project, @Nullable ProjectAgent agent, List<AiTools> availableTools, @Nullable CancellationToken cancellationToken,
-                                                     CompletionListener listener, boolean canWaitForClient, List<PendingCall> pendingCalls) {
-        Map<String, AiTools> toolMap = new HashMap<>();
-        //map available tools for quick lookup, parse the jsonSchema to JsonNode and find the .function.name property
-        availableTools.forEach(tool -> {
-
-            JsonNode functionObj = null; // json_schema is the whole function block
-            try {
-                functionObj = objectMapper.readTree(tool.getJsonSchema());
-            } catch (JsonProcessingException e) {
-                throw new GendoxRuntimeException(HttpStatus.BAD_REQUEST, "AI_TOOL_NOT_PROPER_JSON_SCHEMA", "Tool json schema is not a valid JSON", e);
-            }
-            String toolName = functionObj.get("name").asText();
-            toolMap.put(toolName, tool);
-        });
-
-
-        List<AiModelMessage> toolExecutionMessages = new ArrayList<>();
-        List<JsonNode> clientToolCalls = new ArrayList<>();
-
-        completionResponseMessage.getToolCalls().forEach(toolCall -> {
-            String toolName = toolCall.get("function").get("name").asText();
-            AiTools toolDefinition = toolMap.get(toolName);
-            if (toolDefinition == null) {
-                throw new GendoxRuntimeException(HttpStatus.BAD_REQUEST, "AI_TOOL_NOT_FOUND", "Tool with name " + toolName + " not found in available tools");
-            }
-
-            // Tools without a backend handler run on the page or app that sent the message
-            boolean runsOnClient = !aiToolRegistry.supports(toolName);
-            if (runsOnClient && canWaitForClient && "CLIENT".equals(toolDefinition.getExecution())) {
-                pendingCalls.add(new PendingCall(toolCall.get("id").asText(), completionResponseMessage.getId(), toolName,
-                        toolCall.get("function").get("arguments").asText()));
-                return;
-            }
-            if (runsOnClient) {
-                clientToolCalls.add(toolCall);
-            }
-
-            JsonNode args = toolCall.get("function").get("arguments");
-            ToolExecutionContext ctx = new ToolExecutionContext(project, agent, completionResponseMessage, parentPreviousMessages, toolDefinition, cancellationToken);
-            JsonNode result = aiToolRegistry.execute(toolName, args, ctx);
-
-            AiModelMessage message = new AiModelMessage();
-            message.setRole("tool");
-            message.setToolCallId(toolCall.get("id").asText());
-            message.setName(toolName);
-            message.setContent(result.toString());
-            toolExecutionMessages.add(message);
-        });
-
-        if (!clientToolCalls.isEmpty()) {
-            listener.onClientToolCalls(completionResponseMessage, clientToolCalls);
-        }
-        return toolExecutionMessages;
     }
 
 }

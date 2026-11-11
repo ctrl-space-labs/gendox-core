@@ -3,6 +3,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelRequestParams;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.CompletionResponse;
@@ -12,6 +13,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterSe
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.CompletionDelta;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.AiToolRegistry;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.MessageAiMessageConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.ToolsHandlerAdvice;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectAgentRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TemplateRepository;
@@ -38,7 +40,7 @@ import static org.mockito.Mockito.*;
  */
 abstract class CompletionServiceFixture {
 
-    final ObjectMapper mapper = new ObjectMapper();
+    final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
     final UUID chatTemplateId = UUID.randomUUID();
     final UUID sectionTemplateId = UUID.randomUUID();
     final EmbeddingService embeddingService = mock(EmbeddingService.class);
@@ -124,7 +126,7 @@ abstract class CompletionServiceFixture {
         service = new CompletionService(null, mock(ProjectService.class), new MessageAiMessageConverter(),
                 mock(ProjectAgentRepository.class), typeService, aiModelUtils, mock(ProjectAgentService.class),
                 trainingService, organizationModelKeyService, messageService, auditLogsService,
-                mapper, aiToolRegistry, contextResolver);
+                mapper, aiToolRegistry, contextResolver, new ToolExecutionService(aiToolRegistry, mapper, new ToolsHandlerAdvice()));
         ReflectionTestUtils.setField(service, "self", service);
         ReflectionTestUtils.setField(service, "completionTurnService", completionTurnService);
         ReflectionTestUtils.setField(service, "messageLocalContextService", mock(MessageLocalContextService.class));
