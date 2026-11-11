@@ -1,22 +1,9 @@
 const config = require('../../tests.config');
 
 
-const getProjectMembers = async (request, token, projectId) => {
+const getProjectMembers = async (request, token, organizationId, projectId) => {
 
-        const response = await request.get(`${config.gendox.contextPath}/projects/${projectId}/users`, {
-            headers: {
-                'Authorization': 'Bearer ' + token,
-                'Content-Type': 'application/json'
-            }
-        });
-       const responseBody =  JSON.parse(await response.text())
-        return response;
-
-}
-
-const addProjectMember = async (request, token, projectId, userId) => {
-
-        const response = await request.post(`${config.gendox.contextPath}/projects/${projectId}/users/${userId}`, {
+        const response = await request.get(`${config.gendox.contextPath}/organizations/${organizationId}/projects/${projectId}/users`, {
             headers: {
                 'Authorization': 'Bearer ' + token,
                 'Content-Type': 'application/json'
@@ -26,10 +13,22 @@ const addProjectMember = async (request, token, projectId, userId) => {
 
 }
 
+const addProjectMember = async (request, token, organizationId, projectId, userId) => {
 
-const deleteProjectMember = async (request, token, projectId, userId) => {
+        const response = await request.post(`${config.gendox.contextPath}/organizations/${organizationId}/projects/${projectId}/users/${userId}`, {
+            headers: {
+                'Authorization': 'Bearer ' + token,
+                'Content-Type': 'application/json'
+            }
+        });
+        return response;
 
-        const response = await request.delete(`${config.gendox.contextPath}/projects/${projectId}/users/${userId}`, {
+}
+
+
+const deleteProjectMember = async (request, token, organizationId, projectId, userId) => {
+
+        const response = await request.delete(`${config.gendox.contextPath}/organizations/${organizationId}/projects/${projectId}/users/${userId}`, {
             headers: {
                 'Authorization': 'Bearer ' + token,
                 'Content-Type': 'application/json'

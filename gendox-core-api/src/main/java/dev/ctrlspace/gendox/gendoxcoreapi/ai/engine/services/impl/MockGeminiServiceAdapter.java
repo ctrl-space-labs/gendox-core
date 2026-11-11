@@ -2,6 +2,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.impl;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.CompletionDelta;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Choice;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.EmbeddingData;
@@ -15,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.Set;
 
@@ -85,7 +87,49 @@ public class MockGeminiServiceAdapter implements AiModelApiAdapterService {
         logger.debug("Messages count: {}, Agent role: {}, Tools: {}",
                 messages.size(), agentRole, tools.size());
 
+        // Honor the chat contract in ALWAYS mode. CompletionService executes the real tool;
+        // only the provider decision is deterministic. The next call returns the final answer.
+        boolean searchTool = tools.stream().anyMatch(tool -> tool.getJsonSchema() != null
+                && tool.getJsonSchema().contains("\"advanced_search\""));
+        if ("required".equals(toolChoice) && searchTool) {
+            ObjectNode arguments = JsonNodeFactory.instance.objectNode();
+            String question = messages.stream().filter(m -> "user".equals(m.getRole()))
+                    .map(AiModelMessage::getContent).filter(java.util.Objects::nonNull)
+                    .reduce((first, second) -> second).orElse("test document");
+            arguments.put("search_query", question.substring(0, Math.min(4000, question.length())));
+            ObjectNode call = JsonNodeFactory.instance.objectNode();
+            call.put("id", "mock-search-" + UUID.randomUUID());
+            call.put("type", "function");
+            call.putObject("function").put("name", "advanced_search").put("arguments", arguments.toString());
+            return CompletionResponse.builder().model(aiModel.getModel())
+                    .usage(Usage.builder().completionTokens(1).promptTokens(1).totalTokens(2).build())
+                    .choices(List.of(Choice.builder().index(0).finishReason("tool_calls")
+                            .message(AiModelMessage.builder().role("assistant").content("Searching project documents.")
+                                    .toolCalls(JsonNodeFactory.instance.arrayNode().add(call)).build()).build()))
+                    .build();
+        }
+
         String mockContent = generateMockGeminiResponse(messages, agentRole);
+        // Document Insights requests structured answers, not markdown. Preserve the supplied
+        // question IDs so the real job can associate and persist deterministic mock results.
+        if (responseJsonSchema != null && responseJsonSchema.path("schema").path("properties").has("completionAnswers")) {
+            ObjectNode structured = JsonNodeFactory.instance.objectNode();
+            var answers = structured.putArray("completionAnswers");
+            var seen = new java.util.HashSet<String>();
+            var pattern = java.util.regex.Pattern.compile("\"questionId\"\\s*:\\s*\"([0-9a-fA-F-]{36})\"");
+            for (AiModelMessage input : messages) {
+                if (input.getContent() == null) continue;
+                var ids = pattern.matcher(input.getContent());
+                while (ids.find()) {
+                    if (seen.add(ids.group(1))) {
+                        answers.addObject().put("questionId", ids.group(1))
+                                .put("answerText", "MOCK GEMINI RESPONSE: deterministic document insight")
+                                .put("answerValue", "Mock insight").put("answerFlagEnum", "OK");
+                    }
+                }
+            }
+            mockContent = structured.toString();
+        }
 
         return CompletionResponse.builder()
                 .model(aiModel.getModel())
@@ -155,7 +199,7 @@ public class MockGeminiServiceAdapter implements AiModelApiAdapterService {
     private List<Double> generateMockEmbedding(int dimensions) {
         List<Double> embedding = new java.util.ArrayList<>();
         for (int i = 0; i < dimensions; i++) {
-            embedding.add(Math.random() * 0.1 - 0.05);  // Random values between -0.05 and 0.05
+            embedding.add(Math.sin(i + 1) * 0.05); // Stable non-zero vector: reproducible mock retrieval
         }
         return embedding;
     }

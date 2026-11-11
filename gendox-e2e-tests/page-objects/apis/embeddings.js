@@ -1,22 +1,6 @@
 const config = require('../../tests.config');
 
 
-
-const getEmbeddings = async (request, token, botRequest, aiModel) => {
-
-    let params = new URLSearchParams(aiModel).toString();
-
-    const response = await request.post(`${config.gendox.contextPath}/embeddings?${params}`, {
-        headers: {
-            'Authorization': 'Bearer ' + token,
-            'Content-Type': 'application/json'
-        },
-        data: botRequest
-    });
-    return response;
-}
-
-
 const semanticSearch = async (request, token, message, criteria) => {
 
     let params = new URLSearchParams(criteria).toString();
@@ -35,7 +19,7 @@ const semanticCompletion = async (request, token, message, criteria) => {
 
     let params = new URLSearchParams(criteria).toString();
 
-    const response = await request.post(`${config.gendox.contextPath}/messages/search?${params}`, {
+    const response = await request.post(`${config.gendox.contextPath}/messages/completions?${params}`, {
         headers: {
             'Authorization': 'Bearer ' + token,
             'Content-Type': 'application/json'
@@ -47,7 +31,6 @@ const semanticCompletion = async (request, token, message, criteria) => {
 
 
 module.exports = {
-    getEmbeddings,
     semanticSearch,
     semanticCompletion
 }

@@ -25,9 +25,27 @@ const simpleUserLogin = async (request) => {
 }
 
 
+/**
+ * Logs in a user from config.gendox.users and returns the access token.
+ *
+ * @param {Request} request - The Playwright request object.
+ * @param {string} name - A key of config.gendox.users, e.g. testUser1.
+ */
+const tokenFor = async (request, name) => {
+
+    const user = config.gendox.users[name];
+    const response = await login(request, config.idp.keycloak.clientId, user.username, user.password);
+    if (!response.ok()) {
+        throw new Error(`Login failed for ${user.username}: ${response.status()}`);
+    }
+    return (await response.json()).access_token;
+}
+
+
 module.exports = {
     login,
-    simpleUserLogin
+    simpleUserLogin,
+    tokenFor
 }
 
 
