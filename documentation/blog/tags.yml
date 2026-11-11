@@ -1,0 +1,24 @@
+release:
+  label: Release
+  permalink: /release
+  description: What changed in a Gendox release
+document-intelligence:
+  label: Document intelligence
+  permalink: /document-intelligence
+  description: Document Insights, Digitization and working over many documents
+agents:
+  label: AI agents
+  permalink: /agents
+  description: Agents, tools, skills and the Gendox assistant
+earth-observation:
+  label: Earth observation
+  permalink: /earth-observation
+  description: SeaScope and Google Earth Engine
+wordpress:
+  label: WordPress
+  permalink: /wordpress
+  description: The Gendox WP AI Agent plugin
+design:
+  label: Design
+  permalink: /design
+  description: The Gendox app and its design

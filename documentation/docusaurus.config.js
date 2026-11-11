@@ -9,13 +9,12 @@ import {themes as prismThemes} from 'prism-react-renderer';
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: 'Gendox',
-  tagline: 'The Document Intelligence Harness',
+  tagline: 'AI Agents & Document Intelligence Harness',
   favicon: 'img/gendoxLogo.svg',
 
-  // Set the production url of your site here
-  url: 'https://ctrl-space-labs.github.io',
-  // Set the /<baseUrl>/ pathname under which your site is served
-  // For GitHub pages deployment, it is often '/<projectName>/'
+  // The production url of the site
+  url: 'https://docs.gendox.dev',
+  // The site is served from the root of docs.gendox.dev
   baseUrl: '/',
 
   // GitHub pages deployment config.
@@ -86,12 +85,12 @@ const config = {
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
-      // Replace with your project's social card
-      image: 'img/docusaurus-social-card.jpg',
+      // Social card shown when a page is shared
+      image: 'img/gendox-social-card.jpg',
       navbar: {
         title: '',
         logo: {
-          alt: 'My Site Logo',
+          alt: 'Gendox',
           src: 'img/gendox-logo-final-01.png',
         },
         items: [
