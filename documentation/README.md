@@ -1,47 +1,32 @@
-# Website
+# Gendox documentation
 
-This website is built using [Docusaurus](https://docusaurus.io/), a modern static website generator.
+The source of [docs.gendox.dev](https://docs.gendox.dev), built with [Docusaurus](https://docusaurus.io/).
 
-### Installation
+| Folder | Contents |
+|---|---|
+| `docs/` | The documentation pages, one folder per section. Images are in each section's `img/` folder. |
+| `blog/` | Release notes and news. |
+| `static/` | Files served as they are: images, `llms.txt`, and the Agent Skills under `skills/`. |
+| `src/` | Custom CSS and components. |
 
-```
-$ yarn
-```
+How to write pages and capture screenshots and GIFs: [AGENTS.md](./AGENTS.md).
 
-### Local Development
+## Run it locally
 
-```
-$ yarn start
-```
-
-This command starts a local development server and opens up a browser window. Most changes are reflected live without having to restart the server.
-
-### Build
-
-```
-$ yarn build
+```bash
+npm install
+npm start          # http://localhost:4000, reloads as you edit
 ```
 
-This command generates static content into the `build` directory and can be served using any static contents hosting service.
+## Build
 
-### Deployment
-
-Currently, this site is deployed to Cloudflare Pages. 
-
-
-To deploy the site to Github Actions, you can use the following command:
+```bash
+npm run build      # static site in build/
+npm run serve      # serve the build locally
 ```
 
-Using SSH:
+The build fails on broken links, so run it before you push.
 
-```
-$ USE_SSH=true yarn deploy
-```
+## Deployment
 
-Not using SSH:
-
-```
-$ GIT_USER=<Your GitHub username> yarn deploy
-```
-
-If you are using GitHub pages for hosting, this command is a convenient way to build the website and push to the `gh-pages` branch.
+The site is deployed to Cloudflare Pages at https://docs.gendox.dev.

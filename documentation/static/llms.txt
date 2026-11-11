@@ -55,6 +55,13 @@ Pages use the exact names of buttons and fields in the app, in bold, and write n
 - [Import data integrations](/integrations/integrations-types): Git and AWS S3
 - [Agent Skills for coding assistants](/skills/)
 
+## Blog
+
+- [SeaScope, automatic document digitization and Deep thinking](/blog/gendox-v0-11-seascope-and-auto-digitization): Earth observation, document processing and multi-step chat workflows
+- [WordPress agents and structured answers from documents](/blog/gendox-v0-12-wordpress-and-decisions): WordPress integration, decision questions and supported reasoning summaries
+- [Agent skills, streaming answers and the Gendox assistant](/blog/gendox-v0-13-skills-streaming-and-the-assistant): reusable skills, client tools, streaming and knowledge search
+- [A new Gendox workspace built around agents](/blog/the-new-gendox): agent navigation, guided setup, settings and document review
+
 ## Maintenance
 
 - [Administrator guide](/maintenance/administrator-guide)
