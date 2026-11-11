@@ -198,7 +198,7 @@ No migration, no API change, no frontend change.
 
 ## Noticed while reading, not part of CORE
 
-- The streaming plan says the `ALWAYS` search mode keeps the search before answering and is not a forced tool choice; the code sets a required tool choice on the first model call. One of the two should be brought in line, in that plan.
+- In `ALWAYS` search mode the first model call requires a tool call, and the agent searches itself. The Anthropic adapter drops the forced choice for models with thinking, which reject it. The streaming chat plan described an earlier design and has been removed.
 - "A cancellation token means deep thinking" and "the last 25 messages" are both marked with TODOs in the loop. The roadmap leaves them to RUNS and to the history budget.
 - Some constructor parameters of `CompletionService` are not used by any code in the file. Left alone here.
 - `mvn test` has six errors before CORE, in `DownloadServiceTest`, `DocxCommentAnnotatorTest` and `AssistantToolSupportTest` (the last one passes when run alone). CORE is checked against the other tests.
