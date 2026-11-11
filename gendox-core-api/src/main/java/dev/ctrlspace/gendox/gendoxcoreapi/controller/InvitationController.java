@@ -68,7 +68,7 @@ public class InvitationController {
 
 
     @GetMapping("/invitations/acceptance")
-    public Invitation acceptInvitation(@RequestParam("email") String inviteeEmail,@RequestParam("token") String token) throws GendoxException {
+    public Invitation acceptInvitation(@RequestParam("email") String inviteeEmail, @RequestParam("token") String token) throws GendoxException {
 
         // A revoked invitation only has its expiry moved to the past, and an accepted link must not
         // add the member again after they were removed: only pending, unexpired invitations are accepted here.
@@ -81,7 +81,7 @@ public class InvitationController {
             throw new GendoxException("INVITATION_ALREADY_ACCEPTED", "Invitation has already been accepted", HttpStatus.BAD_REQUEST);
         }
 
-        return userInvitationService.acceptInvitation(inviteeEmail, token);
+        return userInvitationService.fillAcceptanceNames(userInvitationService.acceptInvitation(inviteeEmail, token));
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_ADD_USERS', 'getRequestedOrgIdFromPathVariable')")

@@ -75,14 +75,28 @@ const AcceptInvitationPage = () => {
             </span>
             <h2>You’re in</h2>
             <p className='muted' style={{ lineHeight: 1.6 }}>
-              You joined the team that invited you
+              {invitation?.inviterName && (
+                <>
+                  <b>{invitation.inviterName}</b> invited you.{' '}
+                </>
+              )}
+              You joined{' '}
+              {invitation?.organizationName ? <b>{invitation.organizationName}</b> : 'the team that invited you'}
               {ROLES[role] && (
                 <>
                   {' '}
                   as {article(roleTitle(role))} <b>{roleTitle(role)}</b>
                 </>
               )}
-              {invitation?.projectId ? ', with access to the agent they shared' : ''}. Gendox opens in{' '}
+              {invitation?.projectId &&
+                (invitation.agentName ? (
+                  <>
+                    , with access to <b>{invitation.agentName}</b>
+                  </>
+                ) : (
+                  ', with access to the agent they shared'
+                ))}
+              . Gendox opens in{' '}
               {Math.max(counter, 0)} seconds.
             </p>
             <button className='btn primary' style={{ marginTop: 8 }} onClick={() => router.replace(destination)}>
