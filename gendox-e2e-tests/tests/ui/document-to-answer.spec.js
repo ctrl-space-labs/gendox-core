@@ -2,6 +2,9 @@ const { test, expect } = require('../../support/workspace');
 const { sessionOf } = require('../../support/login');
 const { inProject, apiResponse, expectOk, textFile } = require('../../support/app');
 const documents = require('../../page-objects/apis/documents');
+const embeddingsProject = require('../../page-objects/apis/embeddingsProject');
+const { openChat, send } = require('../../support/chat');
+const { messages } = require('../../support/domain');
 
 test.use({ storageState: sessionOf('testUser1') });
 
@@ -26,15 +29,24 @@ test('document to answer: upload, read the sections, ask in chat', { tag: '@smok
     await expect(page.getByRole('heading', { name: 'least-squares Document' })).toBeVisible();
     await expect(page.getByRole('main').getByText(/least squares/i).first()).toBeVisible();
 
-    await page.goto(inProject(workspace, 'chat'));
-    // The chat clears the input and drops the message when the agent is not set yet, so wait
-    // until the header shows the agent before typing.
-    await expect(page.getByText(`${workspace.name} project Agent`).first()).toBeVisible();
-    await page.getByRole('textbox', { name: 'Ask anything...' }).fill('What are the drawbacks of least squares?');
-    await page.getByRole('button', { name: 'Send' }).click();
-
-    await expect(page.getByText('What are the drawbacks of least squares?').first()).toBeVisible();
-    await expect(page.getByText('MOCK GEMINI RESPONSE FOR PERFORMANCE TESTING').first()).toBeVisible({ timeout: 30_000 });
+    await expectOk(await embeddingsProject.getProjectEmbeddings(api, workspace.ownerToken, workspace.projectId));
+    await openChat(page, workspace);
+    await send(page, 'What are the drawbacks of least squares?', 1);
+    await expect(page.getByText('calling advanced_search', { exact: true })).toBeVisible();
+    await page.getByText('calling advanced_search', { exact: true }).click();
+    await expect(page.getByText('↳ result', { exact: true }).first()).toBeVisible();
     await expect(page).toHaveURL(/threadId=/);
-    await expect(page.getByRole('heading', { name: 'Threads' })).toBeVisible();
+    const threadId = new URL(page.url()).searchParams.get('threadId');
+
+    await send(page, 'How does that relate to outliers in the same document?', 2);
+    expect(new URL(page.url()).searchParams.get('threadId')).toBe(threadId);
+    const stored = await messages(api, workspace, threadId);
+    expect(stored.filter(m => m.role === 'user').map(m => m.value)).toEqual([
+        'What are the drawbacks of least squares?',
+        'How does that relate to outliers in the same document?',
+    ]);
+    expect(stored.filter(m => m.role === 'tool' && m.name === 'advanced_search')).toHaveLength(2);
+
+    await page.reload();
+    await expect(page.getByText('MOCK GEMINI RESPONSE FOR PERFORMANCE TESTING', { exact: true })).toHaveCount(2);
 });

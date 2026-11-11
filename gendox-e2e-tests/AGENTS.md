@@ -47,7 +47,11 @@ Only the last 30 failed runs keep their folder.
   environment's ports from `../gendox-compose-scripts/ephemeral/.env`. Projects: `setup` logs
   each seeded user in and saves the session in `.auth/<invocation>/`; `api` includes
   `tests/api-tests` and `tests/smoke/api.spec.js`; `ui` includes `tests/ui` and
-  `tests/smoke/ui.spec.js` and starts from the saved sessions.
+  `tests/smoke/ui.spec.js` and starts from the saved sessions. The API and UI projects also
+  include `tests/regression/*.api.spec.js` and `*.ui.spec.js`, respectively.
+- `streaming-contract` runs the embedded frontend against `fixtures/chat-streaming-server.cjs`
+  in the full suite, with one worker because that legacy fixture has shared state. It is
+  excluded from smoke. It exercises the client protocol, not real backend persistence.
 - `support/workspace.js`: isolation. A test that changes data works in an organization of
   its own. Use the `workspace` fixture for one test, or `sharedWorkspace()` for a file whose
   tests build on each other. A passing test deactivates its organization; a failing one keeps
@@ -78,7 +82,8 @@ smoke command enforces a 60-second global timeout (including global setup and re
 with no retries. Builds and stack boot happen beforehand. It must contain no skips.
 
 `tests/smoke/api.spec.js` holds independent API checks; `tests/smoke/ui.spec.js` holds focused
-browser checks. Three existing browser journeys also carry the smoke tag. Do not add smoke
+browser checks. Three existing browser journeys and the Sources case in
+`tests/regression/chat.ui.spec.js` also carry the smoke tag. Do not add smoke
 tags to serial CRUD chains or cases using `sharedWorkspace`. Put all prerequisites in the
 case or its test-scoped fixture, and verify the case alone as well as in a parallel run.
 
@@ -90,15 +95,22 @@ Project creation in the browser uses testUser3 as its owner: other smoke cases d
 that identity's organization/project memberships while it refreshes its profile.
 
 The current [coverage plan](../.ai/e2e-coverage-2026-11-11.md) lists remaining application
-journeys and their prerequisites. The older three unfinished smoke journeys are now full-suite
-backlog entries, alongside the unfinished training case.
+journeys and their prerequisites. The older unfinished journeys now have executable
+full-suite tests for logout, workspace creation, insights generation and training.
+Use `--grep @p1`, `--grep @p2`, or `--grep-invert @background` to select regression work.
+`E2E_UI_WORKERS` defaults to four to keep local Chromium rendering responsive. The API
+workers and each isolated browser case remain parallelizable.
 
 ## Things that bite
 
 - **Stale profile.** The API caches each user's organizations and projects. The seeded
   users act in many tests at once, and right after a change a user can still get the old
   state. After creating an organization or project, or adding a member, call
-  `ensureAccess()` before using it. The fixture already does.
+  `ensureAccess()` before using it. The fixture already does. Its `setupRequest` helper
+  also refreshes the owner's cached membership after a refused fixture-construction
+  request. Never use that helper around access-denial assertions or application actions
+  under test. API contexts allow 30 seconds per request for cold document parsers;
+  browser actions have a separate 10-second limit and smoke retains its whole-run cap.
 - **First organization after an API start.** Creating several organizations at once right
   after the API starts breaks its DID key setup until it restarts. The global setup creates
   one alone first. If creating an organization fails with a DID resolver error, run
@@ -109,6 +121,9 @@ backlog entries, alongside the unfinished training case.
   crashes the page. Call `projectSettingsLoaded(page)` first.
 - **Uploads** use a hidden file input: `page.locator('input[type=file]').setInputFiles(...)`,
   then the "Upload Files" button.
+- **Mock models** now honor a required `advanced_search` call, return structured answers for
+  Document Insights and use stable mock vectors. They exercise real tools/jobs without LLM
+  costs; they do not assess relevance or answer quality.
 - **Training** (splitting and embedding uploaded documents) is a background job. Tests that
   need sections ask for the split through the API (`documents.splitDocumentSections`).
 

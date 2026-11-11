@@ -25,7 +25,7 @@ npx playwright install chromium
 | Whole suite | `npm test` |
 | List the tests | `npm run list` |
 | Open the last report | `npm run report` |
-| Run interactively | `npx playwright test --ui` |
+| Run interactively | `npm run ui` |
 
 These are Playwright's own commands; the `npm run` ones are short aliases defined in
 `package.json`. Smoke tests are the ones tagged `@smoke` in the code. The smoke configuration
@@ -43,7 +43,26 @@ npm run smoke -- -g "knowledge pipeline"   # this case also works alone
 
 Use separate CI checkouts for concurrently running shards; the normal report/history files
 are shared within a checkout. Keep setup dependencies enabled. `npm test` includes smoke
-and the broader regression cases; four older unfinished browser journeys remain skipped there.
+and the broader regression cases, including background jobs and the deterministic streaming
+contract project. Browser UI mode can hide other projects: enable `setup`, `api`, and `ui`
+in its project filter, then run the four setup logins before browser cases.
+
+Useful filters:
+
+```bash
+npx playwright test --grep @p1
+npx playwright test --grep @p2
+npx playwright test --project=streaming-contract
+npx playwright test --grep-invert @background
+```
+
+The `streaming-contract` project uses a local API fixture rather than the running backend.
+All other API/browser projects use the real ephemeral stack with mock models. Background
+jobs may take several minutes and never enter smoke. `E2E_UI_WORKERS` controls browser
+concurrency (default four), independently of the total `E2E_WORKERS` limit (default eight).
+
+`npm run report` displays the most recent invocation, including filtered invocations. Run
+`npm test` before opening it to see the complete report. Persistent run summaries are below.
 
 [Coverage plan and remaining journeys](../.ai/e2e-coverage-2026-11-11.md) records the review,
 smoke coverage, priorities and service requirements for the full application suite.

@@ -1,6 +1,7 @@
 # Application e2e coverage
 
-Status: smoke implemented and validated locally, 2026-11-11; full-suite expansion is the backlog below.
+Status: smoke and a first P1/P2 regression batch implemented, 2026-11-11.
+The implementation table distinguishes executable coverage from remaining scenarios.
 This is the current coverage plan. The November 6 and 9 environment plans describe the setup;
 the November 10 handover retains the history of unfinished journeys.
 
@@ -20,8 +21,8 @@ Problems with the earlier smoke selection:
 - Browser storage-state filenames were shared by separate invocations in a checkout.
 
 The replacement uses independent API scenarios, focused browser scenarios and the three existing
-core browser journeys. Existing CRUD cases remain in the full suite. The unfinished journeys
-remain explicitly unfinished; the smoke selection does not include them.
+core browser journeys. Existing CRUD cases remain in the full suite. The four previously
+unfinished browser journeys now run in the full suite, outside smoke.
 
 ## Smoke contract
 
@@ -49,7 +50,8 @@ directory. No external model, mail server, Google account or paid provider is ne
 | Browser | Project creation | Submit creation form, reach home, find project, verify stored fields |
 | Browser | Tasks | Create Document Insights, open it, reload saved task |
 | Browser | Reader access | Load settings, refuse update, reload unchanged value |
-| Browser | Document to answer | Upload, open sections, send question and display mock answer |
+| Browser | Document to answer | Upload, open sections, embed, send question and follow-up, expand tool call/result, verify persisted turns and reload |
+| Browser | Chat sources | Independently prepare a retrieved document, open Sources, follow its link and verify the document page |
 | Browser | Agent settings | Save instructions/model settings, reload, use them in chat |
 | Browser | Written document | Create in editor, add section, read saved section after reload |
 | Setup | Four browser logins | Runtime frontend configuration, OIDC redirects, Keycloak and profile loading |
@@ -60,45 +62,83 @@ checkouts (or sequentially locally); do not use `--no-deps`. `E2E_WORKERS` or `-
 concurrency without changing scenarios. Multiple runners sharing one checkout still share the
 standard Playwright report/history destinations; use separate checkouts for concurrent runs.
 
-## Full-suite backlog
+## P1/P2 implementation
 
-These are test specifications, not created tracker tickets. P1 is the next implementation batch;
-P2 follows core journeys; P3 needs a separate service-enabled environment. Each row should become
-one or more independent cases with its own workspace, not one serial mega-journey.
+All new application cases use the real ephemeral API and database. Browser cases use real
+pages and authentication. The mock Gemini adapter now supports required `advanced_search`
+calls, structured Insights answers and stable embedding vectors. The backend executes the
+real retrieval tool and jobs; mock answers do not assess answer quality or semantic relevance.
+No paid LLM is called. ProvenAI remains disabled and its features are excluded.
 
-| Priority | Area | Remaining scenarios and acceptance criteria | Fixture / dependency |
+The isolated `streaming-contract` project is included in `npm test`; it serves the built
+frontend against its existing local API fixture. Its single worker is confined to that
+project; smoke and workspace-scoped regression cases remain independent and parallelizable.
+Browser concurrency defaults to four, under the total eight-worker limit, and is configurable
+with `E2E_UI_WORKERS`. Smoke keeps its 60-second cap and no retries or skips.
+
+| Priority | Area | Executable coverage | Remaining coverage |
 |---|---|---|---|
-| P1 | Sign in/out | Finish the parked logout case; wait for the completed redirect chain, then verify protected navigation requires credentials. Invalid password, expired session, refresh and deep-link return | Separate browser session per case |
-| P1 | Organizations | Browser organization creation; switching organizations; persist editable fields; deactivate only the test's organization; validation and cancel paths | Organization created by the case; no shared profile edits |
-| P1 | Projects | Diagnose parked rename/reload journey, then cover rename, description, auto-training toggle, switching and deactivation | Own organization/project; owner creation identity separated from concurrent creation |
-| P1 | Documents | Upload txt/md/pdf/docx/xlsx fixtures; validate unsupported/oversized/empty inputs; list/filter/page; open content and metadata; edit title/sections; download and remove with confirmation; cancel removal | Small committed format fixtures; test-scoped workspace |
-| P1 | Training | Finish parked Training-button test; poll job status to terminal success and verify searchable sections; retraining, failure state and repeat invocation | Background-job tier with measured multi-minute budget; mock embedding model |
-| P1 | Chat and threads | Follow-up messages preserve context; reopen persisted thread; rename/delete thread; stop generation; failed turn and retry; citations/source navigation; message copy; search/filter threads; attachments persist across reload | Mock models, independent threads/documents |
-| P1 | Streaming | Connect the existing isolated streaming tests to the full validation command or CI as a separate project; add real-stack stream completion, cancellation, error and persisted-answer checks | Existing mock-server tests are outside the default application suite |
-| P1 | Members and roles | Keep existing owner/reader journey; add admin/editor/reader operation matrix, add/remove membership, role changes, revocation after reload and project-membership boundaries | Each case creates and assigns its own memberships; allowed counterpart for denied routes |
-| P1 | Document Insights | Finish parked document/question selection; generate mock answers and verify cells after reload. Edit questions, add/remove documents, rerun, pagination and export | Small pre-split document and mock completion model |
-| P2 | Task management | Rename/duplicate/delete each supported task type; list filtering/paging; nodes/edges persist; status/loading/error states | Separate task per case |
-| P2 | Document digitization | Upload small fixture, configure extraction, run job, inspect/export output; invalid file and failed job | Deterministic OCR/digitization adapter needed before enabling local run |
-| P2 | Agent configuration | All persisted settings, prompt validation, model selection, retrieval settings, tool validation, disabled/missing model, and feedback for failed save | Mock models/tools, no paid provider calls |
-| P2 | Search | Global search opens correct project/document; semantic empty/no-match result; filters/pagination; content changed after retraining | Documents created in own workspace; stable mock vectors |
-| P2 | API keys | Use a created key against an allowed endpoint, exercise its scope, revoke it and verify refusal; list/copy UI and validation | Test-owned keys; never retain key values in public notes |
-| P2 | Provider keys/connectors | Create/update/remove configuration; masked values remain masked; invalid credentials and connection errors produce useful feedback | Local stub provider/connector; test-only values |
-| P2 | Integrations | Configure Git/S3/API sources, run sync, update/delete source, verify imported content and failure status | Local Git/HTTP/S3-compatible fixtures; scheduler-aware budget |
-| P2 | Web scraping | Add website, discover/select pages, scrape, track jobs, inspect imported content, rescrape/remove; invalid URL and controlled upstream errors | Local HTTP pages plus deterministic Firecrawl stub |
-| P2 | Subscriptions/usage | Plan/usage displays; actions consume expected usage; configured-limit rejection; isolation between organizations | Abstract test plan limits; fresh organization per case |
-| P2 | Profile/preferences | Profile read/edit, org/project navigation, theme, guard corrections and stale selected IDs | Dedicated editable identity; avoid mutating seeded shared profiles |
-| P2 | Embedded chat | Real parent page initializes iframe, passes supported configuration, exchanges messages and displays a persisted answer; reload/reconnect | Local parent origin and own project; browser contexts isolated |
-| P2 | Responsive/accessibility | Main user journeys at narrow viewport; keyboard focus, accessible dialogs/labels, error feedback and navigation | Chromium viewport project; add browser engines in nightly tier |
-| P2 | Admin skills | Authorized CRUD/versioning/validation, unauthorized refusal, agent skill assignment and execution | Dedicated seeded admin identity required; no production credentials |
+| P1 | Authentication | Logout and protected redirect, invalid password, saved-session deep link and reload | Actual token expiry/refresh and return after fresh login |
+| P1 | Organizations/projects | Browser creation, rename, address/phone, description, auto-training persistence; existing API CRUD | Switch between two workspaces, browser validation/cancel/deactivation |
+| P1 | Documents | txt/md/pdf/docx/xlsx upload, parsing, metadata, original bytes, pagination, rename/removal, direct-link reload, clear upload queue | Invalid/oversized/empty files, section editing, browser removal confirmation/cancel |
+| P1 | Training | Real Training button and scheduled processing | Repeat invocation, retraining and controlled job failure; assert indexed search after scheduled training |
+| P1 | Chat | Browser question/follow-up, tool expansion, saved turns; API search OFF/ALWAYS, rename/delete, membership boundary; copy answer; attachment reload/download; Sources navigation assertion | Stop/retry, thread filtering and browser rename/delete |
+| P1 | Streaming | Existing plain stream, client tool continuation and navigation/resume contract cases now in full suite | Real-stack stream completion, cancellation and controlled error |
+| P1 | Roles | Admin/editor/reader operation matrix, membership revocation, promotion/demotion | Additional organization/project boundaries and reload via browser |
+| P1 | Insights | Browser document/question selection, generated cell and reload; API edit/remove questions, duplicate nodes, run/regenerate, CSV export | Remove documents via browser, table pagination, controlled failure |
+| P2 | Tasks | Four supported types create/rename/duplicate/delete; filtering/pagination assertion; browser rename/cancel deletion | Edge persistence and loading/error states |
+| P2 | Digitization | Small PDF, real scheduled job using mock completion, CSV export | OCR image boundary, invalid input and controlled failure |
+| P2 | Agent configuration | Existing browser settings plus persisted retrieval/generation settings and custom skill assignment/removal | Validation, disabled/missing models, controlled save failure and skill execution |
+| P2 | Search | Global agent/document navigation and empty-project semantic result | Filters/pagination, changed content after retraining, relevance checks require appropriate model fixture |
+| P2 | API/provider keys | API key authentication/revocation, provider key create/update/delete and masking | API key scopes/copy/validation and stubbed provider credential errors |
+| P2 | Connectors/integrations | Disabled connector configuration/update/removal; Git/S3 inactive configuration/schedule/removal; website CRUD and scrape budget arithmetic | Actual Git/S3/API sync and Firecrawl jobs need deterministic local upstream fixtures |
+| P2 | Subscription/usage | Active plan and available plan reads | UI usage, consumption, configured limits and organization isolation |
+| P2 | Profile/navigation | Identity display, stale selected-ID correction | Profile editing with dedicated identity, theme and navigation preferences |
+| P2 | Embedded chat | Real widget/iframe sends a message through the real backend and displays an answer | Cross-origin parent configuration/events, reload/reconnect persistence |
+| P2 | Responsive/accessibility | Narrow viewport project/document upload dialog | Keyboard focus, labels/dialogs/error feedback across main journeys |
+| P2 | Admin skills | Library/tools reads and project-specific custom skill assignment | Authorized global CRUD/versioning needs a dedicated seeded administrator |
+
+Source metadata and task filtering currently have executable failing assertions in this
+ephemeral environment. Application queries, schema and feature flags have not been changed
+to make those assertions pass. Keep the failures visible; do not mark them as expected or
+skip them. Recheck the environment separately before attributing them to application behavior.
+
+### P1/P2 validation
+
+Measured on the running ephemeral stack after rebuilding the mock adapter:
+
+| Command | Result | Duration |
+|---|---|---|
+| `mvn -q -Dtest=MockGeminiServiceAdapterTest test` | 3 passed | Unit tests |
+| `npm run smoke` | 19 passed, 1 failed, no skips/retries | 23.0 s |
+| `npm test` | 120 passed, 3 failed, no skips/retries | 87 s |
+
+The smoke failure is Sources metadata returning HTTP 500. The full suite includes that
+browser case, the corresponding API case and a task-filtering HTTP 500 failure. Navigation
+from Sources is implemented but cannot be validated past that response on this stack.
+The other tests, including document parsing, attachments, embedded chat, scheduled training,
+Insights, Digitization and the streaming contract, passed in the final full run.
+No application source besides the mock adapter changed. The combined HTML report is left
+as the latest invocation; use `npm run report`. Run history retains the failure traces and
+API logs locally.
+
+## Service-enabled backlog
+
+These are test specifications, not created tracker tickets. Each future case must own its
+workspace. P1/P2 work remaining in the table above also needs separate scenarios rather
+than shared serial journeys.
+
+| Priority | Area | Scenarios | Fixture / dependency |
+|---|---|---|---|
 | P3 | Invitations | Invite, accept, expiry, revoke, duplicate email and role selection, including UI loading/error states | Local mail sink and disposable users |
 | P3 | Earth Observation | OAuth guard, create/load/save scripts, editor execution, layers and layout persistence, iframe chat handoff | Dedicated GEE test account or documented adapter boundary; separate opt-in tier |
-| P3 | External providers/ProvenAI | Small contract runs for enabled real integrations; provider timeout/error and callback processing | Explicit service credentials and spending budget; excluded from smoke |
+| P3 | External providers | Small contract runs for enabled real integrations; provider timeout/error processing | Explicit service credentials and spending budget; excluded from smoke; ProvenAI excluded entirely |
 
 DIDs, wallets and verifiable credentials are excluded following the existing handover: that area
 is scheduled for removal. Never create tracker tickets or change application behavior as part of
 stabilizing a test without a separate request.
 
-## Validation
+## Initial smoke validation
 
 Measured against this checkout's already running ephemeral stack, with no application changes:
 
@@ -117,5 +157,5 @@ configuration-level grep filtering out setup and a test issuing a second reload 
 organization save was already reloading the page; both test issues were corrected. Eight
 concurrent browser journeys need the normal 10-second assertion readiness waits on this stack;
 shortening them to five seconds produced false failures under load. The whole-run cap remains
-60 seconds. Existing unfinished logout, workspace rename, insights generation and scheduled
-training journeys remain visible as full-suite skips, with the specifications above.
+60 seconds. The four full-suite skips in these historical results have since been replaced
+by executable logout, workspace creation, insights generation and scheduled training cases.

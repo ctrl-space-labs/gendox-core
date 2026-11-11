@@ -122,7 +122,7 @@ test('Semantic Completion', async ({ request }) => {
 
         expect(response.ok()).toBeTruthy();
         let respBody = await response.json();
-        expect(respBody.messages[0].value).toContain('MOCK GEMINI RESPONSE');
+        expect(respBody.messages.at(-1).value).toContain('MOCK GEMINI RESPONSE');
         expect(respBody.threadId).toBeDefined();
 
     });

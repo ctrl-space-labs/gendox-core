@@ -55,18 +55,35 @@ const ephemeralConfig = {
         baseURL: apiBaseURL,
         trace: 'retain-on-failure',
         screenshot: 'only-on-failure',
+        actionTimeout: 10_000,
+        navigationTimeout: 15_000,
     },
     projects: [
         // Logs each seeded user in once and saves the session for the ui project.
         { name: 'setup', testMatch: 'ui/auth.setup.js', use: browser },
-        { name: 'api', testMatch: ['api-tests/**/*.spec.js', 'smoke/api.spec.js'] },
+        { name: 'api', testMatch: ['api-tests/**/*.spec.js', 'smoke/api.spec.js', 'regression/**/*.api.spec.js'] },
         {
             name: 'ui',
-            testMatch: ['ui/**/*.spec.js', 'smoke/ui.spec.js'],
+            workers: process.env.E2E_UI_WORKERS ? Number(process.env.E2E_UI_WORKERS) : 4,
+            testMatch: ['ui/**/*.spec.js', 'smoke/ui.spec.js', 'regression/**/*.ui.spec.js'],
             dependencies: ['setup'],
             use: { ...browser, baseURL: frontendURL },
         },
+        {
+            name: 'streaming-contract',
+            testDir: path.resolve(__dirname, '../tests/chat-streaming'),
+            testMatch: '**/*.spec.js',
+            testIgnore: [],
+            fullyParallel: false,
+            workers: 1,
+            use: { ...browser, baseURL: 'http://127.0.0.1:3520' },
+        },
     ],
+    webServer: {
+        command: 'node fixtures/chat-streaming-server.cjs',
+        url: 'http://127.0.0.1:3520/__state',
+        reuseExistingServer: false,
+    },
     frontendURL,
     authDir,
     gendox: {

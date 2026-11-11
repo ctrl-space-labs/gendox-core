@@ -6,7 +6,8 @@ module.exports = defineConfig({
     ...config,
     grep: /@smoke/,
     // Configuration-level grep also applies to dependencies; always include real logins.
-    projects: config.projects.map(project => project.name === 'setup' ? { ...project, grep: /.*/ } : project),
+    webServer: undefined,
+    projects: config.projects.filter(project => project.name !== 'streaming-contract').map(project => project.name === 'setup' ? { ...project, grep: /.*/ } : project),
     globalTimeout: 60_000,
     timeout: 40_000,
     expect: { timeout: 10_000 },

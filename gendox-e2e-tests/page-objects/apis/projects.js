@@ -90,7 +90,8 @@ const getAiModels = async (request, token, organizationId, projectId) => {
  */
 const createProjectWithMockModels = async (request, token, organizationId, name, afterCreate) => {
 
-    const created = await createProject(request, token, { organizationId, name, description: 'Created by the tests' });
+    const setupRequest = operation => require('./fixtureSetup').setupRequest(request, token, operation);
+    const created = await setupRequest(() => createProject(request, token, { organizationId, name, description: 'Created by the tests' }));
     if (!created.ok()) {
         throw new Error(`Creating project failed: ${created.status()}`);
     }
@@ -98,11 +99,13 @@ const createProjectWithMockModels = async (request, token, organizationId, name,
     // The caller can wait here until the new project is visible to the user.
     if (afterCreate) await afterCreate(project.id);
 
-    const models = await (await getAiModels(request, token, organizationId, project.id)).json();
+    const available = await setupRequest(() => getAiModels(request, token, organizationId, project.id));
+    if (!available.ok()) throw new Error(`Reading fixture models failed: ${available.status()} ${await available.text()}`);
+    const models = await available.json();
     project.projectAgent.semanticSearchModel = models.find(model => model.model === 'mock-gemini-embedding');
     project.projectAgent.completionModel = models.find(model => model.model === 'mock-gemini-2.0-flash');
 
-    const updated = await updateProject(request, token, project);
+    const updated = await setupRequest(() => updateProject(request, token, project));
     if (!updated.ok()) {
         throw new Error(`Setting the mock models failed: ${updated.status()}`);
     }

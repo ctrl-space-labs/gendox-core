@@ -6,6 +6,34 @@ public: no secrets, no absolute paths, no details of unfixed security weaknesses
 
 ## 2026-11-11
 
+- **P1/P2 expansion:** new `tests/regression/` cases cover documents, chat, roles, tasks,
+  settings, keys/connectors, search, embedding and scheduled Insights/Digitization. All
+  four formerly parked browser journeys are executable. The coverage plan records what
+  remains; this does not mean every scenario in the original backlog is implemented.
+- Final combined run: **120 passed, 3 failed, no skips/retries, 87 seconds**. Failures are
+  Sources metadata through API and browser, plus task filtering, each receiving HTTP 500
+  on this stack. They remain visible and unchanged. `npm run report` now opens this full
+  run; `test-history/STATUS.md` records the individual pass history.
+- **Chat smoke** now checks a question, follow-up, tool call/result and persisted reload.
+  Sources navigation is a separate independent smoke case with its own document/thread.
+  Latest smoke: 19 passed, one Sources metadata HTTP 500 failure, no skips/retries,
+  23.0 seconds including real logins. No source-query, filtering or schema fixes were made.
+- The mock adapter can request real `advanced_search`, produce structured Insights answers,
+  and return stable embedding vectors. Three focused unit tests pass. The adapter does not
+  emulate relevance, answer quality, external credentials or OCR image understanding.
+- Attaching immediately after creating a chat can race the thread URL/state transition.
+  The attachment regression opens a persisted thread and waits for its saved answer first;
+  it then uploads, sends a follow-up, reloads and verifies downloaded bytes.
+- Embedded chat waits for the agent in `#chat-conversation-header`: the first matching
+  agent name can be in the hidden drawer, and the textbox can render before thread setup.
+  Browser actions remain bounded independently of the 30-second API request budget.
+- Playwright UI's project filter can show only `setup`. Enable application projects to see
+  their cases. `npm run report` shows the latest invocation, even if it was one API test;
+  `npm test` produces the combined report. Existing streaming fixture tests now participate
+  through the separate `streaming-contract` project.
+
+### Initial smoke implementation (before P1/P2 expansion)
+
 - Smoke coverage now lives in `tests/smoke/` plus the existing agent-settings,
   document-to-answer and written-document journeys. The old serial CRUD chains and three
   unfinished journeys no longer carry smoke tags. No application code was changed.

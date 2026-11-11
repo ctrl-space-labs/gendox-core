@@ -56,7 +56,7 @@ test.describe('API smoke', { tag: '@smoke' }, () => {
         const completion = await embeddings.semanticCompletion(api, token, question, { projectId });
         await expectOk(completion);
         const answer = await completion.json();
-        expect(answer.messages[0].value).toContain('MOCK GEMINI RESPONSE');
+        expect(answer.messages.at(-1).value).toContain('MOCK GEMINI RESPONSE');
         expect(answer.threadId).toBeTruthy();
     });
 });

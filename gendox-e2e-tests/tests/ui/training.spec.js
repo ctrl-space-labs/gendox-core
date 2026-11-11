@@ -6,8 +6,7 @@ const documents = require('../../page-objects/apis/documents');
 test.use({ storageState: sessionOf('testUser1') });
 
 // Not a smoke test: training is a background job the API picks up on a schedule.
-// FIXME, never run: how long the background job takes here is not measured yet.
-test.fixme('training: the Training button splits the uploaded documents into sections', async ({ page, api, workspace }) => {
+test('training: the Training button splits the uploaded documents into sections', { tag: ['@p1', '@background'] }, async ({ page, api, workspace }) => {
     test.setTimeout(240_000);
     await documents.uploadDocument(api, workspace.ownerToken, workspace.organizationId, workspace.projectId, textFile);
 

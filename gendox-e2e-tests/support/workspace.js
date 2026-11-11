@@ -7,6 +7,7 @@ const projects = require('../page-objects/apis/projects');
 const projectUsers = require('../page-objects/apis/projectUsers');
 const users = require('../page-objects/apis/users');
 const seed = require('../page-objects/apis/seed');
+const { setupRequest } = require('../page-objects/apis/fixtureSetup');
 
 /**
  * Isolation for tests that change data. Each test, or each file that follows one thing
@@ -100,7 +101,7 @@ const fillWorkspace = async (api, organization, name, owner, ownerToken, members
 
     const workspaceTokens = { [owner]: ownerToken };
     for (const [member, role] of Object.entries(members)) {
-        await must(await organizationUsers.addOrganizationUser(api, ownerToken, organization.id, seed[member], role),
+        await must(await setupRequest(api, ownerToken, () => organizationUsers.addOrganizationUser(api, ownerToken, organization.id, seed[member], role)),
             `Adding ${member} to the organization`);
         workspaceTokens[member] = await tokenFor(api, member);
         await ensureAccess(api, workspaceTokens[member], organization.id);
@@ -111,7 +112,7 @@ const fillWorkspace = async (api, organization, name, owner, ownerToken, members
         projectId = await projects.createProjectWithMockModels(api, ownerToken, organization.id, `${name} project`,
             (id) => ensureAccess(api, ownerToken, organization.id, id));
         for (const member of options.projectMembers || Object.keys(members)) {
-            await must(await projectUsers.addProjectMember(api, ownerToken, organization.id, projectId, seed[member]),
+            await must(await setupRequest(api, ownerToken, () => projectUsers.addProjectMember(api, ownerToken, organization.id, projectId, seed[member])),
                 `Adding ${member} to the project`);
             await ensureAccess(api, workspaceTokens[member], organization.id, projectId);
         }
@@ -132,7 +133,7 @@ const keptNote = (workspace) => ({
 const test = base.test.extend({
     // Requests to the API, also from browser tests whose base URL is the frontend.
     api: async ({ playwright }, use) => {
-        const api = await playwright.request.newContext({ baseURL: config.use.baseURL });
+        const api = await playwright.request.newContext({ baseURL: config.use.baseURL, timeout: 30_000 });
         await use(api);
         await api.dispose();
     },
@@ -163,7 +164,7 @@ const sharedWorkspace = (label, options = {}) => {
     let failed = false;
 
     test.beforeAll(async ({ playwright }) => {
-        api = await playwright.request.newContext({ baseURL: config.use.baseURL });
+        api = await playwright.request.newContext({ baseURL: config.use.baseURL, timeout: 30_000 });
         Object.assign(workspace, await createWorkspace(api, label, options));
     });
 
