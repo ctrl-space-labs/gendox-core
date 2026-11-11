@@ -9,7 +9,7 @@ test.use({ storageState: sessionOf('testUser3') });
 
 // FIXME, not finished: the rename is saved (the API answers 200) but the old name is shown
 // after the reload. Not yet known whether the test or the application is wrong.
-test.fixme('new workspace: create an organization and a project, rename the project', { tag: '@smoke' }, async ({ page, api }) => {
+test.fixme('new workspace: create an organization and a project, rename the project', async ({ page, api }) => {
     const name = `e2e new workspace ${Date.now().toString(36)}`;
 
     await page.goto('/gendox/create-organization/');

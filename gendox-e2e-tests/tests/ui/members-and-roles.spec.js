@@ -10,7 +10,7 @@ test.use({
 
 // Members are added through the API: the application adds them by email invitation,
 // and this environment has no mail server.
-test('members and roles: a reader is listed, can read, cannot change, cannot enter another organization', { tag: '@smoke' }, async ({ page, browser, api, workspace }) => {
+test('members and roles: a reader is listed, can read, cannot change, cannot enter another organization', async ({ page, browser, api, workspace }) => {
     await documents.uploadDocument(api, workspace.ownerToken, workspace.organizationId, workspace.projectId, textFile);
 
     // The owner sees the reader in both member lists.

@@ -42,7 +42,7 @@ test.describe('Embeddings CRUD API', () => {
 //Given the project ID.
 //Then the embeddings for the given project will be produced.
 
-test('Get Project Embeddings', { tag: '@smoke' }, async ({ request }) => {
+test('Get Project Embeddings', async ({ request }) => {
 
         const response = await embeddingsProject.getProjectEmbeddings(request, token, projectId);
 
@@ -78,7 +78,7 @@ test('Get Section Embedding', async ({ request }) => {
 //When the project embeddings are created.
 //Then the sections closest to the query are returned.
 
-test('Semantic Search', { tag: '@smoke' }, async ({ request }) => {
+test('Semantic Search', async ({ request }) => {
 
         const response = await embeddings.semanticSearch(request, token, message, { projectId, size: '5' });
 
@@ -116,7 +116,7 @@ test('Outsider Semantic Search', async ({ request }) => {
 //When the project embeddings are created.
 //Then the project agent answers the message.
 
-test('Semantic Completion', { tag: '@smoke' }, async ({ request }) => {
+test('Semantic Completion', async ({ request }) => {
 
         const response = await embeddings.semanticCompletion(request, token, message, { projectId });
 

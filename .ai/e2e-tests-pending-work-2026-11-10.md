@@ -1,6 +1,8 @@
 # End-to-end tests and ephemeral environments: pending work
 
-Status: not started. Written 2026-11-10 as a handover to another agent.
+Status: historical handover, written 2026-11-10. The current smoke scope and remaining
+application coverage are tracked in [the 2026-11-11 plan](e2e-coverage-2026-11-11.md).
+The unfinished journeys below remain in the full-suite backlog, outside smoke.
 
 The setup itself is built and described in
 [ephemeral-environments-2026-11-09.md](ephemeral-environments-2026-11-09.md). This file lists only what

@@ -7,7 +7,7 @@ const config = require('../../tests.config');
 // in by itself instead of using a saved session, because it also logs out.
 // FIXME, unreliable: the log in part works (the setup project uses the same steps), but
 // after logout the next navigation often races with Keycloak's redirects. See NOTES.md.
-test.fixme('sign in and out', { tag: '@smoke' }, async ({ page }) => {
+test.fixme('sign in and out', async ({ page }) => {
     const profile = await login(page, 'testUser2');
     expect(profile.status()).toBe(200);
     await expect(page.getByRole('main').getByRole('heading', { level: 4 })).toBeVisible();

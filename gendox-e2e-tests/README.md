@@ -19,7 +19,7 @@ npx playwright install chromium
 
 | Purpose | Command |
 |---|---|
-| Smoke tests, about 20 seconds | `npm run smoke` |
+| Smoke tests, 60-second maximum on a ready stack | `npm run smoke` |
 | Specific tests | `npx playwright test documents` or `npx playwright test -g "upload"` |
 | Re-run what failed | `npx playwright test --last-failed` |
 | Whole suite | `npm test` |
@@ -28,7 +28,25 @@ npx playwright install chromium
 | Run interactively | `npx playwright test --ui` |
 
 These are Playwright's own commands; the `npm run` ones are short aliases defined in
-`package.json`. Smoke tests are the ones tagged `@smoke` in the code.
+`package.json`. Smoke tests are the ones tagged `@smoke` in the code. The smoke configuration
+adds a 60-second global timeout, includes fresh browser logins, and uses no retries. Stack
+boot and builds happen before that budget. Smoke has no skipped scenarios.
+
+Smoke scenarios run independently with test-scoped organizations and can be distributed:
+
+```bash
+npm run smoke -- --workers=8
+npm run smoke -- --shard=1/2
+npm run smoke -- --shard=2/2
+npm run smoke -- -g "knowledge pipeline"   # this case also works alone
+```
+
+Use separate CI checkouts for concurrently running shards; the normal report/history files
+are shared within a checkout. Keep setup dependencies enabled. `npm test` includes smoke
+and the broader regression cases; four older unfinished browser journeys remain skipped there.
+
+[Coverage plan and remaining journeys](../.ai/e2e-coverage-2026-11-11.md) records the review,
+smoke coverage, priorities and service requirements for the full application suite.
 
 ## Results and history
 

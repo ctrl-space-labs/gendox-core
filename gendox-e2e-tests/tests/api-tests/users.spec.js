@@ -39,7 +39,7 @@ test.describe('Users CRUD API', () => {
 //  Given that the user is logged in.
 //  Then the user profile is returned.
 
-    test('Get User Profile', { tag: '@smoke' }, async ({ request }) => {
+    test('Get User Profile', async ({ request }) => {
         const response = await users.getUserProfile(request, token);
 
         expect(response.ok()).toBeTruthy();

@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "playwright test",
-    "smoke": "playwright test --grep @smoke",
+    "smoke": "playwright test --config playwright.smoke.config.js",
     "list": "playwright test --list",
     "report": "playwright show-report"
   },

@@ -5,6 +5,9 @@ history and the agent docs are built and run. Three of the seven browser journey
 [Implementation status](#implementation-status). It replaces the
 [original plan of 2026-11-06](ephemeral-environments-2026-11-06.md), which is kept as first written.
 
+The [2026-11-11 coverage plan](e2e-coverage-2026-11-11.md) supersedes the smoke selection
+and browser-journey scope below. Earlier measurements here are historical.
+
 ## Implementation status
 
 | Part | State |

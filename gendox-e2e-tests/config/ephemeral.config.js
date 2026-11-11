@@ -27,7 +27,8 @@ const apiBaseURL = url('E2E_API_BASE_URL', 'EPH_API_PORT');
 const frontendURL = url('E2E_FRONTEND_URL', 'EPH_FRONTEND_PORT');
 const keycloakURL = process.env.E2E_KEYCLOAK_URL || `${url('E2E_KEYCLOAK_URL', 'EPH_KEYCLOAK_PORT')}/idp`;
 
-const authDir = path.resolve(__dirname, '../.auth');
+process.env.E2E_RUN_ID ||= require('crypto').randomUUID();
+const authDir = path.resolve(__dirname, '../.auth', process.env.E2E_RUN_ID);
 const browser = { ...devices['Desktop Chrome'], channel: process.env.PLAYWRIGHT_CHANNEL || undefined };
 
 const ephemeralConfig = {
@@ -58,10 +59,10 @@ const ephemeralConfig = {
     projects: [
         // Logs each seeded user in once and saves the session for the ui project.
         { name: 'setup', testMatch: 'ui/auth.setup.js', use: browser },
-        { name: 'api', testMatch: 'api-tests/**/*.spec.js' },
+        { name: 'api', testMatch: ['api-tests/**/*.spec.js', 'smoke/api.spec.js'] },
         {
             name: 'ui',
-            testMatch: 'ui/**/*.spec.js',
+            testMatch: ['ui/**/*.spec.js', 'smoke/ui.spec.js'],
             dependencies: ['setup'],
             use: { ...browser, baseURL: frontendURL },
         },

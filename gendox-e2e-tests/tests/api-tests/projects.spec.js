@@ -38,7 +38,7 @@ test.describe('Projects CRUD API', () => {
 //  Given the project ID.
 //  Then from the selected project is returned.
 
-    test('Get Project by id', { tag: '@smoke' }, async ({ request }) => {
+    test('Get Project by id', async ({ request }) => {
 
         const response = await projects.getProjectById(request, adminToken, seed.organization1, seed.project1_1);
 
@@ -73,7 +73,7 @@ test.describe('Projects CRUD API', () => {
 //  When the user is not a member of the organization.
 //  Then no project is revealed.
 
-    test('Outsider Gets Projects By Organization', { tag: '@smoke' }, async ({ request }) => {
+    test('Outsider Gets Projects By Organization', async ({ request }) => {
 
         const response = await projects.getProjectsByOrganization(request, outsiderToken, seed.organization1);
 

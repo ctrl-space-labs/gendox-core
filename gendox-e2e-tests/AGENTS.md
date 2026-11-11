@@ -14,10 +14,10 @@ Run from `gendox-e2e-tests`, against this checkout's environment (see
 
 | When | Command | Time |
 |---|---|---|
-| Between turns: did I break something basic? | `npm run smoke` | about 20 s |
+| Between turns: did I break something basic? | `npm run smoke` | about 30 s; 60 s cap |
 | While working on a feature: its own tests | `npx playwright test documents` or `-g "upload"` | seconds |
 | Re-run what just failed | `npx playwright test --last-failed` | seconds |
-| End of the work: no regression | `npm test` | about 20 s |
+| End of the work: no regression | `npm test` | measure on your stack |
 | What tests exist | `npm run list`, or `npx playwright test --list --grep @smoke` | |
 | The last run in a browser | `npm run report` | |
 
@@ -45,8 +45,9 @@ Only the last 30 failed runs keep their folder.
 
 - `playwright.config.js` takes its settings from `config/ephemeral.config.js`, which reads the
   environment's ports from `../gendox-compose-scripts/ephemeral/.env`. Projects: `setup` logs
-  each seeded user in and saves the session in `.auth/`, `api` is `tests/api-tests`, `ui` is
-  `tests/ui` and starts from the saved sessions.
+  each seeded user in and saves the session in `.auth/<invocation>/`; `api` includes
+  `tests/api-tests` and `tests/smoke/api.spec.js`; `ui` includes `tests/ui` and
+  `tests/smoke/ui.spec.js` and starts from the saved sessions.
 - `support/workspace.js`: isolation. A test that changes data works in an organization of
   its own. Use the `workspace` fixture for one test, or `sharedWorkspace()` for a file whose
   tests build on each other. A passing test deactivates its organization; a failing one keeps
@@ -73,7 +74,24 @@ Only the last 30 failed runs keep their folder.
 
 Tag with `{ tag: '@smoke' }`. A smoke test checks one path a user cannot work without, runs
 alone (also when the other tests of its file are filtered out), and takes a few seconds. The
-whole smoke run should stay under a minute. Everything else belongs in the full suite.
+smoke command enforces a 60-second global timeout (including global setup and real logins),
+with no retries. Builds and stack boot happen beforehand. It must contain no skips.
+
+`tests/smoke/api.spec.js` holds independent API checks; `tests/smoke/ui.spec.js` holds focused
+browser checks. Three existing browser journeys also carry the smoke tag. Do not add smoke
+tags to serial CRUD chains or cases using `sharedWorkspace`. Put all prerequisites in the
+case or its test-scoped fixture, and verify the case alone as well as in a parallel run.
+
+`npm run smoke -- --shard=1/2` supports distribution; repeat with `--shard=2/2` in a separate
+CI checkout. Keep project dependencies enabled: every shard logs its users in. Sessions are
+invocation-specific, but reports/history still share destinations inside one checkout.
+`E2E_WORKERS` or `--workers` changes worker count without serializing tests or altering coverage.
+Project creation in the browser uses testUser3 as its owner: other smoke cases do not change
+that identity's organization/project memberships while it refreshes its profile.
+
+The current [coverage plan](../.ai/e2e-coverage-2026-11-11.md) lists remaining application
+journeys and their prerequisites. The older three unfinished smoke journeys are now full-suite
+backlog entries, alongside the unfinished training case.
 
 ## Things that bite
 
@@ -85,6 +103,8 @@ whole smoke run should stay under a minute. Everything else belongs in the full 
   after the API starts breaks its DID key setup until it restarts. The global setup creates
   one alone first. If creating an organization fails with a DID resolver error, run
   `docker compose restart api`.
+- **Organization settings saves** reload the document themselves. Start waiting for the main-frame
+  navigation before clicking Save; do not race it with a second `page.reload()`.
 - **Settings tabs.** Clicking a tab of project settings before the project has loaded
   crashes the page. Call `projectSettingsLoaded(page)` first.
 - **Uploads** use a hidden file input: `page.locator('input[type=file]').setInputFiles(...)`,

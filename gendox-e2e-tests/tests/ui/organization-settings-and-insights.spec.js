@@ -7,7 +7,7 @@ test.use({ storageState: sessionOf('testUser1') });
 
 // FIXME, not finished: written up to the "Select Project Documents" dialog of the task.
 // Adding the document and a question, and running the task, are still to do.
-test.fixme('organization settings and insights: rename, create an API key, run a Document Insights task', { tag: '@smoke' }, async ({ page, api, workspace }) => {
+test.fixme('organization settings and insights: rename, create an API key, run a Document Insights task', async ({ page, api, workspace }) => {
     await documents.uploadDocument(api, workspace.ownerToken, workspace.organizationId, workspace.projectId, textFile);
     await documents.splitDocumentSections(api, workspace.ownerToken, workspace.organizationId, workspace.projectId);
 

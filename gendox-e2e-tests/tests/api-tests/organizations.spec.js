@@ -37,7 +37,7 @@ test.describe('Organizations CRUD API', () => {
 //  Given the organization ID.
 //  Then from the selected organization is returned.
 
-    test('Get Organization by id', { tag: '@smoke' }, async ({ request }) => {
+    test('Get Organization by id', async ({ request }) => {
 
 
         const response = await organizations.getOrganizationById(request, token, organizationId1);

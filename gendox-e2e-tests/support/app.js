@@ -17,9 +17,9 @@ const apiResponse = (page, method, pathPattern) => page.waitForResponse(response
 // Fails with what the API answered, which a bare status check would hide.
 const expectOk = async (response) => {
     if (!response.ok()) {
-        const request = response.request();
-        throw new Error(`${request.method()} ${new URL(response.url()).pathname} answered ${response.status()}: ` +
-            `${(await response.text()).slice(0, 500)}\nSent: ${(request.postData() || '').slice(0, 500)}`);
+        const request = response.request?.();
+        throw new Error(`${request?.method() || 'API'} ${new URL(response.url()).pathname} answered ${response.status()}: ` +
+            `${(await response.text()).slice(0, 500)}\nSent: ${(request?.postData() || '').slice(0, 500)}`);
     }
 };
 

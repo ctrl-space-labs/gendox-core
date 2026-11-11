@@ -31,7 +31,7 @@ test.describe('Documents CRUD API', () => {
 //Given a project and a file.
 //Then the file is uploaded and the project has one document.
 
-test('Upload Document', { tag: '@smoke' }, async ({ request }) => {
+test('Upload Document', async ({ request }) => {
 
         const response = await documents.uploadDocument(request, token, organizationId, projectId, testFile);
 
@@ -63,7 +63,7 @@ test('Reader Upload Document', async ({ request }) => {
 //Given the project ID.
 //Then the project documents will be split in sections.
 
-test('Split Document Sections', { tag: '@smoke' }, async ({ request }) => {
+test('Split Document Sections', async ({ request }) => {
 
         const response = await documents.splitDocumentSections(request, token, organizationId, projectId);
 

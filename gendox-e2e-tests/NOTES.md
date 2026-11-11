@@ -4,6 +4,22 @@ Findings by coding agents, newest first: dated, short, one entry per finding. Wh
 finding turns out to be lasting, move it into `AGENTS.md` and delete it here. This file is
 public: no secrets, no absolute paths, no details of unfixed security weaknesses.
 
+## 2026-11-11
+
+- Smoke coverage now lives in `tests/smoke/` plus the existing agent-settings,
+  document-to-answer and written-document journeys. The old serial CRUD chains and three
+  unfinished journeys no longer carry smoke tags. No application code was changed.
+- The complete smoke run passed 19 checks (15 scenarios plus four real browser logins),
+  with eight workers, no skips/retries, in 27.9 seconds. The full run passed 57 with the
+  four pre-existing unfinished browser cases skipped, in 28.5 seconds. Both native shards
+  also passed separately: 12 checks in 8.0 seconds and 11 checks in 26.9 seconds,
+  each including its own four logins.
+- Browser project creation uses an organization owned by testUser3 so other smoke cases
+  do not change that user's memberships while the frontend refreshes its profile.
+- The current review and prioritized remaining journeys are in
+  [the coverage plan](../.ai/e2e-coverage-2026-11-11.md). The older findings below remain
+  applicable to the unfinished full-suite journeys.
+
 ## 2026-11-10
 
 - **Unfinished browser journeys**, marked `test.fixme` so the runs stay green:
