@@ -5,16 +5,18 @@ import { ArrowUpRight, LoaderCircle, Plus, Search, Upload } from 'lucide-react'
 import useActiveScope from 'src/hooks/useActiveScope'
 import documentService from 'src/gendox-sdk/documentService'
 import taskService from 'src/gendox-sdk/taskService'
+import chatThreadService from 'src/gendox-sdk/chatThreadService'
 import { selectChatSession } from 'src/store/chat/gendoxChat'
 import { getToken } from 'src/components/agent/useAgent'
 import Chat from 'src/components/chat/Chat'
+import ChatSources from 'src/components/chat/ChatSources'
 import { useChatSession } from 'src/components/chat/useChat'
 import { fileNameOf, formatDateTime, timeAgo } from 'src/components/knowledge/documentUtils'
 import UploadDialog from 'src/components/knowledge/UploadDialog'
 import FileTile from 'src/components/ui/FileTile'
 import { TaskFormDialog } from 'src/components/tasks/TaskDialogs'
 import { TaskTile, typeOfTask } from 'src/components/tasks/taskUtils'
-import { ViewProvider } from 'src/views/ViewContext'
+import { ViewProvider, useView } from 'src/views/ViewContext'
 import { useDockTab } from 'src/components/dock/Dock'
 
 /**
@@ -126,8 +128,49 @@ export const DockChat = ({ chatKey, threadId }) => {
       chatKey={chatKey}
       variant='window'
       prefill={prefill}
-      documentHref={source => href('/gendox/document-instance', { documentId: source.documentId, sectionId: source.sectionId })}
+      onOpenSources={(threadId, answer) => actions.open(sourcesUrlOf(threadId, answer.messageId))}
     />
+  )
+}
+
+export const sourcesUrlOf = (threadId, messageId) => `/sources?${new URLSearchParams({ threadId, messageId })}`
+
+/** The sources of one answer in a tab of their own, beside the chat; a document opens in a tab at the passage */
+export const DockSources = () => {
+  const tab = useDockTab()
+  const { query } = useView()
+  const { href } = useActiveScope()
+  const { threadId, messageId } = query
+  const [metadata, setMetadata] = useState(null)
+
+  // the tab is reused for the next answer's sources, so it loads again when its URL changes
+  useEffect(() => {
+    tab.setTitle('Sources')
+    if (!threadId || !messageId) return
+    let current = true
+    setMetadata(null)
+    chatThreadService
+      .getThreadMessageMetadataByMessageId(threadId, messageId, getToken())
+      .then(response => current && setMetadata(response.data))
+      .catch(() => current && setMetadata([]))
+
+    return () => {
+      current = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [threadId, messageId])
+
+  return (
+    <div className='vw in-dock'>
+      <div className='gc-sheet-b'>
+        <ChatSources
+          isLoading={metadata === null}
+          metadata={metadata}
+          sameTab
+          documentHref={source => href('/gendox/document-instance', { documentId: source.documentId, sectionId: source.sectionId })}
+        />
+      </div>
+    </div>
   )
 }
 

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
 import { useDispatch } from 'react-redux'
-import { Check, FileText, Library, ListChecks, MessageSquareText, PanelsTopLeft, RotateCcw, ScanText, Table2 } from 'lucide-react'
+import { BookOpen, Check, FileText, Library, ListChecks, MessageSquareText, PanelsTopLeft, RotateCcw, ScanText, Table2 } from 'lucide-react'
 import useActiveScope from 'src/hooks/useActiveScope'
 import { chatActions } from 'src/store/chat/gendoxChat'
 import { clearAll } from 'src/store/chatAttachments/chatAttachments'
@@ -13,6 +13,7 @@ import {
   DockChat,
   DockKnowledge,
   DockScreen,
+  DockSources,
   DockTasks,
   tabUrlOf
 } from 'src/components/dock/dockViews'
@@ -28,6 +29,7 @@ import Menu from 'src/components/ui/Menu'
  *   /gendox/document-instance?documentId=&sectionId=
  *   /gendox/tasks/document-insights?taskId=&doc=&q=
  *   /gendox/tasks/document-digitization?taskId=&doc=
+ *   /sources?threadId=&messageId=           the sources of one answer; one such tab, reused for the next answer
  * Earth observation is a workspace of its own windows, so it opens as a full page.
  */
 const PAGES = {
@@ -38,9 +40,16 @@ const PAGES = {
   '/gendox/tasks/document-digitization': { title: 'Digitization', icon: ScanText, element: () => <DigitizationView />, screen: true }
 }
 
+// tabs with no page of their own outside the dock
+const DOCK_ONLY = {
+  '/sources': { title: 'Sources', icon: BookOpen, element: () => <DockSources /> }
+}
+
 // where a tab opens when it isn't open yet: beside windows holding similar tabs
 const NEAR = {
   chat: ['/chat'],
+  // sources open beside the chat, with the documents they lead to
+  '/sources': ['/sources', '/gendox/document-instance', '/gendox/knowledge'],
   '/gendox/document-instance': ['/gendox/document-instance', '/gendox/knowledge'],
   '/gendox/knowledge': ['/gendox/knowledge', '/gendox/document-instance'],
   '/gendox/tasks': ['/gendox/tasks'],
@@ -102,7 +111,7 @@ const AgentHomePage = () => {
           }
         }
       }
-      const page = PAGES[path]
+      const page = PAGES[path] ?? DOCK_ONLY[path]
       if (!page) return null
 
       return { title: page.title, icon: page.icon, element: <DockScreen>{page.element()}</DockScreen> }
@@ -113,7 +122,7 @@ const AgentHomePage = () => {
   const canOpen = useCallback(href => {
     const url = tabUrlOf(href)
 
-    return !!url && (pathOf(url).startsWith('/chat/') || !!PAGES[pathOf(url)])
+    return !!url && (pathOf(url).startsWith('/chat/') || !!PAGES[pathOf(url)] || !!DOCK_ONLY[pathOf(url)])
   }, [])
 
   const open = useCallback(
@@ -122,10 +131,15 @@ const AgentHomePage = () => {
       if (!url) return
       if (url === '/chat/new') url = newChatUrl()
       const path = pathOf(url)
-      if (!path.startsWith('/chat/') && !PAGES[path]) {
+      if (!path.startsWith('/chat/') && !PAGES[path] && !DOCK_ONLY[path]) {
         router.push(target) // a page the dock can't show, e.g. Earth observation
 
         return
+      }
+      // one Sources tab: another answer's sources replace the ones on screen, in the same place
+      if (path === '/sources') {
+        const shown = dockRef.current?.urls().find(u => pathOf(u) === '/sources' && u !== url)
+        if (shown) dockRef.current.rename(shown, url)
       }
       dockRef.current?.open(url, { near: NEAR[path.startsWith('/chat/') ? 'chat' : path] ?? [] })
     },
