@@ -8,8 +8,8 @@ import dev.ctrlspace.gendox.spring.batch.jobs.splitter.steps.DocumentSplitterPro
 import dev.ctrlspace.gendox.spring.batch.jobs.splitter.steps.DocumentSplitterReader;
 import dev.ctrlspace.gendox.spring.batch.jobs.splitter.steps.DocumentSplitterWriter;
 import io.micrometer.observation.ObservationRegistry;
-import org.springframework.batch.core.Job;
-import org.springframework.batch.core.Step;
+import org.springframework.batch.core.job.Job;
+import org.springframework.batch.core.step.Step;
 import org.springframework.batch.core.job.builder.FlowBuilder;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.job.flow.Flow;

@@ -48,7 +48,7 @@ public class ProvenAiQueryAdapter {
 
         HttpEntity<String> requestEntity = new HttpEntity<>(question, headers);
 
-        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(baseUrl + contextPath + searchApiPath);
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(baseUrl + contextPath + searchApiPath);
 
         ResponseEntity<List<SearchResult>> responseEntity = restTemplate.exchange(
                 builder.toUriString(),

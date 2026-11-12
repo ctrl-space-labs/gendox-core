@@ -14,14 +14,16 @@ import dev.ctrlspace.gendox.spring.batch.services.SplitterBatchService;
 import dev.ctrlspace.gendox.spring.batch.services.TrainingBatchService;
 import dev.ctrlspace.gendox.spring.batch.utils.JobUtils;
 import io.micrometer.observation.ObservationRegistry;
-import org.springframework.batch.core.Job;
+import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
-import org.springframework.batch.core.launch.JobLauncher;
+import org.springframework.batch.core.configuration.annotation.EnableJdbcJobRepository;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.batch.core.launch.JobOperator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
-import org.springframework.boot.autoconfigure.domain.EntityScan;
+import org.springframework.boot.persistence.autoconfigure.EntityScan;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -31,10 +33,11 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 
 @Configuration
-@EnableBatchProcessing(
+@EnableBatchProcessing
+@EnableJdbcJobRepository(
         tablePrefix = "gendox_jobs.batch_",
         maxVarCharLength = 1000,
-        isolationLevelForCreate = "ISOLATION_REPEATABLE_READ")
+        isolationLevelForCreate = Isolation.REPEATABLE_READ)
 @ComponentScan(basePackageClasses = {UniqueInstanceDecider.class,
         TrainingBatchService.class,
         DemoJobConfig.class,
@@ -55,7 +58,7 @@ public class SpringBatchConfiguration implements ApplicationRunner {
     private Integer insightsLlmPoolSize;
 
     @Autowired
-    private JobLauncher jobLauncher;
+    private JobOperator jobOperator;
 
     @Autowired
     private TrainingBatchService trainingBatchService;
@@ -96,7 +99,7 @@ public class SpringBatchConfiguration implements ApplicationRunner {
 //                .addString("now", Instant.now().toString())
 //                .addLong("pageSize", 100L)
 //                .toJobParameters();
-//        jobLauncher.run(demoJob, new JobParametersBuilder().toJobParameters());
+//        jobOperator.start(demoJob, new JobParametersBuilder().toJobParameters());
 //        int x = 5;
 //        JobExecution jobExecution = trainingBatchService.runAutoTraining();
 //        JobExecution jobExecution2 = splitterBatchService.runAutoSplitter();

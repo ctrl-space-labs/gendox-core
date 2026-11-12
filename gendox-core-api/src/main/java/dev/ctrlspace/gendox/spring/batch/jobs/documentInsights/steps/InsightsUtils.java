@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.InvitationCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
 import dev.ctrlspace.gendox.spring.batch.utils.JobExecutionParamConstants;
-import org.springframework.batch.core.JobParameters;
+import org.springframework.batch.core.job.parameters.JobParameters;
 import org.springframework.stereotype.Component;
 
 import java.util.List;

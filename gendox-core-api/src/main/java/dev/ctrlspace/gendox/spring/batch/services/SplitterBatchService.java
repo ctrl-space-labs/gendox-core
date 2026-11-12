@@ -11,10 +11,12 @@ import dev.ctrlspace.gendox.spring.batch.utils.TimePeriodUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.*;
-import org.springframework.batch.core.launch.JobLauncher;
-import org.springframework.batch.core.repository.JobExecutionAlreadyRunningException;
-import org.springframework.batch.core.repository.JobInstanceAlreadyCompleteException;
-import org.springframework.batch.core.repository.JobRestartException;
+import org.springframework.batch.core.job.*;
+import org.springframework.batch.core.job.parameters.*;
+import org.springframework.batch.core.launch.JobOperator;
+import org.springframework.batch.core.launch.JobExecutionAlreadyRunningException;
+import org.springframework.batch.core.launch.JobInstanceAlreadyCompleteException;
+import org.springframework.batch.core.launch.JobRestartException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -30,30 +32,30 @@ public class SplitterBatchService {
 
     private final DocumentInstanceCriteriaJobParamsConverter documentInstanceCriteriaJobParamsConverter;
     private final Job documentSplitterJob;
-    private final JobLauncher jobLauncher;
+    private final JobOperator jobOperator;
     private final JobUtils jobUtils;
 
     @Autowired
     public SplitterBatchService(
             DocumentInstanceCriteriaJobParamsConverter documentInstanceCriteriaJobParamsConverter,
             Job documentSplitterJob,
-            JobLauncher jobLauncher,
+            JobOperator jobOperator,
             JobUtils jobUtils) {
         this.documentInstanceCriteriaJobParamsConverter = documentInstanceCriteriaJobParamsConverter;
         this.documentSplitterJob = documentSplitterJob;
-        this.jobLauncher = jobLauncher;
+        this.jobOperator = jobOperator;
         this.jobUtils = jobUtils;
     }
 
-    public JobExecution runAutoSplitter() throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException, GendoxException {
+    public JobExecution runAutoSplitter() throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, InvalidJobParametersException, JobRestartException, GendoxException {
         return this.runAutoSplitter(null, null);
     }
 
-    public JobExecution runAutoSplitter(@Nullable UUID projectId) throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException, GendoxException {
+    public JobExecution runAutoSplitter(@Nullable UUID projectId) throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, InvalidJobParametersException, JobRestartException, GendoxException {
         return this.runAutoSplitter(projectId, null);
     }
 
-    public JobExecution runAutoSplitter(@Nullable UUID projectId, @Nullable TimePeriodDTO timePeriod) throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException, GendoxException {
+    public JobExecution runAutoSplitter(@Nullable UUID projectId, @Nullable TimePeriodDTO timePeriod) throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, InvalidJobParametersException, JobRestartException, GendoxException {
 
 
         var splitterTimePeriodAndOverride = TimePeriodUtils.prepareTimePeriodAndOverride(
@@ -77,7 +79,7 @@ public class SplitterBatchService {
 
 
         logger.info("Start Running document splitter job with parameters: {}", splitterParams);
-        return jobLauncher.run(documentSplitterJob, splitterParams);
+        return jobOperator.start(documentSplitterJob, splitterParams);
 
 
     }

@@ -59,7 +59,7 @@ public class ProvenAiAgentAuthenticationAdapter {
         HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(requestBody, headers);
 
         // Build the URL with tokenApiUrl
-        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(baseUrl + contextPath + tokenApiPath);
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(baseUrl + contextPath + tokenApiPath);
 
         // Send POST request to the token API URL
         ResponseEntity<AccessTokenResponse> responseEntity = restTemplate.exchange(

@@ -1,6 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.configuration;
 
 
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.Jackson2RestTemplates;
 import dev.ctrlspace.gendox.spring.batch.jobs.common.ObservabilityTaskDecorator;
 import io.micrometer.observation.ObservationRegistry;
 import io.micrometer.tracing.Tracer;
@@ -55,7 +56,7 @@ public class RestTemplateConfiguration {
         requestFactory.setConnectTimeout(connectionTimeoutMillis);
         requestFactory.setReadTimeout(readTimeoutMillis);
 
-        RestTemplate restTemplate = new RestTemplate(requestFactory);
+        RestTemplate restTemplate = Jackson2RestTemplates.create(requestFactory);
 
         List<ClientHttpRequestInterceptor> interceptors = new ArrayList<>(restTemplate.getInterceptors());
 

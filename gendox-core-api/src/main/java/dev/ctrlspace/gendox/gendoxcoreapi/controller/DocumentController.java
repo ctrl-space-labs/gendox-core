@@ -17,10 +17,10 @@ import jakarta.validation.Valid;
 import org.bitbucket.cowwoc.diffmatchpatch.DiffMatchPatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.batch.core.JobParametersInvalidException;
-import org.springframework.batch.core.repository.JobExecutionAlreadyRunningException;
-import org.springframework.batch.core.repository.JobInstanceAlreadyCompleteException;
-import org.springframework.batch.core.repository.JobRestartException;
+import org.springframework.batch.core.job.parameters.InvalidJobParametersException;
+import org.springframework.batch.core.launch.JobExecutionAlreadyRunningException;
+import org.springframework.batch.core.launch.JobInstanceAlreadyCompleteException;
+import org.springframework.batch.core.launch.JobRestartException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -390,7 +390,7 @@ public class DocumentController {
     public ResponseEntity<Map<String, Object>> handleFilesUpload(@RequestParam("file") List<MultipartFile> files,
                                                                  @PathVariable UUID organizationId,
                                                                  @PathVariable UUID projectId)
-            throws IOException, GendoxException, JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException {
+            throws IOException, GendoxException, JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, InvalidJobParametersException, JobRestartException {
 
         // Get the allowed file extensions from application.properties
         List<String> allowedExtensionsList = Arrays.asList(allowedExtensions.split(","));
@@ -427,7 +427,7 @@ public class DocumentController {
                                                              @RequestParam(value = "threadId", required = false) UUID threadId,
                                                              @PathVariable UUID organizationId,
                                                              @PathVariable UUID projectId)
-            throws IOException, GendoxException, JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException, NoSuchAlgorithmException {
+            throws IOException, GendoxException, JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, InvalidJobParametersException, JobRestartException, NoSuchAlgorithmException {
 
 
         if (file.isEmpty()) {

@@ -5,10 +5,10 @@ import dev.ctrlspace.gendox.spring.batch.repositories.BatchJobExecutionRepositor
 import dev.ctrlspace.gendox.spring.batch.utils.JobExecutionParamConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.batch.core.JobExecution;
-import org.springframework.batch.core.JobParameters;
-import org.springframework.batch.core.StepExecution;
-import org.springframework.batch.core.explore.JobExplorer;
+import org.springframework.batch.core.job.JobExecution;
+import org.springframework.batch.core.job.parameters.JobParameters;
+import org.springframework.batch.core.step.StepExecution;
+import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.job.flow.FlowExecutionStatus;
 import org.springframework.batch.core.job.flow.JobExecutionDecider;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,14 +21,14 @@ public class UniqueInstanceDecider implements JobExecutionDecider {
 
     Logger logger = LoggerFactory.getLogger(getClass());
 
-    private final JobExplorer jobExplorer;
+    private final JobRepository jobRepository;
 
     private BatchJobExecutionRepository batchJobExecutionRepository;
 
     @Autowired
-    public UniqueInstanceDecider(JobExplorer jobExplorer,
+    public UniqueInstanceDecider(JobRepository jobRepository,
                                  BatchJobExecutionRepository batchJobExecutionRepository) {
-        this.jobExplorer = jobExplorer;
+        this.jobRepository = jobRepository;
         this.batchJobExecutionRepository = batchJobExecutionRepository;
     }
 

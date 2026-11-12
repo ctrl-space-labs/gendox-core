@@ -14,11 +14,14 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.spring.batch.services.DeepThinkingBatchService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.batch.core.JobExecution;
+import org.springframework.batch.core.job.JobExecution;
+import org.springframework.batch.core.job.JobInstance;
+import org.springframework.batch.core.job.parameters.JobParameters;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.ArrayList;
@@ -80,7 +83,10 @@ class EmbeddingsControllerStreamingTest {
         EmbeddingsController controller = new EmbeddingsController(mock(EmbeddingService.class), mock(TrainingService.class), completions,
                 messages, mock(OrganizationModelKeyService.class), subscriptions, projects, contextConverter, contexts, deep,
                 turns, naming, mock(DocumentSectionService.class), mock(SecurityUtils.class), executor);
-        mvc = MockMvcBuilders.standaloneSetup(controller).build();
+        // Jackson 2, as the application is configured (spring.http.converters.preferred-json-mapper)
+        mvc = MockMvcBuilders.standaloneSetup(controller)
+                .setMessageConverters(new MappingJackson2HttpMessageConverter())
+                .build();
     }
 
     // Streams one token, as a provider would, then returns the answer
@@ -222,7 +228,7 @@ class EmbeddingsControllerStreamingTest {
 
     @Test
     void deepThinkingKeepsItsAcceptedJobResponse() throws Exception {
-        when(deep.runDeepThinking(any(), any(), any())).thenReturn(new JobExecution(77L));
+        when(deep.runDeepThinking(any(), any(), any())).thenReturn(new JobExecution(77L, new JobInstance(1L, "deepThinkingJob"), new JobParameters()));
 
         mvc.perform(post("/messages/completions").param("projectId", projectId.toString())
                         .contentType(MediaType.APPLICATION_JSON)

@@ -2,8 +2,8 @@ package dev.ctrlspace.gendox.spring.batch.jobs.demojob.steps;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import org.springframework.batch.core.configuration.annotation.StepScope;
-import org.springframework.batch.item.ItemProcessor;
-import org.springframework.batch.item.ItemReader;
+import org.springframework.batch.infrastructure.item.ItemProcessor;
+import org.springframework.batch.infrastructure.item.ItemReader;
 import org.springframework.stereotype.Component;
 
 import java.util.List;

@@ -41,6 +41,9 @@ spring:
         # Rows and collections that are loaded one by one after a query (types, users, models, agent tools,
         # message sections) are loaded together, in one statement per kind instead of one per row.
         default_batch_fetch_size: 50
+        # JSON columns are mapped with Jackson 2, like the rest of the application (see spring.http.converters).
+        type:
+          json_format_mapper: jackson
   datasource:
     url: ${DATABASE_URL}
     username: ${DATABASE_USERNAME}
@@ -49,7 +52,12 @@ spring:
       maximum-pool-size: 100
       minimum-idle: 10
 
-  jackson:
+  # The application reads and writes JSON with Jackson 2 (com.fasterxml.jackson). Spring Boot 4 prefers
+  # Jackson 3, so the choice is stated here until the code moves to Jackson 3.
+  http:
+    converters:
+      preferred-json-mapper: jackson2
+  jackson2:
     serialization:
       write-dates-as-timestamps: false
   servlet:
