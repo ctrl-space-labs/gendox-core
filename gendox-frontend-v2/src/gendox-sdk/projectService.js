@@ -32,6 +32,21 @@ const getProjectStatistics = async (organizationId, token) => {
 }
 
 /**
+ * The agent's definition (its setup, not its content) as a file, in the format the Accept header asks for
+ * @param format - 'json' | 'yaml'
+ * @returns {Promise<axios.AxiosResponse<Blob>>}
+ */
+const getAgentDefinition = async (organizationId, projectId, format, token) => {
+  return axios.get(apiRequests.getAgentDefinition(organizationId, projectId), {
+    headers: {
+      Accept: format === 'yaml' ? 'application/yaml' : 'application/json',
+      Authorization: 'Bearer ' + token
+    },
+    responseType: 'blob'
+  })
+}
+
+/**
  * Get project by id
  * @param organizationId
  * @param projectId
@@ -192,6 +207,7 @@ const deactivateProjectById = async (organizationId, projectId, token) => {
 export default {
   getProjectsByOrganization,
   getProjectStatistics,
+  getAgentDefinition,
   getProjectById,
   getProjectMembers,
   updateProject,

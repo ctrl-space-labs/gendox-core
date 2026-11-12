@@ -17,6 +17,8 @@ export default {
 
   getProjectStatistics: organizationId => `${url}organizations/${organizationId}/projects/statistics`,
 
+  getAgentDefinition: (organizationId, projectId) => `${url}organizations/${organizationId}/projects/${projectId}/definition`,
+
   findDocumentsByCriteria: (organizationId, projectId, page, size, sort = 'createdAt,desc') =>
     `${url}organizations/${organizationId}/projects/${projectId}/documents/search?page=${page}&size=${size}&sort=${sort}`,
 

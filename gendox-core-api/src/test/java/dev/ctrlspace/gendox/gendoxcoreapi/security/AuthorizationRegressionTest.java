@@ -168,7 +168,8 @@ class AuthorizationRegressionTest {
     void projectListingIntersectsClientIdsWithMembership() throws Exception {
         ProjectService projects = mock(ProjectService.class);
         ProjectController c = new ProjectController(projects, mock(ProjectConverter.class), mock(ProjectMemberService.class),
-                mock(ProjectMemberConverter.class), mock(ProjectAgentService.class), security, mock(UserService.class));
+                mock(ProjectMemberConverter.class), mock(ProjectAgentService.class), security, mock(UserService.class),
+                mock(AgentDefinitionConverter.class));
         UUID foreignProject = UUID.randomUUID();
         ProjectCriteria criteria = new ProjectCriteria();
         criteria.getProjectIdIn().add(foreignProject.toString());

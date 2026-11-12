@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
 import toast from 'react-hot-toast'
-import { Play } from 'lucide-react'
+import { Check, Copy, FileDown, Play } from 'lucide-react'
 import useHasOrgRole from 'src/authentication/hooks/useHasOrgRole'
 import documentService from 'src/gendox-sdk/documentService'
 import projectService from 'src/gendox-sdk/projectService'
@@ -14,6 +14,64 @@ import Dialog from 'src/components/ui/Dialog'
 import Switch from 'src/components/ui/Switch'
 import { findDocuments } from 'src/components/tasks/DocumentPicker'
 import { plural } from 'src/components/knowledge/documentUtils'
+import { downloadBlobForCSV } from 'src/utils/tasks/downloadBlobForCSV'
+import { copyToClipboard } from 'src/utils/copyToClipboard'
+
+/**
+ * The agent's definition file, shown before it is downloaded: GET …/definition as YAML or JSON, each loaded the first
+ * time it is shown, while the details are open
+ */
+const DefinitionPreview = ({ organizationId, projectId }) => {
+  const [open, setOpen] = useState(false)
+  const [format, setFormat] = useState('yaml')
+  const [files, setFiles] = useState({}) // format -> text, or an Error when it couldn't be loaded
+  const [copied, setCopied] = useState(false)
+  const file = files[format]
+
+  useEffect(() => {
+    if (!open || files[format] !== undefined) return
+    projectService
+      .getAgentDefinition(organizationId, projectId, format, getToken())
+      .then(response => response.data.text())
+      .then(text => setFiles(f => ({ ...f, [format]: format === 'json' ? JSON.stringify(JSON.parse(text), null, 2) : text })))
+      .catch(error => setFiles(f => ({ ...f, [format]: error })))
+  }, [open, format, files, organizationId, projectId])
+
+  const copy = async () => {
+    await copyToClipboard(file)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+
+  return (
+    <details className='card-f' onToggle={e => setOpen(e.currentTarget.open)}>
+      <summary className='muted sm' style={{ cursor: 'pointer' }}>
+        Preview the file
+      </summary>
+      <div className='row' style={{ margin: '12px 0 8px' }}>
+        <div className='pill-tabs'>
+          {['yaml', 'json'].map(f => (
+            <button key={f} className={f === format ? 'on' : ''} onClick={() => setFormat(f)}>
+              {f.toUpperCase()}
+            </button>
+          ))}
+        </div>
+        <span className='sp' />
+        <button className='btn ghost s' onClick={copy} disabled={typeof file !== 'string'}>
+          {copied ? <Check className='lucide' /> : <Copy className='lucide' />}
+          {copied ? 'Copied' : 'Copy'}
+        </button>
+      </div>
+      {file instanceof Error ? (
+        <p className='muted sm'>Couldn’t load the file. {getErrorMessage(file)}</p>
+      ) : (
+        <pre className='code' style={{ maxHeight: 360, overflow: 'auto' }}>
+          {file ?? 'Loading…'}
+        </pre>
+      )}
+    </details>
+  )
+}
 
 // Delete asks for the agent's name, since it removes its knowledge and conversations; it says how much is lost
 const DeleteAgentDialog = ({ open, onClose, name, organizationId, projectId, onDelete }) => {
@@ -105,6 +163,7 @@ const AgentSettingsPage = () => {
   const [description, setDescription] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [exporting, setExporting] = useState(null) // 'json' | 'yaml' while that file is prepared
   const [toggling, setToggling] = useState(null) // { key, value } while a switch's change is saved
   const [deleteOpen, setDeleteOpen] = useState(false)
 
@@ -157,6 +216,20 @@ const AgentSettingsPage = () => {
       toast.error(`Couldn’t start processing. ${getErrorMessage(error)}`)
     } finally {
       setIsProcessing(false)
+    }
+  }
+
+  // the agent's setup as a file, named after it: support-bot.agent.json
+  const exportAgent = async format => {
+    setExporting(format)
+    try {
+      const response = await projectService.getAgentDefinition(organizationId, projectId, format, getToken())
+      const slug = (project.name || 'agent').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'agent'
+      downloadBlobForCSV(response.data, `${slug}.agent.${format}`)
+    } catch (error) {
+      toast.error(`Couldn’t export the agent. ${getErrorMessage(error)}`)
+    } finally {
+      setExporting(null)
     }
   }
 
@@ -268,6 +341,39 @@ const AgentSettingsPage = () => {
                 onChange={value => toggle('autoDigitization', value, { agent: { autoDigitization: value } })}
               />
             </div>
+          </div>
+        </section>
+
+        <section className='sect'>
+          <header>
+            <h2>Export</h2>
+            <p>
+              The agent’s setup as a file: instructions, models, settings, chat look, tools and skills. Its documents,
+              conversations and members are not included.
+            </p>
+          </header>
+          <div className='card'>
+            <div className='item' style={{ flexWrap: 'wrap' }}>
+              <span className='ftype' style={{ '--h': 270 }}>
+                <FileDown className='lucide' />
+              </span>
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <b style={{ fontWeight: 500 }}>Download settings</b>
+                <div className='faint sm'>YAML is easier to read and edit; JSON is what the API takes.</div>
+              </div>
+              {['yaml', 'json'].map(format => (
+                <button
+                  key={format}
+                  aria-busy={exporting === format}
+                  className='btn s'
+                  onClick={() => exportAgent(format)}
+                  disabled={Boolean(exporting)}
+                >
+                  {format.toUpperCase()}
+                </button>
+              ))}
+            </div>
+            <DefinitionPreview organizationId={organizationId} projectId={projectId} />
           </div>
         </section>
 
