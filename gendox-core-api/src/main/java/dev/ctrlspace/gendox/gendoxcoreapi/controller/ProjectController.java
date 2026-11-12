@@ -1,6 +1,8 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.AgentDefinitionConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.ProjectConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.ProjectMemberConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
@@ -29,11 +31,14 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 @RestController
@@ -49,6 +54,7 @@ public class ProjectController {
     private SecurityUtils securityUtils;
 
     private UserService userService;
+    private final AgentDefinitionConverter agentDefinitionConverter;
 
 
     @Autowired
@@ -58,12 +64,14 @@ public class ProjectController {
                              ProjectMemberConverter projectMemberConverter,
                              ProjectAgentService projectAgentService,
                              SecurityUtils securityUtils,
-                             UserService userService) {
+                             UserService userService,
+                             AgentDefinitionConverter agentDefinitionConverter) {
         this.projectService = projectService;
         this.projectConverter = projectConverter;
         this.projectMemberService = projectMemberService;
         this.projectMemberConverter = projectMemberConverter;
         this.projectAgentService = projectAgentService;
+        this.agentDefinitionConverter = agentDefinitionConverter;
         this.securityUtils = securityUtils;
         this.userService = userService;
     }
@@ -123,6 +131,26 @@ public class ProjectController {
     public List<ProjectStatisticsDTO> getProjectStatistics(@PathVariable("organizationId") String organizationId,
                                                            Authentication authentication) throws GendoxException {
         return projectService.getProjectStatistics(UUID.fromString(organizationId), visibleProjectIds(organizationId, authentication));
+    }
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')")
+    @GetMapping(value = "organizations/{organizationId}/projects/{projectId}/definition", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Export the agent's definition as JSON",
+            description = "The agent's setup, not its content: instructions, models by name, settings, chat settings, tools and skills. " +
+                    "Send Accept: application/yaml for YAML.")
+    public AgentDefinitionDTO getAgentDefinition(@PathVariable UUID projectId) throws GendoxException {
+        return agentDefinitionConverter.toDTO(projectService.getProjectById(projectId));
+    }
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')")
+    @GetMapping(value = "organizations/{organizationId}/projects/{projectId}/definition", produces = AgentDefinitionConverter.APPLICATION_YAML)
+    @Operation(summary = "Export the agent's definition as YAML",
+            description = "The same definition as the JSON one, as YAML.")
+    public ResponseEntity<String> getAgentDefinitionYaml(@PathVariable UUID projectId) throws GendoxException, JsonProcessingException {
+        AgentDefinitionDTO definition = agentDefinitionConverter.toDTO(projectService.getProjectById(projectId));
+        return ResponseEntity.ok()
+                .contentType(new MediaType("application", "yaml", StandardCharsets.UTF_8))
+                .body(agentDefinitionConverter.toYaml(definition));
     }
 
 

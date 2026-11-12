@@ -14,7 +14,7 @@
     <name>gendox-core-api</name>
     <description>gendox-core-api</description>
 
-<!--    for SBOM generation-->
+    <!--    for SBOM generation-->
     <licenses>
         <license>
             <name>GNU Affero General Public License v3.0</name>
@@ -28,8 +28,6 @@
         <querydsl.version>5.1.0</querydsl.version>
         <spring-ai.version>1.0.3</spring-ai.version>
     </properties>
-
-
 
 
     <repositories>
@@ -54,7 +52,6 @@
             <name>jcenter</name>
             <url>https://jcenter.bintray.com</url>
         </repository>
-
 
 
         <repository>
@@ -167,7 +164,6 @@
         </dependency>
 
 
-
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
@@ -243,7 +239,7 @@
             <groupId>jakarta.annotation</groupId>
             <artifactId>jakarta.annotation-api</artifactId>
             <version>2.1.1</version>
-<!--            <scope>provided</scope>-->
+            <!--            <scope>provided</scope>-->
         </dependency>
         <dependency>
             <groupId>com.querydsl</groupId>
@@ -269,13 +265,11 @@
         </dependency>
 
 
-
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <version>1.18.42</version>
         </dependency>
-
 
 
         <dependency>
@@ -330,9 +324,6 @@
         </dependency>
 
 
-
-
-
         <!-- https://mvnrepository.com/artifact/io.awspring.cloud/spring-cloud-aws-core -->
         <dependency>
             <groupId>io.awspring.cloud</groupId>
@@ -381,9 +372,6 @@
             <groupId>org.springframework.integration</groupId>
             <artifactId>spring-integration-file</artifactId>
         </dependency>
-
-
-
 
 
         <!--                              JGit                           -->
@@ -507,6 +495,12 @@
             <groupId>org.bitbucket.cowwoc</groupId>
             <artifactId>diff-match-patch</artifactId>
             <version>1.2</version>
+        </dependency>
+
+        <!-- YAML for agent definitions; the version comes from Spring Boot's dependency management -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-yaml</artifactId>
         </dependency>
 
     </dependencies>
@@ -653,9 +647,6 @@
                     <!-- NOTE: No <compilerArgs> / -processor here -->
                 </configuration>
             </plugin>
-
-
-
 
 
         </plugins>
