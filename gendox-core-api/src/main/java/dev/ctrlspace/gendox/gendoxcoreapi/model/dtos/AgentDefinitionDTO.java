@@ -1,7 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model.dtos;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ChatSettings;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

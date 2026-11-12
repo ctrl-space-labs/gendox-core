@@ -1,8 +1,9 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.converters;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.dataformat.yaml.YAMLMapper;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.AgentDefinitionDTO;
 import org.junit.jupiter.api.Test;
 
@@ -12,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class AgentDefinitionConverterTest {
 
-    private final ObjectMapper json = new ObjectMapper();
+    private final ObjectMapper json = JsonMapper.builder().build();
     private final AgentDefinitionConverter converter = new AgentDefinitionConverter(json);
 
     @Test
@@ -30,7 +31,7 @@ class AgentDefinitionConverterTest {
                 .tools(List.of(AgentDefinitionDTO.ToolDefinition.builder().type("function").execution("ACTION").schema(schema).build()))
                 .build();
 
-        JsonNode fromYaml = new YAMLMapper().readTree(converter.toYaml(definition));
+        JsonNode fromYaml = YAMLMapper.builder().build().readTree(converter.toYaml(definition));
 
         assertEquals(json.valueToTree(definition), fromYaml);
     }

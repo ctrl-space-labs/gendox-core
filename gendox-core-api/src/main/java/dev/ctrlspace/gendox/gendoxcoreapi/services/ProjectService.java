@@ -1,6 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
-import brave.internal.Nullable;
+import org.jspecify.annotations.Nullable;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.ProjectConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;

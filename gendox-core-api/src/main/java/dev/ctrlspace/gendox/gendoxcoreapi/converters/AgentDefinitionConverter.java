@@ -1,12 +1,12 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.converters;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.TextNode;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.StringNode;
+import tools.jackson.dataformat.yaml.YAMLMapper;
+import tools.jackson.dataformat.yaml.YAMLWriteFeature;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiTools;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
@@ -25,13 +25,13 @@ public class AgentDefinitionConverter {
 
     // YAML for people to read: no "---" line, quotes only where needed, multi-line text (instructions, skills) as blocks.
     // Strings that look like numbers keep their quotes, or reading the file back would turn "123" into 123.
-    private static final ObjectMapper YAML = new ObjectMapper(YAMLFactory.builder()
-            .disable(YAMLGenerator.Feature.WRITE_DOC_START_MARKER)
-            .enable(YAMLGenerator.Feature.MINIMIZE_QUOTES)
-            .enable(YAMLGenerator.Feature.ALWAYS_QUOTE_NUMBERS_AS_STRINGS)
-            .enable(YAMLGenerator.Feature.LITERAL_BLOCK_STYLE)
-            .build())
-            .setSerializationInclusion(JsonInclude.Include.NON_NULL);
+    private static final ObjectMapper YAML = YAMLMapper.builder()
+            .disable(YAMLWriteFeature.WRITE_DOC_START_MARKER)
+            .enable(YAMLWriteFeature.MINIMIZE_QUOTES)
+            .enable(YAMLWriteFeature.ALWAYS_QUOTE_NUMBERS_AS_STRINGS)
+            .enable(YAMLWriteFeature.LITERAL_BLOCK_STYLE)
+            .changeDefaultPropertyInclusion(inclusion -> inclusion.withValueInclusion(JsonInclude.Include.NON_NULL))
+            .build();
 
     private final ObjectMapper objectMapper;
 
@@ -88,7 +88,7 @@ public class AgentDefinitionConverter {
                 .build();
     }
 
-    public String toYaml(AgentDefinitionDTO definition) throws JsonProcessingException {
+    public String toYaml(AgentDefinitionDTO definition) throws JacksonException {
         return YAML.writeValueAsString(definition);
     }
 
@@ -100,8 +100,8 @@ public class AgentDefinitionConverter {
     private JsonNode schemaOf(AiTools tool) {
         try {
             return objectMapper.readTree(tool.getJsonSchema());
-        } catch (JsonProcessingException e) {
-            return TextNode.valueOf(tool.getJsonSchema());
+        } catch (JacksonException e) {
+            return StringNode.valueOf(tool.getJsonSchema());
         }
     }
 }
