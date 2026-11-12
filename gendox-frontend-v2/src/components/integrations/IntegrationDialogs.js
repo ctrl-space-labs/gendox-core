@@ -12,9 +12,24 @@ import { getToken } from 'src/components/agent/useAgent'
 import ConfirmDialog from 'src/components/ui/ConfirmDialog'
 import Dialog from 'src/components/ui/Dialog'
 import { IntegrationTile, bareUrl, configOf, everyOptions, everyText, typeOf } from 'src/components/integrations/integrationUtils'
+import { hasWebScrape, planFeatureMessages, planFeatures } from 'src/configs/planFeatures'
 
 // the kinds that can be added here; WordPress is set up from the plugin, so it leads to a guide
 const ADDABLE = ['WEB_SCRAPE_INTEGRATION', 'API_INTEGRATION']
+
+/** Why reading websites is disabled, and where to change it */
+export const WebScrapeOffNote = () => {
+  const { href } = useActiveScope()
+
+  return (
+    <div className='alert' style={{ '--c': 'var(--warn)' }}>
+      <b>Upgrade to read websites</b>
+      <span className='muted'>
+        {planFeatureMessages[planFeatures.WEB_SCRAPE]} <Link href={href('/gendox/plan')}>See the plans</Link>
+      </span>
+    </div>
+  )
+}
 
 /**
  * Add an integration. A crawled website: POST organizations/{o}/websites/web-scrape
@@ -28,6 +43,8 @@ export const AddIntegrationDialog = ({ open, onClose, onAdded, budget, initialTy
   const [fields, setFields] = useState({})
   const [urlError, setUrlError] = useState(false)
   const [isAdding, setIsAdding] = useState(false)
+  // the plan allows no pages: the website kind stays in the list, disabled, with the reason below
+  const scrapeOff = !hasWebScrape(budget)
 
   useEffect(() => {
     if (!open) return
@@ -84,7 +101,7 @@ export const AddIntegrationDialog = ({ open, onClose, onAdded, budget, initialTy
             Cancel
           </button>
           {type === 'WEB_SCRAPE_INTEGRATION' && (
-            <button aria-busy={isAdding} className='btn primary' onClick={add} disabled={isAdding || !projects.length}>
+            <button aria-busy={isAdding} className='btn primary' onClick={add} disabled={isAdding || !projects.length || scrapeOff}>
               {isAdding ? 'Adding…' : 'Add and find pages'}
             </button>
           )}
@@ -96,10 +113,11 @@ export const AddIntegrationDialog = ({ open, onClose, onAdded, budget, initialTy
           {ADDABLE.map(key => {
             const t = typeOf(key)
             const Icon = t.icon
+            const off = key === 'WEB_SCRAPE_INTEGRATION' && scrapeOff
 
             return (
-              <label key={key}>
-                <input type='radio' name='integration-type' onChange={() => setType(key)} />
+              <label key={key} title={off ? planFeatureMessages[planFeatures.WEB_SCRAPE] : undefined}>
+                <input type='radio' name='integration-type' disabled={off} onChange={() => setType(key)} />
                 <Icon className='lucide' />
                 <b>{t.title}</b>
                 <span>{t.how}</span>
@@ -108,6 +126,7 @@ export const AddIntegrationDialog = ({ open, onClose, onAdded, budget, initialTy
           })}
         </div>
       )}
+      {scrapeOff && (!type || type === 'WEB_SCRAPE_INTEGRATION') && <WebScrapeOffNote />}
 
       {type === 'WEB_SCRAPE_INTEGRATION' && (
         <div className='form'>

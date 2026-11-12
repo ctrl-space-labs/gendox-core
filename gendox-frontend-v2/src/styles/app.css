@@ -268,6 +268,8 @@ a.eo-chip.warn { border-color: color-mix(in srgb, var(--warn) 40%, transparent);
 .btn[aria-busy='true'] > .lucide { display: none; }
 .btn[aria-busy='true']::before { content: ''; width: 13px; height: 13px; flex: none; border-radius: 50%; border: 2px solid color-mix(in srgb, currentColor 30%, transparent); border-top-color: currentColor; animation: spin .8s linear infinite; }
 
+/* a choice the plan doesn't include: visible, not selectable (the reason is in its title and a note) */
+.choice label:has(input:disabled) { opacity: .55; cursor: not-allowed; }
 /* the WordPress badge in a choice card keeps its own size (.choice span would make it text-sized) */
 .choice label > .wp { font: 700 9px/1 Georgia, serif; color: var(--text-2); }
 

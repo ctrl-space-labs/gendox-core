@@ -240,11 +240,13 @@ const IntegrationsPage = () => {
             used={counts.on}
             max={limit.count}
             note={`Sources Gendox reads.${
-              limit.plan && limit.count < UNLIMITED ? ` Your ${limit.plan} plan allows ${limit.count} at once;` : ''
+              // plan names already end in "Plan" (Free Plan, Pro Plan)
+              limit.plan && limit.count < UNLIMITED ? ` Your ${limit.plan} allows ${limit.count} at once;` : ''
             } Switched-off ones don’t count.`}
           />
         )}
-        {budget?.maxPages != null && (
+        {/* a plan without web scraping has no pages to count: the Add dialog says why websites are off */}
+        {budget?.maxPages > 0 && (
           <Meter
             label='Website pages read'
             used={budget.usedPages}
