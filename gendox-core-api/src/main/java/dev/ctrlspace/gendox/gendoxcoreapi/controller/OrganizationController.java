@@ -12,7 +12,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserOrganizationCr
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.OrganizationRoleUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
 import io.micrometer.observation.annotation.Observed;
 import io.swagger.v3.oas.annotations.Operation;
@@ -69,13 +68,7 @@ public class OrganizationController {
     @Operation(summary = "Get all organizations",
             description = "Retrieve a list of all organizations based on the provided criteria.")
     @Observed(name = "OrganizationController.getAllOrganizations",
-            contextualName = "OrganizationController#getAllOrganizations",
-            lowCardinalityKeyValues = {
-                    ObservabilityTags.LOGGABLE, "true",
-                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
-                    ObservabilityTags.LOG_METHOD_NAME, "true",
-                    ObservabilityTags.LOG_ARGS, "false"
-            })
+            contextualName = "OrganizationController#getAllOrganizations")
     public Page<Organization> getAllOrganizations(@Valid OrganizationCriteria criteria, Pageable pageable) throws Exception {
 
         //run code to get the organization from database
@@ -87,13 +80,7 @@ public class OrganizationController {
     @Operation(summary = "Get organization by ID",
             description = "Retrieve an organization by its unique ID.")
     @Observed(name = "OrganizationController.getOrganizationById",
-            contextualName = "OrganizationController#getOrganizationById",
-            lowCardinalityKeyValues = {
-                    ObservabilityTags.LOGGABLE, "true",
-                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
-                    ObservabilityTags.LOG_METHOD_NAME, "true",
-                    ObservabilityTags.LOG_ARGS, "false"
-            })
+            contextualName = "OrganizationController#getOrganizationById")
     public Organization getOrganizationById(@PathVariable UUID organizationId, Authentication authentication) throws Exception {
 
 
@@ -107,13 +94,7 @@ public class OrganizationController {
     @Operation(summary = "Create organization",
             description = "Create a new organization based on the provided organization details.")
     @Observed(name = "OrganizationController.createOrganization",
-            contextualName = "OrganizationController#createOrganization",
-            lowCardinalityKeyValues = {
-                    ObservabilityTags.LOGGABLE, "true",
-                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
-                    ObservabilityTags.LOG_METHOD_NAME, "true",
-                    ObservabilityTags.LOG_ARGS, "false"
-            })
+            contextualName = "OrganizationController#createOrganization")
     public Organization createOrganization(@RequestBody OrganizationDTO organizationDTO) throws Exception {
 
         if (organizationDTO.getId() != null) {
@@ -138,13 +119,7 @@ public class OrganizationController {
     @Operation(summary = "Update organization by ID",
             description = "Update an existing organization by specifying its unique ID and providing updated organization details.")
     @Observed(name = "OrganizationController.updateOrganization",
-            contextualName = "OrganizationController#updateOrganization",
-            lowCardinalityKeyValues = {
-                    ObservabilityTags.LOGGABLE, "true",
-                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
-                    ObservabilityTags.LOG_METHOD_NAME, "true",
-                    ObservabilityTags.LOG_ARGS, "false"
-            })
+            contextualName = "OrganizationController#updateOrganization")
     public Organization updateOrganization(@PathVariable UUID organizationId, @RequestBody OrganizationDTO organizationDTO) throws Exception {
         UUID updatedOrganizationId = organizationDTO.getId();
         Organization organization = new Organization();
@@ -169,13 +144,7 @@ public class OrganizationController {
     @Operation(summary = "Deactivate organization by ID",
             description = "Deactivate an existing organization and its projects by specifying its unique ID.")
     @Observed(name = "OrganizationController.deleteOrganization",
-            contextualName = "OrganizationController#deleteOrganization",
-            lowCardinalityKeyValues = {
-                    ObservabilityTags.LOGGABLE, "true",
-                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
-                    ObservabilityTags.LOG_METHOD_NAME, "true",
-                    ObservabilityTags.LOG_ARGS, "false"
-            })
+            contextualName = "OrganizationController#deleteOrganization")
     public void deactivateOrganization(@PathVariable UUID organizationId) throws Exception {
         organizationService.deactivateOrganization(organizationId);
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -218,13 +187,7 @@ public class OrganizationController {
                     """)
     @PostMapping(value = "/organizations/{organizationId}/users", consumes = {"application/json"})
     @Observed(name = "OrganizationController.addUserToOrganization",
-            contextualName = "OrganizationController#addUserToOrganization",
-            lowCardinalityKeyValues = {
-                    ObservabilityTags.LOGGABLE, "true",
-                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
-                    ObservabilityTags.LOG_METHOD_NAME, "true",
-                    ObservabilityTags.LOG_ARGS, "false"
-            })
+            contextualName = "OrganizationController#addUserToOrganization")
     public UserOrganization addUserToOrganization(@PathVariable UUID organizationId, @RequestBody UserOrganizationDTO userOrganizationDTO) throws Exception {
 
         return userOrganizationService.addUserToOrganization(organizationId, userOrganizationDTO);

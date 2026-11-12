@@ -10,7 +10,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.IntegrationRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.IntegrationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TypeService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.IntegrationTypesConstants;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import io.micrometer.observation.annotation.Observed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,13 +57,7 @@ public class IntegrationManager {
      * Called by the scheduled integration poller to check all active integrations across organizations.
      */
     @Observed(name = "integrationManager.dispatchToIntegrationServices",
-            contextualName = "dispatchToIntegrationServices-integrationManager",
-            lowCardinalityKeyValues = {
-                    ObservabilityTags.LOGGABLE, "true",
-                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_DEBUG,
-                    ObservabilityTags.LOG_METHOD_NAME, "true",
-                    ObservabilityTags.LOG_ARGS, "false"
-            })
+            contextualName = "dispatchToIntegrationServices-integrationManager")
     public Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> dispatchToIntegrationServices() throws GendoxException {
         return processIntegrations(findActiveIntegrations(), true);
     }

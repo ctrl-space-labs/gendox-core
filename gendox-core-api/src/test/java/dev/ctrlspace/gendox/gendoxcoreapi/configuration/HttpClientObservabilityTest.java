@@ -1,6 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.configuration;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationHandler;
 import io.micrometer.observation.ObservationRegistry;
@@ -22,6 +23,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 class HttpClientObservabilityTest {
@@ -48,14 +50,17 @@ class HttpClientObservabilityTest {
                     String json = "{\"arguments\":{\"hits\":3}}";
                     RestTemplate template = context.getBean(RestTemplate.class);
                     MockRestServiceServer server = MockRestServiceServer.bindTo(template).build();
-                    server.expect(requestTo(url)).andRespond(withSuccess(json, MediaType.APPLICATION_JSON));
-                    assertThat(template.getForObject(url, Payload.class).arguments().get("hits").asInt()).isEqualTo(3);
+                    Payload payload = new Payload(JsonNodeFactory.instance.objectNode().put("hits", 3));
+                    server.expect(requestTo(url)).andExpect(content().json(json))
+                            .andRespond(withSuccess(json, MediaType.APPLICATION_JSON));
+                    assertThat(template.postForObject(url, payload, Payload.class).arguments().get("hits").asInt()).isEqualTo(3);
                     server.verify();
 
                     RestClient.Builder builder = context.getBean(RestClient.Builder.class);
                     MockRestServiceServer clientServer = MockRestServiceServer.bindTo(builder).build();
-                    clientServer.expect(requestTo(url)).andRespond(withSuccess(json, MediaType.APPLICATION_JSON));
-                    assertThat(builder.build().get().uri(url).retrieve().body(Payload.class).arguments().get("hits").asInt()).isEqualTo(3);
+                    clientServer.expect(requestTo(url)).andExpect(content().json(json))
+                            .andRespond(withSuccess(json, MediaType.APPLICATION_JSON));
+                    assertThat(builder.build().post().uri(url).body(payload).retrieve().body(Payload.class).arguments().get("hits").asInt()).isEqualTo(3);
                     clientServer.verify();
                     assertThat(stopped).hasSize(2);
                     for (Observation.Context observation : stopped) {

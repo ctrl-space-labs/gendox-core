@@ -20,7 +20,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.UserPredicate;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.OrganizationRoleUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.OrganizationRolesConstants;
 import io.micrometer.observation.annotation.Observed;
@@ -265,13 +264,7 @@ public class UserService implements UserDetailsService {
 
 
     @Observed(name = "get.jwt.claims",
-            contextualName = "get-jwt-claims",
-            lowCardinalityKeyValues = {
-                    ObservabilityTags.LOGGABLE, "true",
-                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
-                    ObservabilityTags.LOG_METHOD_NAME, "true",
-                    ObservabilityTags.LOG_ARGS, "true"
-            })
+            contextualName = "get-jwt-claims")
     public JwtClaimsSet getJwtClaims(String userIdentifier) throws GendoxException {
 
         UserProfile userProfile = this.getUserProfileByUniqueIdentifier(userIdentifier);

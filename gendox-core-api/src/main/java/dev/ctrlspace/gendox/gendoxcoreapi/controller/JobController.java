@@ -10,7 +10,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.services.JobService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TaskService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.AsyncExecutionTypes;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskTypeConstants;
 import dev.ctrlspace.gendox.spring.batch.model.BatchJobExecution;
 import dev.ctrlspace.gendox.spring.batch.model.criteria.BatchExecutionCriteria;
@@ -76,13 +75,7 @@ public class JobController {
             description = "Trigger an async job: SPLITTER, TRAINING, SPLITTER_AND_TRAINING. projectId is optional."
     )
     @Observed(name = "triggerAsyncJob",
-            contextualName = "Trigger Async Job",
-            lowCardinalityKeyValues = {
-                    ObservabilityTags.LOGGABLE, "true",
-                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_DEBUG,
-                    ObservabilityTags.LOG_METHOD_NAME, "true",
-                    ObservabilityTags.LOG_ARGS, "false"
-            })
+            contextualName = "Trigger Async Job")
     public String triggerAsyncJob(
             @PathVariable UUID organizationId,
             @PathVariable(required = false) UUID projectId,

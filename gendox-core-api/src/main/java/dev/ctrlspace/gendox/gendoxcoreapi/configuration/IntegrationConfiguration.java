@@ -13,7 +13,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.services.UploadService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.IntegrationManager;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.DocumentUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.IntegrationTypesConstants;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import dev.ctrlspace.gendox.spring.batch.services.SplitterAndTrainingBatchService;
 import dev.ctrlspace.gendox.spring.batch.services.SplitterBatchService;
 import dev.ctrlspace.gendox.spring.batch.services.TrainingBatchService;
@@ -105,13 +104,7 @@ public class IntegrationConfiguration {
     @Bean
     @ServiceActivator(inputChannel = "integrationChannel")
     @Observed(name = "integrationConfiguration.integrationHandler",
-            contextualName = "integrationHandler-integrationConfiguration",
-            lowCardinalityKeyValues = {
-                    ObservabilityTags.LOGGABLE, "true",
-                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_DEBUG,
-                    ObservabilityTags.LOG_METHOD_NAME, "true",
-                    ObservabilityTags.LOG_ARGS, "false"
-            })
+            contextualName = "integrationHandler-integrationConfiguration")
     public MessageHandler integrationHandler() {
         return new MessageHandler() {
             @Override

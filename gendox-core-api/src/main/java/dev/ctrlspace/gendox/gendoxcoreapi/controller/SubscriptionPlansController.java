@@ -5,7 +5,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.SubscriptionNotificationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.OrganizationPlanCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import io.micrometer.observation.annotation.Observed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -79,13 +78,7 @@ public class SubscriptionPlansController {
     @PreAuthorize("@securityUtils.isSuperAdmin()")
     @PostMapping("/subscription-notifications")
     @Observed(name = "SubscriptionPlansController.createOrganizationPlanBySubscriptionNotification",
-            contextualName = "SubscriptionPlansController#createOrganizationPlanBySubscriptionNotification",
-            lowCardinalityKeyValues = {
-                    ObservabilityTags.LOGGABLE, "true",
-                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
-                    ObservabilityTags.LOG_METHOD_NAME, "true",
-                    ObservabilityTags.LOG_ARGS, "true"
-            })
+            contextualName = "SubscriptionPlansController#createOrganizationPlanBySubscriptionNotification")
     public OrganizationPlan createOrganizationPlanBySubscriptionNotification(@RequestBody SubscriptionNotificationDTO subscriptionNotificationDTO) throws GendoxException {
         User user = userService.getByEmail(subscriptionNotificationDTO.getEmail());
         UserOrganization userOrganization = userOrganizationService.getUserOrganizationByOwnerId(user.getId());

@@ -87,41 +87,16 @@ keycloak:
   client-secret: ${KEYCLOAK_CLIENT_SECRET}
 
 management:
-  # Explicit opt-in is required before any telemetry leaves this process.
+  # Keep the SDK and all push exporters off until a collector is deployed.
+  opentelemetry:
+    enabled: false
+    map-environment-variables: false
   tracing:
     export:
-      enabled: ${GENDOX_TRACING_EXPORT_ENABLED:false}
-      otlp:
-        enabled: ${GENDOX_TRACING_EXPORT_ENABLED:false}
-      zipkin:
-        enabled: false
-    sampling:
-      probability: ${GENDOX_TRACING_SAMPLING_PROBABILITY:0.0}
-    baggage:
       enabled: false
-    propagation:
-      consume: [W3C, B3, B3_MULTI]
-      produce: [W3C]
   logging:
     export:
       enabled: false
-      otlp:
-        enabled: false
-  opentelemetry:
-    # Prevent inherited OTEL_* settings from silently enabling export in Boot 4.1.
-    map-environment-variables: false
-    resource-attributes:
-      service.name: ${spring.application.name}
-      deployment.environment.name: ${GENDOX_ENVIRONMENT:unknown}
-    tracing:
-      sampler: ${GENDOX_TRACING_SAMPLER:trace-id-ratio}
-      export:
-        max-queue-size: 512
-        max-batch-size: 128
-        schedule-delay: 5s
-        otlp:
-          connect-timeout: 1s
-          timeout: 2s
   otlp:
     metrics:
       export:
@@ -142,6 +117,8 @@ management:
     health:
       show-details: never
   observations:
+    annotations:
+      enabled: true
     key-values:
       application: gendox-core-api
 

@@ -8,7 +8,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxErrorResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxRuntimeException;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.ToolsHandlerAdvice;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import io.micrometer.observation.annotation.Observed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,13 +43,7 @@ public class AiToolRegistry {
     }
 
     @Observed(name = "AiToolRegistry.execute",
-            contextualName = "AiToolRegistry#execute",
-            lowCardinalityKeyValues = {
-                    ObservabilityTags.LOGGABLE, "true",
-                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
-                    ObservabilityTags.LOG_METHOD_NAME, "true",
-                    ObservabilityTags.LOG_ARGS, "false"
-            })
+            contextualName = "AiToolRegistry#execute")
     public JsonNode execute(String toolName, JsonNode args, ToolExecutionContext context) {
         AiToolHandler handler = handlersByName.get(toolName);
         logger.info("AiToolRegistry.execute: toolName={}, parentThreadId={}",

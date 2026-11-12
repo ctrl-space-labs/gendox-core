@@ -6,7 +6,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.documents.DocPageToImageOpt
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.documents.PageText;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.ImageUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.ScannedPageImageFinder;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.document.WordToPdfConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.document.readers.DocFileReader;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.document.readers.DocxFileReader;
@@ -332,13 +331,7 @@ public class DownloadService {
     }
 
     @Observed(name = "DownloadService.readTxtFileContent",
-            contextualName = "DownloadService#readTxtFileContent",
-            lowCardinalityKeyValues = {
-                    ObservabilityTags.LOGGABLE, "true",
-                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
-                    ObservabilityTags.LOG_METHOD_NAME, "true",
-                    ObservabilityTags.LOG_ARGS, "false"
-            })
+            contextualName = "DownloadService#readTxtFileContent")
     private String readTxtFileContent(Resource fileResource) throws IOException {
         return fileResource.getContentAsString(StandardCharsets.UTF_8);
     }
@@ -353,13 +346,7 @@ public class DownloadService {
     }
 
     @Observed(name = "DownloadService.readPdfContent",
-            contextualName = "DownloadService#readPdfContent",
-            lowCardinalityKeyValues = {
-                    ObservabilityTags.LOGGABLE, "true",
-                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
-                    ObservabilityTags.LOG_METHOD_NAME, "true",
-                    ObservabilityTags.LOG_ARGS, "false"
-            })
+            contextualName = "DownloadService#readPdfContent")
     private String readPdfContent(Resource fileResource) throws IOException {
         // Use the PagePdfDocumentReader to read the PDF content
         var pages = new PagePdfDocumentReader(fileResource).get();

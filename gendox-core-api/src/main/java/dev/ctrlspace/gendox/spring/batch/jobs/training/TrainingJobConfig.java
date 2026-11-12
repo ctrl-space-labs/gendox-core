@@ -1,10 +1,9 @@
 package dev.ctrlspace.gendox.spring.batch.jobs.training;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
-import dev.ctrlspace.gendox.spring.batch.jobs.common.ObservabilityTaskDecorator;
+import org.springframework.core.task.TaskDecorator;
 import dev.ctrlspace.gendox.spring.batch.jobs.common.UniqueInstanceDecider;
 import dev.ctrlspace.gendox.spring.batch.jobs.training.steps.*;
-import io.micrometer.observation.ObservationRegistry;
 import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.step.Step;
 import org.springframework.batch.core.job.builder.FlowBuilder;
@@ -88,13 +87,13 @@ public class TrainingJobConfig {
     }
 
     @Bean
-    public TaskExecutor asyncBatchTrainingExecutor(ObservationRegistry observationRegistry) {
+    public TaskExecutor asyncBatchTrainingExecutor(TaskDecorator taskDecorator) {
 
         SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor("b-training-");
         // switch to Loom’s virtual threads (each task → its own VT)
         executor.setVirtualThreads(true);
 
-        executor.setTaskDecorator(new ObservabilityTaskDecorator(observationRegistry));
+        executor.setTaskDecorator(taskDecorator);
         // Throttle concurrency
         executor.setConcurrencyLimit(threadPoolSize);
         return executor;

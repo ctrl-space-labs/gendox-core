@@ -2,13 +2,12 @@ package dev.ctrlspace.gendox.spring.batch.jobs.documentDigitization;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskAnswerBatchDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDocumentMetadataDTO;
-import dev.ctrlspace.gendox.spring.batch.jobs.common.ObservabilityTaskDecorator;
+import org.springframework.core.task.TaskDecorator;
 import dev.ctrlspace.gendox.spring.batch.jobs.common.UniqueInstanceDecider;
 import dev.ctrlspace.gendox.spring.batch.jobs.documentDigitization.steps.DocumentDigitizationProcessor;
 import dev.ctrlspace.gendox.spring.batch.jobs.documentDigitization.steps.DocumentDigitizationReader;
 import dev.ctrlspace.gendox.spring.batch.jobs.documentDigitization.steps.DocumentDigitizationWriter;
 import dev.ctrlspace.gendox.spring.batch.jobs.documentDigitization.steps.TempFileCleanupListener;
-import io.micrometer.observation.ObservationRegistry;
 import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.step.Step;
 import org.springframework.batch.core.job.builder.FlowBuilder;
@@ -85,12 +84,12 @@ public class DocumentDigitizationJobConfig {
     }
 
     @Bean
-    public TaskExecutor asyncBatchDigitizationExecutor(ObservationRegistry observationRegistry) {
+    public TaskExecutor asyncBatchDigitizationExecutor(TaskDecorator taskDecorator) {
         SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor("b-document-digitization-");
         // switch to Loom’s virtual threads (each task → its own VT)
         executor.setVirtualThreads(true);
 
-        executor.setTaskDecorator(new ObservabilityTaskDecorator(observationRegistry));
+        executor.setTaskDecorator(taskDecorator);
         // Throttle concurrency
         executor.setConcurrencyLimit(threadPoolSize);
         return executor;
