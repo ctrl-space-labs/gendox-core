@@ -1,5 +1,7 @@
 package dev.ctrlspace.gendox.spring.batch.services;
 
+import tools.jackson.databind.json.JsonMapper;
+
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Task;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
@@ -17,7 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 
 
 import java.time.Instant;
@@ -50,7 +52,7 @@ public class DocumentInsightsBatchService {
         JobParametersBuilder paramsBuilder = new JobParametersBuilder();
 
 
-        ObjectMapper mapper = new ObjectMapper();
+        ObjectMapper mapper = JsonMapper.shared();
 
         if (criteria.getDocumentNodeIds() != null && !criteria.getDocumentNodeIds().isEmpty()) {
             try {

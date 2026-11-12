@@ -1,7 +1,7 @@
 package dev.ctrlspace.gendox.spring.batch.jobs.documentInsights.steps;
 
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.knuddels.jtokkit.api.EncodingRegistry;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.*;

@@ -17,7 +17,6 @@ public class ProjectMember {
     @Id
     @Column(name = "id", nullable = false)
     private UUID id;
-    @JsonManagedReference(value = "project")
     @ManyToOne
     @JoinColumn(name = "project_id", referencedColumnName = "id", nullable = false)
     private Project project;

@@ -1,12 +1,14 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.documents;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import lombok.*;
 import org.springframework.http.HttpStatus;
 
 @Data
 @AllArgsConstructor
-@NoArgsConstructor
+@NoArgsConstructor(onConstructor_ = @JsonCreator)
 @Builder(toBuilder = true)
 public class DocPageToImageOptions {
 

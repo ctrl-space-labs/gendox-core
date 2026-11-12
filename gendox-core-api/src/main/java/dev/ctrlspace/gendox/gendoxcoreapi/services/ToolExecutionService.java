@@ -1,8 +1,8 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.AiToolRegistry;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.ToolExecutionContext;
@@ -61,7 +61,7 @@ public class ToolExecutionService {
             JsonNode functionObj = null; // json_schema is the whole function block
             try {
                 functionObj = objectMapper.readTree(tool.getJsonSchema());
-            } catch (JsonProcessingException e) {
+            } catch (JacksonException e) {
                 throw new GendoxRuntimeException(HttpStatus.BAD_REQUEST, "AI_TOOL_NOT_PROPER_JSON_SCHEMA", "Tool json schema is not a valid JSON", e);
             }
             String toolName = functionObj.get("name").asText();

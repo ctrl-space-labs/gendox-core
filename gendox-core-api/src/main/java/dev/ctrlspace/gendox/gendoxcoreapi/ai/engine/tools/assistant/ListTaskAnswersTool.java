@@ -1,8 +1,8 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.assistant;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ObjectNode;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.ToolExecutionContext;

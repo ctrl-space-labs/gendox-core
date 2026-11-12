@@ -1,5 +1,7 @@
 package dev.ctrlspace.gendox.spring.batch.model.criteria;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -10,7 +12,7 @@ import java.util.List;
 
 @Data
 @AllArgsConstructor
-@NoArgsConstructor
+@NoArgsConstructor(onConstructor_ = @JsonCreator)
 @Builder(toBuilder = true)
 public class BatchExecutionCriteria {
 

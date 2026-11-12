@@ -1,7 +1,9 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.assistant;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.TextNode;
+import tools.jackson.databind.json.JsonMapper;
+
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.StringNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.ToolExecutionContext;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
@@ -30,7 +32,7 @@ class RunTaskToolTest {
     @Mock private JobService jobService;
 
     private RunTaskTool tool;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = JsonMapper.shared();
     private final Project project = new Project();
     private final Task task = new Task();
     private ToolExecutionContext context;
@@ -53,7 +55,7 @@ class RunTaskToolTest {
 
     @Test
     void neverRegeneratesExistingAnswers() throws Exception {
-        tool.execute(TextNode.valueOf("{}"), context);
+        tool.execute(StringNode.valueOf("{}"), context);
 
         verify(support).requireProjectMember(context);
         ArgumentCaptor<TaskNodeCriteria> criteria = ArgumentCaptor.forClass(TaskNodeCriteria.class);
@@ -66,7 +68,7 @@ class RunTaskToolTest {
     void doesNotStartASecondRunWhileOneIsRunning() {
         when(jobService.isTaskRunning(project.getId(), task.getId())).thenReturn(true);
 
-        GendoxException e = assertThrows(GendoxException.class, () -> tool.execute(TextNode.valueOf("{}"), context));
+        GendoxException e = assertThrows(GendoxException.class, () -> tool.execute(StringNode.valueOf("{}"), context));
 
         assertEquals("TASK_ALREADY_RUNNING", e.getErrorCode());
         verify(jobService, never()).executeDocumentInsightsTask(any(), any());
@@ -77,7 +79,7 @@ class RunTaskToolTest {
         doThrow(new GendoxException("FORBIDDEN_SIGN_IN_AS_PROJECT_MEMBER", "no", HttpStatus.FORBIDDEN))
                 .when(support).requireProjectMember(context);
 
-        assertThrows(GendoxException.class, () -> tool.execute(TextNode.valueOf("{}"), context));
+        assertThrows(GendoxException.class, () -> tool.execute(StringNode.valueOf("{}"), context));
         verifyNoInteractions(jobService);
     }
 

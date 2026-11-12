@@ -1,10 +1,12 @@
 package dev.ctrlspace.gendox.spring.batch.jobs.documentInsights.steps;
 
+import tools.jackson.databind.json.JsonMapper;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 import com.knuddels.jtokkit.api.EncodingRegistry;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
@@ -114,9 +116,9 @@ public class InsightsSummaryProcessor implements ItemProcessor<TaskDocumentQuest
     }
 
 
-    private static ObjectNode buildResponseSchema(ParameterizedTypeReference typeReference) throws JsonProcessingException {
+    private static ObjectNode buildResponseSchema(ParameterizedTypeReference typeReference) throws JacksonException {
         String raw = JsonSchemaGenerator.generateForType(typeReference.getType());
-        ObjectMapper mapper = new ObjectMapper();
+        ObjectMapper mapper = JsonMapper.shared();
         JsonNode schemaNode = mapper.readTree(raw);
         ObjectNode wrapper = mapper.createObjectNode();
         wrapper.put("name", "json_response_with_actions");
@@ -241,7 +243,7 @@ public class InsightsSummaryProcessor implements ItemProcessor<TaskDocumentQuest
                     documentNode.getDocumentId());
             return null;
 
-        } catch (JsonProcessingException | IllegalArgumentException e) {
+        } catch (JacksonException | IllegalArgumentException e) {
             logger.warn("Error converting Json completion to GroupedQuestionAnswers, message: {}, error: {}", message.getId(), e.getMessage());
             logger.warn("Response Completion message is: {}", response.getLast().getValue());
             logger.warn("Skipping processing documentId: {}",

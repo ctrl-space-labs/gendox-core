@@ -1,10 +1,12 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.utils.tools;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.json.JsonMapper;
+
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JavaType;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.tools.ToolFunctionCall;
 import org.springframework.stereotype.Component;
 
@@ -12,7 +14,7 @@ import org.springframework.stereotype.Component;
 public class AiToolUtils {
 
 
-    private ObjectMapper objectMapper = new ObjectMapper();
+    private ObjectMapper objectMapper = JsonMapper.shared();
 
     /**
      * Deserialize a tool‐call JSON node into a ToolFunctionCall<T> with typed arguments.
@@ -25,12 +27,12 @@ public class AiToolUtils {
      * @param argumentsType        the Class of the T you want for the "arguments" field
      * @param <T>                  the type of the arguments DTO
      * @return                     a ToolFunctionCall<T> with `arguments` bound to T
-     * @throws JsonProcessingException on JSON parsing errors
+     * @throws JacksonException on JSON parsing errors
      */
     public <T> ToolFunctionCall<T> deserializeToolFunctionCall(
             ObjectNode toolFunctionCallJson,
             Class<T> argumentsType
-    ) throws JsonProcessingException {
+    ) throws JacksonException {
 
         // 1) Unwrap string‐encoded JSON if necessary
         JsonNode rawArgs = toolFunctionCallJson.get("arguments");

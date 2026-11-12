@@ -1,6 +1,8 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming;
 
-import com.fasterxml.jackson.databind.*;
+import tools.jackson.databind.json.JsonMapper;
+
+import tools.jackson.databind.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.cohere.response.CohereCompletionResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.mistral.response.MistralCompletionResponse;
@@ -14,7 +16,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 
 class ProviderStreamHttpTest {
-    final ObjectMapper mapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    final ObjectMapper mapper = JsonMapper.shared();
     @Test void usesExistingHttpClientAndHeadersAndProducesTypedResponse() {
         RestTemplate client = new RestTemplate(); var server = MockRestServiceServer.bindTo(client).build();
         server.expect(requestTo("https://provider.invalid/chat")).andExpect(method(HttpMethod.POST))

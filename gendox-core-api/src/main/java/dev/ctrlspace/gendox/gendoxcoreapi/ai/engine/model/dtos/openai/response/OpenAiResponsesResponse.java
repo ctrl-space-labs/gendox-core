@@ -1,7 +1,9 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.OpenAiResponsesItem;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -16,7 +18,7 @@ import java.util.List;
  */
 @Data
 @AllArgsConstructor
-@NoArgsConstructor
+@NoArgsConstructor(onConstructor_ = @JsonCreator)
 @Builder(toBuilder = true)
 public class OpenAiResponsesResponse {
 
@@ -38,7 +40,7 @@ public class OpenAiResponsesResponse {
     /** input/output rather than prompt/completion; mapped to {@link Usage} so billing is unchanged. */
     @Data
     @AllArgsConstructor
-    @NoArgsConstructor
+    @NoArgsConstructor(onConstructor_ = @JsonCreator)
     @Builder(toBuilder = true)
     public static class ResponsesUsage {
         @JsonProperty("input_tokens")
@@ -55,7 +57,7 @@ public class OpenAiResponsesResponse {
 
     @Data
     @AllArgsConstructor
-    @NoArgsConstructor
+    @NoArgsConstructor(onConstructor_ = @JsonCreator)
     @Builder(toBuilder = true)
     public static class InputTokensDetails {
         @JsonProperty("cached_tokens")
@@ -64,7 +66,7 @@ public class OpenAiResponsesResponse {
 
     @Data
     @AllArgsConstructor
-    @NoArgsConstructor
+    @NoArgsConstructor(onConstructor_ = @JsonCreator)
     @Builder(toBuilder = true)
     public static class OutputTokensDetails {
         /** A subset of output_tokens, not an addition. */

@@ -1,9 +1,9 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.subagents;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.AiToolHandler;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.ToolExecutionContext;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
@@ -72,7 +72,7 @@ public class CreateSubAgentTool implements AiToolHandler {
                 """;
         try {
             return objectMapper.readTree(schemaJson);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new IllegalStateException("Invalid JSON schema in CreateSubAgentTool", e);
         }
     }

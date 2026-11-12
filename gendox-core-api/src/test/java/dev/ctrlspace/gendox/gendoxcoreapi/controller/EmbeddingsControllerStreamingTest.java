@@ -21,7 +21,6 @@ import org.springframework.core.task.TaskExecutor;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.ArrayList;
@@ -83,10 +82,7 @@ class EmbeddingsControllerStreamingTest {
         EmbeddingsController controller = new EmbeddingsController(mock(EmbeddingService.class), mock(TrainingService.class), completions,
                 messages, mock(OrganizationModelKeyService.class), subscriptions, projects, contextConverter, contexts, deep,
                 turns, naming, mock(DocumentSectionService.class), mock(SecurityUtils.class), executor);
-        // Jackson 2, as the application is configured (spring.http.converters.preferred-json-mapper)
-        mvc = MockMvcBuilders.standaloneSetup(controller)
-                .setMessageConverters(new MappingJackson2HttpMessageConverter())
-                .build();
+        mvc = MockMvcBuilders.standaloneSetup(controller).build();
     }
 
     // Streams one token, as a provider would, then returns the answer

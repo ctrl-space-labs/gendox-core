@@ -1,7 +1,9 @@
 package dev.ctrlspace.gendox.spring.batch.jobs.documentDigitization.steps;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
+
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDocumentMetadataDTO;
@@ -50,7 +52,7 @@ public class DocumentDigitizationReader extends GendoxJpaPageReader<TaskDocument
         criteria.setTaskId(UUID.fromString(taskId));
         criteria.setNodeTypeNames(List.of("DOCUMENT"));
 
-        ObjectMapper mapper = new ObjectMapper();
+        ObjectMapper mapper = JsonMapper.shared();
 
         // Deserialize documentNodeIds list from JSON string
         String documentNodeIdsJson = jobParameters.getString(JobExecutionParamConstants.DOCUMENT_NODE_IDS);

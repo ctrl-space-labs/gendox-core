@@ -1,5 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model.dtos;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -10,7 +12,7 @@ import java.util.UUID;
 
 @Data
 @AllArgsConstructor
-@NoArgsConstructor
+@NoArgsConstructor(onConstructor_ = @JsonCreator)
 @Builder(toBuilder = true)
 @Entity
 @SqlResultSetMapping(

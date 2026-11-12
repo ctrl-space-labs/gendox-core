@@ -1,5 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.cohere.response;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -11,7 +13,7 @@ import java.util.List;
 @Data
 @Builder(toBuilder = true)
 @AllArgsConstructor
-@NoArgsConstructor
+@NoArgsConstructor(onConstructor_ = @JsonCreator)
 public class CohereEmbedResponse {
     private String id;
     private Embeddings embeddings;
@@ -21,7 +23,7 @@ public class CohereEmbedResponse {
     @Data
     @Builder(toBuilder = true)
     @AllArgsConstructor
-    @NoArgsConstructor
+    @NoArgsConstructor(onConstructor_ = @JsonCreator)
     public static class Embeddings {
         @JsonProperty("float")
         private List<List<Float>> _float;
@@ -30,7 +32,7 @@ public class CohereEmbedResponse {
     @Data
     @Builder(toBuilder = true)
     @AllArgsConstructor
-    @NoArgsConstructor
+    @NoArgsConstructor(onConstructor_ = @JsonCreator)
     public static class Meta {
         private ApiVersion api_version;
         private BilledUnits billed_units;
@@ -40,7 +42,7 @@ public class CohereEmbedResponse {
     @Data
     @Builder(toBuilder = true)
     @AllArgsConstructor
-    @NoArgsConstructor
+    @NoArgsConstructor(onConstructor_ = @JsonCreator)
     public static class ApiVersion {
         private String version;
         private boolean is_experimental;
@@ -49,7 +51,7 @@ public class CohereEmbedResponse {
     @Data
     @Builder(toBuilder = true)
     @AllArgsConstructor
-    @NoArgsConstructor
+    @NoArgsConstructor(onConstructor_ = @JsonCreator)
     public static class BilledUnits {
         private int input_tokens;
     }

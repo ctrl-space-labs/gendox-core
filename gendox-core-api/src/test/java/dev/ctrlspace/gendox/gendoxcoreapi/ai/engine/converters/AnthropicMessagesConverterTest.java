@@ -1,7 +1,9 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
+
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.anthropic.request.AnthropicCompletionRequest;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.anthropic.request.AnthropicContentBlock;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMessage;
@@ -25,7 +27,7 @@ class AnthropicMessagesConverterTest {
 
     @BeforeEach
     void setUp() {
-        objectMapper = new ObjectMapper();
+        objectMapper = JsonMapper.shared();
         converter = new AnthropicMessagesConverter(objectMapper);
     }
 

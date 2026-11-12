@@ -1,5 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Choice;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Usage;
 import lombok.AllArgsConstructor;
@@ -11,7 +13,7 @@ import java.util.List;
 
 @Data
 @AllArgsConstructor
-@NoArgsConstructor
+@NoArgsConstructor(onConstructor_ = @JsonCreator)
 @Builder(toBuilder = true)
 public class CompletionResponse {
 

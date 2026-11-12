@@ -1,6 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.CompletionDelta;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.CompletionTurn;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;

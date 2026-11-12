@@ -1,5 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -10,7 +12,7 @@ import java.util.Map;
 
 @Data
 @AllArgsConstructor
-@NoArgsConstructor
+@NoArgsConstructor(onConstructor_ = @JsonCreator)
 @Builder(toBuilder = true)
 public class OpenAiModerationResponse {
     private String id;
@@ -21,7 +23,7 @@ public class OpenAiModerationResponse {
 
     @Data
     @AllArgsConstructor
-    @NoArgsConstructor
+    @NoArgsConstructor(onConstructor_ = @JsonCreator)
     @Builder(toBuilder = true)
     public static class OpenAiGpt35ModerationResult {
         private boolean flagged;

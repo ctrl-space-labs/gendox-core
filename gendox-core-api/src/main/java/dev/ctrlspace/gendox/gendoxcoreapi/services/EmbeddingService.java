@@ -1,6 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.node.ObjectNode;
 import com.knuddels.jtokkit.api.Encoding;
 import com.knuddels.jtokkit.api.EncodingRegistry;
 import com.knuddels.jtokkit.api.ModelType;

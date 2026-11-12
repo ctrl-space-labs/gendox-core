@@ -1,8 +1,10 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ContentPart;
 //import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.MessageLocalContext;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.MessageLocalContext;
@@ -27,7 +29,7 @@ import java.util.UUID;
 @EntityListeners(AuditingEntityListener.class)
 @Table(name = "message", schema = "gendox_core")
 @AllArgsConstructor
-@NoArgsConstructor
+@NoArgsConstructor(onConstructor_ = @JsonCreator)
 @Builder(toBuilder = true)
 public class Message {
     //    @GeneratedValue(strategy = GenerationType.IDENTITY)

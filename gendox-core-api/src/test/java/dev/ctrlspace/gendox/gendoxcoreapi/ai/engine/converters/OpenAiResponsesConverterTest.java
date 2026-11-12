@@ -1,7 +1,9 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
+
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.OpenAiResponsesItem;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ContentPart;
@@ -22,7 +24,7 @@ class OpenAiResponsesConverterTest {
 
     @BeforeEach
     void setUp() {
-        objectMapper = new ObjectMapper();
+        objectMapper = JsonMapper.shared();
         converter = new OpenAiResponsesConverter(objectMapper);
     }
 

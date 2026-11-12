@@ -5,6 +5,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelRe
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiTools;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.node.JsonNodeFactory;
 import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -31,7 +32,7 @@ class MockGeminiServiceAdapterTest {
 
     @Test
     void structuredInsightsUseTheQuestionIdsFromTheRequest() {
-        var schema = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        var schema = JsonNodeFactory.instance.objectNode();
         schema.putObject("schema").putObject("properties").putObject("completionAnswers");
         String id = "15a6a61a-82d3-40dd-9258-22d6ad348050";
         String request = "{\"questionId\":\"" + id + "\",\"questionText\":\"What?\"}";

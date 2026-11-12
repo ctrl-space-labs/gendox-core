@@ -1,6 +1,8 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
+
+import tools.jackson.databind.ObjectMapper;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.cohere.response.CohereCompletionResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.CompletionResponse;
@@ -12,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 /** Cohere and Mistral tool calls reach the tool loop in OpenAI's shape, as the other providers' do. */
 class ToolCallResponseConvertersTest {
 
-    final ObjectMapper mapper = new ObjectMapper();
+    final ObjectMapper mapper = JsonMapper.shared();
 
     @Test
     void mistralCallsKeepTheirArgumentsAsJsonText() throws Exception {

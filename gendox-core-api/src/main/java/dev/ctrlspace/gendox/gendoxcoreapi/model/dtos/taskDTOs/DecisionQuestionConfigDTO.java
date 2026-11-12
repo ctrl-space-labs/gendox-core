@@ -1,5 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -10,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 @Data
-@NoArgsConstructor
+@NoArgsConstructor(onConstructor_ = @JsonCreator)
 @AllArgsConstructor
 @Builder(toBuilder = true)
 public class DecisionQuestionConfigDTO {

@@ -1,6 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.ollama.aiengine.aiengine;
 
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.node.ObjectNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;

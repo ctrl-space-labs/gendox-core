@@ -1,6 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services;
 
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.node.ObjectNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.CompletionDelta;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;

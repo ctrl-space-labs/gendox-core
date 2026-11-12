@@ -1,10 +1,12 @@
 package dev.ctrlspace.gendox.spring.batch.jobs.documentInsights.steps;
 
+import tools.jackson.databind.json.JsonMapper;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 import com.knuddels.jtokkit.api.Encoding;
 import com.knuddels.jtokkit.api.EncodingRegistry;
 import com.knuddels.jtokkit.api.ModelType;
@@ -470,7 +472,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                                                                   CompletionRuntimeOverridesDTO overrides,
                                                                   MessageLocalContextDTO mainDocSupportingDocumentsContext,
                                                                   @Nullable String mainDocumentTitle,
-                                                                  @Nullable UUID mainDocumentId) throws JsonProcessingException {
+                                                                  @Nullable UUID mainDocumentId) throws JacksonException {
 
         List<AnswerCreationDTO> newAnswers = new ArrayList<>();
 
@@ -536,7 +538,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         return newAnswers;
     }
 
-    private @Nullable GroupedQuestionAnswers consolidatePartsAnswersToASingleOne(TaskDocumentQuestionsDTO documentGroupWithQuestions, List<CompletionQuestionRequest> questionGroup, String allQuestions, List<GroupedQuestionAnswers> allAnswersFromDocumentParts, ChatThread newThread, ObjectNode responseJsonSchema, Task task, CompletionRuntimeOverridesDTO overrides) throws JsonProcessingException {
+    private @Nullable GroupedQuestionAnswers consolidatePartsAnswersToASingleOne(TaskDocumentQuestionsDTO documentGroupWithQuestions, List<CompletionQuestionRequest> questionGroup, String allQuestions, List<GroupedQuestionAnswers> allAnswersFromDocumentParts, ChatThread newThread, ObjectNode responseJsonSchema, Task task, CompletionRuntimeOverridesDTO overrides) throws JacksonException {
         StringBuilder prompt = new StringBuilder();
         prompt.append("""
                 Big documents don't fit in the LLM context window; the document was split into parts.
@@ -558,7 +560,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
 
             try {
                 prompt.append(objectMapper.writeValueAsString(answers.getCompletionAnswers())).append("\n\n");
-            } catch (JsonProcessingException ignored) {
+            } catch (JacksonException ignored) {
             }
         }
 
@@ -775,7 +777,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                     questionGroup.stream().map(CompletionQuestionRequest::getQuestionId).toList());
             return null;
 
-        } catch (JsonProcessingException | IllegalArgumentException e) {
+        } catch (JacksonException | IllegalArgumentException e) {
             logger.warn("Error converting Json completion to GroupedQuestionAnswers, message: {}, error: {}", message.getId(), e.getMessage(), e);
             if (response.getLast() != null) {
                 logger.warn("Response Completion message is: {}", response.getLast().getValue());
@@ -966,9 +968,9 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         return groups;
     }
 
-    private static ObjectNode buildResponseSchema(ParameterizedTypeReference typeReference) throws JsonProcessingException {
+    private static ObjectNode buildResponseSchema(ParameterizedTypeReference typeReference) throws JacksonException {
         String raw = JsonSchemaGenerator.generateForType(typeReference.getType());
-        ObjectMapper mapper = new ObjectMapper();
+        ObjectMapper mapper = JsonMapper.shared();
         JsonNode schemaNode = mapper.readTree(raw);
         ObjectNode wrapper = mapper.createObjectNode();
         wrapper.put("name", "json_response_with_actions");

@@ -1,6 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.converters;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import tools.jackson.core.JacksonException;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskEdge;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskEdgeDTO;
@@ -20,7 +20,7 @@ public class TaskEdgeConverter implements GendoxConverter<TaskEdge, TaskEdgeDTO>
     }
 
     @Override
-    public TaskEdgeDTO toDTO(TaskEdge taskEdge) throws GendoxException, JsonProcessingException {
+    public TaskEdgeDTO toDTO(TaskEdge taskEdge) throws GendoxException, JacksonException {
         return null;
     }
 

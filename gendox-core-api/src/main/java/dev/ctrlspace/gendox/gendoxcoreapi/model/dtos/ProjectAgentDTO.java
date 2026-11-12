@@ -1,5 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model.dtos;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AgentSkill;
@@ -18,7 +20,7 @@ import java.util.UUID;
 
 @Data
 @AllArgsConstructor
-@NoArgsConstructor
+@NoArgsConstructor(onConstructor_ = @JsonCreator)
 @Builder(toBuilder = true)
 public class ProjectAgentDTO {
 

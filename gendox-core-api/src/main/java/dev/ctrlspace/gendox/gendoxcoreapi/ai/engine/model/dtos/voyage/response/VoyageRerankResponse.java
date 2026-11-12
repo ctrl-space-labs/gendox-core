@@ -1,5 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.voyage.response;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -10,7 +12,7 @@ import java.util.List;
 @Data
 @Builder(toBuilder = true)
 @AllArgsConstructor
-@NoArgsConstructor
+@NoArgsConstructor(onConstructor_ = @JsonCreator)
 public class VoyageRerankResponse {
     private String object;
     private List<Result> data;
@@ -20,7 +22,7 @@ public class VoyageRerankResponse {
     @Data
     @Builder(toBuilder = true)
     @AllArgsConstructor
-    @NoArgsConstructor
+    @NoArgsConstructor(onConstructor_ = @JsonCreator)
     public static class Result {
         private double relevance_score;
         private int index;
@@ -29,7 +31,7 @@ public class VoyageRerankResponse {
     @Data
     @Builder(toBuilder = true)
     @AllArgsConstructor
-    @NoArgsConstructor
+    @NoArgsConstructor(onConstructor_ = @JsonCreator)
     public static class Usage {
         private int total_tokens;
     }

@@ -1,7 +1,9 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services.integrations;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
+
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
@@ -84,7 +86,7 @@ public class S3BucketIntegrationUpdateService implements IntegrationUpdateServic
 
     private void processSqsMessage(Message sqsMessage, List<MultipartFile> fileList, Integration integration) throws IOException, GendoxException {
 
-        JsonNode messageBody = new ObjectMapper().readTree(sqsMessage.getBody());
+        JsonNode messageBody = JsonMapper.shared().readTree(sqsMessage.getBody());
         String event = extractJsonValue(messageBody, S3BucketIntegrationConstants.OBJECT_ROOT_EVENT);
         String bucketName = extractJsonValue(messageBody, S3BucketIntegrationConstants.OBJECT_ROOT_BUCKET_NAME);
         String objectKey = extractJsonValue(messageBody, S3BucketIntegrationConstants.OBJECT_ROOT_KEY);

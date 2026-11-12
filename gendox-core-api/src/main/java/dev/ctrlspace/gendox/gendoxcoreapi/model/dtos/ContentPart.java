@@ -1,5 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model.dtos;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
@@ -16,7 +18,7 @@ import lombok.NoArgsConstructor;
  */
 @Data
 @AllArgsConstructor
-@NoArgsConstructor
+@NoArgsConstructor(onConstructor_ = @JsonCreator)
 @Builder(toBuilder = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ContentPart {
@@ -34,7 +36,7 @@ public class ContentPart {
 
     @Data
     @AllArgsConstructor
-    @NoArgsConstructor
+    @NoArgsConstructor(onConstructor_ = @JsonCreator)
     @Builder(toBuilder = true)
     public static class ImageInput {
         // it can be a base64 string or a public URL
@@ -44,7 +46,7 @@ public class ContentPart {
 
     @Data
     @AllArgsConstructor
-    @NoArgsConstructor
+    @NoArgsConstructor(onConstructor_ = @JsonCreator)
     @Builder(toBuilder = true)
     public static class AudioInput {
         private String data;

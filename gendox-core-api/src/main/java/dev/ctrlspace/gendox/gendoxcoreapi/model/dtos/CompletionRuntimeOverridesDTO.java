@@ -1,5 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model.dtos;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiTools;
@@ -15,7 +17,7 @@ import java.util.UUID;
 
 @Data
 @AllArgsConstructor
-@NoArgsConstructor
+@NoArgsConstructor(onConstructor_ = @JsonCreator)
 @Builder(toBuilder = true)
 public class CompletionRuntimeOverridesDTO {
 

@@ -1,6 +1,8 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
+
+import tools.jackson.databind.ObjectMapper;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.AiToolRegistry;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AgentSkill;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiTools;
@@ -45,7 +47,7 @@ class CompletionRuntimeContextResolverTest {
 
     @BeforeEach
     void setUp() {
-        resolver = new CompletionRuntimeContextResolver(null, typeService, null, null, new ObjectMapper(), null, aiToolRegistry,
+        resolver = new CompletionRuntimeContextResolver(null, typeService, null, null, JsonMapper.shared(), null, aiToolRegistry,
                 new SkillService(null, agentSkillRepository, aiToolRegistry, null, typeService));
         agent.setId(UUID.randomUUID());
         agent.setAiTools(new ArrayList<>(List.of(tool("advanced_search"))));
@@ -54,7 +56,7 @@ class CompletionRuntimeContextResolverTest {
     }
 
     private List<String> names(List<AiTools> tools) {
-        ObjectMapper mapper = new ObjectMapper();
+        ObjectMapper mapper = JsonMapper.shared();
         return tools.stream().map(tool -> {
             try {
                 return mapper.readTree(tool.getJsonSchema()).path("name").asText();

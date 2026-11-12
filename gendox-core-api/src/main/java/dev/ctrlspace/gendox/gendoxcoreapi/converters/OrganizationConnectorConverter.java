@@ -1,8 +1,8 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.converters;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.OrganizationConnector;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
@@ -65,7 +65,7 @@ public class OrganizationConnectorConverter
         }
         try {
             return objectMapper.readValue(json, MAP_TYPE);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new GendoxException("CONNECTOR_CONFIG_DESERIALIZE_ERROR",
                     "Could not deserialize connector config JSON", HttpStatus.INTERNAL_SERVER_ERROR);
         }
@@ -75,7 +75,7 @@ public class OrganizationConnectorConverter
         Map<String, Object> safe = config == null ? Collections.emptyMap() : config;
         try {
             return objectMapper.writeValueAsString(safe);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new GendoxException("CONNECTOR_CONFIG_SERIALIZE_ERROR",
                     "Could not serialize connector config JSON", HttpStatus.BAD_REQUEST);
         }

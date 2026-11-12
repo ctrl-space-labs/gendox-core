@@ -1,5 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model.dtos;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -12,7 +14,7 @@ import java.util.UUID;
 
 @Data
 @AllArgsConstructor
-@NoArgsConstructor
+@NoArgsConstructor(onConstructor_ = @JsonCreator)
 @Builder
 public class MessageAttachmentsRequestDTO {
     @NotEmpty(message = "messageIds must not be empty")

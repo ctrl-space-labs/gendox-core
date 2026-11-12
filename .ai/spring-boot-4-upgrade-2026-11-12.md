@@ -7,10 +7,11 @@ Spring Batch 6 and Spring AI 2.0.2, retaining Java 25.
 The migration updates modular starters, Hibernate/Hypersistence, Springdoc and
 ShedLock, and removes older explicit versions of dependencies managed by Boot.
 
-Jackson 2 remains an explicit compatibility boundary for application DTOs,
-MVC, outbound HTTP clients and Hibernate JSON columns. Spring AI also brings
-Jackson 3. Boot's deprecated Jackson 2 module is temporary: port application
-serializers and tree models before removing it or upgrading beyond its support.
+Application DTOs, MVC, HTTP clients and Hibernate JSON values now use Boot's
+managed Jackson 3 defaults. The initial Jackson 2 compatibility boundary was
+removed in a separate migration, with before/after JSON API contracts. See the
+[Jackson 3 migration plan](jackson-3-migration-2026-11-12.md). External SDKs may still
+retain Jackson 2 transitively; the application no longer selects it.
 
 Batch imports and job launching use the version 6 APIs. JDBC job metadata stays
 in `gendox_jobs`; the forward migration renames the job-instance sequence.
@@ -66,15 +67,19 @@ URI-limit filters, tuning aliases and `Jackson2RestTemplates` have been removed.
 Boot already limits URI labels to 100. Only HTTP URL privacy conventions remain custom.
 The optional `observability` profile selects Boot's JSON console logging.
 
-Jackson 2 converter selection is still temporarily configured through Boot, which
-applies it to its HTTP builders. The application no longer rewrites converter lists.
-A separate Jackson 3 change will add explicit JSON API contracts, establish their
-Jackson 2 baseline, migrate application types and remove the compatibility settings.
+The application no longer rewrites converter lists. The separate Jackson 3 migration
+establishes a Jackson 2 wire-contract baseline and removes the compatibility settings.
+Boot chooses its default Jackson 3 converter for MVC and both HTTP client types.
 
 The preceding implementation was verified with 337 backend tests (the same seven
 baseline errors and two skips), 19 passing smoke cases and 120 passing e2e cases
 with the same three documented database-dependent failures. Simplification validation:
 17 focused backend checks passed and all 19 smoke cases passed. No production load benchmark was performed.
+
+The subsequent Jackson 3 revision passed four JSON API contracts, all 19 smoke
+cases and 124 full-suite cases, with only the same three known database-dependent
+failures. Its backend run contains 338 tests, the same seven baseline errors and
+two skips. JSON-specific decisions and coverage are in the separate migration plan.
 
 See [`gendox-core-api/OBSERVABILITY.md`](../gendox-core-api/OBSERVABILITY.md) for
 operation, coverage limits and the later Hetzner/ECS collector setup.

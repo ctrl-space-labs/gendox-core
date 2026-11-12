@@ -1,9 +1,10 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import tools.jackson.databind.json.JsonMapper;
+
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.AiToolRegistry;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.ToolExecutionContext;
@@ -29,7 +30,7 @@ import static org.mockito.Mockito.*;
 /** Where a tool call runs: in Gendox, on the client while the turn waits, on the client as an action, or not at all. */
 class ToolExecutionServiceTest {
 
-    final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
+    final ObjectMapper mapper = JsonMapper.shared();
     final AiToolRegistry aiToolRegistry = mock(AiToolRegistry.class);
     final ToolExecutionService service = new ToolExecutionService(aiToolRegistry, mapper, new ToolsHandlerAdvice());
 

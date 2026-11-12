@@ -1,8 +1,8 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import org.springframework.http.HttpStatus;
 
@@ -18,7 +18,7 @@ public abstract class DefinedToolHandler implements AiToolHandler {
     protected DefinedToolHandler(ObjectMapper objectMapper, String definitionJson) {
         try {
             this.definition = objectMapper.readTree(definitionJson);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new IllegalStateException("Invalid tool definition in " + getClass().getSimpleName(), e);
         }
     }
@@ -30,7 +30,7 @@ public abstract class DefinedToolHandler implements AiToolHandler {
                     : arguments.isTextual() ? objectMapper.readTree(arguments.asText().isBlank() ? "{}" : arguments.asText())
                     : arguments;
             return objectMapper.treeToValue(node, type);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new GendoxException("INVALID_TOOL_ARGUMENTS", "Arguments are not valid: " + e.getOriginalMessage(), HttpStatus.BAD_REQUEST);
         }
     }

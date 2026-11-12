@@ -1,4 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.mistral.request;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -9,7 +11,7 @@ import java.util.List;
 @Data
 @Builder(toBuilder = true)
 @AllArgsConstructor
-@NoArgsConstructor
+@NoArgsConstructor(onConstructor_ = @JsonCreator)
 public class MistralOcrRequest {
     private String model;
     private String id;
@@ -22,7 +24,7 @@ public class MistralOcrRequest {
     @Data
     @Builder(toBuilder = true)
     @AllArgsConstructor
-    @NoArgsConstructor
+    @NoArgsConstructor(onConstructor_ = @JsonCreator)
     public static class Document {
         private String documentUrl;
         private String documentName;

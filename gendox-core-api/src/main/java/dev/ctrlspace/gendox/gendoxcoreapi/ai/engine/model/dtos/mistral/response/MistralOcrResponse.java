@@ -1,5 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.mistral.response;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -10,7 +12,7 @@ import java.util.List;
 @Data
 @Builder(toBuilder = true)
 @AllArgsConstructor
-@NoArgsConstructor
+@NoArgsConstructor(onConstructor_ = @JsonCreator)
 public class MistralOcrResponse {
     private List<Page> pages;
     private String model;
@@ -19,7 +21,7 @@ public class MistralOcrResponse {
     @Data
     @Builder(toBuilder = true)
     @AllArgsConstructor
-    @NoArgsConstructor
+    @NoArgsConstructor(onConstructor_ = @JsonCreator)
     public static class Page {
         private int index;
         private String markdown;
@@ -30,7 +32,7 @@ public class MistralOcrResponse {
     @Data
     @Builder(toBuilder = true)
     @AllArgsConstructor
-    @NoArgsConstructor
+    @NoArgsConstructor(onConstructor_ = @JsonCreator)
     public static class Image {
         private String id;
         private int topLeftX;
@@ -43,7 +45,7 @@ public class MistralOcrResponse {
     @Data
     @Builder(toBuilder = true)
     @AllArgsConstructor
-    @NoArgsConstructor
+    @NoArgsConstructor(onConstructor_ = @JsonCreator)
     public static class Dimensions {
         private int dpi;
         private int height;
@@ -53,7 +55,7 @@ public class MistralOcrResponse {
     @Data
     @Builder(toBuilder = true)
     @AllArgsConstructor
-    @NoArgsConstructor
+    @NoArgsConstructor(onConstructor_ = @JsonCreator)
     public static class UsageInfo {
         private int pagesProcessed;
         private int docSizeBytes;

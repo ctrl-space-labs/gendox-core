@@ -1,6 +1,8 @@
 package dev.ctrlspace.gendox.spring.batch.services;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
+
+import tools.jackson.databind.ObjectMapper;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Task;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
@@ -46,7 +48,7 @@ public class DocumentDigitizationBatchService {
         logger.info("Starting Document Digitization job for Task ID: {}", task.getId());
 
         JobParametersBuilder paramsBuilder = new JobParametersBuilder();
-        ObjectMapper mapper = new ObjectMapper();
+        ObjectMapper mapper = JsonMapper.shared();
 
         if (criteria.getDocumentNodeIds() != null && !criteria.getDocumentNodeIds().isEmpty()) {
             try {

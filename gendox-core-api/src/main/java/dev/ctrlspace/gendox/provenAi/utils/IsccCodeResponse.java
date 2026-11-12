@@ -1,5 +1,7 @@
 package dev.ctrlspace.gendox.provenAi.utils;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -8,7 +10,7 @@ import lombok.NoArgsConstructor;
 @Data
 @Builder(toBuilder = true)
 @AllArgsConstructor
-@NoArgsConstructor
+@NoArgsConstructor(onConstructor_ = @JsonCreator)
 public class IsccCodeResponse {
 
     private String context;
