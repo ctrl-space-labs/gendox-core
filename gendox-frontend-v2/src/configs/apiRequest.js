@@ -15,6 +15,8 @@ export default {
 
   getProjectsByOrganization: organizationId => `${url}organizations/${organizationId}/projects`,
 
+  getProjectStatistics: organizationId => `${url}organizations/${organizationId}/projects/statistics`,
+
   findDocumentsByCriteria: (organizationId, projectId, page, size, sort = 'createdAt,desc') =>
     `${url}organizations/${organizationId}/projects/${projectId}/documents/search?page=${page}&size=${size}&sort=${sort}`,
 

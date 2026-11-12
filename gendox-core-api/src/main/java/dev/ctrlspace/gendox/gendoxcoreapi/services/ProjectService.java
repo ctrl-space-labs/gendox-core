@@ -1,9 +1,11 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
+import brave.internal.Nullable;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.ProjectConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectStatisticsDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.ProjectPredicates;
@@ -34,7 +36,6 @@ public class ProjectService {
     private TypeService typeService;
     private AuditLogsService auditLogsService;
     private SubscriptionValidationService subscriptionValidationService;
-    private ProjectDocumentService projectDocumentService;
 
 
     @Autowired
@@ -45,8 +46,7 @@ public class ProjectService {
                           UserOrganizationService userOrganizationService,
                           TypeService typeService,
                           AuditLogsService auditLogsService,
-                          SubscriptionValidationService subscriptionValidationService,
-                          ProjectDocumentService projectDocumentService) {
+                          SubscriptionValidationService subscriptionValidationService) {
         this.projectRepository = projectRepository;
         this.projectAgentService = projectAgentService;
         this.projectConverter = projectConverter;
@@ -55,7 +55,6 @@ public class ProjectService {
         this.typeService = typeService;
         this.auditLogsService = auditLogsService;
         this.subscriptionValidationService = subscriptionValidationService;
-        this.projectDocumentService = projectDocumentService;
     }
 
     public Project getProjectById(UUID id) throws GendoxException {
@@ -83,18 +82,15 @@ public class ProjectService {
     }
 
     /**
-     * Fills the document and member counts of a page of projects (the agent list): one grouped query per count,
-     * never one per project. A project without documents or members gets 0.
+     * How many documents and members each active project of an organization has.
+     *
+     * @param visibleProjectIds the projects to return, those the user can see; null for all of them
      */
-    public Page<Project> fillCounts(Page<Project> projects) {
-        Set<UUID> projectIds = projects.stream().map(Project::getId).collect(Collectors.toSet());
-        Map<UUID, Long> documents = projectDocumentService.countDocumentsByProject(projectIds);
-        Map<UUID, Long> members = projectMemberService.countMembersByProject(projectIds);
-        projects.forEach(project -> {
-            project.setDocumentCount(documents.getOrDefault(project.getId(), 0L));
-            project.setMemberCount(members.getOrDefault(project.getId(), 0L));
-        });
-        return projects;
+    public List<ProjectStatisticsDTO> getProjectStatistics(UUID organizationId, @Nullable Set<String> visibleProjectIds) {
+        return projectRepository.findStatisticsByOrganizationId(organizationId).stream()
+                .map(row -> new ProjectStatisticsDTO((UUID) row[0], ((Number) row[1]).longValue(), ((Number) row[2]).longValue()))
+                .filter(statistics -> visibleProjectIds == null || visibleProjectIds.contains(statistics.getProjectId().toString()))
+                .toList();
     }
 
     private void validateProjectName(String name) throws GendoxException {

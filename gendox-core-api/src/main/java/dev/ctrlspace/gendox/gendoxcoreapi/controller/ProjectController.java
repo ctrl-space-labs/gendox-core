@@ -8,10 +8,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.OrganizationUserDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.ProjectOrganizationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.OrganizationDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectAgentVPCredential;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectMemberDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectMemberCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.request.ProjectAgentVPOfferRequest;
@@ -91,9 +88,7 @@ public class ProjectController {
     @Operation(summary = "Get all projects",
             description = "Retrieve a list of all projects based on the provided criteria. The user must have the necessary permissions to access these projects.")
 
-    public Page<Project> getAllProjects(@Valid ProjectCriteria criteria, @PathVariable("organizationId") String organizationId, Pageable pageable,
-                                        @RequestParam(value = "withCounts", defaultValue = "false") boolean withCounts,
-                                        Authentication authentication) throws GendoxException {
+    public Page<Project> getAllProjects(@Valid ProjectCriteria criteria, @PathVariable("organizationId") String organizationId, Pageable pageable, Authentication authentication) throws GendoxException {
         // override requested org id with the path variable
         criteria.setOrganizationId(organizationId);
         criteria.setIsActive(true);
@@ -110,26 +105,24 @@ public class ProjectController {
         }
 
         // make sure that only the projects that the user has access to, are returned
-        if (securityUtils.isUser()) {
-            UserProfile userProfile = (UserProfile) authentication.getPrincipal();
-//            find user profile organization by organization id
-            OrganizationUserDTO organizationUserDTO = userProfile.getOrganizations().stream().filter(org -> org.getId().equals(organizationId)).findFirst().orElseThrow(() -> new GendoxException("ORGANIZATION_NOT_FOUND", "Organization not found", HttpStatus.NOT_FOUND));
-//            add project ids to criteria
-            Set<String> authorizedIds = organizationUserDTO.getProjects().stream().map(ProjectOrganizationDTO::getId)
-                    .collect(java.util.stream.Collectors.toSet());
+        Set<String> visibleIds = visibleProjectIds(organizationId, authentication);
+        if (visibleIds != null) {
             List<String> requested = criteria.getProjectIdIn();
-            criteria.setProjectIdIn(authorizedIds.stream()
+            criteria.setProjectIdIn(visibleIds.stream()
                     .filter(id -> requested == null || requested.isEmpty() || requested.contains(id)).toList());
             if (criteria.getProjectIdIn().isEmpty()) return Page.empty(pageable);
-
         }
 
-        Page<Project> projects = projectService.getAllProjects(criteria, pageable);
-        // only the agent list asks for the counts, and only signed-in users get them
-        if (withCounts && authentication instanceof GendoxAuthenticationToken) {
-            projectService.fillCounts(projects);
-        }
-        return projects;
+        return projectService.getAllProjects(criteria, pageable);
+    }
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
+    @GetMapping("organizations/{organizationId}/projects/statistics")
+    @Operation(summary = "Get the statistics of the organization's projects",
+            description = "How many documents and members each project the user can see has. Members don't count the agents' own users.")
+    public List<ProjectStatisticsDTO> getProjectStatistics(@PathVariable("organizationId") String organizationId,
+                                                           Authentication authentication) throws GendoxException {
+        return projectService.getProjectStatistics(UUID.fromString(organizationId), visibleProjectIds(organizationId, authentication));
     }
 
 
@@ -355,6 +348,25 @@ public class ProjectController {
         projectAgentVPCredential.setAgentVpJwt(agentVpJwt.toString());
 
         return projectAgentVPCredential;
+    }
+
+
+    /**
+     * The ids of the organization's projects the signed-in user is a member of, or null when nothing narrows them
+     * (a super admin, an API key, an anonymous caller).
+     */
+    private Set<String> visibleProjectIds(String organizationId, Authentication authentication) throws GendoxException {
+        if (!securityUtils.isUser()) {
+            return null;
+        }
+        UserProfile userProfile = (UserProfile) authentication.getPrincipal();
+        OrganizationUserDTO organizationUserDTO = userProfile.getOrganizations().stream()
+                .filter(org -> org.getId().equals(organizationId))
+                .findFirst()
+                .orElseThrow(() -> new GendoxException("ORGANIZATION_NOT_FOUND", "Organization not found", HttpStatus.NOT_FOUND));
+        return organizationUserDTO.getProjects().stream()
+                .map(ProjectOrganizationDTO::getId)
+                .collect(java.util.stream.Collectors.toSet());
     }
 
 

@@ -64,20 +64,7 @@ public class ProjectMemberService {
         }
     }
 
-    /**
-     * How many people each project has, without the agents' own users, for a page of the agent list.
-     * Projects without members are left out.
-     */
-    public Map<UUID, Long> countMembersByProject(Set<UUID> projectIds) {
-        if (projectIds == null || projectIds.isEmpty()) {
-            return Map.of();
-        }
-        Map<UUID, Long> counts = new HashMap<>();
-        for (Object[] row : projectMemberRepository.countGroupedByProjectIds(projectIds)) {
-            counts.put((UUID) row[0], (Long) row[1]);
-        }
-        return counts;
-    }
+
 
 
     public ProjectMember createProjectMember(ProjectMember projectMember) throws GendoxException {

@@ -10,8 +10,8 @@ import Avatar from 'src/components/ui/Avatar'
 import Empty from 'src/components/ui/Empty'
 import { formatDate } from 'src/components/knowledge/documentUtils'
 
-// The organization's agents the user belongs to. Visibility, model, tools and the document and member counts come
-// from GET organizations/{o}/projects?withCounts=true: one request for the page, the counts in two grouped queries.
+// The organization's agents the user belongs to. Visibility, model and tools come from GET organizations/{o}/projects,
+// the document and member counts from GET organizations/{o}/projects/statistics: one request each, for all the cards.
 
 // below this many documents, an agent's card suggests adding knowledge
 const FEW_DOCUMENTS = 3
@@ -20,18 +20,24 @@ const AgentsPage = () => {
   const { organization, organizationId, projects, href } = useActiveScope()
   const canCreate = useHasOrgRole({ organizationId, roles: ['OP_CREATE_PROJECT'] })
   const [details, setDetails] = useState(null) // projectId -> project, null while loading
+  const [statistics, setStatistics] = useState(null) // projectId -> { documentCount, memberCount }
   const [query, setQuery] = useState('')
 
   useEffect(() => {
     if (!organizationId) return
     let current = true
     projectService
-      .getProjectsByOrganization(organizationId, getToken(), { size: 100, withCounts: true })
+      .getProjectsByOrganization(organizationId, getToken())
       .then(response => {
         const list = response.data?.content ?? response.data ?? []
         if (current) setDetails(Object.fromEntries(list.map(p => [p.id, p])))
       })
       .catch(() => current && setDetails({}))
+    // without them the cards just leave the counts out
+    projectService
+      .getProjectStatistics(organizationId, getToken())
+      .then(response => current && setStatistics(Object.fromEntries((response.data ?? []).map(s => [s.projectId, s]))))
+      .catch(() => current && setStatistics({}))
 
     return () => {
       current = false
@@ -70,8 +76,8 @@ const AgentsPage = () => {
           const agent = details?.[p.id]?.projectAgent
           const loading = details === null
           const tools = agent?.aiTools?.length ?? 0
-          const documents = details?.[p.id]?.documentCount
-          const members = details?.[p.id]?.memberCount
+          const documents = statistics?.[p.id]?.documentCount
+          const members = statistics?.[p.id]?.memberCount
 
           return (
             <div className='card agent' key={p.id}>

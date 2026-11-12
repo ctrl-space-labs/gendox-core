@@ -172,7 +172,7 @@ class AuthorizationRegressionTest {
         UUID foreignProject = UUID.randomUUID();
         ProjectCriteria criteria = new ProjectCriteria();
         criteria.getProjectIdIn().add(foreignProject.toString());
-        c.getAllProjects(criteria, org.toString(), PageRequest.of(0, 20), false, SecurityContextHolder.getContext().getAuthentication());
+        c.getAllProjects(criteria, org.toString(), PageRequest.of(0, 20), SecurityContextHolder.getContext().getAuthentication());
         assertTrue(criteria.getProjectIdIn().isEmpty());
         verifyNoInteractions(projects);
         assertNull(criteria.getPrivateProjectAgent());
