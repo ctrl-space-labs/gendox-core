@@ -24,6 +24,12 @@ Spring:
 
 
 
+management:
+  tracing:
+    sampling:
+      # Record 1 request in 10. Trace ids are still created and logged for every request.
+      probability: 0.1
+
 gendox:
   domains:
     frontend: https://app.gendox.dev
