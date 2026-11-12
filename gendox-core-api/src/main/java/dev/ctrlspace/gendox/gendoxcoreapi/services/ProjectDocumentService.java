@@ -11,9 +11,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -43,19 +40,6 @@ public class ProjectDocumentService {
                 .orElseThrow(() -> new GendoxException("PROJECT_NOT_FOUND", "Project not found with documentId: " + documentId, HttpStatus.NOT_FOUND));
     }
 
-    /**
-     * How many documents each project has, for a page of the agent list. Projects without documents are left out.
-     */
-    public Map<UUID, Long> countDocumentsByProject(Set<UUID> projectIds) {
-        if (projectIds == null || projectIds.isEmpty()) {
-            return Map.of();
-        }
-        Map<UUID, Long> counts = new HashMap<>();
-        for (Object[] row : projectDocumentRepository.countGroupedByProjectIds(projectIds)) {
-            counts.put((UUID) row[0], (Long) row[1]);
-        }
-        return counts;
-    }
 
 
     public ProjectDocument createProjectDocument(Project project, DocumentInstance documentInstance) {

@@ -39,7 +39,18 @@ public interface ProjectRepository extends JpaRepository<Project, UUID>, Queryds
     long countByIdInAndOrganizationId(Collection<UUID> projectIds, UUID organizationId);
 
 
-
+    // [projectId, documentCount, memberCount] for each active project of an organization, in one query
+    @Query(value = """
+            SELECT p.id,
+                   (SELECT count(*) FROM gendox_core.project_documents pd WHERE pd.project_id = p.id),
+                   (SELECT count(*) FROM gendox_core.project_members pm
+                        JOIN gendox_core.users u ON u.id = pm.user_id
+                        JOIN gendox_core.types t ON t.id = u.users_type_id
+                    WHERE pm.project_id = p.id AND t.name <> 'GENDOX_AGENT')
+            FROM gendox_core.projects p
+            WHERE p.organization_id = :organizationId AND p.is_active = true
+            """, nativeQuery = true)
+    List<Object[]> findStatisticsByOrganizationId(@Param("organizationId") UUID organizationId);
 
 
 }

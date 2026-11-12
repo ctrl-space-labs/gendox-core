@@ -19,6 +19,19 @@ const getProjectsByOrganization = async (organizationId, token, params = { size:
 }
 
 /**
+ * How many documents and members each agent of the organization the user can see has
+ * @returns {Promise<axios.AxiosResponse<{projectId, documentCount, memberCount}[]>>}
+ */
+const getProjectStatistics = async (organizationId, token) => {
+  return axios.get(apiRequests.getProjectStatistics(organizationId), {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
+    }
+  })
+}
+
+/**
  * Get project by id
  * @param organizationId
  * @param projectId
@@ -178,6 +191,7 @@ const deactivateProjectById = async (organizationId, projectId, token) => {
 
 export default {
   getProjectsByOrganization,
+  getProjectStatistics,
   getProjectById,
   getProjectMembers,
   updateProject,
