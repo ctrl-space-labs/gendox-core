@@ -131,7 +131,7 @@ workers and each isolated browser case remain parallelizable.
 - **V2 training fixture.** The API-only workspace leaves `autoTraining` unset, whereas the
   v2 create-agent wizard enables it. The Process now scenario explicitly enables it before
   uploading, so the training job's enabled-project criterion includes this fixture.
-- **V2 logout isolation.** Give the real-login/logout case its own workspace and use an
+- **V2 profile/logout isolation.** Give profile and real-login/logout cases their own workspace and use an
   explicit organization/project URL for the profile. An unscoped profile can select a
   parallel case's organization while that case is still creating its first project.
 - **V2 selectors.** No `data-testid` attributes were added. Preserve role/label locators;
