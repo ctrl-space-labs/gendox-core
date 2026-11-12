@@ -2,6 +2,9 @@ package dev.ctrlspace.gendox.gendoxcoreapi.configuration;
 
 import com.nimbusds.jose.JOSEException;
 import dev.ctrlspace.gendox.authentication.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
+import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -72,7 +75,13 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests((authz) ->
                         authz
                                 .requestMatchers("/invitations/acceptance").permitAll()
-                                .requestMatchers("/actuator/health").permitAll()
+                                .requestMatchers("/actuator/health", "/actuator/health/liveness", "/actuator/health/readiness").permitAll()
+                                .requestMatchers("/actuator/**").access((authentication, context) -> {
+                                    Object principal = authentication.get().getPrincipal();
+                                    return new AuthorizationDecision(principal instanceof UserProfile profile
+                                            && profile.getGlobalUserRoleType() != null
+                                            && UserNamesConstants.GENDOX_SUPER_ADMIN.equals(profile.getGlobalUserRoleType().getName()));
+                                })
                                 .requestMatchers("/auth/signup").permitAll()
                                 .requestMatchers("/users/login").permitAll()
                                 .requestMatchers("/messages/completions").permitAll() // Allow requests when the Project Agent is Public

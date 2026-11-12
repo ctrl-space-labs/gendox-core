@@ -1,0 +1,12 @@
+# Optional local JSON console output for later collection by Alloy/Fluent Bit.
+# Add this profile after dev/prod. This profile does not enable any network export.
+logging:
+  level:
+    dev.ctrlspace: INFO
+  structured:
+    format:
+      console: logstash
+    json:
+      add:
+        service: ${spring.application.name}
+        environment: ${GENDOX_ENVIRONMENT:unknown}

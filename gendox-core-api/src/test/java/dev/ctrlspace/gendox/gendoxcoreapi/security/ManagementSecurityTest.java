@@ -72,7 +72,8 @@ class ManagementSecurityTest {
         @Bean ManagementProbe probe() { return new ManagementProbe(); }
     }
     @RestController static class ManagementProbe {
-        @GetMapping("/actuator/health") String endpoint() { return "probe"; }
+        @GetMapping({"/actuator/health", "/actuator/health/liveness", "/actuator/health/readiness",
+                "/actuator/prometheus", "/actuator/beans"}) String endpoint() { return "probe"; }
     }
     @Autowired WebApplicationContext context;
     MockMvc mvc;
@@ -86,6 +87,16 @@ class ManagementSecurityTest {
     // Which actuator endpoints exist is limited in application.yml (management.endpoints.web.exposure)
     @Test void healthRemainsPublic() throws Exception {
         mvc.perform(get("/actuator/health")).andExpect(status().isOk());
+        mvc.perform(get("/actuator/health/liveness")).andExpect(status().isOk());
+        mvc.perform(get("/actuator/health/readiness")).andExpect(status().isOk());
+    }
+    @Test void managementMetricsRequireAnOperatorRatherThanAnOrganizationUserOrApiKey() throws Exception {
+        for (String endpoint : List.of("/actuator/prometheus", "/actuator/beans")) {
+            mvc.perform(get(endpoint)).andExpect(status().isUnauthorized());
+            mvc.perform(get(endpoint).with(authentication(token("GENDOX_USER")))).andExpect(status().isForbidden());
+            mvc.perform(get(endpoint).with(authentication(token("GENDOX_API_KEY")))).andExpect(status().isForbidden());
+            mvc.perform(get(endpoint).with(authentication(token("GENDOX_SUPER_ADMIN")))).andExpect(status().isOk());
+        }
     }
     @Test void invitationAcceptanceRemainsPublicWithoutAuthentication() throws Exception {
         mvc.perform(get("/invitations/acceptance").param("email", "invitee@example.invalid").param("token", "invitation-token"))

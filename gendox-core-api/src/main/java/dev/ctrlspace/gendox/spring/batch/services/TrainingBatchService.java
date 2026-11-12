@@ -1,6 +1,6 @@
 package dev.ctrlspace.gendox.spring.batch.services;
 
-import brave.internal.Nullable;
+import org.jspecify.annotations.Nullable;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentSectionCriteriaJobParamsConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TimePeriodDTO;
