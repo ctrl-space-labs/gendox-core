@@ -30,6 +30,7 @@ import { TaskFormDialog } from 'src/components/tasks/TaskDialogs'
 import {
   FLAGS,
   Flag,
+  ISSUE_FLAGS,
   KIND,
   answerOf as answerFromNode,
   documentOf,
@@ -42,12 +43,19 @@ import {
 import InsightsInspector, { docTabOf, useDocumentNames } from 'src/components/tasks/InsightsInspector'
 import DocumentPicker, { findDocuments } from 'src/components/tasks/DocumentPicker'
 import useSplitPane from 'src/components/tasks/useSplitPane'
-import InsightsColumnMenu, { toDocumentSearch } from 'src/components/tasks/InsightsColumnMenu'
+import InsightsColumnMenu, { UNANSWERED, toDocumentSearch } from 'src/components/tasks/InsightsColumnMenu'
 import useTaskJob, { jobParam } from 'src/components/tasks/useTaskJob'
 import { ViewMain, useScreenTitle, useView } from 'src/views/ViewContext'
 import ConfirmDialog from 'src/components/ui/ConfirmDialog'
 import Empty from 'src/components/ui/Empty'
 import Menu from 'src/components/ui/Menu'
+
+// Show rows: documents by the answers to every question (answerFilterAnyStatuses), as the column filter does for one
+const SHOW_ROWS = {
+  ALL: { label: 'All answers' },
+  ISSUES: { label: 'With issues', statuses: ISSUE_FLAGS },
+  UNANSWERED: { label: 'Not answered yet', statuses: [UNANSWERED] }
+}
 
 const ALL = 2147483647
 
@@ -89,6 +97,7 @@ const DocumentInsightsView = () => {
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState(null) // { by: 'title' | 'answer', qId, dir }, null for the newest first
   const [filter, setFilter] = useState(null) // { qId, values, negate }: one question's answers
+  const [rows, setRows] = useState('ALL') // Show rows: across every question, beside the column filter
   const [selected, setSelected] = useState(new Set())
   const [view, setView] = useState(null)
   const [confirm, setConfirm] = useState(null)
@@ -140,7 +149,13 @@ const DocumentInsightsView = () => {
           organizationId,
           projectId,
           taskId,
-          { taskId, nodeTypeNames: ['DOCUMENT'], ...(search ? { documentNameContains: search } : {}), ...order.criteria },
+          {
+            taskId,
+            nodeTypeNames: ['DOCUMENT'],
+            ...(search ? { documentNameContains: search } : {}),
+            ...(SHOW_ROWS[rows].statuses ? { answerFilterAnyStatuses: SHOW_ROWS[rows].statuses } : {}),
+            ...order.criteria
+          },
           token,
           page,
           pageSize,
@@ -174,7 +189,7 @@ const DocumentInsightsView = () => {
       toast.error(getErrorMessage(error))
       setDocs(d => d ?? [])
     }
-  }, [organizationId, projectId, taskId, search, page, pageSize, sort, filter, loadAnswers])
+  }, [organizationId, projectId, taskId, search, page, pageSize, sort, filter, rows, loadAnswers])
 
   useEffect(loadTask, [loadTask])
   useEffect(() => {
@@ -550,6 +565,22 @@ const DocumentInsightsView = () => {
                   <Search className='lucide' />
                   <input placeholder='Find a document' value={query} onChange={e => setQuery(e.target.value)} />
                 </label>
+                <select
+                  className='input s'
+                  style={{ width: 'auto' }}
+                  title='Show rows'
+                  value={rows}
+                  onChange={e => {
+                    setRows(e.target.value)
+                    setPage(0)
+                  }}
+                >
+                  {Object.entries(SHOW_ROWS).map(([key, option]) => (
+                    <option key={key} value={key}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
                 <span className='sp' />
                 <button
                   aria-busy={exporting}

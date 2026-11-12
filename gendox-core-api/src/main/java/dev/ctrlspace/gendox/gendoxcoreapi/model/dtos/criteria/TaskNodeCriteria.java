@@ -42,4 +42,8 @@ public class TaskNodeCriteria {
     private Boolean answerFilterNegate;
     // The question whose answers are sorted by, with sort=answer
     private UUID sortQuestionNodeId;
+
+    // Show rows: DOCUMENT nodes by the answers to every question of the task, beside the one-question filter above.
+    // An AnswerFlag name keeps documents with that flag on any answer; UNANSWERED keeps those missing an answer to some question.
+    private List<String> answerFilterAnyStatuses;
 }

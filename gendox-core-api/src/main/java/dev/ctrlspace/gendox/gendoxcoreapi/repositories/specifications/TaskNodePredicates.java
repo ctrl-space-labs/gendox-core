@@ -49,7 +49,8 @@ public class TaskNodePredicates {
                 pageTo(criteria.getPageTo()),
                 documentNameContains(criteria.getDocumentNameContains()),
                 answerStatus(criteria),
-                answerValue(criteria)
+                answerValue(criteria),
+                anyAnswerStatus(criteria)
         );
     }
 
@@ -267,6 +268,40 @@ public class TaskNodePredicates {
         return Boolean.TRUE.equals(criteria.getAnswerFilterNegate()) ? match.not() : match;
     }
 
+    /**
+     * DOCUMENT nodes by the answers to every question of the task (Show rows), beside the one-question filter:
+     * a flag in answerFilterAnyStatuses on any of its answers, or with UNANSWERED a question it has no answer to.
+     */
+    private static Predicate anyAnswerStatus(TaskNodeCriteria criteria) {
+        List<String> statuses = criteria.getAnswerFilterAnyStatuses();
+        if (statuses == null || statuses.isEmpty()) {
+            return null;
+        }
+
+        List<String> flags = statuses.stream().filter(status -> !TaskNodeCriteria.UNANSWERED.equals(status)).toList();
+        QTaskNode flaggedAnswer = new QTaskNode("anyFlaggedAnswer");
+        BooleanExpression hasFlag = flags.isEmpty() ? null
+                : answersOfDocument(flaggedAnswer, Expressions.ONE)
+                .where(nodeValueText(flaggedAnswer, "answerFlagEnum").in(flags))
+                .exists();
+
+        BooleanExpression unanswered = null;
+        if (statuses.contains(TaskNodeCriteria.UNANSWERED)) {
+            QTaskNode question = new QTaskNode("anyQuestion");
+            QTaskNode answer = new QTaskNode("anyQuestionAnswer");
+            unanswered = JPAExpressions.select(Expressions.ONE)
+                    .from(question)
+                    .where(question.taskId.eq(qTaskNode.taskId),
+                            question.nodeType.name.eq(TaskNodeTypeConstants.QUESTION),
+                            answersOfDocument(answer, Expressions.ONE)
+                                    .where(nodeValueText(answer, "nodeQuestionId").eq(Expressions.stringTemplate("str({0})", question.id)))
+                                    .notExists())
+                    .exists();
+        }
+
+        return ExpressionUtils.anyOf(hasFlag, unanswered);
+    }
+
     /** The ANSWER nodes of the current DOCUMENT node for one question. */
     private static <T> JPQLQuery<T> answersOf(QTaskNode answer, UUID questionNodeId, Expression<T> select) {
         return JPAExpressions.select(select)
@@ -275,6 +310,15 @@ public class TaskNodePredicates {
                         answer.nodeType.name.eq(TaskNodeTypeConstants.ANSWER),
                         nodeValueText(answer, "nodeDocumentId").eq(Expressions.stringTemplate("str({0})", qTaskNode.id)),
                         nodeValueText(answer, "nodeQuestionId").eq(questionNodeId.toString()));
+    }
+
+    /** The answers of the DOCUMENT node in the outer query, to any question. */
+    private static <T> JPQLQuery<T> answersOfDocument(QTaskNode answer, Expression<T> select) {
+        return JPAExpressions.select(select)
+                .from(answer)
+                .where(answer.taskId.eq(qTaskNode.taskId),
+                        answer.nodeType.name.eq(TaskNodeTypeConstants.ANSWER),
+                        nodeValueText(answer, "nodeDocumentId").eq(Expressions.stringTemplate("str({0})", qTaskNode.id)));
     }
 
     /**
