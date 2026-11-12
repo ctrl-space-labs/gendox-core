@@ -23,10 +23,12 @@ public class AgentDefinitionConverter {
 
     public static final String APPLICATION_YAML = "application/yaml";
 
-    // YAML for people to read: no "---" line, quotes only where needed, multi-line text (instructions, skills) as blocks
+    // YAML for people to read: no "---" line, quotes only where needed, multi-line text (instructions, skills) as blocks.
+    // Strings that look like numbers keep their quotes, or reading the file back would turn "123" into 123.
     private static final ObjectMapper YAML = new ObjectMapper(YAMLFactory.builder()
             .disable(YAMLGenerator.Feature.WRITE_DOC_START_MARKER)
             .enable(YAMLGenerator.Feature.MINIMIZE_QUOTES)
+            .enable(YAMLGenerator.Feature.ALWAYS_QUOTE_NUMBERS_AS_STRINGS)
             .enable(YAMLGenerator.Feature.LITERAL_BLOCK_STYLE)
             .build())
             .setSerializationInclusion(JsonInclude.Include.NON_NULL);
