@@ -7,10 +7,12 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
 import dev.ctrlspace.gendox.spring.batch.utils.JobExecutionParamConstants;
 import org.slf4j.Logger;
 import org.springframework.batch.core.*;
-import org.springframework.batch.core.launch.JobLauncher;
-import org.springframework.batch.core.repository.JobExecutionAlreadyRunningException;
-import org.springframework.batch.core.repository.JobInstanceAlreadyCompleteException;
-import org.springframework.batch.core.repository.JobRestartException;
+import org.springframework.batch.core.job.*;
+import org.springframework.batch.core.job.parameters.*;
+import org.springframework.batch.core.launch.JobOperator;
+import org.springframework.batch.core.launch.JobExecutionAlreadyRunningException;
+import org.springframework.batch.core.launch.JobInstanceAlreadyCompleteException;
+import org.springframework.batch.core.launch.JobRestartException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -27,20 +29,20 @@ public class DocumentDigitizationBatchService {
     private String documentDigitizationJobName;
 
     private final Job documentDigitizationJob;
-    private final JobLauncher jobLauncher;
+    private final JobOperator jobOperator;
 
     @Autowired
     public DocumentDigitizationBatchService(
             Job documentDigitizationJob,
-            JobLauncher jobLauncher) {
+            JobOperator jobOperator) {
         this.documentDigitizationJob = documentDigitizationJob;
-        this.jobLauncher = jobLauncher;
+        this.jobOperator = jobOperator;
     }
 
     /**
      * Run Document Digitization batch job for a specific Task ID
      */
-    public JobExecution runDocumentDigitization(Task task, TaskNodeCriteria criteria)  throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException, GendoxException {
+    public JobExecution runDocumentDigitization(Task task, TaskNodeCriteria criteria)  throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, InvalidJobParametersException, JobRestartException, GendoxException {
         logger.info("Starting Document Digitization job for Task ID: {}", task.getId());
 
         JobParametersBuilder paramsBuilder = new JobParametersBuilder();
@@ -65,7 +67,7 @@ public class DocumentDigitizationBatchService {
 
         JobParameters jobParameters = paramsBuilder.toJobParameters();
 
-        JobExecution jobExecution = jobLauncher.run(documentDigitizationJob, jobParameters);
+        JobExecution jobExecution = jobOperator.start(documentDigitizationJob, jobParameters);
         logger.info("Document Digitization job started with execution ID: {}", jobExecution.getId());
         return jobExecution;
     }

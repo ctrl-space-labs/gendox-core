@@ -4,8 +4,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TimePeriodDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentInstanceSectionCriteria;
 import dev.ctrlspace.gendox.spring.batch.utils.JobExecutionParamConstants;
-import org.springframework.batch.core.JobParameters;
-import org.springframework.batch.core.JobParametersBuilder;
+import org.springframework.batch.core.job.parameters.JobParameters;
+import org.springframework.batch.core.job.parameters.JobParametersBuilder;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;

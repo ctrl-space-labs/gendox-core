@@ -5,10 +5,12 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.Task;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
 import dev.ctrlspace.gendox.spring.batch.utils.JobExecutionParamConstants;
 import org.springframework.batch.core.*;
-import org.springframework.batch.core.launch.JobLauncher;
-import org.springframework.batch.core.repository.JobExecutionAlreadyRunningException;
-import org.springframework.batch.core.repository.JobInstanceAlreadyCompleteException;
-import org.springframework.batch.core.repository.JobRestartException;
+import org.springframework.batch.core.job.*;
+import org.springframework.batch.core.job.parameters.*;
+import org.springframework.batch.core.launch.JobOperator;
+import org.springframework.batch.core.launch.JobExecutionAlreadyRunningException;
+import org.springframework.batch.core.launch.JobInstanceAlreadyCompleteException;
+import org.springframework.batch.core.launch.JobRestartException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -30,20 +32,20 @@ public class DocumentInsightsBatchService {
     private String documentInsightsJobName;
 
     private final Job documentInsightsJob;
-    private final JobLauncher jobLauncher;
+    private final JobOperator jobOperator;
 
     @Autowired
     public DocumentInsightsBatchService(
             Job documentInsightsJob,
-            JobLauncher jobLauncher) {
+            JobOperator jobOperator) {
         this.documentInsightsJob = documentInsightsJob;
-        this.jobLauncher = jobLauncher;
+        this.jobOperator = jobOperator;
     }
 
     /**
      * Run Document Insights batch job for a specific Task ID
      */
-    public JobExecution runDocumentInsights(Task task, TaskNodeCriteria criteria) throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException, GendoxException {
+    public JobExecution runDocumentInsights(Task task, TaskNodeCriteria criteria) throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, InvalidJobParametersException, JobRestartException, GendoxException {
 
         JobParametersBuilder paramsBuilder = new JobParametersBuilder();
 
@@ -82,7 +84,7 @@ public class DocumentInsightsBatchService {
         logger.info("Starting Document Insights job for Task ID {} with parameters: {}", task.getId(), jobParameters);
 
         // Launch the job
-        JobExecution jobExecution = jobLauncher.run(documentInsightsJob, jobParameters);
+        JobExecution jobExecution = jobOperator.start(documentInsightsJob, jobParameters);
 
         logger.info("Document Insights job started with status: {}", jobExecution.getStatus());
 

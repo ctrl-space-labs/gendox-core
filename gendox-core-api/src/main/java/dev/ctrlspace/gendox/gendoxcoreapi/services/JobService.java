@@ -18,8 +18,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.slf4j.Logger;
 import org.springframework.batch.core.BatchStatus;
-import org.springframework.batch.core.JobExecution;
-import org.springframework.batch.core.explore.JobExplorer;
+import org.springframework.batch.core.job.JobExecution;
+import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Async;
@@ -44,7 +44,7 @@ public class JobService {
     private SplitterAndTrainingBatchService splitterAndTrainingBatchService;
     private DocumentInsightsBatchService documentInsightsBatchService;
     private DocumentDigitizationBatchService documentDigitizationBatchService;
-    private final JobExplorer jobExplorer;
+    private final JobRepository jobRepository;
     private final TaskService taskService;
     private final BatchJobExecutionRepository batchJobExecutionRepository;
     private final BatchJobExecutionParamsRepository batchJobExecutionParamsRepository;
@@ -56,7 +56,7 @@ public class JobService {
                       SplitterAndTrainingBatchService splitterAndTrainingBatchService,
                       DocumentInsightsBatchService documentInsightsBatchService,
                       DocumentDigitizationBatchService documentDigitizationBatchService,
-                      JobExplorer jobExplorer,
+                      JobRepository jobRepository,
                       TaskService taskService,
                       BatchJobExecutionRepository batchJobExecutionRepository,
                       BatchJobExecutionParamsRepository batchJobExecutionParamsRepository,
@@ -66,7 +66,7 @@ public class JobService {
         this.splitterAndTrainingBatchService = splitterAndTrainingBatchService;
         this.documentInsightsBatchService = documentInsightsBatchService;
         this.documentDigitizationBatchService = documentDigitizationBatchService;
-        this.jobExplorer = jobExplorer;
+        this.jobRepository = jobRepository;
         this.taskService = taskService;
         this.batchJobExecutionRepository = batchJobExecutionRepository;
         this.batchJobExecutionParamsRepository = batchJobExecutionParamsRepository;

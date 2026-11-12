@@ -15,9 +15,11 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.*;
-import org.springframework.batch.core.repository.JobExecutionAlreadyRunningException;
-import org.springframework.batch.core.repository.JobInstanceAlreadyCompleteException;
-import org.springframework.batch.core.repository.JobRestartException;
+import org.springframework.batch.core.job.*;
+import org.springframework.batch.core.job.parameters.*;
+import org.springframework.batch.core.launch.JobExecutionAlreadyRunningException;
+import org.springframework.batch.core.launch.JobInstanceAlreadyCompleteException;
+import org.springframework.batch.core.launch.JobRestartException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Pageable;
@@ -59,13 +61,13 @@ public class SplitterAndTrainingBatchService {
 
     public JobExecution runSplitterAndTraining() throws
             JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException,
-            JobParametersInvalidException, JobRestartException, InterruptedException, GendoxException {
+            InvalidJobParametersException, JobRestartException, InterruptedException, GendoxException {
         return this.runSplitterAndTraining(null, null);
     }
 
     public JobExecution runSplitterAndTraining(@Nullable UUID projectId) throws
             JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException,
-            JobParametersInvalidException, JobRestartException, InterruptedException, GendoxException {
+            InvalidJobParametersException, JobRestartException, InterruptedException, GendoxException {
         return this.runSplitterAndTraining(projectId, null);
     }
 
@@ -76,7 +78,7 @@ public class SplitterAndTrainingBatchService {
      */
     public JobExecution runSplitterAndTraining(@Nullable UUID projectId, @Nullable TimePeriodDTO timePeriod) throws
             JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException,
-            JobParametersInvalidException, JobRestartException, InterruptedException, GendoxException {
+            InvalidJobParametersException, JobRestartException, InterruptedException, GendoxException {
 
         logger.info("Running Splitter and Training job for projectId: {}", projectId);
 

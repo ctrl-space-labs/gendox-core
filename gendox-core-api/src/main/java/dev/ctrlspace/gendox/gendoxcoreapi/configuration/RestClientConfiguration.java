@@ -1,6 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.configuration;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine.OpenAiClient;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.Jackson2RestTemplates;
 import dev.ctrlspace.gendox.gendoxcoreapi.discord.post.MessageRestClient;
 import io.micrometer.tracing.Tracer;
 import org.jetbrains.annotations.NotNull;
@@ -33,7 +34,9 @@ public class RestClientConfiguration {
     public OpenAiClient openAiService() {
 //return null;
 
-        RestClient restClient = RestClient.create("https://api.openai.com/v1");
+        RestClient restClient = RestClient.builder(Jackson2RestTemplates.create())
+                .baseUrl("https://api.openai.com/v1")
+                .build();
 
         HttpServiceProxyFactory httpServiceProxyFactory = HttpServiceProxyFactory.builderFor(RestClientAdapter.create(restClient)).build();
         return httpServiceProxyFactory.createClient(OpenAiClient.class);
@@ -56,7 +59,7 @@ public class RestClientConfiguration {
 
     @NotNull
     private static RestTemplate createRestTemplateWithObservabilityParams(Tracer tracer, String base) {
-        RestTemplate restTemplate = new RestTemplate();
+        RestTemplate restTemplate = Jackson2RestTemplates.create();
         DefaultUriBuilderFactory uriBuilderFactory = new DefaultUriBuilderFactory(base);
         restTemplate.setUriTemplateHandler(uriBuilderFactory);
 

@@ -22,7 +22,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.BatchStatus;
-import org.springframework.batch.core.JobExecution;
+import org.springframework.batch.core.job.JobExecution;
 import org.springframework.batch.core.launch.JobOperator;
 import org.springframework.batch.core.launch.NoSuchJobExecutionException;
 import org.springframework.data.domain.Page;

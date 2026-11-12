@@ -5,10 +5,12 @@ import dev.ctrlspace.gendox.spring.batch.utils.JobExecutionParamConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.*;
-import org.springframework.batch.core.launch.JobLauncher;
-import org.springframework.batch.core.repository.JobExecutionAlreadyRunningException;
-import org.springframework.batch.core.repository.JobInstanceAlreadyCompleteException;
-import org.springframework.batch.core.repository.JobRestartException;
+import org.springframework.batch.core.job.*;
+import org.springframework.batch.core.job.parameters.*;
+import org.springframework.batch.core.launch.JobOperator;
+import org.springframework.batch.core.launch.JobExecutionAlreadyRunningException;
+import org.springframework.batch.core.launch.JobInstanceAlreadyCompleteException;
+import org.springframework.batch.core.launch.JobRestartException;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -20,16 +22,16 @@ public class DeepThinkingBatchService {
     private static final Logger logger = LoggerFactory.getLogger(DeepThinkingBatchService.class);
 
     private final Job deepThinkingJob;
-    private final JobLauncher jobLauncher;
+    private final JobOperator jobOperator;
 
-    public DeepThinkingBatchService(Job deepThinkingJob, JobLauncher jobLauncher) {
+    public DeepThinkingBatchService(Job deepThinkingJob, JobOperator jobOperator) {
         this.deepThinkingJob = deepThinkingJob;
-        this.jobLauncher = jobLauncher;
+        this.jobOperator = jobOperator;
     }
 
     public JobExecution runDeepThinking(UUID messageId, UUID projectId, UUID threadId)
             throws JobExecutionAlreadyRunningException, JobRestartException,
-            JobInstanceAlreadyCompleteException, JobParametersInvalidException {
+            JobInstanceAlreadyCompleteException, InvalidJobParametersException {
 
         JobParameters params = new JobParametersBuilder()
                 .addString(JobExecutionParamConstants.MESSAGE_ID, messageId.toString())
@@ -41,7 +43,7 @@ public class DeepThinkingBatchService {
 
         logger.info("Starting deep thinking job for message {} in project {}", messageId, projectId);
 
-        JobExecution jobExecution = jobLauncher.run(deepThinkingJob, params);
+        JobExecution jobExecution = jobOperator.start(deepThinkingJob, params);
 
         logger.info("Deep thinking job started with execution id {} and status {}",
                 jobExecution.getId(), jobExecution.getStatus());

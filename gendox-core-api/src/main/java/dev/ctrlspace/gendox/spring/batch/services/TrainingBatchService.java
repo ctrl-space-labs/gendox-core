@@ -11,10 +11,12 @@ import dev.ctrlspace.gendox.spring.batch.utils.TimePeriodUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.*;
-import org.springframework.batch.core.launch.JobLauncher;
-import org.springframework.batch.core.repository.JobExecutionAlreadyRunningException;
-import org.springframework.batch.core.repository.JobInstanceAlreadyCompleteException;
-import org.springframework.batch.core.repository.JobRestartException;
+import org.springframework.batch.core.job.*;
+import org.springframework.batch.core.job.parameters.*;
+import org.springframework.batch.core.launch.JobOperator;
+import org.springframework.batch.core.launch.JobExecutionAlreadyRunningException;
+import org.springframework.batch.core.launch.JobInstanceAlreadyCompleteException;
+import org.springframework.batch.core.launch.JobRestartException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -29,7 +31,7 @@ public class TrainingBatchService {
     private String documentTrainingJobName;
     private final DocumentSectionCriteriaJobParamsConverter documentSectionCriteriaJobParamsConverter;
     private final Job documentTrainingJob;
-    private final JobLauncher jobLauncher;
+    private final JobOperator jobOperator;
     private final JobUtils jobUtils;
 
 
@@ -37,22 +39,22 @@ public class TrainingBatchService {
     public TrainingBatchService(
             DocumentSectionCriteriaJobParamsConverter documentSectionCriteriaJobParamsConverter,
             Job documentTrainingJob,
-            JobLauncher jobLauncher,
+            JobOperator jobOperator,
             JobUtils jobUtils) {
         this.documentSectionCriteriaJobParamsConverter = documentSectionCriteriaJobParamsConverter;
         this.documentTrainingJob = documentTrainingJob;
-        this.jobLauncher = jobLauncher;
+        this.jobOperator = jobOperator;
         this.jobUtils = jobUtils;
     }
 
-    public JobExecution runAutoTraining() throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException, GendoxException {
+    public JobExecution runAutoTraining() throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, InvalidJobParametersException, JobRestartException, GendoxException {
         return this.runAutoTraining(null);
     }
-    public JobExecution runAutoTraining(@Nullable UUID projectId) throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException, GendoxException {
+    public JobExecution runAutoTraining(@Nullable UUID projectId) throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, InvalidJobParametersException, JobRestartException, GendoxException {
         return this.runAutoTraining(projectId, null);
     }
 
-    public JobExecution runAutoTraining(@Nullable UUID projectId, @Nullable TimePeriodDTO timePeriod) throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException, GendoxException {
+    public JobExecution runAutoTraining(@Nullable UUID projectId, @Nullable TimePeriodDTO timePeriod) throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, InvalidJobParametersException, JobRestartException, GendoxException {
 
 
         var trainingTimePeriodAndOverride = TimePeriodUtils.prepareTimePeriodAndOverride(
@@ -77,7 +79,7 @@ public class TrainingBatchService {
 
         logger.info("Start Running document training job with parameters: {}", trainingParams);
 
-        return jobLauncher.run(documentTrainingJob, trainingParams);
+        return jobOperator.start(documentTrainingJob, trainingParams);
 
     }
 
