@@ -50,8 +50,8 @@ test.describe('V2 search, profile and embedding', { tag: '@p2' }, () => {
         await expect(page.getByText(/least squares/i).first()).toBeVisible();
     });
 
-    test('profile displays the current identity and organizations', async ({ page }) => {
-        await page.goto('/gendox/user-profile/');
+    test('profile displays the current identity and organizations', async ({ page, workspace: w }) => {
+        await page.goto(inProject(w, 'user-profile'));
         await expect(page.getByRole('heading', { name: 'Test User1', exact: true })).toBeVisible();
         await expect(page.getByRole('textbox', { name: 'Email', exact: true })).toHaveValue('testuser1@test.com');
         await expect(page.getByRole('heading', { name: 'Organizations', exact: true })).toBeVisible();
