@@ -13,7 +13,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.OrganizationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import io.micrometer.observation.annotation.Observed;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -88,13 +87,7 @@ public class UserController {
     @Operation(summary = "Get user profile by ID",
             description = "Retrieve a user's profile by their unique ID.")
     @Observed(name = "UserController.getUserUserProfile",
-            contextualName = "UserController#getUserUserProfile",
-            lowCardinalityKeyValues = {
-                    ObservabilityTags.LOGGABLE, "true",
-                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
-                    ObservabilityTags.LOG_METHOD_NAME, "true",
-                    ObservabilityTags.LOG_ARGS, "false"
-            })
+            contextualName = "UserController#getUserUserProfile")
     public UserProfile getUserUserProfile(Authentication authentication) throws Exception {
 
         if (authentication instanceof ApiKeyAuthenticationToken || authentication instanceof GendoxAuthenticationToken) {

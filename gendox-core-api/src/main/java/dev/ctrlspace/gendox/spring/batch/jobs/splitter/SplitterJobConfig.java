@@ -1,13 +1,12 @@
 package dev.ctrlspace.gendox.spring.batch.jobs.splitter;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
-import dev.ctrlspace.gendox.spring.batch.jobs.common.ObservabilityTaskDecorator;
+import org.springframework.core.task.TaskDecorator;
 import dev.ctrlspace.gendox.spring.batch.jobs.common.UniqueInstanceDecider;
 import dev.ctrlspace.gendox.spring.batch.jobs.splitter.steps.DocumentSectionDTO;
 import dev.ctrlspace.gendox.spring.batch.jobs.splitter.steps.DocumentSplitterProcessor;
 import dev.ctrlspace.gendox.spring.batch.jobs.splitter.steps.DocumentSplitterReader;
 import dev.ctrlspace.gendox.spring.batch.jobs.splitter.steps.DocumentSplitterWriter;
-import io.micrometer.observation.ObservationRegistry;
 import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.step.Step;
 import org.springframework.batch.core.job.builder.FlowBuilder;
@@ -92,14 +91,14 @@ public class SplitterJobConfig {
     }
 
     @Bean
-    public TaskExecutor asyncBatchSplitterExecutor(ObservationRegistry observationRegistry) {
+    public TaskExecutor asyncBatchSplitterExecutor(TaskDecorator taskDecorator) {
 
 
         SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor("b-splitter-");
         // switch to Loom’s virtual threads (each task → its own VT)
         executor.setVirtualThreads(true);
 
-        executor.setTaskDecorator(new ObservabilityTaskDecorator(observationRegistry));
+        executor.setTaskDecorator(taskDecorator);
         // Throttle concurrency
         executor.setConcurrencyLimit(threadPoolSize);
         return executor;

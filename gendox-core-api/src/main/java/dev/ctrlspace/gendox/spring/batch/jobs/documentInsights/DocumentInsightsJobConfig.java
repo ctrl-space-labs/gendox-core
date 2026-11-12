@@ -2,10 +2,9 @@ package dev.ctrlspace.gendox.spring.batch.jobs.documentInsights;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.InsightDocumentAnswersWithSummaryDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskAnswerBatchDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDocumentQuestionsDTO;
-import dev.ctrlspace.gendox.spring.batch.jobs.common.ObservabilityTaskDecorator;
+import org.springframework.core.task.TaskDecorator;
 import dev.ctrlspace.gendox.spring.batch.jobs.common.UniqueInstanceDecider;
 import dev.ctrlspace.gendox.spring.batch.jobs.documentInsights.steps.*;
-import io.micrometer.observation.ObservationRegistry;
 import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.step.Step;
 import org.springframework.batch.core.job.builder.FlowBuilder;
@@ -128,13 +127,13 @@ public class DocumentInsightsJobConfig {
     }
 
     @Bean
-    public TaskExecutor asyncBatchInsightsExecutor(ObservationRegistry observationRegistry) {
+    public TaskExecutor asyncBatchInsightsExecutor(TaskDecorator taskDecorator) {
 
         SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor("b-document-insights-");
         // switch to Loom’s virtual threads (each task → its own VT)
         executor.setVirtualThreads(true);
 
-        executor.setTaskDecorator(new ObservabilityTaskDecorator(observationRegistry));
+        executor.setTaskDecorator(taskDecorator);
         // Throttle concurrency
         executor.setConcurrencyLimit(threadPoolSize);
         return executor;

@@ -51,34 +51,30 @@ The existing database-dependent e2e failures are recorded in the
 those tests or mark their failures as expected successes. Paid model providers,
 ProvenAI and production infrastructure are outside this validation.
 
-## Observability requirements
+## Observability
 
-The separate observability change replaces Brave with Boot's OpenTelemetry starter.
-Trace, log and metric exporters are off by default; mapping of inherited OpenTelemetry
-environment settings is disabled. Zero ratio sampling applies even to sampled remote
-parents. Local metrics and log correlation remain available. The optional
-`observability` profile formats console logs as JSON without enabling network export.
+Use Boot's OpenTelemetry starter and auto-configured HTTP builders. Keep the SDK,
+trace/log push export, OTLP metric export and inherited `OTEL_*` mapping disabled
+until a collector is deployed. SDK-off context tests verify there are no exporters
+or span processors. Prometheus/Micrometer metrics remain local and scrapeable by
+an operator; health probes remain public without component details.
 
-Spring HTTP clients use Boot's builders, retain Jackson 2 conversion and omit full URL
-attributes. Literal client paths and query strings are excluded from metric dimensions;
-explicit templates are retained. HTTP URI/host dimensions are capped. Observation
-logs omit method arguments. Async observations set parents before starting, record
-exceptions and restore the prior worker/caller MDC on exit. Actuator metrics require
-the global operator role; health probes remain public with no component details.
+Boot supplies `@Observed` aspects through `management.observations.annotations.enabled`.
+Spring's `ContextPropagatingTaskDecorator` replaces the custom async decorator.
+The custom before/after observation logger, its logging-control metric tags, redundant
+URI-limit filters, tuning aliases and `Jackson2RestTemplates` have been removed.
+Boot already limits URI labels to 100. Only HTTP URL privacy conventions remain custom.
+The optional `observability` profile selects Boot's JSON console logging.
 
-Backend verification after observability: 337 tests, zero assertion failures, the same
-seven baseline errors and two skips. All seven added checks pass. Context tests load
-actual application defaults (including the JSON-log profile), verify no exporters are
-created, and verify that sampled remote parents cannot enable recording by default.
-HTTP tests cover Jackson 2 trees, real observation callbacks and secret-query omission.
-Management tests cover anonymous, ordinary, API-key and operator access. Live probes
-are healthy and ordinary-user metric requests are refused.
+Jackson 2 converter selection is still temporarily configured through Boot, which
+applies it to its HTTP builders. The application no longer rewrites converter lists.
+A separate Jackson 3 change will add explicit JSON API contracts, establish their
+Jackson 2 baseline, migrate application types and remove the compatibility settings.
 
-The final packaged backend runs in the worktree's own ephemeral environment. Smoke:
-19 passed, no skips/retries. Full e2e: 120 passed and the same three documented
-database-dependent failures, no skips/retries, in 42.4 seconds.
-Boot retains an idle batch-processing worker with a bounded queue even without an
-exporter. No production load benchmark was performed. Collector deployment and export
-activation remain a later operation for Hetzner and ECS. See
-[`gendox-core-api/OBSERVABILITY.md`](../gendox-core-api/OBSERVABILITY.md) for operation,
-coverage limits and future collector configuration.
+The preceding implementation was verified with 337 backend tests (the same seven
+baseline errors and two skips), 19 passing smoke cases and 120 passing e2e cases
+with the same three documented database-dependent failures. Simplification validation:
+17 focused backend checks passed and all 19 smoke cases passed. No production load benchmark was performed.
+
+See [`gendox-core-api/OBSERVABILITY.md`](../gendox-core-api/OBSERVABILITY.md) for
+operation, coverage limits and the later Hetzner/ECS collector setup.

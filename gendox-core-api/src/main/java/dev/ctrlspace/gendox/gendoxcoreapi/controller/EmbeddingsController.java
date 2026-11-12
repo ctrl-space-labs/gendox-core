@@ -58,7 +58,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.SubscriptionValidationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TrainingService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import dev.ctrlspace.gendox.spring.batch.services.DeepThinkingBatchService;
 import io.micrometer.observation.annotation.Observed;
 import io.swagger.v3.oas.annotations.Operation;
@@ -148,13 +147,7 @@ public class EmbeddingsController {
                     "This endpoint calculates and returns embeddings for all sections within the specified project. " +
                     "It performs the embedding calculation for each section and associates the results with the respective sections.")
     @Observed(name = "EmbeddingsController.getProjectEmbeddings",
-            contextualName = "EmbeddingsController#getProjectEmbeddings",
-            lowCardinalityKeyValues = {
-                    ObservabilityTags.LOGGABLE, "true",
-                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
-                    ObservabilityTags.LOG_METHOD_NAME, "true",
-                    ObservabilityTags.LOG_ARGS, "false"
-            })
+            contextualName = "EmbeddingsController#getProjectEmbeddings")
     public List<Embedding> getProjectEmbeddings(@PathVariable UUID projectId) throws GendoxException, NoSuchAlgorithmException {
         return trainingService.runTrainingForProject(projectId);
     }
@@ -167,13 +160,7 @@ public class EmbeddingsController {
                     "This endpoint calculates the embedding for the input message and retrieves sections from the specified project " +
                     "that have similar semantic representations.")
     @Observed(name = "EmbeddingsController.findCloserSections",
-            contextualName = "EmbeddingsController#findCloserSections",
-            lowCardinalityKeyValues = {
-                    ObservabilityTags.LOGGABLE, "true",
-                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
-                    ObservabilityTags.LOG_METHOD_NAME, "true",
-                    ObservabilityTags.LOG_ARGS, "false"
-            })
+            contextualName = "EmbeddingsController#findCloserSections")
     public List<DocumentInstanceSectionDTO> findCloserSections(@RequestBody Message message,
                                                                @RequestParam String projectId,
                                                                Authentication authentication,
@@ -220,13 +207,7 @@ public class EmbeddingsController {
                     "A message with role=tool returns the result of a CLIENT tool call (toolCallId, value) to a turn " +
                     "that waits for it; until every waiting call has a result this returns 202 with the turn status.")
     @Observed(name = "EmbeddingsController.getCompletionSearch",
-            contextualName = "EmbeddingsController#getCompletionSearch",
-            lowCardinalityKeyValues = {
-                    ObservabilityTags.LOGGABLE, "true",
-                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
-                    ObservabilityTags.LOG_METHOD_NAME, "true",
-                    ObservabilityTags.LOG_ARGS, "false"
-            })
+            contextualName = "EmbeddingsController#getCompletionSearch")
     public ResponseEntity<?> getCompletionSearch(@RequestBody CompletionRequestDTO completionRequestDTO,
                                                                     @RequestParam String projectId,
                                                                     Authentication authentication,

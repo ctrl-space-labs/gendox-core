@@ -1,6 +1,6 @@
 package dev.ctrlspace.gendox.spring.batch.jobs;
 
-import dev.ctrlspace.gendox.spring.batch.jobs.common.ObservabilityTaskDecorator;
+import org.springframework.core.task.TaskDecorator;
 import dev.ctrlspace.gendox.spring.batch.jobs.common.UniqueInstanceDecider;
 import dev.ctrlspace.gendox.spring.batch.jobs.deepThinking.DeepThinkingJobConfig;
 import dev.ctrlspace.gendox.spring.batch.jobs.demojob.DemoJobConfig;
@@ -13,7 +13,6 @@ import dev.ctrlspace.gendox.spring.batch.jobs.training.TrainingJobConfig;
 import dev.ctrlspace.gendox.spring.batch.services.SplitterBatchService;
 import dev.ctrlspace.gendox.spring.batch.services.TrainingBatchService;
 import dev.ctrlspace.gendox.spring.batch.utils.JobUtils;
-import io.micrometer.observation.ObservationRegistry;
 import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.configuration.annotation.EnableJdbcJobRepository;
@@ -72,19 +71,19 @@ public class SpringBatchConfiguration implements ApplicationRunner {
     private SplitterBatchService splitterBatchService;
 
     @Bean
-    public TaskExecutor asyncDigitizationLlmCompletionsExecutor(ObservationRegistry observationRegistry) {
+    public TaskExecutor asyncDigitizationLlmCompletionsExecutor(TaskDecorator taskDecorator) {
         SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor("llm-completion-");
         executor.setVirtualThreads(true);
-        executor.setTaskDecorator(new ObservabilityTaskDecorator(observationRegistry));
+        executor.setTaskDecorator(taskDecorator);
         executor.setConcurrencyLimit(digitizationLlmPoolSize);
         return executor;
     }
 
     @Bean
-    public TaskExecutor asyncInsightsLlmCompletionsExecutor(ObservationRegistry observationRegistry) {
+    public TaskExecutor asyncInsightsLlmCompletionsExecutor(TaskDecorator taskDecorator) {
         SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor("llm-insights-");
         executor.setVirtualThreads(true);
-        executor.setTaskDecorator(new ObservabilityTaskDecorator(observationRegistry));
+        executor.setTaskDecorator(taskDecorator);
         executor.setConcurrencyLimit(insightsLlmPoolSize);
         return executor;
     }

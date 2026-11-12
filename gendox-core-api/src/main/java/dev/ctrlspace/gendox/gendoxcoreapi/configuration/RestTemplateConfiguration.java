@@ -1,8 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.configuration;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.Jackson2RestTemplates;
-import dev.ctrlspace.gendox.spring.batch.jobs.common.ObservabilityTaskDecorator;
-import io.micrometer.observation.ObservationRegistry;
+import org.springframework.core.task.TaskDecorator;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.restclient.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
@@ -25,10 +23,10 @@ public class RestTemplateConfiguration {
      * SimpleAsyncTaskExecutor supports virtual threads + task decoration.
      */
     @Bean(name = "taskExecutor")
-    public SimpleAsyncTaskExecutor taskExecutor(ObservationRegistry registry) {
+    public SimpleAsyncTaskExecutor taskExecutor(TaskDecorator taskDecorator) {
         SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor("async-");
         executor.setVirtualThreads(true);
-        executor.setTaskDecorator(new ObservabilityTaskDecorator(registry));
+        executor.setTaskDecorator(taskDecorator);
         // Set the concurrency limit to not look like a DOS attack :)
         executor.setConcurrencyLimit(500);
         return executor;
@@ -41,7 +39,7 @@ public class RestTemplateConfiguration {
         requestFactory.setReadTimeout(readTimeoutMillis);
 
         // Boot's builder installs observations and W3C propagation without manual trace headers.
-        return Jackson2RestTemplates.useJackson2(builder.requestFactory(() -> requestFactory).build());
+        return builder.requestFactory(() -> requestFactory).build();
     }
 
 }

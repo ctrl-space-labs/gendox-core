@@ -21,7 +21,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.tools.ToolFunctionCall;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.AiModelUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.CryptographyUtils;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.tools.AiToolUtils;
 import dev.ctrlspace.gendox.provenAi.utils.ProvenAiService;
 import io.micrometer.observation.annotation.Observed;
@@ -193,13 +192,7 @@ public class EmbeddingService {
     }
 
     @Observed(name = "EmbeddingService.getEmbeddingForMessage",
-            contextualName = "EmbeddingService#getEmbeddingForMessage",
-            lowCardinalityKeyValues = {
-                    ObservabilityTags.LOGGABLE, "true",
-                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
-                    ObservabilityTags.LOG_METHOD_NAME, "true",
-                    ObservabilityTags.LOG_ARGS, "false"
-            })
+            contextualName = "EmbeddingService#getEmbeddingForMessage")
     private EmbeddingResponse getEmbeddingForMessage(ProjectAgent agent, EmbeddingMessage embeddingMessage, AiModel aiModel) throws GendoxException {
         String apiKey = this.getApiKey(agent, "SEMANTIC_SEARCH_MODEL");
         AiModelApiAdapterService aiModelApiAdapterService = aiModelUtils.getAiModelApiAdapterImpl(aiModel.getApiType().getName());
@@ -328,13 +321,7 @@ public class EmbeddingService {
 
 
     @Observed(name = "EmbeddingService.findClosestSections",
-            contextualName = "EmbeddingService#findClosestSections",
-            lowCardinalityKeyValues = {
-                    ObservabilityTags.LOGGABLE, "true",
-                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
-                    ObservabilityTags.LOG_METHOD_NAME, "true",
-                    ObservabilityTags.LOG_ARGS, "false"
-            })
+            contextualName = "EmbeddingService#findClosestSections")
     public List<DocumentInstanceSectionDTO> findClosestSections(Message message, Project project, Pageable pageable) throws GendoxException, IOException, NoSuchAlgorithmException {
 
         return findClosestSectionsByQuery(message.getValue(), message.getId(), project, pageable);

@@ -7,7 +7,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.OrganizationConnectorDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.AccessCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.OrganizationConnectorService;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import io.micrometer.observation.annotation.Observed;
 import io.swagger.v3.oas.annotations.Operation;
@@ -42,13 +41,7 @@ public class OrganizationConnectorController {
     @GetMapping("/organizations/{organizationId}/connectors")
     @Operation(summary = "List all connectors for an organization")
     @Observed(name = "OrganizationConnectorController.getConnectors",
-            contextualName = "OrganizationConnectorController#getConnectors",
-            lowCardinalityKeyValues = {
-                    ObservabilityTags.LOGGABLE, "true",
-                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
-                    ObservabilityTags.LOG_METHOD_NAME, "true",
-                    ObservabilityTags.LOG_ARGS, "false"
-            })
+            contextualName = "OrganizationConnectorController#getConnectors")
     public List<OrganizationConnectorDTO> getConnectors(@PathVariable UUID organizationId, Authentication authentication) throws GendoxException {
         boolean canReadSecrets = securityUtils.hasAuthority((UserProfile) authentication.getPrincipal(), "OP_UPDATE_ORGANIZATION",
                 AccessCriteria.builder().orgIds(Set.of(organizationId.toString())).build());
@@ -68,13 +61,7 @@ public class OrganizationConnectorController {
     @GetMapping("/organizations/{organizationId}/connectors/{connectorType}")
     @Operation(summary = "Get a single connector by type")
     @Observed(name = "OrganizationConnectorController.getConnector",
-            contextualName = "OrganizationConnectorController#getConnector",
-            lowCardinalityKeyValues = {
-                    ObservabilityTags.LOGGABLE, "true",
-                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
-                    ObservabilityTags.LOG_METHOD_NAME, "true",
-                    ObservabilityTags.LOG_ARGS, "false"
-            })
+            contextualName = "OrganizationConnectorController#getConnector")
     public OrganizationConnectorDTO getConnector(@PathVariable UUID organizationId,
                                                  @PathVariable String connectorType, Authentication authentication) throws GendoxException {
         OrganizationConnector entity = organizationConnectorService.getByOrganizationAndType(organizationId, connectorType);
@@ -91,13 +78,7 @@ public class OrganizationConnectorController {
     @Operation(summary = "Upsert a connector for the organization",
             description = "Creates the connector entry if missing, or updates the existing one with the provided config.")
     @Observed(name = "OrganizationConnectorController.upsertConnector",
-            contextualName = "OrganizationConnectorController#upsertConnector",
-            lowCardinalityKeyValues = {
-                    ObservabilityTags.LOGGABLE, "true",
-                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
-                    ObservabilityTags.LOG_METHOD_NAME, "true",
-                    ObservabilityTags.LOG_ARGS, "false"
-            })
+            contextualName = "OrganizationConnectorController#upsertConnector")
     public OrganizationConnectorDTO upsertConnector(@PathVariable UUID organizationId,
                                                     @PathVariable String connectorType,
                                                     @RequestBody OrganizationConnectorDTO dto) throws GendoxException {
@@ -110,13 +91,7 @@ public class OrganizationConnectorController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Delete a connector configuration")
     @Observed(name = "OrganizationConnectorController.deleteConnector",
-            contextualName = "OrganizationConnectorController#deleteConnector",
-            lowCardinalityKeyValues = {
-                    ObservabilityTags.LOGGABLE, "true",
-                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
-                    ObservabilityTags.LOG_METHOD_NAME, "true",
-                    ObservabilityTags.LOG_ARGS, "false"
-            })
+            contextualName = "OrganizationConnectorController#deleteConnector")
     public void deleteConnector(@PathVariable UUID organizationId,
                                 @PathVariable String connectorType) throws GendoxException {
         organizationConnectorService.delete(organizationId, connectorType);

@@ -16,7 +16,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectMemberService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserOrganizationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.OrganizationRolesConstants;
 import io.micrometer.observation.annotation.Observed;
 import net.dv8tion.jda.api.entities.TextChannel;
@@ -65,13 +64,7 @@ public class CommonCommandUtility {
 
     @Async("asyncDiscordExecutor")
     @Observed(name = "discord.commands.asyncDiscordExecutor",
-            contextualName = "discord-commands-asyncDiscordExecutor",
-            lowCardinalityKeyValues = {
-                    ObservabilityTags.LOGGABLE, "true",
-                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_DEBUG,
-                    ObservabilityTags.LOG_METHOD_NAME, "true",
-                    ObservabilityTags.LOG_ARGS, "false"
-            })
+            contextualName = "discord-commands-asyncDiscordExecutor")
     public void executeCommandCode(SlashCommandInteractionEvent event, String command, String threadId) {
         // Ignore if the event user is a bot
         if (event.getUser().isBot()) return;

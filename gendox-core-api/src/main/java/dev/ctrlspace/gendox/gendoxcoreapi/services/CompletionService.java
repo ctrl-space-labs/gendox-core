@@ -18,7 +18,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectAgentRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.AiModelUtils;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import io.micrometer.observation.annotation.Observed;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.LoggerFactory;
@@ -154,13 +153,7 @@ public class CompletionService {
      * @throws NoSuchAlgorithmException
      */
     @Observed(name = "CompletionService.getCompletionSearch",
-            contextualName = "CompletionService#getCompletionSearch",
-            lowCardinalityKeyValues = {
-                    ObservabilityTags.LOGGABLE, "true",
-                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
-                    ObservabilityTags.LOG_METHOD_NAME, "true",
-                    ObservabilityTags.LOG_ARGS, "false"
-            })
+            contextualName = "CompletionService#getCompletionSearch")
     public CompletionMessageDTO getCompletionSearch(Message message, Project project, CompletionListener listener) throws GendoxException, IOException, NoSuchAlgorithmException {
 
         // The agent searches the documents itself, with advanced_search
@@ -325,13 +318,7 @@ public class CompletionService {
     }
 
     @Observed(name = "CompletionService.getCompletion",
-            contextualName = "CompletionService#getCompletion",
-            lowCardinalityKeyValues = {
-                    ObservabilityTags.LOGGABLE, "true",
-                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
-                    ObservabilityTags.LOG_METHOD_NAME, "true",
-                    ObservabilityTags.LOG_ARGS, "false"
-            })
+            contextualName = "CompletionService#getCompletion")
     public List<Message> getCompletion(Message message, List<DocumentInstanceSectionDTO> nearestSections, @Nullable Project project,
                                        @Nullable ObjectNode responseJsonSchema,
                                        @Nullable CompletionRuntimeOverridesDTO overrides,

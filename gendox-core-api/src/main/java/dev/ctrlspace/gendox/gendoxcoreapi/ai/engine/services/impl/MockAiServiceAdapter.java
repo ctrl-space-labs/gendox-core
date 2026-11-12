@@ -5,12 +5,10 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.*
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.OpenAIADA2;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.Jackson2RestTemplates;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 
@@ -18,7 +16,6 @@ import java.util.List;
 public class MockAiServiceAdapter {
     Logger logger = LoggerFactory.getLogger(MockAiServiceAdapter.class);
 
-    private static final RestTemplate restTemplate = Jackson2RestTemplates.create();
 
     @Autowired
     private AiModelRepository aiModelRepository;
