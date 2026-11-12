@@ -1,6 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import tools.jackson.core.JacksonException;
 import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.AgentDefinitionConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.ProjectConverter;
@@ -146,7 +146,7 @@ public class ProjectController {
     @GetMapping(value = "organizations/{organizationId}/projects/{projectId}/definition", produces = AgentDefinitionConverter.APPLICATION_YAML)
     @Operation(summary = "Export the agent's definition as YAML",
             description = "The same definition as the JSON one, as YAML.")
-    public ResponseEntity<String> getAgentDefinitionYaml(@PathVariable UUID projectId) throws GendoxException, JsonProcessingException {
+    public ResponseEntity<String> getAgentDefinitionYaml(@PathVariable UUID projectId) throws GendoxException, JacksonException {
         AgentDefinitionDTO definition = agentDefinitionConverter.toDTO(projectService.getProjectById(projectId));
         return ResponseEntity.ok()
                 .contentType(new MediaType("application", "yaml", StandardCharsets.UTF_8))
