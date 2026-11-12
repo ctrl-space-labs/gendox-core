@@ -16,7 +16,6 @@ import org.keycloak.admin.client.resource.UserResource;
 import org.keycloak.representations.AccessTokenResponse;
 import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.Jackson2RestTemplates;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -40,7 +39,7 @@ public class KeycloakAuthenticationService implements AuthenticationService {
 
     private Logger logger = LoggerFactory.getLogger(KeycloakAuthenticationService.class);
 
-    private RestTemplate restTemplate = Jackson2RestTemplates.create();
+    private final RestTemplate restTemplate;
 
     private String keycloakServerUrl;
 
@@ -63,7 +62,8 @@ public class KeycloakAuthenticationService implements AuthenticationService {
                                          @Value("${keycloak.realm}") String realm,
                                          @Value("${keycloak.client-id}") String clientId,
                                          @Value("${keycloak.client-secret}") String clientSecret,
-                                         JwtDecoder jwtDecoder) {
+                                         JwtDecoder jwtDecoder,
+                                         RestTemplate restTemplate) {
 
         this.keycloakServerUrl = keycloakServerUrl;
         this.keycloakTokenUrl = keycloakTokenUrl;
@@ -71,6 +71,7 @@ public class KeycloakAuthenticationService implements AuthenticationService {
         this.clientId = clientId;
         this.clientSecret = clientSecret;
         this.jwtDecoder = jwtDecoder;
+        this.restTemplate = restTemplate;
 
         keycloakClient = KeycloakBuilder.builder()
                 .serverUrl(keycloakServerUrl)

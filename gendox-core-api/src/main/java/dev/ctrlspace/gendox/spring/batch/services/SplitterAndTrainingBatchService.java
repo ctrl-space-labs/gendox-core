@@ -1,6 +1,6 @@
 package dev.ctrlspace.gendox.spring.batch.services;
 
-import brave.internal.Nullable;
+import org.jspecify.annotations.Nullable;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;

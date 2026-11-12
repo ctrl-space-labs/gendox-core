@@ -66,9 +66,8 @@ public class LoggingObservationHandler implements ObservationHandler<Observation
         if ("false".equals(getTagFromContextByName(context, ObservabilityTags.LOG_METHOD_NAME))) {
             functionName = "...";
         }
-        if ("true".equals(getTagFromContextByName(context, ObservabilityTags.LOG_ARGS))) {
-            args = objectArrayToString(((ObservedAspect.ObservedAspectContext) context).getProceedingJoinPoint().getArgs());
-        }
+        // Observation logs intentionally omit arguments, even when an annotation requests them.
+        // Arguments may include tokens, prompts or document contents.
         if (logLevel == null) {
             logLevel = ObservabilityTags.LOG_LEVEL_DEBUG;
         }
@@ -115,14 +114,6 @@ public class LoggingObservationHandler implements ObservationHandler<Observation
                 .map(KeyValue::getValue)
                 .findFirst()
                 .orElse(null);
-    }
-
-    private String objectArrayToString(Object[] objects) {
-        StringBuilder sb = new StringBuilder();
-        for (Object object : objects) {
-            sb.append(object.toString()).append(",");
-        }
-        return sb.toString();
     }
 
     private String proceedFunctionName(ObservedAspect.ObservedAspectContext context) {

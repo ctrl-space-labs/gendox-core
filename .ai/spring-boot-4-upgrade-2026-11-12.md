@@ -53,10 +53,32 @@ ProvenAI and production infrastructure are outside this validation.
 
 ## Observability requirements
 
-A separate follow-up change will replace Brave with Micrometer's OpenTelemetry
-bridge, keep all telemetry exporters off by default, preserve local metrics and
-log correlation, and prepare structured console logs for later collection.
-Use bounded sampling and metric cardinality; avoid prompts, document content,
-credentials, raw URLs and tenant identifiers in telemetry dimensions. Management
-endpoints must enforce operator access. Collector deployment and enabling export
-are a later operation for Hetzner and ECS, not part of this backend change.
+The separate observability change replaces Brave with Boot's OpenTelemetry starter.
+Trace, log and metric exporters are off by default; mapping of inherited OpenTelemetry
+environment settings is disabled. Zero ratio sampling applies even to sampled remote
+parents. Local metrics and log correlation remain available. The optional
+`observability` profile formats console logs as JSON without enabling network export.
+
+Spring HTTP clients use Boot's builders, retain Jackson 2 conversion and omit full URL
+attributes. Literal client paths and query strings are excluded from metric dimensions;
+explicit templates are retained. HTTP URI/host dimensions are capped. Observation
+logs omit method arguments. Async observations set parents before starting, record
+exceptions and restore the prior worker/caller MDC on exit. Actuator metrics require
+the global operator role; health probes remain public with no component details.
+
+Backend verification after observability: 337 tests, zero assertion failures, the same
+seven baseline errors and two skips. All seven added checks pass. Context tests load
+actual application defaults (including the JSON-log profile), verify no exporters are
+created, and verify that sampled remote parents cannot enable recording by default.
+HTTP tests cover Jackson 2 trees, real observation callbacks and secret-query omission.
+Management tests cover anonymous, ordinary, API-key and operator access. Live probes
+are healthy and ordinary-user metric requests are refused.
+
+The final packaged backend runs in the worktree's own ephemeral environment. Smoke:
+19 passed, no skips/retries. Full e2e: 120 passed and the same three documented
+database-dependent failures, no skips/retries, in 42.4 seconds.
+Boot retains an idle batch-processing worker with a bounded queue even without an
+exporter. No production load benchmark was performed. Collector deployment and export
+activation remain a later operation for Hetzner and ECS. See
+[`gendox-core-api/OBSERVABILITY.md`](../gendox-core-api/OBSERVABILITY.md) for operation,
+coverage limits and future collector configuration.

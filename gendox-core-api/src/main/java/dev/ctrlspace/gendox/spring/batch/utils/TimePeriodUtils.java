@@ -1,6 +1,6 @@
 package dev.ctrlspace.gendox.spring.batch.utils;
 
-import brave.internal.Nullable;
+import org.jspecify.annotations.Nullable;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TimePeriodDTO;
 import org.springframework.http.HttpStatus;

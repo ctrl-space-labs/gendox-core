@@ -2,8 +2,6 @@ package dev.ctrlspace.gendox.spring.batch.jobs.common;
 
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationRegistry;
-import io.micrometer.tracing.Span;
-import io.micrometer.tracing.Tracer;
 import org.slf4j.MDC;
 import org.springframework.core.task.TaskDecorator;
 
@@ -20,29 +18,27 @@ public class ObservabilityTaskDecorator implements TaskDecorator {
     @Override
     public Runnable decorate(Runnable runnable) {
         Map<String, String> contextMap = MDC.getCopyOfContextMap();
-        Observation parentObservation = observationRegistry.getCurrentObservation();
-
+        Observation parent = observationRegistry.getCurrentObservation();
         return () -> {
-            Observation observation = null;
-            try (Observation.Scope scope = parentObservation != null ? parentObservation.openScope() : null) {
-                if (contextMap != null) {
-                    MDC.setContextMap(contextMap);
-                }
-
-                // Start a new observation (span) for the thread execution
-                observation = Observation.start("-spring-batch-thread-execution-span", observationRegistry)
-                        .parentObservation(parentObservation);
-
-                // Run the task within the observation scope
-                observation.scoped(runnable);
+            Map<String, String> previous = MDC.getCopyOfContextMap();
+            try (Observation.Scope scope = parent != null ? parent.openScope() : null) {
+                restoreMdc(contextMap);
+                // Set the parent before starting, and record failures before stopping the observation.
+                Observation.createNotStarted("gendox.async.task", observationRegistry)
+                        .parentObservation(parent)
+                        .observe(runnable);
             } finally {
-                MDC.clear();
-
-                // Ensure the observation is stopped even if an exception occurs
-                if (observation != null) {
-                    observation.stop();
-                }
+                // Executors may reuse a thread, or execute inline: restore its caller's context.
+                restoreMdc(previous);
             }
         };
+    }
+
+    private static void restoreMdc(Map<String, String> context) {
+        if (context == null) {
+            MDC.clear();
+        } else {
+            MDC.setContextMap(context);
+        }
     }
 }
