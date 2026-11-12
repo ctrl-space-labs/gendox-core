@@ -19,14 +19,20 @@ import { copyToClipboard } from 'src/utils/copyToClipboard'
 
 /**
  * The agent's definition file, shown before it is downloaded: GET …/definition as YAML or JSON, each loaded the first
- * time it is shown, while the details are open
+ * time it is shown while the details are open, and again once they are closed or the agent is saved
+ * @param project - the agent as the store holds it; a save replaces it, which makes the loaded files stale
  */
-const DefinitionPreview = ({ organizationId, projectId }) => {
+const DefinitionPreview = ({ organizationId, projectId, project }) => {
   const [open, setOpen] = useState(false)
   const [format, setFormat] = useState('yaml')
   const [files, setFiles] = useState({}) // format -> text, or an Error when it couldn't be loaded
   const [copied, setCopied] = useState(false)
   const file = files[format]
+
+  // a save changed the agent: what was loaded no longer matches the Download
+  useEffect(() => {
+    setFiles({})
+  }, [project])
 
   useEffect(() => {
     if (!open || files[format] !== undefined) return
@@ -44,7 +50,14 @@ const DefinitionPreview = ({ organizationId, projectId }) => {
   }
 
   return (
-    <details className='card-f' onToggle={e => setOpen(e.currentTarget.open)}>
+    <details
+      className='card-f'
+      onToggle={e => {
+        setOpen(e.currentTarget.open)
+        // opened again later, it shows the agent as it is then
+        if (!e.currentTarget.open) setFiles({})
+      }}
+    >
       <summary className='muted sm' style={{ cursor: 'pointer' }}>
         Preview the file
       </summary>
@@ -373,7 +386,7 @@ const AgentSettingsPage = () => {
                 </button>
               ))}
             </div>
-            <DefinitionPreview organizationId={organizationId} projectId={projectId} />
+            <DefinitionPreview organizationId={organizationId} projectId={projectId} project={project} />
           </div>
         </section>
 
