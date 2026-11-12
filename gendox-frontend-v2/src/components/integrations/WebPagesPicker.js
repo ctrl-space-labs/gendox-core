@@ -7,6 +7,8 @@ import { getErrorMessage } from 'src/utils/errorHandler'
 import { getToken } from 'src/components/agent/useAgent'
 import { formatDate } from 'src/components/knowledge/documentUtils'
 import { configOf, formatWhen } from 'src/components/integrations/integrationUtils'
+import { WebScrapeOffNote } from 'src/components/integrations/IntegrationDialogs'
+import { hasWebScrape, planFeatureMessages, planFeatures } from 'src/configs/planFeatures'
 import ConfirmDialog from 'src/components/ui/ConfirmDialog'
 import Empty from 'src/components/ui/Empty'
 import Spinner from 'src/components/ui/Spinner'
@@ -231,6 +233,9 @@ const WebPagesPicker = ({ organizationId, integration, agentName, onRunFinished 
   }
 
   const left = budget?.remainingPages ?? null
+  // the plan allows no pages: finding and reading stay visible, disabled, with the reason above the list
+  const scrapeOff = !hasWebScrape(budget)
+  const offReason = planFeatureMessages[planFeatures.WEB_SCRAPE]
   const overBudget = left != null && ticked > left
   const totalPages = Math.ceil((data.totalElements || 0) / PAGE_SIZE)
 
@@ -249,8 +254,8 @@ const WebPagesPicker = ({ organizationId, integration, agentName, onRunFinished 
           </div>
           <button
             className='btn s'
-            disabled={Boolean(busy)}
-            title={`Lists the pages the site exposes${limit ? `, up to ${limit}` : ''}. Free: nothing is downloaded.`}
+            disabled={Boolean(busy) || scrapeOff}
+            title={scrapeOff ? offReason : `Lists the pages the site exposes${limit ? `, up to ${limit}` : ''}. Free: nothing is downloaded.`}
             onClick={() => run('Looking for pages', webScrapeService.crawl)}
           >
             <Radar className='lucide' />
@@ -258,14 +263,20 @@ const WebPagesPicker = ({ organizationId, integration, agentName, onRunFinished 
           </button>
           <button
             className='btn ghost s'
-            disabled={Boolean(busy)}
-            title='Follows the links page by page to find what Find pages missed. Every page it visits is billed.'
+            disabled={Boolean(busy) || scrapeOff}
+            title={scrapeOff ? offReason : 'Follows the links page by page to find what Find pages missed. Every page it visits is billed.'}
             onClick={() => setConfirmDeep(true)}
           >
             <Telescope className='lucide' />
             Search deeper
           </button>
         </div>
+
+        {scrapeOff && (
+          <div className='card-b' style={{ borderBottom: '1px solid var(--border)' }}>
+            <WebScrapeOffNote />
+          </div>
+        )}
 
         {busy && (
           <div className='card-b' style={{ borderBottom: '1px solid var(--border)' }}>
@@ -305,9 +316,11 @@ const WebPagesPicker = ({ organizationId, integration, agentName, onRunFinished 
           )}
           <button
             className='btn primary'
-            disabled={Boolean(busy) || left === 0}
+            disabled={Boolean(busy) || left === 0 || scrapeOff}
             title={
-              left === 0
+              scrapeOff
+                ? offReason
+                : left === 0
                 ? 'The allowance for this period is spent.'
                 : overBudget
                 ? `Only ${left} of the ${ticked} ticked pages fit in the allowance. The rest keep their tick for later.`
@@ -396,7 +409,7 @@ const WebPagesPicker = ({ organizationId, integration, agentName, onRunFinished 
                               <ArrowUpRight className='lucide' />
                             </a>
                             {!gone && !stored && (
-                              <button className='btn ghost s icon' title='Read this page now' disabled={fetchingId === p.id} onClick={() => readOne(p.id)}>
+                              <button className='btn ghost s icon' title={scrapeOff ? offReason : 'Read this page now'} disabled={fetchingId === p.id || scrapeOff} onClick={() => readOne(p.id)}>
                                 {fetchingId === p.id ? <Spinner size={13} /> : <Download className='lucide' />}
                               </button>
                             )}

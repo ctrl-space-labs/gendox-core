@@ -8,7 +8,8 @@
  */
 
 export const planFeatures = {
-  INVITE_USERS: 'INVITE_USERS'
+  INVITE_USERS: 'INVITE_USERS',
+  WEB_SCRAPE: 'WEB_SCRAPE'
 }
 
 /**
@@ -20,7 +21,8 @@ const excludedSkusByFeature = {
 }
 
 export const planFeatureMessages = {
-  [planFeatures.INVITE_USERS]: 'Inviting members requires at least a Basic subscription.'
+  [planFeatures.INVITE_USERS]: 'Inviting members requires at least a Basic subscription.',
+  [planFeatures.WEB_SCRAPE]: 'Reading websites isn’t included in this plan.'
 }
 
 /**
@@ -36,5 +38,14 @@ export const hasPlanFeature = (sku, feature) => {
 
   return !excludedSkus.includes(sku)
 }
+
+/**
+ * Web scraping is defined by a number, not by name: the plan's monthly page limit. It is read from
+ * GET …/web-scrape/budget, which already applies the seats and whether limits are enforced at all.
+ * @param budget the budget, or null while it loads
+ * @returns {boolean} false only when the plan allows no pages (maxPages 0). A missing maxPages means limits
+ *   are not enforced, which is not the same as a limit of zero, and a budget still loading allows it too.
+ */
+export const hasWebScrape = budget => budget?.maxPages !== 0
 
 export default planFeatures
