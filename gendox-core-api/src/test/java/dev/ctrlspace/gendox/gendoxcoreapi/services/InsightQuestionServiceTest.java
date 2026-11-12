@@ -1,6 +1,8 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
+
+import tools.jackson.databind.ObjectMapper;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.decision.DecisionAnswer;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.decision.DecisionResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
@@ -35,7 +37,7 @@ class InsightQuestionServiceTest {
     @BeforeEach
     void setUp() {
         service = new InsightQuestionService(decisionService, completionService, messageService,
-                projectService, taskService, new ObjectMapper(), new SimpleAsyncTaskExecutor());
+                projectService, taskService, JsonMapper.shared(), new SimpleAsyncTaskExecutor());
     }
 
     @Test

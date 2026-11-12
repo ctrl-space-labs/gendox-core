@@ -1,8 +1,10 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.assistant;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.databind.node.TextNode;
+import tools.jackson.databind.json.JsonMapper;
+
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.node.StringNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.ToolExecutionContext;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
@@ -52,7 +54,7 @@ class AssistantToolSupportTest {
     @Mock private DocumentInstanceRepository documentInstanceRepository;
 
     private AssistantToolSupport support;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = JsonMapper.shared();
     private final Project project = new Project();
 
     @BeforeEach
@@ -93,17 +95,17 @@ class AssistantToolSupportTest {
     void argumentsArriveAsAJsonStringAndAreReadIntoARecord() throws GendoxException {
         UUID taskId = UUID.randomUUID();
 
-        Args args = support.readArguments(TextNode.valueOf("{\"task_id\":\"" + taskId + "\",\"page\":2}"), Args.class);
+        Args args = support.readArguments(StringNode.valueOf("{\"task_id\":\"" + taskId + "\",\"page\":2}"), Args.class);
 
         assertEquals(taskId, args.task_id());
         assertEquals(2, args.page());
-        assertNull(support.readArguments(TextNode.valueOf(""), Args.class).task_id());
+        assertNull(support.readArguments(StringNode.valueOf(""), Args.class).task_id());
     }
 
     @Test
     void badArgumentsAreAToolErrorNotACrash() {
         GendoxException e = assertThrows(GendoxException.class,
-                () -> support.readArguments(TextNode.valueOf("{\"task_id\":\"not-a-uuid\"}"), Args.class));
+                () -> support.readArguments(StringNode.valueOf("{\"task_id\":\"not-a-uuid\"}"), Args.class));
         assertEquals("INVALID_TOOL_ARGUMENTS", e.getErrorCode());
     }
 

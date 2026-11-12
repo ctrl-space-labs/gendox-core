@@ -1,8 +1,10 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.anthropic.request;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -14,7 +16,7 @@ import java.util.List;
 @Data
 @Builder(toBuilder = true)
 @AllArgsConstructor
-@NoArgsConstructor
+@NoArgsConstructor(onConstructor_ = @JsonCreator)
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class AnthropicCompletionRequest {
 
@@ -35,7 +37,7 @@ public class AnthropicCompletionRequest {
     @Data
     @Builder(toBuilder = true)
     @AllArgsConstructor
-    @NoArgsConstructor
+    @NoArgsConstructor(onConstructor_ = @JsonCreator)
     public static class CacheControl {
         private String type;
 
@@ -48,7 +50,7 @@ public class AnthropicCompletionRequest {
     @Data
     @Builder(toBuilder = true)
     @AllArgsConstructor
-    @NoArgsConstructor
+    @NoArgsConstructor(onConstructor_ = @JsonCreator)
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class SystemBlock {
         private String type;
@@ -64,7 +66,7 @@ public class AnthropicCompletionRequest {
     @Data
     @Builder(toBuilder = true)
     @AllArgsConstructor
-    @NoArgsConstructor
+    @NoArgsConstructor(onConstructor_ = @JsonCreator)
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class OutputConfig {
         private Format format;
@@ -78,7 +80,7 @@ public class AnthropicCompletionRequest {
     @Data
     @Builder(toBuilder = true)
     @AllArgsConstructor
-    @NoArgsConstructor
+    @NoArgsConstructor(onConstructor_ = @JsonCreator)
     public static class Thinking {
         private String type;
         private String display;
@@ -87,7 +89,7 @@ public class AnthropicCompletionRequest {
     @Data
     @Builder(toBuilder = true)
     @AllArgsConstructor
-    @NoArgsConstructor
+    @NoArgsConstructor(onConstructor_ = @JsonCreator)
     public static class Format {
         private String type;
         private JsonNode schema;
@@ -96,7 +98,7 @@ public class AnthropicCompletionRequest {
     @Data
     @Builder(toBuilder = true)
     @AllArgsConstructor
-    @NoArgsConstructor
+    @NoArgsConstructor(onConstructor_ = @JsonCreator)
     public static class Message {
         private String role;
         private List<AnthropicContentBlock> content;
@@ -105,7 +107,7 @@ public class AnthropicCompletionRequest {
     @Data
     @Builder(toBuilder = true)
     @AllArgsConstructor
-    @NoArgsConstructor
+    @NoArgsConstructor(onConstructor_ = @JsonCreator)
     public static class ToolDefinition {
         private String name;
         private String description;

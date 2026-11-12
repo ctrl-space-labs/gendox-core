@@ -1,7 +1,9 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming;
 
-import com.fasterxml.jackson.databind.*;
-import com.fasterxml.jackson.databind.node.*;
+import tools.jackson.databind.json.JsonMapper;
+
+import tools.jackson.databind.*;
+import tools.jackson.databind.node.*;
 import org.junit.jupiter.api.Test;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -10,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.ProviderStreamClient.Protocol;
 
 class ProviderStreamTest {
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper = JsonMapper.shared();
     @Test void readsMultilineCrLfCommentsAndSplitUtf8() throws Exception {
         byte[] bytes = ": ping\r\nevent: delta\r\ndata: hello\r\ndata: κόσμε\r\n\r\nevent: done\ndata: eof".getBytes(StandardCharsets.UTF_8);
         InputStream fragmented = new FilterInputStream(new ByteArrayInputStream(bytes)) {

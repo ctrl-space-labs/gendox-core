@@ -1,8 +1,10 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMessage;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -14,7 +16,7 @@ import java.util.List;
 
 @Data
 @AllArgsConstructor
-@NoArgsConstructor
+@NoArgsConstructor(onConstructor_ = @JsonCreator)
 @Builder(toBuilder = true)
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class OpenAiCompletionRequest {
@@ -43,7 +45,7 @@ public class OpenAiCompletionRequest {
 
     @Data
     @Builder
-    @NoArgsConstructor
+    @NoArgsConstructor(onConstructor_ = @JsonCreator)
     @AllArgsConstructor
     public static class ToolDto {
         private String type;
@@ -52,7 +54,7 @@ public class OpenAiCompletionRequest {
 
     @Data
     @Builder
-    @NoArgsConstructor
+    @NoArgsConstructor(onConstructor_ = @JsonCreator)
     @AllArgsConstructor
     public static class ResponseFormat {
         private String type;

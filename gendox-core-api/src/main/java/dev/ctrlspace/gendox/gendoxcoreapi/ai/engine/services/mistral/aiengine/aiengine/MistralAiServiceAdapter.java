@@ -1,10 +1,10 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.mistral.aiengine.aiengine;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.CompletionDelta;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.ProviderStreamClient;
 import java.util.function.Consumer;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.node.ObjectNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.MistralCompletionResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.MistralEmbeddingResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.MistralModerationResponseConverter;

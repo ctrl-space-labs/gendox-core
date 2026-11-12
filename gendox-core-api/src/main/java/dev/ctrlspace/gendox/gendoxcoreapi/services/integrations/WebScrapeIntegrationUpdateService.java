@@ -1,8 +1,8 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services.integrations;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Integration;
@@ -591,7 +591,7 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
     private String writeConfig(Integration integration, Map<String, Object> config) throws GendoxException {
         try {
             return objectMapper.writeValueAsString(config);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new GendoxException("WEB_SCRAPE_CONFIG_INVALID",
                     "Could not write the config of integration " + integration.getId(),
                     HttpStatus.BAD_REQUEST, e);
@@ -606,7 +606,7 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
         try {
             return objectMapper.readValue(config, new TypeReference<Map<String, Object>>() {
             });
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new GendoxException("WEB_SCRAPE_CONFIG_INVALID",
                     "Could not read the config of integration " + integration.getId(),
                     HttpStatus.BAD_REQUEST, e);

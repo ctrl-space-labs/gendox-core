@@ -3,8 +3,8 @@ package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.ai
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.CompletionDelta;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.ProviderStreamClient;
 import java.util.function.Consumer;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 import com.knuddels.jtokkit.Encodings;
 import com.knuddels.jtokkit.api.Encoding;
 import com.knuddels.jtokkit.api.EncodingRegistry;

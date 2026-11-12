@@ -1,6 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
@@ -53,7 +53,7 @@ public class Project {
     private UUID updatedBy;
 
     @Schema(hidden = true)
-    @JsonBackReference(value = "project")
+    @JsonIgnore
     @OneToMany(mappedBy = "project")
     private List<ProjectMember> projectMembers;
 
@@ -62,7 +62,7 @@ public class Project {
     private ProjectAgent projectAgent;
 
     @Schema(hidden = true)
-    @JsonBackReference(value = "project")
+    @JsonIgnore
     @OneToMany(mappedBy = "project")
     private List<ProjectDocument> projectDocuments ;
 

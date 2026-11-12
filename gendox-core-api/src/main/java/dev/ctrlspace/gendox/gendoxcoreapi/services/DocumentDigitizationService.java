@@ -1,8 +1,8 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxRuntimeException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
@@ -409,7 +409,7 @@ public class DocumentDigitizationService {
             wrapper.put("name", "json_response_with_actions");
             wrapper.set("schema", objectMapper.readTree(structureJson));
             return wrapper;
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new GendoxException("ERROR_BUILDING_DIGITIZATION_SCHEMA",
                     "Failed to parse digitization response schema: " + e.getMessage(),
                     HttpStatus.INTERNAL_SERVER_ERROR, e);

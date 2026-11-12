@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services.skills;
 
+import tools.jackson.databind.json.JsonMapper;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.AiToolRegistry;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AgentSkill;
@@ -183,7 +184,7 @@ class SkillServiceTest {
     void aBrowserToolWithAToolExampleCanBeNamed() throws Exception {
         // open_web_page has no backend handler: the widget runs it
         when(typeService.getToolExampleDefinitions()).thenReturn(Map.of("open_web_page",
-                new com.fasterxml.jackson.databind.ObjectMapper().readTree("{\"name\":\"open_web_page\",\"description\":\"Open a page\"}")));
+                JsonMapper.shared().readTree("{\"name\":\"open_web_page\",\"description\":\"Open a page\"}")));
 
         assertEquals(List.of("open_web_page"),
                 skillService.parse("---\nname: nav\ndescription: d\nallowed-tools: open_web_page\n---\n").tools());

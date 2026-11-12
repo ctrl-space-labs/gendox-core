@@ -1,6 +1,8 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
+
+import tools.jackson.databind.ObjectMapper;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.CompletionTurn;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.CompletionTurn.PendingCall;
@@ -201,7 +203,7 @@ class CompletionTurnServiceTest {
         latest.setRole("assistant");
         assertEquals("IDLE", service.getStatus(threadId, null).status());
 
-        latest.setToolCalls(new ObjectMapper().readTree("[{\"id\":\"a\"}]"));
+        latest.setToolCalls(JsonMapper.shared().readTree("[{\"id\":\"a\"}]"));
         assertEquals("GENERATING", service.getStatus(threadId, null).status());
 
         latest.setCreatedAt(Instant.now().minusSeconds(600));

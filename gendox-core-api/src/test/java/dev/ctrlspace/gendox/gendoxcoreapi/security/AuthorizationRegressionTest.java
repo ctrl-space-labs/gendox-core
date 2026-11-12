@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.security;
 
+import tools.jackson.databind.json.JsonMapper;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.MessageCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ChatThreadDTO;
 import org.springframework.security.authorization.AuthorizationDeniedException;
@@ -375,7 +376,7 @@ class AuthorizationRegressionTest {
         OrganizationConnectorService service = mock(OrganizationConnectorService.class);
         when(service.getAllByOrganizationId(org)).thenReturn(List.of(connector));
         OrganizationConnectorController c = guarded(OrganizationConnectorController.class,
-                new OrganizationConnectorController(service, new OrganizationConnectorConverter(new com.fasterxml.jackson.databind.ObjectMapper()), security));
+                new OrganizationConnectorController(service, new OrganizationConnectorConverter(JsonMapper.shared()), security));
         assertNull(c.getConnectors(org, SecurityContextHolder.getContext().getAuthentication()).getFirst().getConfig().get("apiKey"));
     }
 
@@ -600,7 +601,7 @@ class AuthorizationRegressionTest {
         when(service.getAllByOrganizationId(org)).thenReturn(List.of(connector));
         when(service.getByOrganizationAndType(org, "WEB_SCRAPE_FIRECRAWL")).thenReturn(connector);
         OrganizationConnectorController controller = guarded(OrganizationConnectorController.class,
-                new OrganizationConnectorController(service, new OrganizationConnectorConverter(new com.fasterxml.jackson.databind.ObjectMapper()), security));
+                new OrganizationConnectorController(service, new OrganizationConnectorConverter(JsonMapper.shared()), security));
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         List<OrganizationConnectorDTO> responses = List.of(controller.getConnectors(org, authentication).getFirst(),
                 controller.getConnector(org, "WEB_SCRAPE_FIRECRAWL", authentication));
@@ -624,7 +625,7 @@ class AuthorizationRegressionTest {
         when(service.getByOrganizationAndType(org, "WEB_SCRAPE_FIRECRAWL")).thenReturn(connector);
         when(service.upsert(eq(org), eq("WEB_SCRAPE_FIRECRAWL"), any())).thenReturn(connector);
         OrganizationConnectorController controller = guarded(OrganizationConnectorController.class,
-                new OrganizationConnectorController(service, new OrganizationConnectorConverter(new com.fasterxml.jackson.databind.ObjectMapper()), security));
+                new OrganizationConnectorController(service, new OrganizationConnectorConverter(JsonMapper.shared()), security));
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         for (OrganizationConnectorDTO dto : List.of(controller.getConnectors(org, authentication).getFirst(),
                 controller.getConnector(org, "WEB_SCRAPE_FIRECRAWL", authentication),

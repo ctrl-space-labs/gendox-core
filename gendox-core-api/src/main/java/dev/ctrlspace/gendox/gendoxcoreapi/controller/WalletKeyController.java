@@ -1,6 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import tools.jackson.core.JacksonException;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.WalletKeyConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.WalletKey;
@@ -42,7 +42,7 @@ public class WalletKeyController {
     @GetMapping("/organizations/{organizationId}/wallet-keys/{walletKeyId}")
     @Operation(summary = "Get wallet key by ID",
             description = "Retrieve wallet key details by its unique ID.")
-    public WalletKeyDTO  getWalletKeyById(@PathVariable UUID walletKeyId) throws GendoxException, JsonProcessingException {
+    public WalletKeyDTO  getWalletKeyById(@PathVariable UUID walletKeyId) throws GendoxException, JacksonException {
         WalletKey walletKey = walletKeyService.getWalletKeybyId(walletKeyId);
         return walletKeyConverter.toDTO(walletKey);
     }
@@ -67,7 +67,7 @@ public class WalletKeyController {
         return walletKeyPage.map(walletKey -> {
             try {
                 return walletKeyConverter.toDTO(walletKey);
-            } catch (JsonProcessingException e) {
+            } catch (JacksonException e) {
                 // Handle the exception if needed
                 e.printStackTrace(); // Example: Print the stack trace
                 // Return a default or error DTO
@@ -114,7 +114,7 @@ public class WalletKeyController {
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Import wallet key",
             description = "Import a new key from a wallet app by providing the private key in jwk format.")
-        public WalletKeyDTO importWalletKey(@PathVariable UUID organizationId, @RequestBody KeyImportDTO keyImportDTO) throws GendoxException, JsonProcessingException {
+        public WalletKeyDTO importWalletKey(@PathVariable UUID organizationId, @RequestBody KeyImportDTO keyImportDTO) throws GendoxException, JacksonException {
             // Call the service method to import the wallet key
             WalletKey walletKey = walletKeyService.importWalletKey(keyImportDTO.getPrivateKeyJwk(), organizationId);
 

@@ -1,12 +1,12 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.ProviderStreamClient.Protocol;
 
-import java.io.IOException;
+import tools.jackson.core.JacksonException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -285,7 +285,7 @@ public final class StreamAccumulator {
 
     private void mergeCall(int index, JsonNode delta) {
         ObjectNode call = calls.computeIfAbsent(index, i -> mapper.createObjectNode().put("type", "function"));
-        delta.fields().forEachRemaining(field -> {
+        delta.properties().iterator().forEachRemaining(field -> {
             boolean mergedSeparately = Set.of("index", "function").contains(field.getKey());
             if (!mergedSeparately && !field.getValue().isNull()) {
                 call.set(field.getKey(), field.getValue());
@@ -321,7 +321,7 @@ public final class StreamAccumulator {
     private JsonNode readJson(String data) {
         try {
             return mapper.readTree(data);
-        } catch (IOException e) {
+        } catch (JacksonException e) {
             throw new IllegalStateException("Invalid provider stream frame", e);
         }
     }

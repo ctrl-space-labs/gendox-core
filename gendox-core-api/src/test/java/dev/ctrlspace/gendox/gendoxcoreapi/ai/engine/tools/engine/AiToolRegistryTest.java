@@ -1,8 +1,9 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import tools.jackson.databind.json.JsonMapper;
+
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.ToolsHandlerAdvice;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,8 +21,7 @@ class AiToolRegistryTest {
 
     @BeforeEach
     void setUp() {
-        objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
+        objectMapper = JsonMapper.shared();
         toolsHandlerAdvice = new ToolsHandlerAdvice();
     }
 

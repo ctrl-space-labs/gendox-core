@@ -1,10 +1,12 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ContentPart;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.ObjectMapperUtil;
 import jakarta.persistence.*;
@@ -12,7 +14,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import com.fasterxml.jackson.core.type.TypeReference;
+import tools.jackson.core.type.TypeReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,7 +69,7 @@ import java.util.UUID;
 )
 @Data
 @AllArgsConstructor
-@NoArgsConstructor
+@NoArgsConstructor(onConstructor_ = @JsonCreator)
 @Builder(toBuilder = true)
 public class AiModelMessage {
 

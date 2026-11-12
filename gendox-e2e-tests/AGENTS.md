@@ -86,6 +86,16 @@ Only the last 30 failed runs keep their folder.
   the same route, because a wrong route returns 404 too.
 - Assert on API responses with `expectOk(response)`, which shows what the API answered.
 
+## JSON API contracts
+
+`tests/regression/json-contract.api.spec.js` (`@json-contract`) checks stable wire
+behavior: field names, ISO dates, booleans/enums, ignored unknown fields, nested JSONB,
+null update semantics, optional chat flags, and saved tool-call JSON across follow-ups.
+It was baselined on Jackson 2 and rerun on Jackson 3. Keep it in the normal API suite:
+it tests application behavior and persistence, without depending on a mapper version.
+Run it with `npx playwright test json-contract.api.spec.js` after changes to JSON DTOs,
+mapper configuration, entity JSON annotations or JSONB handling.
+
 ## Smoke tests
 
 For v2, the eight browser smoke cases are in `tests/v2/smoke/browser.spec.js`. They cover

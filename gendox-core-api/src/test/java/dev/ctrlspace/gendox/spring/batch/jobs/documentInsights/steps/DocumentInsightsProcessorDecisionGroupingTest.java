@@ -1,6 +1,8 @@
 package dev.ctrlspace.gendox.spring.batch.jobs.documentInsights.steps;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
+
+import tools.jackson.databind.ObjectMapper;
 import com.knuddels.jtokkit.Encodings;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.decision.DecisionAnswer;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.decision.DecisionRequest;
@@ -75,7 +77,7 @@ class DocumentInsightsProcessorDecisionGroupingTest {
         processor = new DocumentInsightsProcessor(
                 typeService,
                 taskService,
-                new ObjectMapper(),
+                JsonMapper.shared(),
                 Encodings.newDefaultEncodingRegistry(),
                 completionService,
                 decisionService,

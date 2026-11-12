@@ -1,7 +1,9 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
+
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.anthropic.response.AnthropicCompletionResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.CompletionResponse;
@@ -23,12 +25,12 @@ class AnthropicCompletionResponseConverterTest {
 
     @BeforeEach
     void setUp() {
-        converter = new AnthropicCompletionResponseConverter(new ObjectMapper());
+        converter = new AnthropicCompletionResponseConverter(JsonMapper.shared());
     }
 
     @Test
     void toCompletionResponse_singleChoice_mergesTextAndMapsToolUseToOpenAiShape() throws Exception {
-        ObjectMapper om = new ObjectMapper();
+        ObjectMapper om = JsonMapper.shared();
         JsonNode inputNode = om.readTree("{\"a\":1}");
 
         AnthropicCompletionResponse response = AnthropicCompletionResponse.builder()
@@ -118,7 +120,7 @@ class AnthropicCompletionResponseConverterTest {
                 }
                 """;
 
-        ObjectMapper om = new ObjectMapper();
+        ObjectMapper om = JsonMapper.shared();
         AnthropicCompletionResponse response = om.readValue(json, AnthropicCompletionResponse.class);
         CompletionResponse cr = converter.toCompletionResponse(response);
 
@@ -159,7 +161,7 @@ class AnthropicCompletionResponseConverterTest {
                 }
                 """;
 
-        ObjectMapper om = new ObjectMapper();
+        ObjectMapper om = JsonMapper.shared();
         AnthropicCompletionResponse response = om.readValue(json, AnthropicCompletionResponse.class);
         Usage u = converter.toCompletionResponse(response).getUsage();
 

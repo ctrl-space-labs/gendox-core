@@ -1,6 +1,5 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
@@ -62,7 +61,6 @@ public class AgentSkill {
     private UUID updatedBy;
 
     @JsonIgnore
-    @JsonBackReference(value = "agentSkills")
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

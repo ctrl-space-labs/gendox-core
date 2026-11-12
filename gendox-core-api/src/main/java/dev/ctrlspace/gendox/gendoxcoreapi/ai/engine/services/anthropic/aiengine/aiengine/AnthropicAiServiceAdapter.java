@@ -1,10 +1,10 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.anthropic.aiengine.aiengine;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.CompletionDelta;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.streaming.ProviderStreamClient;
 import java.util.function.Consumer;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.node.ObjectNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.AnthropicCompletionResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.AnthropicMessagesConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.anthropic.request.AnthropicCompletionRequest;
@@ -279,9 +279,7 @@ public class AnthropicAiServiceAdapter implements AiModelApiAdapterService {
 
             // Special case: "properties", "$defs", "definitions" are maps of schemas
             if ("properties".equals(field) || "$defs".equals(field) || "definitions".equals(field)) {
-                Iterator<String> names = obj.fieldNames();
-                while (names.hasNext()) {
-                    String name = names.next();
+                for (String name : obj.propertyNames()) {
                     var schema = obj.get(name);
                     if (schema != null && schema.isObject()) {
                         enforceClosedObjectSchemas((ObjectNode) schema);
@@ -293,7 +291,7 @@ public class AnthropicAiServiceAdapter implements AiModelApiAdapterService {
             enforceClosedObjectSchemas(obj);
         } else if (child.isArray()) {
             // Some generators emit items as an array (tuple validation)
-            child.elements().forEachRemaining(e -> {
+            child.values().forEach(e -> {
                 if (e != null && e.isObject()) {
                     enforceClosedObjectSchemas((ObjectNode) e);
                 }
@@ -305,7 +303,7 @@ public class AnthropicAiServiceAdapter implements AiModelApiAdapterService {
         if (!node.has(field) || !node.get(field).isArray()) {
             return;
         }
-        node.get(field).elements().forEachRemaining(e -> {
+        node.get(field).values().forEach(e -> {
             if (e != null && e.isObject()) {
                 enforceClosedObjectSchemas((ObjectNode) e);
             }

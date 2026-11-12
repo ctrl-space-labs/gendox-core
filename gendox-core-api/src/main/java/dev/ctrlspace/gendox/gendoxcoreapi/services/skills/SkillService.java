@@ -10,7 +10,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AgentSkillRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.MessageLocalContextRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.SkillRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TypeService;
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;

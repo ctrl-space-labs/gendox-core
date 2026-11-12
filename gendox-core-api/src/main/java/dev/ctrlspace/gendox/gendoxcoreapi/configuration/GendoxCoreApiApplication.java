@@ -1,10 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.configuration;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.knuddels.jtokkit.Encodings;
 import com.knuddels.jtokkit.api.EncodingRegistry;
 import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
@@ -27,6 +23,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
 import org.slf4j.Logger;
 import org.springframework.boot.SpringApplication;
+import org.springframework.boot.jackson.autoconfigure.JsonMapperBuilderCustomizer;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.persistence.autoconfigure.EntityScan;
 import org.springframework.cache.annotation.EnableCaching;
@@ -85,24 +82,11 @@ public class GendoxCoreApiApplication {
     }
 
     @Bean
-    public ObjectMapper objectMapper() {
-        ObjectMapper objectMapper = new ObjectMapper();
-
-        // Register the JavaTimeModule
-        objectMapper.registerModule(new JavaTimeModule());
-
-        objectMapper.addMixIn(Object.class, IgnoreHibernatePropertiesInJackson.class);
-
-        // Disable unwanted serialization features
-        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        objectMapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
-        objectMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-
-
-        return objectMapper;
+    public JsonMapperBuilderCustomizer hibernateJsonMixin() {
+        return builder -> builder.addMixIn(Object.class, IgnoreHibernatePropertiesInJackson.class);
     }
 
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
-    private abstract class IgnoreHibernatePropertiesInJackson{ }
+    private abstract static class IgnoreHibernatePropertiesInJackson{ }
 
 }

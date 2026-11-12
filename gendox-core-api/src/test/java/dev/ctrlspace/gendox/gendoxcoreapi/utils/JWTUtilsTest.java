@@ -1,5 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.utils;
 
+import tools.jackson.databind.json.JsonMapper;
+
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtClaimName;
 import org.springframework.security.oauth2.jwt.Jwt;
 
@@ -46,8 +48,8 @@ public class JWTUtilsTest {
 //
 ////    @Test
 //    public void testToClaimsSet_validJWT() throws Exception {
-//        ObjectMapper mapper = new ObjectMapper();
-//        mapper.registerModule(new JavaTimeModule());
+//        ObjectMapper mapper = JsonMapper.shared();
+//        mapper;
 //        JwtDTO jwtDTO = mapper.readValue(jwtDTOJsonString, JwtDTO.class);
 //
 //        JwtClaimsSet jwtClaimsSet = jwtUtils.toClaimsSet(jwtDTO);

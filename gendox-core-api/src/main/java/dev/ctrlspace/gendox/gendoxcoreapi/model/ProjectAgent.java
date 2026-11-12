@@ -1,7 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -142,11 +141,9 @@ public class ProjectAgent {
     @Column(name = "chat_settings")
     private ChatSettings chatSettings;
 
-    @JsonManagedReference(value = "aiTools")
     @OneToMany(mappedBy = "agent", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<AiTools> aiTools = new ArrayList<>();
 
-    @JsonManagedReference(value = "agentSkills")
     @OneToMany(mappedBy = "agent", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("name ASC")
     private List<AgentSkill> agentSkills = new ArrayList<>();

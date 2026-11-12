@@ -1,8 +1,8 @@
 package dev.ctrlspace.gendox.spring.batch.services;
 
 import org.jspecify.annotations.Nullable;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.QueueMessage;
@@ -121,7 +121,7 @@ public class SplitterAndTrainingBatchService {
         Set<String> uniqueProjects = batch.stream().map(message -> {
                     try {
                         return objectMapper.treeToValue(message.getPayload(), DocumentCriteria.class);
-                    } catch (JsonProcessingException e) {
+                    } catch (JacksonException e) {
                         return null;
                     }
                 })

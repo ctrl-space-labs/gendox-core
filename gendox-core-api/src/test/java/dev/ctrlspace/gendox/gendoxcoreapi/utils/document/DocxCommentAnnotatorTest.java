@@ -1,8 +1,10 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.utils.document;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import tools.jackson.databind.json.JsonMapper;
+
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.PropertyNamingStrategies;
 import org.docx4j.openpackaging.packages.WordprocessingMLPackage;
 import org.docx4j.openpackaging.parts.WordprocessingML.CommentsPart;
 import org.junit.jupiter.api.Test;
@@ -47,8 +49,8 @@ class DocxCommentAnnotatorTest {
     // ObjectMapper configured to read snake_case JSON into camelCase records
     // -----------------------------------------------------------------------
 
-    private static final ObjectMapper MAPPER = new ObjectMapper()
-            .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
+    private static final ObjectMapper MAPPER = JsonMapper.builder()
+            .propertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE).build();
 
     // -----------------------------------------------------------------------
     // Tests

@@ -1,5 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.decision;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.DecisionQuestionConfigDTO;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -10,7 +12,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 @Data
-@NoArgsConstructor
+@NoArgsConstructor(onConstructor_ = @JsonCreator)
 @AllArgsConstructor
 @Builder(toBuilder = true)
 public class DecisionRequest {

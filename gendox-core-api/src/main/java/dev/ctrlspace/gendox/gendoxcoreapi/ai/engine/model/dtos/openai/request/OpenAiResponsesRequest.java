@@ -2,7 +2,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.OpenAiResponsesItem;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

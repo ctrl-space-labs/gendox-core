@@ -1,10 +1,10 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.anthropic.request.AnthropicCompletionRequest;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.anthropic.request.AnthropicContentBlock;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMessage;
@@ -158,7 +158,7 @@ public class AnthropicMessagesConverter {
             }
             try {
                 return objectMapper.readTree(raw);
-            } catch (JsonProcessingException e) {
+            } catch (JacksonException e) {
                 throw new GendoxRuntimeException(HttpStatus.BAD_REQUEST, "AI_TOOL_ARGUMENTS_INVALID_JSON",
                         "Tool call arguments are not valid JSON", e);
             }
@@ -173,7 +173,7 @@ public class AnthropicMessagesConverter {
         JsonNode fnObj;
         try {
             fnObj = objectMapper.readTree(entity.getJsonSchema());
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new GendoxRuntimeException(HttpStatus.BAD_REQUEST, "AI_TOOL_NOT_PROPER_JSON_SCHEMA",
                     "Tool json schema is not a valid JSON", e);
         }
@@ -210,7 +210,7 @@ public class AnthropicMessagesConverter {
                 if (parsed.isObject()) {
                     return parsed;
                 }
-            } catch (JsonProcessingException ignored) {
+            } catch (JacksonException ignored) {
                 // fall through to default
             }
         }

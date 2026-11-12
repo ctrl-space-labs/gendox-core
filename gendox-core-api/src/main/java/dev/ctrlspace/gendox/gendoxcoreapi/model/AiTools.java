@@ -1,6 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -13,7 +14,7 @@ import org.hibernate.type.SqlTypes;
 import java.util.UUID;
 
 @Data
-@NoArgsConstructor
+@NoArgsConstructor(onConstructor_ = @JsonCreator)
 @AllArgsConstructor
 @Builder
 @Entity
@@ -37,7 +38,6 @@ public class AiTools {
     private String jsonSchema;
 
     @JsonIgnore
-    @JsonBackReference(value = "aiTools")
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "agent_id", referencedColumnName = "id", nullable = false)
     private ProjectAgent agent;

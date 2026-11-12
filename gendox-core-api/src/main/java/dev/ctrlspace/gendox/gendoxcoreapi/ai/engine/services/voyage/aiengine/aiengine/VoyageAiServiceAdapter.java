@@ -1,6 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.voyage.aiengine.aiengine;
 
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.node.ObjectNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.VoyageEmbeddingResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.VoyageRerankResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.*;

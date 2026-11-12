@@ -1,7 +1,5 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -19,7 +17,6 @@ public class ProjectDocument {
     @Id
     @Column(name = "id", nullable = false)
     private UUID id;
-    @JsonManagedReference(value = "agent")
     @ManyToOne
     @JoinColumn(name = "project_id", referencedColumnName = "id", nullable = false)
     private Project project;

@@ -1,9 +1,10 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import tools.jackson.databind.json.JsonMapper;
+
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelRequestParams;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.CompletionResponse;
@@ -40,7 +41,7 @@ import static org.mockito.Mockito.*;
  */
 abstract class CompletionServiceFixture {
 
-    final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
+    final ObjectMapper mapper = JsonMapper.shared();
     final UUID chatTemplateId = UUID.randomUUID();
     final UUID sectionTemplateId = UUID.randomUUID();
     final EmbeddingService embeddingService = mock(EmbeddingService.class);
