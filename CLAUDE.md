@@ -28,6 +28,8 @@ Two files per topic, no more: **the original, which never changes, and the curre
 
 ### Pending plans
 
+- [Artifacts and mini apps in the chat — #523](.ai/issue-523-artifacts-2026-11-13.md) — planned, nothing implemented. The plan as first written.
+
 - [Application e2e coverage for v2](.ai/e2e-v2-coverage-2026-11-11.md) — current frontend selection, browser coverage and blocked cases; the original v1 plan remains unchanged.
 
 - [End-to-end tests and ephemeral environments: pending work](.ai/e2e-tests-pending-work-2026-11-10.md) — historical setup handover; current test scope is in the coverage plan above.
