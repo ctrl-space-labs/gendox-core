@@ -177,11 +177,10 @@ public class AssistantToolSupport {
         return task;
     }
 
-    /** Documents must belong to the agent's project. */
+    /** Documents must belong to the agent's project, as for a document the user attaches to a message. */
     public void requireDocumentsInProject(ToolExecutionContext context, Collection<UUID> documentIds) throws GendoxException {
-        if (!documentIds.isEmpty() && !securityUtils.areAllDocumentsInAnyProject(documentIds, List.of(context.project().getId()))) {
-            throw new GendoxException("DOCUMENT_NOT_IN_PROJECT", "One or more documents do not belong to this project", HttpStatus.FORBIDDEN);
-        }
+        securityUtils.requireDocumentsInProject(documentIds, context.project().getId(),
+                context.parentMessage() != null ? context.parentMessage().getThreadId() : null);
     }
 
     // ------------------------------------------------------------------ task nodes

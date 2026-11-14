@@ -186,7 +186,7 @@ public class EmbeddingsController {
         if (message.getLocalContexts() != null && !message.getLocalContexts().isEmpty()) {
             securityUtils.requireDocumentsInProject(message.getLocalContexts().stream()
                     .map(context -> context == null || context.getDocument() == null ? null : context.getDocument().getId())
-                    .toList(), UUID.fromString(projectId));
+                    .toList(), UUID.fromString(projectId), message.getThreadId());
         }
         message.setProjectId(UUID.fromString(projectId));
         message = messageService.createMessage(message);
@@ -214,7 +214,7 @@ public class EmbeddingsController {
                                                                     HttpServletRequest request) throws Exception {
 
         securityUtils.requireThreadInProject(completionRequestDTO.getThreadId(), UUID.fromString(projectId));
-        securityUtils.requireDocumentsInProject(completionRequestDTO.getDocumentInstanceIds(), UUID.fromString(projectId));
+        securityUtils.requireDocumentsInProject(completionRequestDTO.getDocumentInstanceIds(), UUID.fromString(projectId), completionRequestDTO.getThreadId());
         if (TOOL_ROLE.equals(completionRequestDTO.getRole())) {
             return postToolResult(completionRequestDTO, UUID.fromString(projectId), request);
         }

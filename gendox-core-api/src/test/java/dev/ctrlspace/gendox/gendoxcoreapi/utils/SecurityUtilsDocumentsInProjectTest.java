@@ -3,6 +3,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.utils;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ChatThreadDocumentsRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.MessageLocalContextService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -29,6 +30,9 @@ public class SecurityUtilsDocumentsInProjectTest {
 
     @Mock
     private ChatThreadDocumentsRepository chatThreadDocumentsRepository;
+
+    @Mock
+    private MessageLocalContextService messageLocalContextService;
 
     private final UUID projectId = UUID.randomUUID();
 
@@ -65,15 +69,25 @@ public class SecurityUtilsDocumentsInProjectTest {
     }
 
     @Test
-    void aChatUploadIsUsedOnlyByTheUserWhoUploadedIt() throws GendoxException {
+    void aChatUploadOfAnotherUserIsUsedOnlyInAThreadItIsAttachedTo() throws GendoxException {
+        UUID doc = UUID.randomUUID();
+        UUID threadId = UUID.randomUUID();
+        when(documentInstanceRepository.areAllDocumentIdsInProjectsOrChats(any(), any())).thenReturn(true);
+        when(documentInstanceRepository.existsByDocumentIdAndProjectIds(doc, List.of(projectId))).thenReturn(false);
+
+        when(messageLocalContextService.isDocumentAttachedToThread(threadId, doc)).thenReturn(true);
+        securityUtils.requireDocumentsInProject(List.of(doc), projectId, threadId);
+
+        when(messageLocalContextService.isDocumentAttachedToThread(threadId, doc)).thenReturn(false);
+        assertThrows(GendoxException.class, () -> securityUtils.requireDocumentsInProject(List.of(doc), projectId, threadId));
+    }
+
+    @Test
+    void aDocumentOfTheKnowledgeBaseIsUsedInAnyThread() throws GendoxException {
         UUID doc = UUID.randomUUID();
         when(documentInstanceRepository.areAllDocumentIdsInProjectsOrChats(any(), any())).thenReturn(true);
+        when(documentInstanceRepository.existsByDocumentIdAndProjectIds(doc, List.of(projectId))).thenReturn(true);
 
-        when(chatThreadDocumentsRepository.existsUploadedByAnotherUser(List.of(doc), null)).thenReturn(false);
-        securityUtils.requireDocumentsInProject(List.of(doc), projectId);
-
-        when(chatThreadDocumentsRepository.existsUploadedByAnotherUser(List.of(doc), null)).thenReturn(true);
-        GendoxException refused = assertThrows(GendoxException.class, () -> securityUtils.requireDocumentsInProject(List.of(doc), projectId));
-        assertEquals("CHAT_UPLOAD_OF_ANOTHER_USER", refused.getErrorCode());
+        securityUtils.requireDocumentsInProject(List.of(doc), projectId, UUID.randomUUID());
     }
 }

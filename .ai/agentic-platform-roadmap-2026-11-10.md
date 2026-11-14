@@ -11,7 +11,25 @@ enough for enterprise use. Decision support is the reference scenario: it is not
 above these features — visualization, triggers and many skill files. It gets **one** ticket (section 8); everything
 else here is a primitive it reuses.
 
-**Status, 2026-11-11:** the CORE workstream is implemented (section 4). Nothing else is. Each workstream gets its own plan file in `.ai/` before code is written.
+**Status, 2026-11-14:** CORE-1 through CORE-4, SRCH-1 and SRCH-3 are implemented. PACK-1 is partly implemented:
+agent definitions export as JSON or YAML; import and connection requirements remain pending. Other roadmap tasks
+remain pending. Each workstream gets its own plan file in `.ai/` before code is written.
+
+This status reflects committed code through `1322408c` on `feature-agent-platform-roadmap`; uncommitted changes are
+not counted. "Done" below means implemented, with the remaining validation stated separately; it does not imply a
+release or that the corresponding GitHub issue is closed.
+
+| Task | State | Commit evidence |
+|---|---|---|
+| CORE-1 … CORE-4 | Done (2026-11-11) | `af889442` (loop tests), `df72faf8` (runtime resolver), `a5720cd8` (tool execution and unknown-tool result). |
+| SRCH-1 | Done (2026-11-14) | `1322408c`: thread file listings, automatic `gendox-files` skill, document-tool access, `list_files`, `view_page` and sub-agent file context. |
+| SRCH-3 | Done (2026-11-14) | `1322408c`: modified time and line ranges in search hits, file metadata in section templates, and the updated date on v2 citations. |
+| PACK-1 | Partial (2026-11-12) | `35db33b1`, `951de835`, `207b89fc`: JSON/YAML export, v2 preview and download, YAML string preservation and Jackson 3 compatibility. Import and connection requirements remain pending. |
+
+Validation recorded in the [agent-files plan](agent-files-2026-11-13.md): unit tests and mock-model API checks cover
+the file listing and search-hit format. Real-model `view_page`, Document Insights with supporting files, the v2
+citation date and direct uploaded-file checks for `regex_search` / `extract_relevant_sections` remain to be verified.
+This roadmap update reviews commits and code; it does not add a new test run.
 
 ---
 
@@ -23,20 +41,24 @@ Checked in code and in the running `local-development-test` stack with the v2 fr
 |---|---|
 | **Completion core** | `CompletionService.getCompletion`: resolve context → moderation → history → loop (model call → audit → save → run tools → continue or wait). One path for JSON, SSE, deep thinking, task runs and sub-agents. |
 | **Extension seams** | `CompletionRuntimeOverridesDTO` (what a caller changes), `CompletionListener` (who is listening), `AiToolRegistry` / `AiToolHandler` (tools that run in Gendox), `SkillService` (skills and the tools they bring), `CompletionTurn` (a turn that waits and resumes). |
-| **Tools** | Run in Gendox: `advanced_search`, `read_document`, `regex_search`, `diff_documents`, `summarize`, `extract_relevant_sections`, `create_sub_agent`, 11 task tools, `read_skill`. Run on the client: `ACTION` (async) and `CLIENT` (sync, the turn waits). User-declared tools are JSON schemas on the agent and can only run on the client. |
+| **Tools** | Run in Gendox: `advanced_search`, `read_document`, `regex_search`, `list_files`, `view_page`, `diff_documents`, `summarize`, `extract_relevant_sections`, `create_sub_agent`, 11 task tools, `read_skill`. Run on the client: `ACTION` (async) and `CLIENT` (sync, the turn waits). User-declared tools are JSON schemas on the agent and can only run on the client. |
 | **Record of a turn** | Every assistant message, tool call and tool result is saved as a message in the thread. |
-| **Skills** | `SKILL.md` with `allowed-tools`, a system library, per-agent copies, `read_skill` on demand. One system skill ships: `gendox-assistant`. A skill may list built-in tools only. |
-| **Knowledge** | Upload, write, crawled websites, WordPress, Git, S3, API integration. Google Drive and Dropbox exist as type names only. Search mode `ALWAYS` / `AUTO` / `OFF`, rerank, sources on answers. |
+| **Skills** | `SKILL.md` with `allowed-tools`, a system library, per-agent copies, `read_skill` on demand. System skills: `gendox-assistant` and `gendox-files`; the latter attaches automatically when the thread has files. A skill may list built-in tools only. |
+| **Knowledge** | Upload, write, crawled websites, WordPress, Git, S3, API integration. Google Drive and Dropbox exist as type names only. Search mode `ALWAYS` / `AUTO` / `OFF`, rerank, sources on answers. Thread uploads are listed in context and read through tools without embeddings; search hits include line ranges and modified time, and v2 citations show the updated date. |
+| **Agent definitions** | JSON/YAML export of behaviour, named models, settings, chat settings, tools and skills, with preview and download in v2. Import and connection requirements are pending (PACK-1). |
 | **Tasks** | Document Insights, Digitization, Earth Observation; deep thinking as a Spring Batch job. |
 | **Channels** | v2 web app (agent home is a dock of tabbed windows; its layout is kept in the browser), chat on every page, white-label widget with host-page tools, WordPress plugin, REST API with API keys, Python SDK. Discord exists but is poorly implemented and tested: not a base to build on. |
 | **Org services** | `organization_connectors`, one row per organization and type: Google Earth Engine, Firecrawl. Model provider keys per organization. |
 | **Governance** | Organizations, projects, roles, `@PreAuthorize`, API keys, rate limits, moderation, `audit_logs` with token counts, plans and limits. |
 | **Sandbox precedent** | `public/gee-sandbox/gee-sandbox.html`: an iframe with a strict CSP that runs model-written Earth Engine code. |
 
-Ticket status, as given in review:
+Ticket status from the original review, with implementation updates from the commits above (issue closure has not
+been rechecked):
 
 - **Done:** #519, #518, #493, #525, #503, #548, #549, #452, #521, #512, #527, #562, #542, #529.
-- **Pending and used below:** #522 browser code execution, #523 artifacts, #524 document generation, #528 speech, #530 MCP, #531 usage, #532 plugin architecture and adapters, #554 agent export/import, #555 unanswered questions, #558 ask before running a tool, #559 / #550 attached documents, #561 API keys, #563 visitor conversations, #564 search, #484 roles.
+- **Implemented since review:** #559 / #550 attached documents (SRCH-1; validation limits above).
+- **Split export/import work:** #554 export is implemented; import is tracked separately in [#567](https://github.com/ctrl-space-labs/gendox-core/issues/567), open and assigned to `gyfantidis` as of 2026-11-14. PACK-1 remains partial; connection requirements are additional roadmap scope, not part of #567.
+- **Pending and used below:** #522 browser code execution, #523 artifacts, #524 document generation, #528 speech, #530 MCP, #531 usage, #532 plugin architecture and adapters, #555 unanswered questions, #558 ask before running a tool, #561 API keys, #563 visitor conversations, #564 search, #484 roles.
 
 One gap found while reading the code: the chat inside the Gendox app does not answer `CLIENT` tool calls itself; only the embedded widget does, through its host page. Several features below need the app to do it (task APP-1).
 
@@ -55,7 +77,7 @@ Looked at: Meta Muse, xAI Grok Bot and Team Bots, ChatGPT Enterprise, Claude, Mi
 | Scheduled and triggered runs, notifications | Yes | Integration schedules only |
 | Shared skills, memory | Yes | Skills only |
 | Admin view of what agents did, usage | Yes | Partly |
-| Agent templates | Yes | No (#554) |
+| Agent templates | Yes | Partial: JSON/YAML definition export (#554); import pending (#567) |
 | Voice | Some | No (#528) |
 | Computer use | Muse, Manus | Not planned |
 
@@ -225,10 +247,11 @@ The Discord bot is not the model to extract from. The contract is written with S
 ### SEARCH (#564, #559, #550)
 
 Plan for SRCH-1 and SRCH-3: [agent-files-2026-11-13.md](agent-files-2026-11-13.md). The context lists the files; tools read them.
+Both are implemented in `1322408c` (2026-11-14); remaining validation is listed at the top of this roadmap and in that plan.
 
-- **SRCH-1.** Attached documents reach the model (#559, #550). Do first: every agentic feature leans on it.
+- **SRCH-1 — Done.** Attached documents reach the model (#559, #550) through a thread-wide file listing and tools. Includes the automatic `gendox-files` skill, `list_files`, `view_page` and file context for sub-agents. Uploads are not embedded or inlined in the prompt.
 - **SRCH-2.** #564 as written: metadata filters, markdown chunking, embedding migration.
-- **SRCH-3.** Source time (document date, sync time) returned by search and shown with the citation.
+- **SRCH-3 — Done.** Source time returned by search and shown with the citation: the document's last update (`modified`, also the sync time for a synced file), as agreed in the agent-files plan. Search hits carry numbered text and line ranges; the default section template includes file metadata; v2 citations show the updated date.
 
 ### GOVERN (#531, #563, #555, #561, #484)
 
@@ -238,9 +261,12 @@ Plan for SRCH-1 and SRCH-3: [agent-files-2026-11-13.md](agent-files-2026-11-13.m
 - **GOV-5.** Several roles per member (#484). The API keys part moved to SEC-1.
 - **SEC-1 Secrets at rest.** Every stored secret, API keys included, is encrypted two-way, with a key provider per deployment (environment, AWS KMS, others). Decided on 2026-11-13 in place of "API keys stored as a hash" (#561). Plan: [secrets-at-rest-2026-11-13.md](secrets-at-rest-2026-11-13.md). CONN-1 waits for it.
 
-### PACKS (#554)
+### PACKS (#554 export, #567 import)
 
-- **PACK-1.** Export and import an agent: behaviour, model, tools, skills, the connections it needs.
+- **PACK-1 — Partial.** Export and import an agent: behaviour, model, tools, skills, the connections it needs.
+  - **Done:** JSON/YAML definition export, including behaviour, named models, settings, chat settings, tools and skills; v2 preview, copy and download. Commits: `35db33b1`, `951de835`, `207b89fc` (2026-11-12).
+  - **Pending:** import of a definition is tracked in [#567](https://github.com/ctrl-space-labs/gendox-core/issues/567): create a new agent from JSON/YAML, with a preview, model fallback, format-version and plan-limit checks, and transactional creation of its tools and skills. It excludes integrations and updating an existing agent. The file shape is an open decision to settle before import is built, per #554's export comment.
+  - **Additional roadmap scope:** declaration of the connections an agent needs. This is not included in #567. PACK-1 as a whole remains open.
 - **PACK-2.** Skill packs for the domains Gendox is used in: contract review, financial analysis, historical ship-log digitization, briefing.
 
 ### MCP-SERVER (#530)
@@ -255,8 +281,8 @@ Plan for SRCH-1 and SRCH-3: [agent-files-2026-11-13.md](agent-files-2026-11-13.m
 
 | Phase | Tasks |
 |---|---|
-| 0 | CORE-1 … CORE-4 in series (done). Beside them: APP-1, SRCH-1, SRCH-3, SEC-1. |
-| 1 | APPR-1, APPR-2, CONN-1, MCP-1, MCP-2, CODE-1, ART-1, ART-2, CHAN-1, GOV-1, GOV-2, GOV-3, PACK-1 |
+| 0 | Done: CORE-1 … CORE-4, SRCH-1, SRCH-3. Pending: APP-1, SEC-1. |
+| 1 | APPR-1, APPR-2, CONN-1, MCP-1, MCP-2, CODE-1, ART-1, ART-2, CHAN-1, GOV-1, GOV-2, GOV-3, PACK-1 (export done; import and connection requirements pending) |
 | 2 | HTTP-1, HTTP-2, CONN-2, CONN-3, SKILL-1, SKILL-2, BOARD-1, BOARD-2, BOARD-3, RUN-1, RUN-2, RUN-3, MEM-1, CODE-2, ART-3, CHAN-2, CHAN-3, MCPS-1, PACK-2, SRCH-2 |
 | 3 | DSS-1, CHAN-4, CODE-3, GOV-4, GOV-5, VOICE-1 |
 

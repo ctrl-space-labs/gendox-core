@@ -79,8 +79,9 @@ Example, as the agent sees it in a chat:
 
 Forty pages and 85 tokens is a scan: the agent can tell from the listing alone.
 
-One class builds the line. `DocumentInsightsProcessor` calls it instead of its own string builder, so its output
-changes by the two new fields and nothing else.
+One class builds the line. `DocumentInsightsProcessor` calls it instead of its own string builder, for the supporting
+documents and for the main document, so its output changes by the two new fields and nothing else. Wherever a tool
+names a document by its line, `DocumentService.getFileLine` picks `./uploads` or `./knowledge`.
 
 ### 3. The listing in the context
 
@@ -93,8 +94,8 @@ changes by the two new fields and nothing else.
 
 | Need | Tool | Change |
 |---|---|---|
-| Read a few pages at a time | `read_document` | None. It has `line_ranges` and sets no limit; the skill tells the agent to check `tokens` in the listing and read a large file by range. |
-| Find exact text | `regex_search` | None. |
+| Read a few pages at a time | `read_document` | The result names the document by its file line, `file`, in place of `document_id`. It has `line_ranges` and sets no limit; the skill tells the agent to check `tokens` in the listing and read a large file by range. |
+| Find exact text | `regex_search` | The result adds `files`, the file line of each document searched. Each match keeps its `document_id`, so the line is not repeated per match. |
 | Find by meaning in an uploaded file | `extract_relevant_sections` | None. A sub-agent scans the file and returns the line ranges that matter, ready for `read_document`. |
 | Semantic search of the knowledge base | `advanced_search` | The output format only (section 6). It keeps searching the knowledge base and nothing else. |
 | List the knowledge base | new `list_files(scope, page)` | The same lines, paged. The knowledge base is too large for the context. |
@@ -106,8 +107,12 @@ agent finds things in it with `regex_search`, with `read_document` by range, and
 when the question is about meaning. Semantic search over uploads would need a second kind of embedding, kept apart
 from the knowledge base, for a need that these three already cover. It is left out until a real case shows they do not.
 
-**Access.** Requirement: a file tool resolves a document id only inside the scopes of its turn — this thread's
-uploads, the agent's knowledge base, the documents of the running task. Specifics belong in the private tracker.
+**Access.** A file uploaded to a chat is used by the user who uploaded it, in any thread, and by everyone in a
+thread it is attached to. Documents of a knowledge base keep the project rule. A new upload is in no thread until it
+is first attached, which is why the uploader is part of the rule. The existing
+`SecurityUtils.requireDocumentsInProject` holds it, with the checks the thread content endpoint already uses (the
+thread's attachments, the uploader). It applies wherever a document id comes in: a user attaching files to a message,
+an agent reading one (`AgentDocumentAccess`), and the assistant adding one to a task.
 
 ### 5. The skill `gendox-files`
 
@@ -183,7 +188,7 @@ Steps 1–4 answer #550 and the "later questions" part of #559.
 ## Files touched
 
 - New: the formatter `FileListing`, `ListFilesTool`, `AgentDocumentAccess` (the one access check, in place of a copy in each document tool), `ViewPageTool`, `resources/skills/gendox-files/SKILL.md`.
-- Changed: `ChatTemplateAuthor`, `MessageLocalContextService`, `DocumentInsightsProcessor` (listing only), `AdvancedSearchTool`, `SectionTemplateAuthor`, `SkillService.getCompletionSkills`, the four tools that read a document, `CreateSubAgentTool` (a sub-agent is told of the same files), `MessageMetadataDTO` and `ChatSources` in v2 (the date on a citation).
+- Changed: `SecurityUtils.requireDocumentsInProject` (takes the thread), `DocumentService.getFileLine`, `ChatTemplateAuthor`, `MessageLocalContextService`, `DocumentInsightsProcessor` (file lines only), `AdvancedSearchTool`, `SectionTemplateAuthor`, `SkillService.getCompletionSkills`, the four tools that read a document, `CreateSubAgentTool` (a sub-agent is told of the same files), `MessageMetadataDTO` and `ChatSources` in v2 (the date on a citation).
 - Core: `CompletionRuntimeContextResolver` gains one call that loads the thread's files for the template. For `view_page`, a tool can hand images to the loop: `ToolExecutionContext` and `ToolRound` carry them, and `CompletionService` adds them after the round's results. `CompletionTurnService` is not touched.
 - One migration: the default section template (step 5).
 

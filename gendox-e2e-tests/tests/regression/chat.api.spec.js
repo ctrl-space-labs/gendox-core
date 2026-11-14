@@ -80,3 +80,20 @@ test.describe('Chat persistence and retrieval', { tag: '@p1' }, () => {
         }
     });
 });
+
+test.describe('Chat uploads', { tag: '@p1' }, () => {
+    test.use({ workspaceOptions: { members: { testUser2: 'ROLE_EDITOR' } } });
+
+    test('an upload is attached by its uploader in any thread, and not by another member', async ({ api, workspace: w }) => {
+        const attached = await json(await api.post(`${config.gendox.contextPath}${projectPath(w)}/documents/upload-single?messageAttachment=true`, {
+            headers: { Authorization: `Bearer ${w.ownerToken}` },
+            multipart: { file: { name: 'mine.txt', mimeType: 'text/plain', buffer: Buffer.from('my notes') } },
+        }));
+        const path = `/messages/completions?projectId=${w.projectId}`;
+        await ok(await call(api, w, 'post', path, { value: 'First thread', documentInstanceIds: [attached.id] }));
+        await ok(await call(api, w, 'post', path, { value: 'Another thread', documentInstanceIds: [attached.id] }));
+        const other = await call(api, w, 'post', path, { value: 'Not mine', documentInstanceIds: [attached.id] }, w.tokens.testUser2);
+        expect(other.status()).toBe(403);
+        expect((await other.json()).errorCode).toBe('DOCUMENT_NOT_IN_PROJECT');
+    });
+});

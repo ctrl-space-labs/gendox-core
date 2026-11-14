@@ -185,8 +185,9 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                 .filter(Objects::nonNull)
                 .findFirst()
                 .orElse(null);
-        String mainDocumentTitle = mainDocument != null ? mainDocument.getTitle() : null;
-        UUID mainDocumentId = mainDocument != null ? mainDocument.getId() : documentGroupWithQuestions.getDocumentNode().getDocumentId();
+        String mainDocumentFile = mainDocument != null
+                ? FileListing.line("./main-document", mainDocument)
+                : FileListing.line("./main-document", "-", "UUID", documentGroupWithQuestions.getDocumentNode().getDocumentId());
 
         Page<DocumentInstance> mainDocSupportingDocuments = getSupportingDocuments(
                 documentGroupWithQuestions.getDocumentNode());
@@ -209,8 +210,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                                     responseJsonSchema,
                                     overrides,
                                     mainDocSupportingDocumentsContext,
-                                    mainDocumentTitle,
-                                    mainDocumentId);
+                                    mainDocumentFile);
                         } catch (Exception e) {
                             throw new RuntimeException(e);
                         }
@@ -472,8 +472,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                                                                   ObjectNode responseJsonSchema,
                                                                   CompletionRuntimeOverridesDTO overrides,
                                                                   MessageLocalContextDTO mainDocSupportingDocumentsContext,
-                                                                  @Nullable String mainDocumentTitle,
-                                                                  @Nullable UUID mainDocumentId) throws JacksonException {
+                                                                  String mainDocumentFile) throws JacksonException {
 
         List<AnswerCreationDTO> newAnswers = new ArrayList<>();
 
@@ -506,8 +505,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                     supportingDocumentsContext,
                     task,
                     documentGroupWithQuestions.getDocumentNode(),
-                    mainDocumentTitle,
-                    mainDocumentId);
+                    mainDocumentFile);
             GroupedQuestionAnswers documentPartAnswers = getCompletion(message, responseJsonSchema, project, documentGroupWithQuestions, questionChunk, overrides);
             if (documentPartAnswers == null) {
                 // ignore all partialAnswers, since there is an error, we cant trust any of those
@@ -589,10 +587,9 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                                                   List<MessageLocalContextDTO> localContext,
                                                   Task task,
                                                   TaskNode documentNode,
-                                                  String mainDocumentTitle,
-                                                  UUID mainDocumentId) {
+                                                  String mainDocumentFile) {
         // Main document is 1st in local context, to increase LLM cache hit rate
-        addMainDocumentText(localContext, textSections, mainDocumentTitle, mainDocumentId);
+        addMainDocumentText(localContext, textSections, mainDocumentFile);
 
         // task prompt, if exists, is 2nd in local context
         addTaskPromptIfExists(localContext, task);
@@ -695,21 +692,16 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
 
     private static void addMainDocumentText(List<MessageLocalContextDTO> localContext,
                                             String textSections,
-                                            @Nullable String mainDocumentTitle,
-                                            @Nullable UUID mainDocumentId) {
+                                            String mainDocumentFile) {
         MessageLocalContextDTO mainDocumentContext = MessageLocalContextDTO.builder()
                 .contextType("**[Main Document] Text**")
                 .value("""
                         
-                        ./main-document/%s | UUID=%s
+                        %s
                         <document-text>
                         %s
                         </document-text>
-                        """.formatted(
-                        Optional.ofNullable(mainDocumentTitle).orElse(""),
-                        Optional.ofNullable(mainDocumentId).map(UUID::toString).orElse(""),
-                        textSections
-                ))
+                        """.formatted(mainDocumentFile, textSections))
                 .build();
         localContext.add(0, mainDocumentContext);
     }

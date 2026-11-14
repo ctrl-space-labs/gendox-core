@@ -93,29 +93,19 @@ public class SecurityUtils {
         }
     }
 
-    public void requireDocumentsInProject(Collection<UUID> ids, UUID projectId) throws GendoxException {
+    /**
+     * Documents used in a thread of a project: each one is in the project's knowledge base, attached to the thread, or
+     * uploaded by the current user (a new upload is in no thread until it is first attached).
+     */
+    public void requireDocumentsInProject(Collection<UUID> ids, UUID projectId, @Nullable UUID threadId) throws GendoxException {
         if (ids != null && !ids.isEmpty()
                 && (projectId == null || ids.stream().anyMatch(Objects::isNull) || !documentInstanceRepository.areAllDocumentIdsInProjectsOrChats(
-                        ids.stream().distinct().toArray(UUID[]::new), new UUID[]{projectId}))) {
+                        ids.stream().distinct().toArray(UUID[]::new), new UUID[]{projectId})
+                        || !ids.stream().allMatch(id -> documentInstanceRepository.existsByDocumentIdAndProjectIds(id, List.of(projectId))
+                                || threadHasDocumentInMessageLocalContext(threadId, id)
+                                || isDocumentCreatedByCurrentUser(id)))) {
             throw new GendoxException("DOCUMENT_NOT_IN_PROJECT", "Documents must belong to the selected project", HttpStatus.FORBIDDEN);
         }
-        if (ids != null && !ids.isEmpty() && !ownsChatUploads(ids)) {
-            throw new GendoxException("CHAT_UPLOAD_OF_ANOTHER_USER", "A file uploaded to a chat can be used only by the user who uploaded it", HttpStatus.FORBIDDEN);
-        }
-    }
-
-    /**
-     * A file uploaded to a chat belongs to the user who uploaded it, in any of their threads. True when none of the
-     * documents is a chat upload of another user; documents of a knowledge base are not affected.
-     */
-    public boolean ownsChatUploads(Collection<UUID> documentIds) {
-        return !chatThreadDocumentsRepository.existsUploadedByAnotherUser(documentIds, getUserId());
-    }
-
-    /** Whether an agent may read a document for the current user: one of its projects, and the user's own chat upload. */
-    public boolean canAgentReadDocument(UserProfile agentProfile, UUID documentId) {
-        return hasAuthority(agentProfile, "OP_READ_DOCUMENT", getRequestedDocumentIdAccessCriteria(documentId.toString()))
-                && ownsChatUploads(List.of(documentId));
     }
 
     public boolean isSuperAdmin() {
