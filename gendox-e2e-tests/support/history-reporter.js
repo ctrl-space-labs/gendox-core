@@ -14,7 +14,9 @@ const { execFileSync } = require('child_process');
  * reads a few lines instead of the whole log.
  */
 const e2eDir = path.resolve(__dirname, '..');
-const historyDir = path.join(e2eDir, 'test-history');
+const target = require('../config/target');
+// A deployed environment keeps its own history, so its results never read as the local stack's.
+const historyDir = path.join(e2eDir, 'test-history', ...(target.deployed ? [target.target] : []));
 const statusFile = path.join(historyDir, 'status.json');
 const runsFile = path.join(historyDir, 'runs.jsonl');
 const composeDir = path.resolve(e2eDir, '../gendox-compose-scripts/ephemeral');
@@ -100,6 +102,8 @@ class HistoryReporter {
             commit: git('rev-parse', '--short', 'HEAD'),
             uncommittedChanges: git('status', '--porcelain') !== '',
             command: process.argv.slice(2).join(' '),
+            target: target.target,
+            models: target.models,
             status: fullResult.status,
             ...counts,
             failures: failures.map(failure => failure.key),
@@ -120,7 +124,26 @@ class HistoryReporter {
         if (failures.length > 0) {
             console.log(`[e2e] Details, traces and the API log: ${relative(path.join(runDir, 'failures.md'))}`);
         }
+        // What a deployed environment would be left with: say it, even when every test passed.
+        const leftovers = [...new Set([...this.results.values()]
+            .flatMap(({ test, result }) => [...test.annotations, ...(result.annotations || [])])
+            .filter(annotation => annotation.type === 'cleanup incomplete')
+            .map(annotation => annotation.description))].map(description => ({ description }));
+        for (const annotation of leftovers) console.log(`[e2e] CLEANUP INCOMPLETE ${annotation.description}`);
+        const requests = this.modelRequests();
+        if (requests !== null) console.log(`[e2e] Model requests sent by the LLM tests: ${requests}`);
         console.log(`[e2e] Every test's last result: ${relative(path.join(historyDir, 'STATUS.md'))}`);
+    }
+
+    // Counted by support/llm.js, one line per request; null when no LLM test ran.
+    modelRequests() {
+        try {
+            const file = path.join(require('../tests.config').authDir, 'llm-requests');
+            const count = fs.readFileSync(file, 'utf8').split('\n').filter(Boolean).length;
+            return count > 0 ? count : null;
+        } catch {
+            return null;
+        }
     }
 
     writeFailures(runDir, failures, finishedAt) {
@@ -168,7 +191,8 @@ class HistoryReporter {
     }
 
     apiLog(finishedAt) {
-        if (!fs.existsSync(path.join(composeDir, '.env'))) return '';
+        // The local stack's log says nothing about a deployed environment.
+        if (target.deployed || !fs.existsSync(path.join(composeDir, '.env'))) return '';
         try {
             return execFileSync('docker', ['compose', 'logs', 'api', '--no-color', '--no-log-prefix',
                 '--since', this.startedAt.toISOString(), '--until', finishedAt.toISOString()],

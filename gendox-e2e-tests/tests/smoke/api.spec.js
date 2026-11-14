@@ -1,5 +1,6 @@
 const { test, expect, tokenFor } = require('../../support/workspace');
 const config = require('../../tests.config');
+const target = require('../../config/target');
 const { expectOk, textFile } = require('../../support/app');
 const users = require('../../page-objects/apis/users');
 const projects = require('../../page-objects/apis/projects');
@@ -20,15 +21,20 @@ test.describe('API smoke', { tag: '@smoke' }, () => {
         test(`identity: ${name} can authenticate and load their own profile`, async ({ api }) => {
             const response = await users.getUserProfile(api, await tokenFor(api, name));
             await expectOk(response);
-            expect(await response.json()).toMatchObject({ id: seed[name], email: config.gendox.users[name].username });
+            const profile = await response.json();
+            // Emails are compared case-insensitively: Keycloak stores them in lower case.
+            expect(profile.email.toLowerCase()).toBe(config.gendox.users[name].username.toLowerCase());
+            // The seeded ids exist only on the local stack.
+            if (!target.deployed) expect(profile.id).toBe(seed[name]);
         });
     }
 
-    test('project access: a member can read and an outsider is refused on the same route', async ({ api }) => {
-        const allowed = await projects.getProjectById(api, await tokenFor(api, 'testUser1'), seed.organization1, seed.project1_1);
+    test('project access: a member can read and an outsider is refused on the same route', async ({ api, workspace }) => {
+        const { organizationId, projectId } = workspace;
+        const allowed = await projects.getProjectById(api, await tokenFor(api, workspace.owner), organizationId, projectId);
         await expectOk(allowed);
-        expect(await allowed.json()).toMatchObject({ id: seed.project1_1, organizationId: seed.organization1 });
-        const denied = await projects.getProjectById(api, await tokenFor(api, 'outsider'), seed.organization1, seed.project1_1);
+        expect(await allowed.json()).toMatchObject({ id: projectId, organizationId });
+        const denied = await projects.getProjectById(api, await tokenFor(api, 'outsider'), organizationId, projectId);
         expect(denied.status()).toBe(404);
     });
 
