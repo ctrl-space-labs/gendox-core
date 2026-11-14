@@ -7,6 +7,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.DocumentPredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.FileListing;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import org.jetbrains.annotations.NotNull;
@@ -80,6 +81,12 @@ public class DocumentService {
         return documentInstanceRepository.findDocumentInstanceById(id)
                 .orElseThrow(() -> new GendoxException("DOCUMENT_NOT_FOUND", "Document not found with id: " + id, HttpStatus.NOT_FOUND));
 
+    }
+
+    /** A document as an agent sees it ({@link FileListing}): under ./uploads when it was uploaded to a chat, else ./knowledge. */
+    public String getFileLine(UUID id) throws GendoxException {
+        String directory = documentInstanceRepository.isChatUpload(id) ? FileListing.UPLOADS : FileListing.KNOWLEDGE;
+        return FileListing.line(directory, getDocumentInstanceById(id));
     }
 
 

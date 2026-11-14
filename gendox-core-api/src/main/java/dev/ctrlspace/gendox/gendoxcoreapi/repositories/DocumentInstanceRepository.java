@@ -117,6 +117,9 @@ public interface DocumentInstanceRepository extends JpaRepository<DocumentInstan
     @Query("select d.organizationId from DocumentInstance d where d.id = :documentId")
     UUID findOrganizationIdByDocumentId(@Param("documentId") UUID documentId);
 
+    @Query(nativeQuery = true, value = "SELECT EXISTS (SELECT 1 FROM gendox_core.chat_thread_documents WHERE document_id = :documentId)")
+    boolean isChatUpload(@Param("documentId") UUID documentId);
+
     @Query("select case when count(d) > 0 then true else false end from DocumentInstance d where d.id = :documentId and d.createdBy = :userId")
     boolean existsByIdAndCreatedBy(@Param("documentId") UUID documentId, @Param("userId") UUID userId);
 

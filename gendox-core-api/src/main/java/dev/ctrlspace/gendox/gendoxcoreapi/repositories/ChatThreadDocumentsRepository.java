@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -13,8 +14,14 @@ public interface ChatThreadDocumentsRepository extends JpaRepository<ChatThreadD
 
     public Optional<ChatThreadDocument> findByProjectIdAndDocumentIdAndThreadId(UUID projectId, UUID documentId, UUID threadId);
 
-    /** True for a file uploaded as a chat attachment, as opposed to a document of the knowledge base. */
-    boolean existsByDocumentId(UUID documentId);
+    /** True if any of the documents was uploaded to a chat by someone other than the user; by anyone, for no user. */
+    @Query("""
+            select case when count(ctd) > 0 then true else false end
+            from ChatThreadDocument ctd
+            where ctd.documentId in :documentIds
+              and (:userId is null or ctd.createdBy is null or ctd.createdBy <> :userId)
+            """)
+    boolean existsUploadedByAnotherUser(Collection<UUID> documentIds, UUID userId);
 
     @Query(value = """
                 SELECT (COUNT(DISTINCT ctd.document_id) = cardinality(CAST(:documentIds AS uuid[]))) AS all_belong

@@ -9,7 +9,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.AiToolHandler;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.ToolExecutionContext;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentSectionService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,16 +25,16 @@ public class ReadDocumentTool implements AiToolHandler {
 
     Logger logger = LoggerFactory.getLogger(ReadDocumentTool.class);
 
-    private final ProjectService projectService;
+    private final DocumentService documentService;
     private final ObjectMapper objectMapper;
     private final DocumentSectionService documentSectionService;
     private final AgentDocumentAccess documentAccess;
 
     @Autowired
-    public ReadDocumentTool(ProjectService projectService,
+    public ReadDocumentTool(DocumentService documentService,
                             ObjectMapper objectMapper,
                             DocumentSectionService documentSectionService, AgentDocumentAccess documentAccess) {
-        this.projectService = projectService;
+        this.documentService = documentService;
         this.objectMapper = objectMapper;
         this.documentSectionService = documentSectionService;
         this.documentAccess = documentAccess;
@@ -116,7 +116,7 @@ public class ReadDocumentTool implements AiToolHandler {
         }
 
         ObjectNode result = objectMapper.createObjectNode();
-        result.put("document_id", docId.toString());
+        result.put("file", documentService.getFileLine(docId));
         result.put("document_text", "\n" + docText + "\n");
         return result;
     }

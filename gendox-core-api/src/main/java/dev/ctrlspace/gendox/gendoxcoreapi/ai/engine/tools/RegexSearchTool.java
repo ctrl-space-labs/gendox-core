@@ -9,6 +9,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.ToolExecutionCo
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.RegexSearchResultDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentSectionService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentService;
+import tools.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -27,13 +29,16 @@ public class RegexSearchTool implements AiToolHandler {
 
     private final DocumentSectionService documentSectionService;
     private final AgentDocumentAccess documentAccess;
+    private final DocumentService documentService;
     private final ObjectMapper objectMapper;
 
     public RegexSearchTool(DocumentSectionService documentSectionService,
                            AgentDocumentAccess documentAccess,
+                           DocumentService documentService,
                            ObjectMapper objectMapper) {
         this.documentSectionService = documentSectionService;
         this.documentAccess = documentAccess;
+        this.documentService = documentService;
         this.objectMapper = objectMapper;
     }
 
@@ -105,10 +110,12 @@ public class RegexSearchTool implements AiToolHandler {
         }
 
         List<UUID> documentIds = new ArrayList<>();
+        List<String> files = new ArrayList<>();
         for (JsonNode docIdNode : arguments.get("document_ids")) {
             UUID docId = UUID.fromString(docIdNode.asText());
             documentAccess.requireReadable(context, docId);
             documentIds.add(docId);
+            files.add(documentService.getFileLine(docId));
         }
 
         logger.info("RegexSearchTool: execute (parentThreadId={}, documents={}, patterns={}, caseInsensitive={})",
@@ -121,6 +128,8 @@ public class RegexSearchTool implements AiToolHandler {
 
         logger.debug("RegexSearchTool: found {} matches across {} documents",
                 resultDto.totalMatches(), documentIds.size());
-        return objectMapper.valueToTree(resultDto);
+        ObjectNode result = objectMapper.valueToTree(resultDto);
+        result.put("files", String.join("\n", files));
+        return result;
     }
 }

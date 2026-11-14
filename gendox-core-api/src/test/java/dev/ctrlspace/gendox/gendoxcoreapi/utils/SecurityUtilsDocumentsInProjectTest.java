@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.utils;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ChatThreadDocumentsRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceRepository;
 import org.junit.jupiter.api.Test;
@@ -14,6 +15,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.AdditionalMatchers.aryEq;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -60,5 +62,18 @@ public class SecurityUtilsDocumentsInProjectTest {
                 aryEq(new UUID[]{doc}), aryEq(new UUID[]{projectId}))).thenReturn(false);
 
         assertFalse(securityUtils.areAllDocumentsInAnyProject(List.of(doc), List.of(projectId)));
+    }
+
+    @Test
+    void aChatUploadIsUsedOnlyByTheUserWhoUploadedIt() throws GendoxException {
+        UUID doc = UUID.randomUUID();
+        when(documentInstanceRepository.areAllDocumentIdsInProjectsOrChats(any(), any())).thenReturn(true);
+
+        when(chatThreadDocumentsRepository.existsUploadedByAnotherUser(List.of(doc), null)).thenReturn(false);
+        securityUtils.requireDocumentsInProject(List.of(doc), projectId);
+
+        when(chatThreadDocumentsRepository.existsUploadedByAnotherUser(List.of(doc), null)).thenReturn(true);
+        GendoxException refused = assertThrows(GendoxException.class, () -> securityUtils.requireDocumentsInProject(List.of(doc), projectId));
+        assertEquals("CHAT_UPLOAD_OF_ANOTHER_USER", refused.getErrorCode());
     }
 }
