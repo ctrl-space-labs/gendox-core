@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react'
-import { ArrowUp, Brain, Paperclip, X } from 'lucide-react'
+import { ArrowUp, AtSign, Brain, Paperclip, X } from 'lucide-react'
 import { displayFileName, formatBytes } from 'src/components/chat/chatUtils'
 import FileTile from 'src/components/ui/FileTile'
+import { useMentions } from 'src/components/chat/mentions'
 
 const AttachmentTile = ({ attachment, onRemove }) => {
   const busy = ['queued', 'uploading', 'deleting'].includes(attachment.status)
@@ -37,7 +38,7 @@ const AttachmentTile = ({ attachment, onRemove }) => {
 
 /**
  * The message box: text, attached files, Deep thinking and Send.
- * Enter sends, Shift+Enter starts a new line.
+ * Enter sends, Shift+Enter starts a new line. With `mentions`, @ mentions a task or document of the agent.
  */
 const ChatComposer = ({
   value,
@@ -51,9 +52,11 @@ const ChatComposer = ({
   onRemoveAttachment,
   deepThinking,
   onDeepThinkingToggle,
-  inputRef
+  inputRef,
+  mentions = false
 }) => {
   const fileInputRef = useRef(null)
+  const mention = useMentions({ enabled: mentions, inputRef, value, onChange })
 
   // grow with the text, up to the CSS max-height
   useEffect(() => {
@@ -65,11 +68,12 @@ const ChatComposer = ({
 
   const submit = e => {
     e.preventDefault()
-    if (!disabled) onSend()
+    if (!disabled) onSend(mention.toMessage(value))
   }
 
   return (
     <form className='gc-composer' onSubmit={submit}>
+      {mention.popup}
       {attachments && attachments.length > 0 && (
         <div className='gc-files'>
           {attachments.map(attachment => (
@@ -83,13 +87,24 @@ const ChatComposer = ({
         placeholder={placeholder}
         aria-label='Message'
         value={value}
-        onChange={e => onChange(e.target.value)}
+        onChange={e => {
+          onChange(e.target.value)
+          mention.track()
+        }}
+        onSelect={mention.track}
+        onBlur={mention.close}
         onPaste={onPaste}
         onKeyDown={e => {
+          if (mention.onKeyDown(e)) return
           if (e.key === 'Enter' && !e.shiftKey) submit(e)
         }}
       />
       <div className='gc-tools'>
+        {mentions && (
+          <button type='button' className='btn ghost s icon' title='Mention a task or document (@)' onClick={mention.start}>
+            <AtSign className='lucide' />
+          </button>
+        )}
         {onPickFiles && (
           <>
             <input

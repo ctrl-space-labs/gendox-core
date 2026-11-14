@@ -18,6 +18,19 @@ export const useTopbarTitle = title => {
   useEffect(() => () => setTitle(null), [setTitle])
 }
 
+// lets a page tell the sidebar which tab it shows, e.g. the agent home's focused chat (#/chat/<threadId>)
+const FocusedTabContext = createContext(() => {})
+
+export const useFocusedTab = url => {
+  const setFocusedTab = useContext(FocusedTabContext)
+
+  useEffect(() => {
+    setFocusedTab(url)
+  }, [url, setFocusedTab])
+
+  useEffect(() => () => setFocusedTab(null), [setFocusedTab])
+}
+
 /**
  * The app shell: sidebar, top bar and ⌘K search around a page.
  * A page uses it through getLayout:
@@ -31,6 +44,7 @@ const AppLayout = ({ page, title, crumb, children }) => {
   const [navOpen, setNavOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [liveTitle, setLiveTitle] = useState(null)
+  const [focusedTab, setFocusedTab] = useState(null)
   const shownTitle = liveTitle ?? title
 
   useEffect(() => {
@@ -50,7 +64,7 @@ const AppLayout = ({ page, title, crumb, children }) => {
       <Head>
         <title>{shownTitle ? `${shownTitle} · Gendox` : 'Gendox'}</title>
       </Head>
-      <Sidebar page={page} />
+      <Sidebar page={page} focusedTab={focusedTab} />
       <div className='main' onClick={() => navOpen && setNavOpen(false)}>
         <Topbar
           title={shownTitle}
@@ -61,7 +75,9 @@ const AppLayout = ({ page, title, crumb, children }) => {
           }}
           onSearchClick={() => setSearchOpen(true)}
         />
-        <TitleContext.Provider value={setLiveTitle}>{children}</TitleContext.Provider>
+        <TitleContext.Provider value={setLiveTitle}>
+          <FocusedTabContext.Provider value={setFocusedTab}>{children}</FocusedTabContext.Provider>
+        </TitleContext.Provider>
       </div>
       <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
       <GendoxAssistant />

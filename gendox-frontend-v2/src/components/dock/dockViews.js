@@ -132,6 +132,7 @@ export const DockChat = ({ chatKey, threadId }) => {
       token={token}
       chatKey={chatKey}
       variant='window'
+      mentions
       prefill={prefill}
       onOpenSources={(threadId, answer) => actions.open(sourcesUrlOf(threadId, answer.messageId))}
     />

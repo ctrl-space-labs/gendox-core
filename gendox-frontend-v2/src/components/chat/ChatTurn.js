@@ -3,6 +3,7 @@ import { BookMarked, Check, ChevronRight, CircleAlert, Copy, Lightbulb, RefreshC
 import { copyToClipboard } from 'src/utils/copyToClipboard'
 import Avatar from 'src/components/ui/Avatar'
 import Markdown from 'src/components/chat/Markdown'
+import { MentionText } from 'src/components/chat/mentions'
 import ChatAttachments from 'src/components/chat/ChatAttachments'
 
 const Trace = ({ icon: Icon, label, children }) => {
@@ -254,7 +255,7 @@ const ChatTurn = ({
           <ChatAttachments attachments={question.attachments} threadId={threadId} token={token} />
           {question.message && question.message.trim() && (
             <div className='bubble' title={sentAt} style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
-              {question.message}
+              <MentionText text={question.message} />
             </div>
           )}
         </div>

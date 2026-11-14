@@ -122,6 +122,7 @@ const Chat = ({
   onNewThread,
   onOpenThread,
   onClose,
+  mentions = false,
   chatKey = MAIN_CHAT
 }) => {
   const dispatch = useDispatch()
@@ -304,9 +305,10 @@ const Chat = ({
     )
   }
 
-  const handleSend = () => {
+  // the composer sends the text with its mentions as links
+  const handleSend = (text = message) => {
     if (!canSend) return
-    send(message, uploadedDocs)
+    send(text, uploadedDocs)
     setMessage('')
     dispatch(clearAll(chatKey))
   }
@@ -553,6 +555,7 @@ const Chat = ({
           value={message}
           onChange={setMessage}
           onSend={handleSend}
+          mentions={mentions}
           onPaste={handlePaste}
           disabled={!canSend}
           placeholder={placeholder || (variant === 'widget' || !agentName ? 'Ask a question…' : `Ask ${agentName}…`)}
