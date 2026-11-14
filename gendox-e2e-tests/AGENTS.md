@@ -244,6 +244,9 @@ users (client `gendox-dev-test-client`) and run `E2E_MODELS=mock npm run smoke:d
 
 ## Things that bite
 
+- **Keycloak login forms.** `support/login.js` supports username and password together,
+  or username, Next, then password. Start the profile-response wait only before the
+  final submit so an earlier form failure is reported at the action that failed.
 - **V2 fields and conversation scope.** Some visual labels are not associated with their
   controls. `support/v2/app.js` scopes by the visible label's parent. Mock answer text can
   also be a recent-conversation link in the sidebar; assert answers inside `main`.
