@@ -1,6 +1,7 @@
 import { ArrowUpRight, BookOpen, ChevronRight, Library } from 'lucide-react'
 import Spinner from 'src/components/ui/Spinner'
 import FileTile from 'src/components/ui/FileTile'
+import { formatDate } from 'src/components/knowledge/documentUtils'
 
 // the splitter names untitled sections "Default Title"
 const sectionTitleOf = source => (source.sectionTitle === 'Default Title' ? null : source.sectionTitle)
@@ -22,9 +23,15 @@ const Source = ({ source, documentHref, sameTab }) => {
         <b className='trunc' style={{ display: 'block', fontWeight: 500 }}>
           {source.documentTitle}
         </b>
-        {(sectionTitle || source.externalUrl) && (
+        {(sectionTitle || source.externalUrl || source.documentUpdatedAt) && (
           <span className='faint sm'>
-            {[sectionTitle, source.externalUrl?.replace(/^https?:\/\//, '')].filter(Boolean).join(' · ')}
+            {[
+              sectionTitle,
+              source.externalUrl?.replace(/^https?:\/\//, ''),
+              source.documentUpdatedAt && `Updated ${formatDate(source.documentUpdatedAt)}`
+            ]
+              .filter(Boolean)
+              .join(' · ')}
           </span>
         )}
         {source.sectionValue && <q className='clamp3'>{source.sectionValue}</q>}

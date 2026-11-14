@@ -20,9 +20,11 @@ const GENDOX_TOOLS = [
   'create_sub_agent',
   'diff_documents',
   'extract_relevant_sections',
+  'list_files',
   'read_document',
   'regex_search',
-  'summarize'
+  'summarize',
+  'view_page'
 ]
 
 const TYPES = ['string', 'number', 'integer', 'boolean', 'array', 'object']

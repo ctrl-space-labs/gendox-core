@@ -123,7 +123,8 @@ abstract class CompletionServiceFixture {
         when(messageService.getPreviousMessages(any(), anyInt())).thenAnswer(invocation -> new ArrayList<>());
 
         CompletionRuntimeContextResolver contextResolver = new CompletionRuntimeContextResolver(templateRepository, typeService,
-                embeddingService, mock(DocumentUtils.class), mapper, aiModelService, aiToolRegistry, mock(SkillService.class));
+                embeddingService, mock(DocumentUtils.class), mapper, aiModelService, aiToolRegistry, mock(SkillService.class),
+                mock(MessageLocalContextService.class));
         service = new CompletionService(null, mock(ProjectService.class), new MessageAiMessageConverter(),
                 mock(ProjectAgentRepository.class), typeService, aiModelUtils, mock(ProjectAgentService.class),
                 trainingService, organizationModelKeyService, messageService, auditLogsService,

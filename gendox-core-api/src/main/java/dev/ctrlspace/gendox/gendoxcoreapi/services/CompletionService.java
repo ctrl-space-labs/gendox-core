@@ -432,6 +432,15 @@ public class CompletionService {
                     // Extend previousMessages for the *next* iteration ===
                     previousMessages.add(completionResponse.getChoices().get(0).getMessage());
                     previousMessages.addAll(toolResponseMessages);
+                    // An image a tool showed goes as a user's attached image does: the one form every provider takes.
+                    // It is not saved, so it is seen in this turn only.
+                    if (!round.images().isEmpty()) {
+                        previousMessages.add(AiModelMessage.builder()
+                                .role("user")
+                                .content("The images the tools returned, in the order of the calls.")
+                                .contentParts(round.images())
+                                .build());
+                    }
                 }
             }
 

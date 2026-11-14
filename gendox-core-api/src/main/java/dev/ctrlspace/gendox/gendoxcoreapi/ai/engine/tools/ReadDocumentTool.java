@@ -4,18 +4,15 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.AgentDocumentAccess;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.AiToolHandler;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.ToolExecutionContext;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentSectionService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -26,23 +23,21 @@ import java.util.UUID;
 @Component
 public class ReadDocumentTool implements AiToolHandler {
 
-    private final UserService userService;
     Logger logger = LoggerFactory.getLogger(ReadDocumentTool.class);
 
     private final ProjectService projectService;
     private final ObjectMapper objectMapper;
     private final DocumentSectionService documentSectionService;
-    private final SecurityUtils securityUtils;
+    private final AgentDocumentAccess documentAccess;
 
     @Autowired
     public ReadDocumentTool(ProjectService projectService,
                             ObjectMapper objectMapper,
-                            DocumentSectionService documentSectionService, SecurityUtils securityUtils, UserService userService) {
+                            DocumentSectionService documentSectionService, AgentDocumentAccess documentAccess) {
         this.projectService = projectService;
         this.objectMapper = objectMapper;
         this.documentSectionService = documentSectionService;
-        this.securityUtils = securityUtils;
-        this.userService = userService;
+        this.documentAccess = documentAccess;
     }
 
     @Override
@@ -106,7 +101,7 @@ public class ReadDocumentTool implements AiToolHandler {
                 context.parentMessage() != null ? context.parentMessage().getThreadId() : null,
                 docId);
 
-        validateAgentHasAccessToReadTheDoc(context, docId);
+        documentAccess.requireReadable(context, docId);
 
         String docText = documentSectionService.getFullNumberedDocumentText(docId);
 
@@ -210,20 +205,6 @@ public class ReadDocumentTool implements AiToolHandler {
             }
         }
         return sb.toString();
-    }
-
-    private void validateAgentHasAccessToReadTheDoc(ToolExecutionContext context, UUID docId) throws GendoxException {
-        UserProfile agentUserProfile = userService.getUserProfileByUniqueIdentifier(context.agent().getUserId().toString());
-        boolean canAccessDoc = securityUtils.hasAuthority(agentUserProfile, "OP_READ_DOCUMENT",
-                securityUtils.getRequestedDocumentIdAccessCriteria(docId.toString()));
-        if (!canAccessDoc) {
-            logger.error("Agent with id: {}, tried to access document without permission: {}, in thread {}",
-                    context.agent().getId(), docId, context.parentMessage().getThreadId());
-
-            throw new GendoxException("FORBIDDEN_AGENT_ACCESS_TO_DOCUMENT",
-                    "Agent tried to access document with id:" + docId + " without proper permissions.",
-                    HttpStatus.FORBIDDEN);
-        }
     }
 
 }

@@ -4,17 +4,14 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.AgentDocumentAccess;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.AiToolHandler;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.ToolExecutionContext;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentSectionService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import org.bitbucket.cowwoc.diffmatchpatch.DiffMatchPatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -36,17 +33,14 @@ public class DocumentDiffTool implements AiToolHandler {
     private static final Logger logger = LoggerFactory.getLogger(DocumentDiffTool.class);
 
     private final DocumentSectionService documentSectionService;
-    private final UserService userService;
-    private final SecurityUtils securityUtils;
+    private final AgentDocumentAccess documentAccess;
     private final ObjectMapper objectMapper;
 
     public DocumentDiffTool(DocumentSectionService documentSectionService,
-                            UserService userService,
-                            SecurityUtils securityUtils,
+                            AgentDocumentAccess documentAccess,
                             ObjectMapper objectMapper) {
         this.documentSectionService = documentSectionService;
-        this.userService = userService;
-        this.securityUtils = securityUtils;
+        this.documentAccess = documentAccess;
         this.objectMapper = objectMapper;
     }
 
@@ -112,8 +106,8 @@ public class DocumentDiffTool implements AiToolHandler {
                 docAId,
                 docBId);
 
-        validateAccess(context, docAId);
-        validateAccess(context, docBId);
+        documentAccess.requireReadable(context, docAId);
+        documentAccess.requireReadable(context, docBId);
 
         List<DiffMatchPatch.Patch> patches = documentSectionService.diffDocuments(docAId, docBId);
         logger.debug("Diff calculated and found {} patches", patches.size());
@@ -126,17 +120,5 @@ public class DocumentDiffTool implements AiToolHandler {
 
         logger.info("DocumentDiffTool: produced {} diff patches", patches.size());
         return result;
-    }
-
-    private void validateAccess(ToolExecutionContext context, UUID docId) throws GendoxException {
-        UserProfile agentProfile = userService.getUserProfileByUniqueIdentifier(
-                context.agent().getUserId().toString());
-        boolean canAccess = securityUtils.hasAuthority(agentProfile, "OP_READ_DOCUMENT",
-                securityUtils.getRequestedDocumentIdAccessCriteria(docId.toString()));
-        if (!canAccess) {
-            throw new GendoxException("FORBIDDEN_AGENT_ACCESS_TO_DOCUMENT",
-                    "Agent tried to access document " + docId + " without proper permissions.",
-                    HttpStatus.FORBIDDEN);
-        }
     }
 }

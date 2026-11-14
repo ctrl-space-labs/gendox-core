@@ -41,6 +41,7 @@ public class CompletionRuntimeContextResolver {
     private final AiModelService aiModelService;
     private final AiToolRegistry aiToolRegistry;
     private final SkillService skillService;
+    private final MessageLocalContextService messageLocalContextService;
 
     public CompletionRuntimeContextResolver(TemplateRepository templateRepository,
                                             TypeService typeService,
@@ -49,7 +50,8 @@ public class CompletionRuntimeContextResolver {
                                             ObjectMapper objectMapper,
                                             AiModelService aiModelService,
                                             AiToolRegistry aiToolRegistry,
-                                            SkillService skillService) {
+                                            SkillService skillService,
+                                            MessageLocalContextService messageLocalContextService) {
         this.templateRepository = templateRepository;
         this.typeService = typeService;
         this.embeddingService = embeddingService;
@@ -58,6 +60,7 @@ public class CompletionRuntimeContextResolver {
         this.aiModelService = aiModelService;
         this.aiToolRegistry = aiToolRegistry;
         this.skillService = skillService;
+        this.messageLocalContextService = messageLocalContextService;
     }
 
     public CompletionRuntimeContext resolve(Message message,
@@ -115,7 +118,6 @@ public class CompletionRuntimeContextResolver {
         if (agent == null) {
             return message.getValue();
         }
-        // TODO add text of attached documents in the message
         return convertToAiModelTextQuestion(message, nearestSections, agent);
     }
 
@@ -357,7 +359,8 @@ public class CompletionRuntimeContextResolver {
         // run chatTemplate
         ChatTemplateAuthor chatTemplateAuthor = new ChatTemplateAuthor();
 
-        String question = chatTemplateAuthor.chatTemplate(message, sectionValues, agentChatTemplate.getText());
+        String question = chatTemplateAuthor.chatTemplate(message, sectionValues, agentChatTemplate.getText(),
+                messageLocalContextService.getThreadFiles(message));
 
 
         return question;

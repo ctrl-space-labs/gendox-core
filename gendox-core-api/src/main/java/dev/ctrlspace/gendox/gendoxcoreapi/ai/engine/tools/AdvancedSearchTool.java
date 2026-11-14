@@ -8,8 +8,11 @@ import tools.jackson.databind.node.ObjectNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.AiToolHandler;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.ToolExecutionContext;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentSectionService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.EmbeddingService;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.FileListing;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,7 +21,12 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
 
 @Component
 public class AdvancedSearchTool implements AiToolHandler {
@@ -28,11 +36,13 @@ public class AdvancedSearchTool implements AiToolHandler {
     private static final Logger logger = LoggerFactory.getLogger(AdvancedSearchTool.class);
 
     private final EmbeddingService embeddingService;
+    private final DocumentSectionService documentSectionService;
     private final ObjectMapper objectMapper;
 
     @Autowired
-    public AdvancedSearchTool(EmbeddingService embeddingService, ObjectMapper objectMapper) {
+    public AdvancedSearchTool(EmbeddingService embeddingService, DocumentSectionService documentSectionService, ObjectMapper objectMapper) {
         this.embeddingService = embeddingService;
+        this.documentSectionService = documentSectionService;
         this.objectMapper = objectMapper;
     }
 
@@ -43,7 +53,8 @@ public class AdvancedSearchTool implements AiToolHandler {
 
     @Override
     public String getDescription() {
-        return "Compose a single semantic-search query for the vector store and return the matching document sections.";
+        return "Compose a single semantic-search query for the vector store and return the matching document sections. " +
+                "Each result names its file, the lines it covers and when the file was last modified, then its text with line numbers.";
     }
 
     @Override
@@ -109,62 +120,53 @@ public class AdvancedSearchTool implements AiToolHandler {
     }
 
     /**
-     * Serializes the search results into a JSON structure returned to the LLM as the tool response.
+     * The search results as the tool response. Each hit is a part of a file: the file's line with the lines
+     * the part covers, then its text numbered as read_document numbers it, so a hit goes straight into
+     * line_ranges. section_id and document_id stay as fields: the answer's sources are read from them.
      *
-     * <p>Example output:
      * <pre>{@code
      * {
      *   "search_query": "hydraulic hose pressure rating",
      *   "sections": [
      *     {
-     *       "section_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-     *       "document_id": "1c4b2e90-...",
-     *       "document_title": "Hydraulic Systems Manual",
+     *       "section_id": "3fa85f64-…",
+     *       "document_id": "1c4b2e90-…",
+     *       "file": "./knowledge/Hydraulic Systems Manual.pdf | lines=120-158 | modified=2026-11-12 14:03 | distance=0.12 | UUID=1c4b2e90-…",
      *       "source": "https://example.com/docs/hydraulics",
-     *       "section_text": "Hoses rated above 350 bar must be ...",
-     *       "distance": 0.12
+     *       "section_text": "120 | Hoses rated above 350 bar must be …\n121 | …"
      *     }
      *   ]
      * }
      * }</pre>
-     *
-     * @param searchQuery the query that was used for the search
-     * @param sections    ranked list of matching document sections
-     * @return JSON node ready to be sent back to the LLM as the tool call result
      */
     private JsonNode buildResult(String searchQuery, List<DocumentInstanceSectionDTO> sections) {
         ObjectNode result = objectMapper.createObjectNode();
         result.put("search_query", searchQuery);
+        Map<UUID, Map<UUID, Integer>> firstLinesByDocument = new HashMap<>();
 
-        ArrayNode sectionsArray = objectMapper.createArrayNode();
+        ArrayNode sectionsArray = result.putArray("sections");
         for (DocumentInstanceSectionDTO section : sections) {
-            ObjectNode sectionNode = objectMapper.createObjectNode();
-            sectionNode.put("section_id", section.getId() != null ? section.getId().toString() : null);
+            DocumentInstanceDTO document = Optional.ofNullable(section.getDocumentInstanceDTO()).orElseGet(DocumentInstanceDTO::new);
+            List<String> lines = List.of(Objects.toString(section.getSectionValue(), "").split("\\R", -1));
+            // a section of another project (ProvenAI) is not in a document of this one: it has no lines here
+            Integer firstLine = document.getId() == null ? null
+                    : firstLinesByDocument.computeIfAbsent(document.getId(), documentSectionService::getSectionFirstLines)
+                    .get(section.getId());
 
-            String documentId = (section.getDocumentInstanceDTO() != null && section.getDocumentInstanceDTO().getId() != null)
-                    ? section.getDocumentInstanceDTO().getId().toString() : null;
-            sectionNode.put("document_id", documentId);
-
-            String documentTitle = null;
-            if (section.getDocumentInstanceDTO() != null) {
-                documentTitle = section.getDocumentInstanceDTO().getTitle();
-                if (documentTitle == null || documentTitle.isBlank()) {
-                    documentTitle = section.getDocumentInstanceDTO().getRemoteUrl();
-                }
-            }
-            sectionNode.put("document_title", documentTitle);
-
-            String source = (section.getDocumentInstanceDTO() != null)
-                    ? section.getDocumentInstanceDTO().getExternalUrl() : null;
-            sectionNode.put("source", source);
-
-            sectionNode.put("section_text", section.getSectionValue());
-            sectionNode.put("distance", section.getDistanceFromQuestion());
-
-            sectionsArray.add(sectionNode);
+            ObjectNode sectionNode = sectionsArray.addObject();
+            sectionNode.put("section_id", Objects.toString(section.getId(), null));
+            sectionNode.put("document_id", Objects.toString(document.getId(), null));
+            sectionNode.put("file", FileListing.line(FileListing.KNOWLEDGE,
+                    FileListing.name(document.getTitle(), document.getRemoteUrl()),
+                    "lines", firstLine == null ? null : firstLine + "-" + (firstLine + lines.size() - 1),
+                    "modified", FileListing.modified(document.getUpdateAt()),
+                    "distance", section.getDistanceFromQuestion() == null ? null
+                            : Math.round(section.getDistanceFromQuestion() * 1000) / 1000.0,
+                    "UUID", document.getId()));
+            sectionNode.put("source", document.getExternalUrl());
+            sectionNode.put("section_text", firstLine == null ? section.getSectionValue()
+                    : DocumentSectionService.toNumberedText(lines, firstLine));
         }
-
-        result.set("sections", sectionsArray);
         return result;
     }
 }

@@ -3,17 +3,14 @@ package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.AgentDocumentAccess;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.AiToolHandler;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.ToolExecutionContext;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.RegexSearchResultDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentSectionService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -29,17 +26,14 @@ public class RegexSearchTool implements AiToolHandler {
     private static final Logger logger = LoggerFactory.getLogger(RegexSearchTool.class);
 
     private final DocumentSectionService documentSectionService;
-    private final UserService userService;
-    private final SecurityUtils securityUtils;
+    private final AgentDocumentAccess documentAccess;
     private final ObjectMapper objectMapper;
 
     public RegexSearchTool(DocumentSectionService documentSectionService,
-                           UserService userService,
-                           SecurityUtils securityUtils,
+                           AgentDocumentAccess documentAccess,
                            ObjectMapper objectMapper) {
         this.documentSectionService = documentSectionService;
-        this.userService = userService;
-        this.securityUtils = securityUtils;
+        this.documentAccess = documentAccess;
         this.objectMapper = objectMapper;
     }
 
@@ -113,7 +107,7 @@ public class RegexSearchTool implements AiToolHandler {
         List<UUID> documentIds = new ArrayList<>();
         for (JsonNode docIdNode : arguments.get("document_ids")) {
             UUID docId = UUID.fromString(docIdNode.asText());
-            validateAccess(context, docId);
+            documentAccess.requireReadable(context, docId);
             documentIds.add(docId);
         }
 
@@ -128,17 +122,5 @@ public class RegexSearchTool implements AiToolHandler {
         logger.debug("RegexSearchTool: found {} matches across {} documents",
                 resultDto.totalMatches(), documentIds.size());
         return objectMapper.valueToTree(resultDto);
-    }
-
-    private void validateAccess(ToolExecutionContext context, UUID docId) throws GendoxException {
-        UserProfile agentProfile = userService.getUserProfileByUniqueIdentifier(
-                context.agent().getUserId().toString());
-        boolean canAccess = securityUtils.hasAuthority(agentProfile, "OP_READ_DOCUMENT",
-                securityUtils.getRequestedDocumentIdAccessCriteria(docId.toString()));
-        if (!canAccess) {
-            throw new GendoxException("FORBIDDEN_AGENT_ACCESS_TO_DOCUMENT",
-                    "Agent tried to access document " + docId + " without proper permissions.",
-                    HttpStatus.FORBIDDEN);
-        }
     }
 }

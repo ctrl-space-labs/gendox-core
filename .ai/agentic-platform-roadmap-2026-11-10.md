@@ -224,6 +224,8 @@ The Discord bot is not the model to extract from. The contract is written with S
 
 ### SEARCH (#564, #559, #550)
 
+Plan for SRCH-1 and SRCH-3: [agent-files-2026-11-13.md](agent-files-2026-11-13.md). The context lists the files; tools read them.
+
 - **SRCH-1.** Attached documents reach the model (#559, #550). Do first: every agentic feature leans on it.
 - **SRCH-2.** #564 as written: metadata filters, markdown chunking, embedding migration.
 - **SRCH-3.** Source time (document date, sync time) returned by search and shown with the citation.
@@ -233,7 +235,8 @@ The Discord bot is not the model to extract from. The contract is written with S
 - **GOV-1 Activity.** "What the agent did" per thread and per organization, read from the saved messages. No new table.
 - **GOV-2 Usage** (#531). **GOV-3 Visitor conversations** (#563, #555).
 - **GOV-4 Policies.** Which tool sources and connections an organization and an agent may use; enforced in the CORE-2 check.
-- **GOV-5.** API keys stored as a hash (#561), several roles per member (#484).
+- **GOV-5.** Several roles per member (#484). The API keys part moved to SEC-1.
+- **SEC-1 Secrets at rest.** Every stored secret, API keys included, is encrypted two-way, with a key provider per deployment (environment, AWS KMS, others). Decided on 2026-11-13 in place of "API keys stored as a hash" (#561). Plan: [secrets-at-rest-2026-11-13.md](secrets-at-rest-2026-11-13.md). CONN-1 waits for it.
 
 ### PACKS (#554)
 
@@ -252,9 +255,9 @@ The Discord bot is not the model to extract from. The contract is written with S
 
 | Phase | Tasks |
 |---|---|
-| 0 | CORE-1 … CORE-4 in series (done). Beside them: APP-1, SRCH-1. |
+| 0 | CORE-1 … CORE-4 in series (done). Beside them: APP-1, SRCH-1, SRCH-3, SEC-1. |
 | 1 | APPR-1, APPR-2, CONN-1, MCP-1, MCP-2, CODE-1, ART-1, ART-2, CHAN-1, GOV-1, GOV-2, GOV-3, PACK-1 |
-| 2 | HTTP-1, HTTP-2, CONN-2, CONN-3, SKILL-1, SKILL-2, BOARD-1, BOARD-2, BOARD-3, RUN-1, RUN-2, RUN-3, MEM-1, CODE-2, ART-3, CHAN-2, CHAN-3, MCPS-1, PACK-2, SRCH-2, SRCH-3 |
+| 2 | HTTP-1, HTTP-2, CONN-2, CONN-3, SKILL-1, SKILL-2, BOARD-1, BOARD-2, BOARD-3, RUN-1, RUN-2, RUN-3, MEM-1, CODE-2, ART-3, CHAN-2, CHAN-3, MCPS-1, PACK-2, SRCH-2 |
 | 3 | DSS-1, CHAN-4, CODE-3, GOV-4, GOV-5, VOICE-1 |
 
 Where parallel branches would collide:

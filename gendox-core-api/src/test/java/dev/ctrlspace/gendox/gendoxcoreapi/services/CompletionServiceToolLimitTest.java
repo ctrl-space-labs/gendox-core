@@ -1,5 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.ToolExecutionContext;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ContentPart;
 import tools.jackson.databind.json.JsonMapper;
 
 import tools.jackson.databind.ObjectMapper;
@@ -53,11 +55,13 @@ class CompletionServiceToolLimitTest {
     private CompletionService completionService;
     private final ObjectMapper objectMapper = JsonMapper.shared();
     private final List<String> toolChoices = new ArrayList<>();
+    /** The messages of each request to the model. */
+    private final List<List<AiModelMessage>> requests = new ArrayList<>();
 
     @BeforeEach
     void setUp() throws Exception {
         CompletionRuntimeContextResolver contextResolver = new CompletionRuntimeContextResolver(null, typeService, null, null,
-                objectMapper, aiModelService, aiToolRegistry, new SkillService(null, null, null, null, null));
+                objectMapper, aiModelService, aiToolRegistry, new SkillService(null, null, null, null, null), null);
         completionService = new CompletionService(null, null, messageAiMessageConverter, null, typeService,
                 aiModelUtils, null, null, null, messageService, auditLogsService, objectMapper,
                 aiToolRegistry, contextResolver, new ToolExecutionService(aiToolRegistry, objectMapper, new ToolsHandlerAdvice()));
@@ -85,6 +89,7 @@ class CompletionServiceToolLimitTest {
         // a model that never stops calling tools
         when(adapter.askCompletion(any(), any(), any(), any(), any(), any(), any(), any(), any())).thenAnswer(inv -> {
             toolChoices.add(inv.getArgument(6));
+            requests.add(List.copyOf(inv.<List<AiModelMessage>>getArgument(0)));
             AiModelMessage reply = new AiModelMessage();
             reply.setRole("assistant");
             reply.setToolCalls(objectMapper.readTree("""
@@ -126,5 +131,24 @@ class CompletionServiceToolLimitTest {
         assertEquals(7, toolChoices.size());
         assertTrue(toolChoices.stream().allMatch("auto"::equals));
         assertEquals("tool", messages.getLast().getRole());
+    }
+
+    @Test
+    void anImageAToolShowsFollowsItsResultAsAUserImageAndIsNotSaved() throws Exception {
+        ReflectionTestUtils.setField(completionService, "maxToolIterations", 3);
+        when(aiToolRegistry.supports(any())).thenReturn(true);
+        ContentPart page = ContentPart.builder().type("image_url")
+                .imageUrl(ContentPart.ImageInput.builder().url("data:image/jpeg;base64,AAAA").build()).build();
+        when(aiToolRegistry.execute(any(), any(), any())).thenAnswer(inv -> {
+            inv.<ToolExecutionContext>getArgument(2).images().add(page);
+            return objectMapper.createObjectNode().put("status", "shown");
+        });
+
+        List<Message> saved = run();
+
+        List<AiModelMessage> second = requests.get(1);
+        assertEquals(List.of("tool", "user"), second.subList(second.size() - 2, second.size()).stream().map(AiModelMessage::getRole).toList());
+        assertEquals(List.of(page), second.getLast().getContentParts());
+        assertTrue(saved.stream().noneMatch(message -> "user".equals(message.getRole())));
     }
 }

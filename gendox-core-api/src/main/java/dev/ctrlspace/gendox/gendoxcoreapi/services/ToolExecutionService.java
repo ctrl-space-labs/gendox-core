@@ -4,6 +4,7 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMessage;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ContentPart;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.AiToolRegistry;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.ToolExecutionContext;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
@@ -33,8 +34,9 @@ public class ToolExecutionService {
      *
      * @param results the tool messages of the calls that ran, in the order of the calls
      * @param pending the CLIENT calls left for the client to answer; they get no tool message here
+     * @param images  what the tools showed the model (view_page), in the order of the calls
      */
-    public record ToolRound(List<AiModelMessage> results, List<PendingCall> pending) {
+    public record ToolRound(List<AiModelMessage> results, List<PendingCall> pending, List<ContentPart> images) {
     }
 
     private final AiToolRegistry aiToolRegistry;
@@ -72,6 +74,7 @@ public class ToolExecutionService {
         List<AiModelMessage> toolExecutionMessages = new ArrayList<>();
         List<PendingCall> pendingCalls = new ArrayList<>();
         List<JsonNode> clientToolCalls = new ArrayList<>();
+        List<ContentPart> images = new ArrayList<>();
 
         assistantMessage.getToolCalls().forEach(toolCall -> {
             String toolName = toolCall.get("function").get("name").asText();
@@ -97,7 +100,7 @@ public class ToolExecutionService {
                 result = objectMapper.createObjectNode().put("status", "executed");
             } else {
                 JsonNode args = toolCall.get("function").get("arguments");
-                ToolExecutionContext ctx = new ToolExecutionContext(context.project(), context.agent(), assistantMessage, history, toolDefinition, context.cancellationToken());
+                ToolExecutionContext ctx = new ToolExecutionContext(context.project(), context.agent(), assistantMessage, history, toolDefinition, context.cancellationToken(), images);
                 result = aiToolRegistry.execute(toolName, args, ctx);
             }
 
@@ -107,7 +110,7 @@ public class ToolExecutionService {
         if (!clientToolCalls.isEmpty()) {
             listener.onClientToolCalls(assistantMessage, clientToolCalls);
         }
-        return new ToolRound(toolExecutionMessages, pendingCalls);
+        return new ToolRound(toolExecutionMessages, pendingCalls, images);
     }
 
     private static AiModelMessage toolMessage(JsonNode toolCall, JsonNode result) {

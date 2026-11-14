@@ -7,9 +7,11 @@ import tools.jackson.databind.node.ObjectNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.AiToolHandler;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.ToolExecutionContext;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionRuntimeOverridesDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.CompletionService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.MessageLocalContextService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.MessageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,15 +28,18 @@ public class CreateSubAgentTool implements AiToolHandler {
 
     private final CompletionService completionService;
     private final MessageService messageService;
+    private final MessageLocalContextService messageLocalContextService;
     private final ObjectMapper objectMapper;
     private final DocumentSectionExtractorTool documentSectionExtractorTool;
     private final SummarizerSubAgentTool summarizerSubAgentTool;
 
     public CreateSubAgentTool(@Lazy CompletionService completionService,
                               MessageService messageService,
+                              MessageLocalContextService messageLocalContextService,
                               ObjectMapper objectMapper, DocumentSectionExtractorTool documentSectionExtractorTool, SummarizerSubAgentTool summarizerSubAgentTool) {
         this.completionService = completionService;
         this.messageService = messageService;
+        this.messageLocalContextService = messageLocalContextService;
         this.objectMapper = objectMapper;
         this.documentSectionExtractorTool = documentSectionExtractorTool;
         this.summarizerSubAgentTool = summarizerSubAgentTool;
@@ -103,6 +108,10 @@ public class CreateSubAgentTool implements AiToolHandler {
         subAgentMessage.setRole("user");
         subAgentMessage.setProjectId(context.parentMessage().getProjectId());
         subAgentMessage.setAdditionalResources(new ArrayList<>());
+        // The conversation's files go with the task: the sub-agent is told of the same files and may read them
+        subAgentMessage.setLocalContexts(new ArrayList<>(messageLocalContextService.buildContextsFromDocumentIds(subAgentMessage,
+                messageLocalContextService.getThreadFiles(context.parentMessage()).stream().map(DocumentInstance::getId).toList(),
+                "ATTACHED_DOCUMENT")));
         // Save before getCompletion: MessageService creates a new ChatThread and assigns threadId,
         // so every message produced inside this sub-agent's loop shares the same thread.
         subAgentMessage = messageService.createMessage(subAgentMessage);

@@ -156,7 +156,22 @@ public class DocumentSectionService {
      * (1-based). Matches document-insights convention and {@code line_start}/{@code line_end} tools.
      */
     public String getFullNumberedDocumentText(UUID docId) throws GendoxException {
-        return toNumberedDocumentText(getFullDocumentLines(docId));
+        return toNumberedText(getFullDocumentLines(docId), 1);
+    }
+
+    /**
+     * The line each section of the document starts at, in the numbering of {@link #getFullNumberedDocumentText}:
+     * what turns a search hit into a range for read_document.
+     */
+    public Map<UUID, Integer> getSectionFirstLines(UUID docId) {
+        Map<UUID, Integer> firstLines = new HashMap<>();
+        int line = 1;
+        for (DocumentInstanceSection section : sectionsSortedByOrder(docId)) {
+            firstLines.put(section.getId(), line);
+            // its own lines, and the blank line that separates it from the next section
+            line += Objects.toString(section.getSectionValue(), "").split("\\R", -1).length + 1;
+        }
+        return firstLines;
     }
 
     private List<DocumentInstanceSection> sectionsSortedByOrder(UUID docId) {
@@ -194,12 +209,13 @@ public class DocumentSectionService {
         return String.join("\n", lines) + "\n";
     }
 
-    private static String toNumberedDocumentText(List<String> lines) {
+    /** Each line prefixed {@code N | }, counting from {@code firstLine}. */
+    public static String toNumberedText(List<String> lines, int firstLine) {
         if (lines.isEmpty()) {
             return "";
         }
         StringBuilder sb = new StringBuilder();
-        int n = 1;
+        int n = firstLine;
         for (String line : lines) {
             sb.append(n).append(" | ").append(line).append("\n");
             n++;

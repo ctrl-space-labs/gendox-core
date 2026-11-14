@@ -23,6 +23,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.CancellationToken;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskNodeTypeConstants;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.FileListing;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.tools.ToolDeclarationStrings;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -917,21 +918,11 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                 q.getNodeValue().getDocumentMetadata().getSupportingDocumentIds().isEmpty()) {
             return null;
         }
-        StringBuilder sb = new StringBuilder();
-        sb.append("./supporting-documents").append("\n");
-        sb.append("./supporting-documents/").append(supportingDocumentDirName).append("\n");
-        sb.append("./supporting-documents/").append(supportingDocumentDirName).append("/").append(q.getId()).append("\n");
-        for (DocumentInstance doc : supportingDocuments.getContent()) {
-            sb.append("./supporting-documents/").append(supportingDocumentDirName).append("/").append(q.getId()).append("/")
-                    .append(doc.getTitle())
-                    .append(" | size=").append(doc.getFileSizeBytes() / 1024).append("KB")
-                    .append(" | pages=").append(doc.getNumberOfPages())
-                    .append(" | UUID=").append(doc.getId())
-                    .append("\n");
-        }
+        String parentDirectory = "./supporting-documents/" + supportingDocumentDirName;
         MessageLocalContextDTO localContext = MessageLocalContextDTO.builder()
                 .contextType("Supporting Documents")
-                .value(sb.toString())
+                .value("./supporting-documents\n" + parentDirectory + "\n"
+                        + FileListing.list(parentDirectory + "/" + q.getId(), supportingDocuments.getContent()) + "\n")
                 .build();
         return localContext;
     }

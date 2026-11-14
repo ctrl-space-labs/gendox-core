@@ -151,6 +151,22 @@ class SkillServiceTest {
     }
 
     @Test
+    void aChatWithAttachedFilesGetsTheFilesSkill() {
+        UUID agentId = UUID.randomUUID();
+        Skill files = version("gendox-files", 1, true, md("gendox-files", "d", "body"));
+        when(skillRepository.findByNameAndLatestTrue("gendox-files")).thenReturn(Optional.of(files));
+        Message withFiles = new Message();
+        withFiles.setThreadId(UUID.randomUUID());
+        when(messageLocalContextRepository.existsByMessage_ThreadIdAndDocumentIsNotNull(withFiles.getThreadId())).thenReturn(true);
+        Message without = new Message();
+        without.setThreadId(UUID.randomUUID());
+
+        assertEquals(List.of("gendox-files"),
+                skillService.getCompletionSkills(agentId, withFiles).stream().map(AgentSkill::getName).toList());
+        assertEquals(List.of(), skillService.getCompletionSkills(agentId, without));
+    }
+
+    @Test
     void anAgentThatHasTheAssistantSkillDoesNotGetItTwice() {
         UUID agentId = UUID.randomUUID();
         AgentSkill linked = AgentSkill.builder().name("gendox-assistant").content("linked").build();

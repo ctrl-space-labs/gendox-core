@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
 import org.apache.commons.text.StringSubstitutor;
 
@@ -8,6 +9,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -19,26 +21,43 @@ public class ChatTemplateAuthor {
     private static final DateTimeFormatter TODAY =
             DateTimeFormatter.ofPattern("EEEE, yyyy-MM-dd", Locale.ENGLISH).withZone(ZoneOffset.UTC);
 
+    /** A thread with more files than this lists its newest; list_files shows the rest. */
+    private static final int MAX_LISTED_FILES = 50;
 
-    public String chatTemplate(Message message, String sectionValues, String templateText) {
+
+    public String chatTemplate(Message message, String sectionValues, String templateText, List<DocumentInstance> threadFiles) {
         String chatGptTemplate = templateText;
-        String question = processTemplate(chatGptTemplate, toChatValues(message, sectionValues));
+        String question = processTemplate(chatGptTemplate, toChatValues(message, sectionValues, threadFiles));
         return question;
     }
 
-    public Map<String, String> toChatValues(Message message, String sectionValues){
+    /**
+     * @param threadFiles the files attached to the conversation so far. The agent gets their listing, never
+     *                    their content: it reads them with tools.
+     */
+    public Map<String, String> toChatValues(Message message, String sectionValues, List<DocumentInstance> threadFiles) {
         Map<String, String> questionTemplateValues = new HashMap<>();
         questionTemplateValues.put("context", escapePlaceholders(sectionValues));
         questionTemplateValues.put(
                 "localContexts",
-                Stream.concat(
+                Stream.of(
                                 Stream.of(sessionItem("USER_CONTEXT", userContext(message))),
+                                // an attached document is a line of the files listing, not an item of its own
                                 message.getLocalContexts().stream()
-                                        .map(c -> sessionItem(c.getContextTypeName(), c.getValue())))
+                                        .filter(c -> !"ATTACHED_DOCUMENT".equals(c.getContextTypeName()))
+                                        .map(c -> sessionItem(c.getContextTypeName(), c.getValue())),
+                                threadFiles.isEmpty() ? Stream.<String>empty() : Stream.of(sessionItem("ATTACHED_FILES", listing(threadFiles))))
+                        .flatMap(items -> items)
                         .collect(Collectors.joining("\n"))
         );
         questionTemplateValues.put("question", (message.getValue()));
         return questionTemplateValues;
+    }
+
+    private String listing(List<DocumentInstance> threadFiles) {
+        int older = Math.max(0, threadFiles.size() - MAX_LISTED_FILES);
+        return FileListing.list(FileListing.UPLOADS, threadFiles.subList(older, threadFiles.size()))
+                + (older > 0 ? "\n(" + older + " older files are not listed here: list_files shows them all)" : "");
     }
 
     private String sessionItem(String type, String value) {

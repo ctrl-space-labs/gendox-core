@@ -36,6 +36,10 @@ public class SectionTemplateAuthor {
     public Map<String, String> toSectionValues(DocumentInstanceSectionDTO documentInstanceSection,String documentTitle ) {
         Map<String, String> values = new HashMap<>();
         values.put("documentTitle", documentTitle);
+        // the same line a tool shows for the file: where it lives, when it was last modified, its id
+        values.put("file", FileListing.line(FileListing.KNOWLEDGE, documentTitle,
+                "modified", FileListing.modified(documentInstanceSection.getDocumentInstanceDTO().getUpdateAt()),
+                "UUID", documentInstanceSection.getDocumentInstanceDTO().getId()));
         if (documentInstanceSection.getDocumentInstanceDTO().getExternalUrl() != null) {
             values.put("source", documentInstanceSection.getDocumentInstanceDTO().getExternalUrl());
         } else {

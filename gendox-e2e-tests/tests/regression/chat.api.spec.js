@@ -1,5 +1,8 @@
 const { test, expect, tokenFor } = require('../../support/workspace');
 const { call, ok, json, upload, complete, messages, projectPath } = require('../../support/domain');
+const { textFile } = require('../../support/app');
+const config = require('../../tests.config');
+const fs = require('fs');
 
 test.describe('Chat persistence and retrieval', { tag: '@p1' }, () => {
     test('follow-up stays in the same thread and both turns survive reload through the API', async ({ api, workspace: w }) => {
@@ -49,9 +52,31 @@ test.describe('Chat persistence and retrieval', { tag: '@p1' }, () => {
         const rows = await messages(api, w, answer.threadId);
         const tool = rows.find(m => m.role === 'tool' && m.name === 'advanced_search');
         expect(tool).toBeTruthy();
-        expect(JSON.parse(tool.value).sections.map(s => s.document_id)).toContain(doc.id);
+        const hit = JSON.parse(tool.value).sections.find(s => s.document_id === doc.id);
+        expect(hit.file).toMatch(new RegExp(`^\\./knowledge/least-squares.* \\| lines=\\d+-\\d+ .*UUID=${doc.id}$`));
+        expect(hit.section_text).toMatch(/^\d+ \| /);
         const final = rows.filter(m => m.role === 'assistant' && !m.toolCalls?.length).at(-1);
         const sources = await json(await call(api, w, 'get', `/threads/${answer.threadId}/message-metadata/${final.id}`));
         expect(sources.map(s => s.documentId)).toContain(doc.id);
+    });
+
+    test('an attached file is listed for the agent, not inlined, in its turn and the next', async ({ api, workspace: w }) => {
+        const text = fs.readFileSync(textFile, 'utf8');
+        const attached = await json(await api.post(`${config.gendox.contextPath}${projectPath(w)}/documents/upload-single?messageAttachment=true`, {
+            headers: { Authorization: `Bearer ${w.ownerToken}` },
+            multipart: { file: { name: 'least-squares.txt', mimeType: 'text/plain', buffer: Buffer.from(text) } },
+        }));
+        const first = await complete(api, w, 'What is in the file?', { documentInstanceIds: [attached.id] });
+        // attached again: still one line
+        await complete(api, w, 'And its last line?', { threadId: first.threadId, documentInstanceIds: [attached.id] });
+        // In ALWAYS mode the mock model searches with the message it was given, so its searches show the prompt.
+        const prompts = (await messages(api, w, first.threadId)).flatMap(m => m.toolCalls || [])
+            .map(toolCall => JSON.parse(toolCall.function.arguments).search_query);
+        expect(prompts).toHaveLength(2);
+        for (const prompt of prompts) {
+            expect(prompt.match(/\.\/uploads\/least-squares/g)).toHaveLength(1);
+            expect(prompt).toContain(`UUID=${attached.id}`);
+            expect(prompt).not.toContain(text.trim().split('\n').at(-1));
+        }
     });
 });

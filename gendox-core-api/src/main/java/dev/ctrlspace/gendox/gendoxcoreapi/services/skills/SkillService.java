@@ -38,6 +38,8 @@ public class SkillService {
     public static final String GENDOX_PAGE_CONTEXT = "GENDOX_PAGE";
     /** The skill a chat from a Gendox page gets, whether or not the agent has it. */
     public static final String ASSISTANT_SKILL = "gendox-assistant";
+    /** The skill a chat with attached files gets, whether or not the agent has it. */
+    public static final String FILES_SKILL = "gendox-files";
 
     private final SkillRepository skillRepository;
     private final AgentSkillRepository agentSkillRepository;
@@ -215,22 +217,37 @@ public class SkillService {
     }
 
     /**
-     * The skills of a completion: the agent's own, plus {@link #ASSISTANT_SKILL} from the library when
-     * the prompt came from a Gendox page ({@link #GENDOX_PAGE_CONTEXT}) and the agent doesn't have it.
-     * That one is not stored on the agent; read_skill finds it in the library.
+     * The skills of a completion: the agent's own, plus two from the library when the agent doesn't have
+     * them. {@link #ASSISTANT_SKILL} when the prompt came from a Gendox page ({@link #GENDOX_PAGE_CONTEXT}),
+     * and {@link #FILES_SKILL} when its thread has attached files. Those are not stored on the agent;
+     * read_skill finds them in the library.
      */
     public List<AgentSkill> getCompletionSkills(UUID agentId, Message prompt) {
         List<AgentSkill> skills = new ArrayList<>(getAgentSkills(agentId));
-        if (!fromGendoxPage(prompt) || skills.stream().anyMatch(s -> ASSISTANT_SKILL.equals(s.getName()))) {
-            return skills;
+        if (fromGendoxPage(prompt)) {
+            addFromLibrary(skills, ASSISTANT_SKILL);
         }
-        getLibrarySkill(ASSISTANT_SKILL).ifPresent(skill -> skills.add(AgentSkill.builder()
+        if (hasFiles(prompt)) {
+            addFromLibrary(skills, FILES_SKILL);
+        }
+        return skills;
+    }
+
+    private void addFromLibrary(List<AgentSkill> skills, String name) {
+        if (skills.stream().anyMatch(s -> name.equals(s.getName()))) {
+            return;
+        }
+        getLibrarySkill(name).ifPresent(skill -> skills.add(AgentSkill.builder()
                 .skillId(skill.getId())
                 .name(skill.getName())
                 .description(skill.getDescription())
                 .content(skill.getContent())
                 .build()));
-        return skills;
+    }
+
+    private boolean hasFiles(Message prompt) {
+        return prompt != null && prompt.getThreadId() != null
+                && messageLocalContextRepository.existsByMessage_ThreadIdAndDocumentIsNotNull(prompt.getThreadId());
     }
 
     // the saved contexts when the prompt is stored (a job reads it back without them), else the ones on it

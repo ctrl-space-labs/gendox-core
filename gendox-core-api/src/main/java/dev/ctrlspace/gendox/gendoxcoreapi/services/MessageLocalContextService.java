@@ -146,6 +146,16 @@ public class MessageLocalContextService {
                 .build();
     }
 
+    /**
+     * The files of the message's thread as they were when it was asked, oldest first: what the agent is told
+     * exists. A message that is not saved yet has only its own.
+     */
+    public List<DocumentInstance> getThreadFiles(Message message) {
+        return message.getThreadId() == null || message.getCreatedAt() == null
+                ? message.getLocalContexts().stream().map(MessageLocalContext::getDocument).filter(Objects::nonNull).toList()
+                : messageLocalContextRepository.findThreadDocuments(message.getThreadId(), message.getCreatedAt());
+    }
+
     @Transactional
     public boolean isDocumentAttachedToThread(UUID threadId, UUID documentId) {
         if (threadId == null || documentId == null) return false;

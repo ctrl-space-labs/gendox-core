@@ -4,21 +4,18 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.AgentDocumentAccess;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.AiToolHandler;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.ToolExecutionContext;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionRuntimeOverridesDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.CompletionService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentSectionService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.MessageService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -43,8 +40,7 @@ public class DocumentSectionExtractorTool implements AiToolHandler {
     private final CompletionService completionService;
     private final DocumentSectionService documentSectionService;
     private final MessageService messageService;
-    private final UserService userService;
-    private final SecurityUtils securityUtils;
+    private final AgentDocumentAccess documentAccess;
     private final ObjectMapper objectMapper;
     private final SummarizerSubAgentTool summarizerSubAgentTool;
     private final CreateSubAgentTool createSubAgentTool;
@@ -52,16 +48,14 @@ public class DocumentSectionExtractorTool implements AiToolHandler {
     public DocumentSectionExtractorTool(@Lazy CompletionService completionService,
                                         DocumentSectionService documentSectionService,
                                         MessageService messageService,
-                                        UserService userService,
-                                        SecurityUtils securityUtils,
+                                        AgentDocumentAccess documentAccess,
                                         ObjectMapper objectMapper,
                                         @Lazy SummarizerSubAgentTool summarizerSubAgentTool,
                                         @Lazy CreateSubAgentTool createSubAgentTool) {
         this.completionService = completionService;
         this.documentSectionService = documentSectionService;
         this.messageService = messageService;
-        this.userService = userService;
-        this.securityUtils = securityUtils;
+        this.documentAccess = documentAccess;
         this.objectMapper = objectMapper;
         this.summarizerSubAgentTool = summarizerSubAgentTool;
         this.createSubAgentTool = createSubAgentTool;
@@ -122,7 +116,7 @@ public class DocumentSectionExtractorTool implements AiToolHandler {
         UUID docId = UUID.fromString(arguments.get("document_id").asText());
         String contractSummary = arguments.get("task_description").asText();
 
-        validateAccess(context, docId);
+        documentAccess.requireReadable(context, docId);
 
         String documentText = documentSectionService.getFullNumberedDocumentText(docId);
 
@@ -211,18 +205,6 @@ public class DocumentSectionExtractorTool implements AiToolHandler {
             result.put("status", "failed");
             result.put("error", e.getMessage());
             return result;
-        }
-    }
-
-    private void validateAccess(ToolExecutionContext context, UUID docId) throws GendoxException {
-        UserProfile agentProfile = userService.getUserProfileByUniqueIdentifier(
-                context.agent().getUserId().toString());
-        boolean canAccess = securityUtils.hasAuthority(agentProfile, "OP_READ_DOCUMENT",
-                securityUtils.getRequestedDocumentIdAccessCriteria(docId.toString()));
-        if (!canAccess) {
-            throw new GendoxException("FORBIDDEN_AGENT_ACCESS_TO_DOCUMENT",
-                    "Agent tried to access document " + docId + " without proper permissions.",
-                    HttpStatus.FORBIDDEN);
         }
     }
 }

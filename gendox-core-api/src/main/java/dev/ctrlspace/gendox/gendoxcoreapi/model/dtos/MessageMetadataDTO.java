@@ -38,6 +38,7 @@ import java.util.UUID;
                                 @ColumnResult(name = "documentid", type = UUID.class),
                                 @ColumnResult(name = "documenturl", type = String.class),
                                 @ColumnResult(name = "documenttitle", type = String.class),
+                                @ColumnResult(name = "documentupdatedat", type = Instant.class),
                                 @ColumnResult(name = "sectiontitle", type = String.class),
                                 @ColumnResult(name = "policytypename", type = String.class),
                                 @ColumnResult(name = "policyvalue")
@@ -64,6 +65,7 @@ import java.util.UUID;
                         d.id AS documentid,
                         d.remote_url AS documenturl,
                         d.title AS documenttitle,
+                        d.updated_at AS documentupdatedat,
                         dsm.title AS sectiontitle,
                         pt.name AS policytypename,
                          COALESCE(ARRAY_AGG(acp.value) FILTER (WHERE acp.value IS NOT NULL),
@@ -98,7 +100,7 @@ import java.util.UUID;
                         m.id = :messageId
                         AND (pt.name = 'ATTRIBUTION_POLICY' OR pt.name IS NULL)
                     GROUP BY
-                        ms.section_id, m.id, ms.section_url, ms.is_completion_participant, u.name, o.name, o.id, dis.section_iscc_code, dis.section_value, m.created_at, m.thread_id, d.id, d.remote_url, d.title, dsm.title, pt.name, pd.project_id, ct.project_id
+                        ms.section_id, m.id, ms.section_url, ms.is_completion_participant, u.name, o.name, o.id, dis.section_iscc_code, dis.section_value, m.created_at, m.thread_id, d.id, d.remote_url, d.title, d.updated_at, dsm.title, pt.name, pd.project_id, ct.project_id
                 """,
         resultSetMapping = "MessageMetadataDTOMapping"
 )
@@ -121,13 +123,14 @@ public class MessageMetadataDTO {
     private UUID documentId;
     private String documentUrl;
     private String documentTitle;
+    private Instant documentUpdatedAt;
     private String sectionTitle;
     private String policyTypeName;
     private List<String> policyValue;
 
     public MessageMetadataDTO(UUID sectionId, UUID messageId, String sectionUrl, Boolean isCompletionParticipant, String externalUrl, String userName, String organizationName,
                               UUID organizationId, String isccCode, String sectionValue, Instant createdAt, UUID threadId, UUID documentId,
-                              String documentUrl, String documentTitle, String sectionTitle, String policyTypeName, String[] policyValueArray) {
+                              String documentUrl, String documentTitle, Instant documentUpdatedAt, String sectionTitle, String policyTypeName, String[] policyValueArray) {
         this.sectionId = sectionId;
         this.messageId = messageId;
         this.sectionUrl = sectionUrl;
@@ -143,6 +146,7 @@ public class MessageMetadataDTO {
         this.documentId = documentId;
         this.documentUrl = documentUrl;
         this.documentTitle = documentTitle;
+        this.documentUpdatedAt = documentUpdatedAt;
         this.sectionTitle = sectionTitle;
         this.policyTypeName = policyTypeName;
         this.policyValue = Arrays.asList(policyValueArray);

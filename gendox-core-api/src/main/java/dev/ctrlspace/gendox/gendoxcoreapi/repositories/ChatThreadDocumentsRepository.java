@@ -13,6 +13,9 @@ public interface ChatThreadDocumentsRepository extends JpaRepository<ChatThreadD
 
     public Optional<ChatThreadDocument> findByProjectIdAndDocumentIdAndThreadId(UUID projectId, UUID documentId, UUID threadId);
 
+    /** True for a file uploaded as a chat attachment, as opposed to a document of the knowledge base. */
+    boolean existsByDocumentId(UUID documentId);
+
     @Query(value = """
                 SELECT (COUNT(DISTINCT ctd.document_id) = cardinality(CAST(:documentIds AS uuid[]))) AS all_belong
                 FROM gendox_core.chat_thread_documents ctd

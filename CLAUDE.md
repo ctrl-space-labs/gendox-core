@@ -30,6 +30,10 @@ Two files per topic, no more: **the original, which never changes, and the curre
 
 - [Artifacts and mini apps in the chat — #523](.ai/issue-523-artifacts-2026-11-13.md) — planned, nothing implemented. The plan as first written.
 
+- [Agent files: one listing, one set of tools, one output format](.ai/agent-files-2026-11-13.md) — implemented, not merged; SRCH-1 and SRCH-3 of the roadmap, #550 and #559.
+
+- [SEC-1: secrets at rest](.ai/secrets-at-rest-2026-11-13.md) — design agreed, not implemented; every stored secret encrypted two-way, with a key provider per deployment. Prerequisite of CONN-1.
+
 - [Application e2e coverage for v2](.ai/e2e-v2-coverage-2026-11-11.md) — current frontend selection, browser coverage and blocked cases; the original v1 plan remains unchanged.
 
 - [End-to-end tests and ephemeral environments: pending work](.ai/e2e-tests-pending-work-2026-11-10.md) — historical setup handover; current test scope is in the coverage plan above.
