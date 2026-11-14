@@ -195,12 +195,14 @@ export const useMentions = ({ enabled, inputRef, value, onChange }) => {
 
 /** A sent question: its mentions as links, the rest as typed */
 export const MentionText = ({ text }) => {
+  const { href } = useActiveScope()
   const parts = []
   let last = 0
   for (const match of text.matchAll(LINK)) {
+    const [path, query] = match[2].split('?')
     parts.push(text.slice(last, match.index))
     parts.push(
-      <a key={match.index} className='gc-mention' href={match[2]}>
+      <a key={match.index} className='gc-mention' href={href(path, Object.fromEntries(new URLSearchParams(query)))}>
         {match[1]}
       </a>
     )

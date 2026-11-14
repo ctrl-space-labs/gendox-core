@@ -181,6 +181,7 @@ const EmbeddedChatPage = () => {
           greeting={false}
           deep={false}
           sources={isSignedIn}
+          mentions={isSignedIn}
           placeholder={placeholder || undefined}
           footnote={footnote || undefined}
           onNewThread={newThread}
@@ -204,6 +205,7 @@ const EmbeddedChatPage = () => {
           header
           threadsDrawer
           sources={isSignedIn}
+          mentions={isSignedIn}
           poweredBy
           placeholder={placeholder || undefined}
           footnote={footnote || undefined}
