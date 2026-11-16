@@ -174,10 +174,12 @@ services:
   frontend:
     # Serves the static export this checkout built with `yarn build`. A new build
     # is live at once, with no restart. Without a build the stack still starts.
+    # The mount is the frontend folder, not out/: a build deletes and recreates
+    # out/, and a mount of out/ itself would keep the deleted, empty folder (403).
     image: nginx:alpine
     labels: *ephemeral-labels
     volumes:
-      - ../../gendox-frontend-v2/out:/usr/share/nginx/html:ro
+      - ../../gendox-frontend-v2:/srv/gendox-frontend-v2:ro
     configs:
       - source: frontend-nginx
         target: /etc/nginx/conf.d/default.conf
@@ -204,7 +206,7 @@ configs:
     content: |
       server {
         listen 80;
-        root /usr/share/nginx/html;
+        root /srv/gendox-frontend-v2/out;
         index index.html;
         error_page 404 /404.html;
         # Redirects such as /login to /login/ must keep the published port, which
