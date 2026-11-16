@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
 import { useDispatch } from 'react-redux'
-import { AppWindow, BookOpen, Check, FileText, Library, ListChecks, MessageSquareText, PanelsTopLeft, RotateCcw, ScanText, Table2 } from 'lucide-react'
+import { AppWindow, BookOpen, Check, FileText, Layers, Library, ListChecks, MessageSquareText, PanelsTopLeft, RotateCcw, ScanText, Table2 } from 'lucide-react'
 import useActiveScope from 'src/hooks/useActiveScope'
 import { chatActions } from 'src/store/chat/gendoxChat'
 import { clearAll } from 'src/store/chatAttachments/chatAttachments'
@@ -11,6 +11,7 @@ import Dock from 'src/components/dock/Dock'
 import {
   DockActionsProvider,
   DockArtifact,
+  DockArtifacts,
   DockChat,
   DockKnowledge,
   DockScreen,
@@ -26,7 +27,7 @@ import Menu from 'src/components/ui/Menu'
 /*
  * Every tab is a URL, routed to the same screen the page shows (src/views), never an iframe:
  *   /chat/new-<id>   a new chat             /chat/<threadId>   a conversation
- *   /gendox/knowledge · /gendox/tasks      compact lists
+ *   /gendox/knowledge · /gendox/tasks · /gendox/artifacts   compact lists
  *   /gendox/document-instance?documentId=&sectionId=
  *   /gendox/tasks/document-insights?taskId=&doc=&q=
  *   /gendox/tasks/document-digitization?taskId=&doc=
@@ -37,6 +38,7 @@ import Menu from 'src/components/ui/Menu'
 const PAGES = {
   '/gendox/knowledge': { title: 'Knowledge', icon: Library, element: () => <DockKnowledge /> },
   '/gendox/tasks': { title: 'Tasks', icon: ListChecks, element: () => <DockTasks /> },
+  '/gendox/artifacts': { title: 'Artifacts', icon: Layers, element: () => <DockArtifacts /> },
   '/gendox/document-instance': { title: 'Document', icon: FileText, element: () => <DocumentView />, screen: true },
   '/gendox/tasks/document-insights': { title: 'Document insights', icon: Table2, element: () => <DocumentInsightsView />, screen: true },
   '/gendox/tasks/document-digitization': { title: 'Digitization', icon: ScanText, element: () => <DigitizationView />, screen: true }
@@ -55,6 +57,7 @@ const NEAR = {
   '/sources': ['/sources', '/gendox/document-instance', '/gendox/knowledge'],
   // an artifact needs room: it joins other artifacts, or the windows beside the chat
   '/artifact': ['/artifact', '/sources', '/gendox/document-instance', '/gendox/knowledge'],
+  '/gendox/artifacts': ['/gendox/artifacts', '/gendox/knowledge', '/gendox/tasks'],
   '/gendox/document-instance': ['/gendox/document-instance', '/gendox/knowledge'],
   '/gendox/knowledge': ['/gendox/knowledge', '/gendox/document-instance'],
   '/gendox/tasks': ['/gendox/tasks'],
@@ -215,7 +218,8 @@ const AgentHomePage = () => {
           <div className='h'>Windows</div>
           {[
             ['/gendox/tasks', 'Tasks', ListChecks],
-            ['/gendox/knowledge', 'Knowledge', Library]
+            ['/gendox/knowledge', 'Knowledge', Library],
+            ['/gendox/artifacts', 'Artifacts', Layers]
           ].map(([url, name, Icon]) => (
             <button
               key={url}
@@ -248,7 +252,8 @@ const AgentHomePage = () => {
         newTabs={[
           { label: 'New chat', icon: MessageSquareText, url: newChatUrl },
           { label: 'Tasks', icon: ListChecks, url: '/gendox/tasks' },
-          { label: 'Knowledge', icon: Library, url: '/gendox/knowledge' }
+          { label: 'Knowledge', icon: Library, url: '/gendox/knowledge' },
+          { label: 'Artifacts', icon: Layers, url: '/gendox/artifacts' }
         ]}
         onFocus={onFocus}
         fullHref={url => (PAGES[pathOf(url)] ? href(pathOf(url), Object.fromEntries(new URLSearchParams(url.split('?')[1] || ''))) : null)}

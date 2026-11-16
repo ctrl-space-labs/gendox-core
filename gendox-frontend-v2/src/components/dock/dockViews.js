@@ -11,7 +11,8 @@ import { getToken } from 'src/components/agent/useAgent'
 import Chat from 'src/components/chat/Chat'
 import ChatSources from 'src/components/chat/ChatSources'
 import ArtifactView from 'src/components/artifacts/ArtifactView'
-import { latestVersionsOf } from 'src/components/artifacts/artifactUtils'
+import { kindInfo, kindOf, latestVersionsOf } from 'src/components/artifacts/artifactUtils'
+import useProjectArtifacts from 'src/components/artifacts/useProjectArtifacts'
 import { useChatSession } from 'src/components/chat/useChat'
 import { fileNameOf, formatDateTime, timeAgo } from 'src/components/knowledge/documentUtils'
 import UploadDialog from 'src/components/knowledge/UploadDialog'
@@ -173,6 +174,70 @@ export const DockArtifact = () => {
           agentName={session?.currentThread?.agent?.fullName}
           onTitle={title => tab.setTitle(short(title))}
         />
+      </div>
+    </div>
+  )
+}
+
+/**
+ * The artifacts of the user's conversations with this agent in a window (gendox-core#523): a thin search and one-line
+ * rows. A row opens the artifact in its tab; the full page has the kind filter.
+ */
+export const DockArtifacts = () => {
+  const tab = useDockTab()
+  const actions = useDockActions()
+  const { organizationId, projectId, href } = useActiveScope()
+  const [query, setQuery] = useState('')
+  const { artifacts, total } = useProjectArtifacts({ organizationId, projectId, search: query, size: 60 })
+
+  useEffect(() => {
+    if (!query && artifacts) tab.setCount(total)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [artifacts])
+
+  return (
+    <div className='vw in-dock compact'>
+      <div className='dk-top'>
+        <label className='dk-search'>
+          <Search className='lucide' />
+          <input placeholder='Find an artifact' value={query} onChange={e => setQuery(e.target.value)} />
+        </label>
+      </div>
+      <div className='dk-list'>
+        {artifacts === null ? (
+          <div className='dk-empty'>
+            <LoaderCircle className='lucide turning' />
+          </div>
+        ) : artifacts.length === 0 ? (
+          <div className='dk-empty'>{query ? `Nothing matches “${query}”.` : 'No artifacts yet. Ask for one in a chat.'}</div>
+        ) : (
+          artifacts.map(artifact => {
+            const { icon: Icon, hue } = kindInfo(kindOf(artifact))
+
+            return (
+              <button
+                key={artifact.id}
+                className='dk-row'
+                title={`${artifact.title} · in ${artifact.threadName || 'a conversation'}`}
+                onClick={() => actions.open(artifactUrlOf(artifact.threadId, artifact.id))}
+              >
+                <span className='ftype dk-ic' style={{ '--h': hue }}>
+                  <Icon className='lucide' />
+                </span>
+                <span className='trunc'>{artifact.title}</span>
+                <span className='dk-meta' title={formatDateTime(artifact.updatedAt)}>
+                  {timeAgo(artifact.updatedAt)}
+                </span>
+              </button>
+            )
+          })
+        )}
+        {artifacts && total > artifacts.length && (
+          <a className='dk-row' href={href('/gendox/artifacts')} data-full=''>
+            <ArrowUpRight className='lucide' />
+            <span className='trunc'>All {total} artifacts</span>
+          </a>
+        )}
       </div>
     </div>
   )

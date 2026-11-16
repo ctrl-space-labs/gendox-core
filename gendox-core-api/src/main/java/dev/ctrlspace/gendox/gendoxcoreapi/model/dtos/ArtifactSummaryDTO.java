@@ -17,6 +17,8 @@ import java.util.UUID;
 public class ArtifactSummaryDTO {
     private UUID id;
     private UUID threadId;
+    /** The conversation's name, in a list across conversations; null in a thread's own list, which knows it. */
+    private String threadName;
     private String title;
     private Type artifactType;
     private String codeLanguage;

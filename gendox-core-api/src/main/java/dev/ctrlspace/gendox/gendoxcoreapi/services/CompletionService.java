@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.artifacts.ArtifactHistory;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -346,7 +347,8 @@ public class CompletionService {
             // TODO populate previous messages with local context, attached file, and attached images (in the ContentPart)
             // TODO rethink the logic, validate count of previous message tokens and drop messages if not enough space
             // TODO maybe add a similar logic to the embedding service to limit the number of messages
-            previousMessages = messageService.getPreviousMessages(message, 25);
+            // an artifact's content is in the call that wrote it; replayed, it is left out (read_artifact reads it)
+            previousMessages = ArtifactHistory.withoutArtifactContent(messageService.getPreviousMessages(message, 25), objectMapper);
         }
 
         //get contentParts without type "text"

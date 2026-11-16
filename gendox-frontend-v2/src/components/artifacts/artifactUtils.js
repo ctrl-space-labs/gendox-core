@@ -8,10 +8,10 @@ const WRITES_ARTIFACT = [CREATE_ARTIFACT, UPDATE_ARTIFACT]
 export const kindOf = artifact => String(artifact?.kind || artifact?.artifactType?.name || '').toLowerCase()
 
 export const KINDS = {
-  html: { label: 'Page', icon: AppWindow, ext: 'html', mime: 'text/html' },
-  svg: { label: 'Diagram', icon: Shapes, ext: 'svg', mime: 'image/svg+xml' },
-  markdown: { label: 'Document', icon: FileText, ext: 'md', mime: 'text/markdown' },
-  code: { label: 'Code', icon: Code, ext: 'txt', mime: 'text/plain' }
+  html: { label: 'Page', icon: AppWindow, hue: 160, ext: 'html', mime: 'text/html' },
+  svg: { label: 'Diagram', icon: Shapes, hue: 280, ext: 'svg', mime: 'image/svg+xml' },
+  markdown: { label: 'Document', icon: FileText, hue: 205, ext: 'md', mime: 'text/markdown' },
+  code: { label: 'Code', icon: Code, hue: 25, ext: 'txt', mime: 'text/plain' }
 }
 
 export const kindInfo = kind => KINDS[kind] || KINDS.code
@@ -79,6 +79,30 @@ export const artifactCallOf = (call, responses) => {
   }
 }
 
+/**
+ * The failed artifact calls of a turn that a later call in the same turn made good: an update of the same artifact,
+ * or, for a failed create, a create, that succeeded. Their warning would only confuse; they show with the other tools.
+ * @param items - a turn's items, from buildTurns
+ * @returns {Set<string>} the ids of those calls
+ */
+export const recoveredFailuresOf = (items = []) => {
+  const calls = items
+    .filter(item => item.type === 'tools')
+    .flatMap(item => (item.header.toolCalls || []).filter(isArtifactCall).map(call => artifactCallOf(call, item.responses)))
+  const recovered = new Set()
+  calls.forEach((call, index) => {
+    if (!call.error) return
+    const madeGood = calls
+      .slice(index + 1)
+      .some(next =>
+        next.result && (call.name === CREATE_ARTIFACT ? next.name === CREATE_ARTIFACT : next.result.artifactId === call.args.artifact_id)
+      )
+    if (madeGood) recovered.add(call.id)
+  })
+
+  return recovered
+}
+
 /** The latest version of each artifact the thread's messages know of: { [artifactId]: version } */
 export const latestVersionsOf = (messages = []) => {
   const callNames = {}
@@ -97,4 +121,33 @@ export const latestVersionsOf = (messages = []) => {
   })
 
   return versions
+}
+
+/**
+ * The artifacts a thread's messages made, from their tool calls and results — no request — the last changed first.
+ * @returns {{ artifactId, title, kind, version }[]}
+ */
+export const artifactsOf = (messages = []) => {
+  const calls = {}
+  messages.forEach(message =>
+    (message.toolCalls || []).forEach(call => {
+      if (isArtifactCall(call)) calls[call.id] = parse(call.function?.arguments) || {}
+    })
+  )
+  const byId = new Map()
+  messages.forEach(message => {
+    const args = message.role === 'tool' ? calls[message.toolCallId] : null
+    const result = args && parse(message.message)
+    if (!result?.artifactId) return
+    const known = byId.get(result.artifactId)
+    byId.delete(result.artifactId) // put back last: the order is the order of the last change
+    byId.set(result.artifactId, {
+      artifactId: result.artifactId,
+      title: result.title || args.title || known?.title || 'Artifact',
+      kind: String(result.kind || args.kind || known?.kind || '').toLowerCase(),
+      version: Math.max(known?.version || 0, result.version || 0)
+    })
+  })
+
+  return [...byId.values()].reverse()
 }

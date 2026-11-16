@@ -3,19 +3,27 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Artifact;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ArtifactVersion;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.ChatThread;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ArtifactEditDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ArtifactVersionSummaryDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ArtifactCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ArtifactRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ArtifactVersionRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ChatThreadRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.ArtifactPredicates;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.data.domain.Pageable;
+
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -31,17 +39,22 @@ public class ArtifactService {
     private final ArtifactRepository artifactRepository;
     private final ArtifactVersionRepository artifactVersionRepository;
     private final TypeService typeService;
+    private final ChatThreadRepository chatThreadRepository;
 
-    /** Characters one version may hold. */
+    /**
+     * Characters one version may hold.
+     */
     @Value("${gendox.artifacts.max-content-length:200000}")
     private int maxContentLength = 200_000;
 
     public ArtifactService(ArtifactRepository artifactRepository,
                            ArtifactVersionRepository artifactVersionRepository,
-                           TypeService typeService) {
+                           TypeService typeService,
+                           ChatThreadRepository chatThreadRepository) {
         this.artifactRepository = artifactRepository;
         this.artifactVersionRepository = artifactVersionRepository;
         this.typeService = typeService;
+        this.chatThreadRepository = chatThreadRepository;
     }
 
     /**
@@ -109,12 +122,34 @@ public class ArtifactService {
         return artifactRepository.findAllByThreadIdOrderByCreatedAtAsc(threadId);
     }
 
+    /**
+     * A page of artifacts across conversations. The criteria must carry the project and the user (see
+     * {@link ArtifactCriteria}); without them the page is empty.
+     */
+    public Page<Artifact> getAll(ArtifactCriteria criteria, Pageable pageable) {
+        return artifactRepository.findAll(ArtifactPredicates.build(criteria), pageable);
+    }
+
+    /**
+     * The names of the conversations the artifacts came from, in one query: { threadId: name }.
+     */
+    public Map<UUID, String> threadNamesOf(List<Artifact> artifacts) {
+        List<UUID> threadIds = artifacts.stream().map(Artifact::getThreadId).distinct().toList();
+        if (threadIds.isEmpty()) {
+            return Map.of();
+        }
+        return chatThreadRepository.findAllById(threadIds).stream()
+                .collect(Collectors.toMap(ChatThread::getId, ChatThread::getName));
+    }
+
     public Artifact getByIdInThread(UUID threadId, UUID artifactId) throws GendoxException {
         return artifactRepository.findByIdAndThreadId(artifactId, threadId)
                 .orElseThrow(() -> notInThread(artifactId, threadId));
     }
 
-    /** @param version null for the latest */
+    /**
+     * @param version null for the latest
+     */
     public ArtifactVersion getVersion(Artifact artifact, @Nullable Integer version) throws GendoxException {
         int wanted = version != null ? version : artifact.getLatestVersion();
         return artifactVersionRepository.findByArtifactIdAndVersion(artifact.getId(), wanted)
@@ -158,7 +193,9 @@ public class ArtifactService {
         return result;
     }
 
-    /** The type of category ARTIFACT_TYPE with this name; the error names the ones there are. */
+    /**
+     * The type of category ARTIFACT_TYPE with this name; the error names the ones there are.
+     */
     private Type getArtifactType(@Nullable String typeName) throws GendoxException {
         List<Type> artifactTypes = typeService.getArtifactTypes();
         String wanted = typeName == null ? "" : typeName.trim().toUpperCase(Locale.ROOT);
@@ -193,7 +230,9 @@ public class ArtifactService {
         }
     }
 
-    /** Names the thread's own artifacts, so an agent that used a wrong id can correct its call. */
+    /**
+     * Names the thread's own artifacts, so an agent that used a wrong id can correct its call.
+     */
     private GendoxException notInThread(UUID artifactId, UUID threadId) {
         String available = getAllByThread(threadId).stream()
                 .map(artifact -> artifact.getId() + " (" + artifact.getTitle() + ")")

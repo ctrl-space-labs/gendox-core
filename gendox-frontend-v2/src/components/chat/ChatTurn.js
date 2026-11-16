@@ -5,7 +5,7 @@ import Avatar from 'src/components/ui/Avatar'
 import Markdown from 'src/components/chat/Markdown'
 import ChatAttachments from 'src/components/chat/ChatAttachments'
 import ArtifactCard from 'src/components/artifacts/ArtifactCard'
-import { artifactCallOf, isArtifactCall } from 'src/components/artifacts/artifactUtils'
+import { artifactCallOf, isArtifactCall, recoveredFailuresOf } from 'src/components/artifacts/artifactUtils'
 
 const Trace = ({ icon: Icon, label, children }) => {
   return (
@@ -69,12 +69,14 @@ const skillNameOf = call => {
 
 // The tools one assistant message called, with their arguments and what each returned.
 // Reading a skill shows as its own line: the skill's instructions are not worth showing as a tool result.
-// Making or changing an artifact shows as its card (gendox-core#523).
-const ToolCalls = ({ header, responses, onOpenArtifact }) => {
+// Making or changing an artifact shows as its card (gendox-core#523); a failed try that a later call made good
+// (`recovered`) shows with the other tools instead.
+const ToolCalls = ({ header, responses, recovered, onOpenArtifact }) => {
   const allCalls = header.toolCalls || []
+  const showsAsCard = call => isArtifactCall(call) && !recovered.has(call.id)
   const skillCalls = allCalls.filter(call => call.function?.name === 'read_skill')
-  const artifactCalls = allCalls.filter(isArtifactCall)
-  const calls = allCalls.filter(call => call.function?.name !== 'read_skill' && !isArtifactCall(call))
+  const artifactCalls = allCalls.filter(showsAsCard)
+  const calls = allCalls.filter(call => call.function?.name !== 'read_skill' && !showsAsCard(call))
 
   return (
     <>
@@ -254,6 +256,7 @@ const ChatTurn = ({
   // A turn that ended without an answer: it failed now, or it stopped before (seen after a reload)
   const hasAnswer = items.some(item => item.type === 'answer' && !item.beforeTools)
   const failed = !hasAnswer && !children && question ? question.failed || (unfinished && {}) : null
+  const recovered = recoveredFailuresOf(items)
 
   return (
     <div className='gc-turn'>
@@ -279,6 +282,7 @@ const ChatTurn = ({
                 key={item.header.messageId || index}
                 header={item.header}
                 responses={item.responses}
+                recovered={recovered}
                 onOpenArtifact={onOpenArtifact}
               />
             ) : (

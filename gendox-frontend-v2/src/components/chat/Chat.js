@@ -38,7 +38,8 @@ import ChatComposer from 'src/components/chat/ChatComposer'
 import ChatSources from 'src/components/chat/ChatSources'
 import ChatDeepThinking from 'src/components/chat/ChatDeepThinking'
 import ArtifactView from 'src/components/artifacts/ArtifactView'
-import { latestVersionsOf } from 'src/components/artifacts/artifactUtils'
+import ChatArtifacts from 'src/components/artifacts/ChatArtifacts'
+import { artifactsOf, latestVersionsOf } from 'src/components/artifacts/artifactUtils'
 
 const COMPLETION_POLL_MS = 2000
 
@@ -170,6 +171,7 @@ const Chat = ({
 
   const turns = useMemo(() => buildTurns(messages, auth.user?.id), [messages, auth.user?.id])
   const artifactVersions = useMemo(() => latestVersionsOf(messages), [messages])
+  const threadArtifacts = useMemo(() => artifactsOf(messages), [messages])
   const uploadedDocs = useMemo(
     () => attachments.filter(a => a.status === 'uploaded').map(a => a.uploadedDoc),
     [attachments]
@@ -496,6 +498,7 @@ const Chat = ({
               </span>
             )}
           </div>
+          <ChatArtifacts artifacts={threadArtifacts} onOpen={threadId ? showArtifact : null} />
           {threadsDrawer && (
             <button
               className='btn ghost s icon'
@@ -515,6 +518,12 @@ const Chat = ({
               {variant === 'widget' ? <ChevronDown className='lucide' /> : <X className='lucide' />}
             </button>
           )}
+        </div>
+      )}
+
+      {!header && threadId && threadArtifacts.length > 1 && (
+        <div className='gc-arts-bar'>
+          <ChatArtifacts artifacts={threadArtifacts} onOpen={threadId ? showArtifact : null} />
         </div>
       )}
 

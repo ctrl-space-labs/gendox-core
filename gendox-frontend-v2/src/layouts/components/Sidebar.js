@@ -3,6 +3,7 @@ import Link from 'next/link'
 import {
   Check,
   ChevronsUpDown,
+  Layers,
   LayoutGrid,
   Library,
   ListChecks,
@@ -23,6 +24,7 @@ import MenuList from 'src/components/ui/MenuList'
 const agentNavigation = [
   { id: 'tasks', title: 'Tasks', icon: ListChecks, path: '/gendox/tasks' },
   { id: 'knowledge', title: 'Knowledge', icon: Library, path: '/gendox/knowledge' },
+  { id: 'artifacts', title: 'Artifacts', icon: Layers, path: '/gendox/artifacts' },
   { id: 'agents', title: 'Settings', icon: Settings, path: '/gendox/agent-behavior' }
 ]
 
