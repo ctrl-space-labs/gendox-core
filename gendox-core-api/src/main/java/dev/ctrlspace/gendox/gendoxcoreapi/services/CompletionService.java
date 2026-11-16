@@ -69,7 +69,9 @@ public class CompletionService {
     private CompletionRuntimeContextResolver contextResolver;
     private ToolExecutionService toolExecutionService;
 
-    /** Tool rounds a completion may take before it must answer; deep thinking gets 20. Skill work (read a skill, look, then change) needs more than a few. */
+    /**
+     * Tool rounds a completion may take before it must answer; deep thinking gets 20. Skill work (read a skill, look, then change) needs more than a few.
+     */
     @Value("${gendox.agents.max-tool-iterations:12}")
     private int maxToolIterations = 12;
 
@@ -127,7 +129,9 @@ public class CompletionService {
         return getCompletionForMessages(aiModelMessages, agentRole, aiModel, aiModelRequestParams, apiKey, tools, toolChoice, responseJsonSchema, null);
     }
 
-    /** @param deltas receives the model's tokens as they arrive; null asks the provider for the whole response */
+    /**
+     * @param deltas receives the model's tokens as they arrive; null asks the provider for the whole response
+     */
     private CompletionResponse getCompletionForMessages(List<AiModelMessage> aiModelMessages, String agentRole, AiModel aiModel,
                                                         AiModelRequestParams aiModelRequestParams, String apiKey, List<AiTools> tools, String toolChoice,
                                                         @Nullable ObjectNode responseJsonSchema,
@@ -168,7 +172,9 @@ public class CompletionService {
         return getCompletionSearch(message, project, CompletionListener.none());
     }
 
-    /** Continues a chat turn that waited for CLIENT tool results, once they are all saved. */
+    /**
+     * Continues a chat turn that waited for CLIENT tool results, once they are all saved.
+     */
     public CompletionMessageDTO resumeCompletionSearch(CompletionTurn turn, CompletionListener listener) throws GendoxException {
         Project project = projectService.getProjectById(turn.getProjectId());
         Message message = messageService.getMessageWithLocalContexts(turn.getUserMessageId());
@@ -211,7 +217,9 @@ public class CompletionService {
         return overrides.build();
     }
 
-    /** The agent's tools in a stable (name) order, so the prompt cache matches, plus advanced_search unless search is OFF. */
+    /**
+     * The agent's tools in a stable (name) order, so the prompt cache matches, plus advanced_search unless search is OFF.
+     */
     private List<AiTools> chatTools(ProjectAgent agent, String mode) {
         Map<String, AiTools> tools = new TreeMap<>();
         for (AiTools tool : agent.getAiTools()) {
@@ -227,7 +235,9 @@ public class CompletionService {
         return new ArrayList<>(tools.values());
     }
 
-    /** The assistant and tool messages a waiting turn already saved after its question. */
+    /**
+     * The assistant and tool messages a waiting turn already saved after its question.
+     */
     private List<AiModelMessage> turnMessages(Message question) throws GendoxException {
         List<AiModelMessage> turnMessages = new ArrayList<>();
         for (Message saved : messageService.getMessagesAfter(question)) {
@@ -236,7 +246,9 @@ public class CompletionService {
         return turnMessages;
     }
 
-    /** The answer's sources: the sections the agent found with advanced_search during the turn. */
+    /**
+     * The answer's sources: the sections the agent found with advanced_search during the turn.
+     */
     private void linkSources(Message question) throws GendoxException {
         List<Message> turn = messageService.getMessagesAfter(question);
         if (turn.isEmpty() || !isFinalAnswer(turn.getLast())) {
@@ -295,9 +307,9 @@ public class CompletionService {
      * The completion context need to be given either in the message or in the nearestSections.
      * Currently, if the agent wants to execute a tool, it will be marked as "done" and provided to the LLM for a final response.
      *
-     * @param message the user message that contains the question
+     * @param message         the user message that contains the question
      * @param nearestSections the nearest sections that will be used to provide context for the completion.
-     * @param project the project that contains the agent and its settings.
+     * @param project         the project that contains the agent and its settings.
      * @return the list of responses. Might be more than one if there are tool calls in the completion response.
      * @throws GendoxException
      */
@@ -393,9 +405,24 @@ public class CompletionService {
             listener.onMessage(completionResponseMessage);
 
             allResponseMessages.add(completionResponseMessage);
-            hasToolCalls = "tool_calls".equals(completionResponse.getChoices().getFirst().getFinishReason());
 
-            if (hasToolCalls) {
+            String finishReason = completionResponse.getChoices().getFirst().getFinishReason();
+            hasToolCalls = "tool_calls".equals(finishReason);
+            boolean toolCallsCutShort = "length".equals(finishReason)
+                    && completionResponseMessage.getToolCalls() != null
+                    && !completionResponseMessage.getToolCalls().isEmpty();
+
+            if (toolCallsCutShort) {
+                // The output limit ended the answer inside a tool call. Nothing runs; each call gets an
+                // error, and the model tries again smaller. Bounded by the iterations like any tool round.
+                logger.warn("Completion cut short by the output limit inside {} tool call(s); answering with errors",
+                        completionResponseMessage.getToolCalls().size());
+                List<AiModelMessage> cutShortResults = toolExecutionService.cutShort(completionResponseMessage);
+                saveToolResponses(cutShortResults, message, runtimeContext, listener, allResponseMessages);
+                previousMessages.add(completionResponse.getChoices().get(0).getMessage());
+                previousMessages.addAll(cutShortResults);
+                hasToolCalls = true;
+            } else if (hasToolCalls) {
                 logger.info("Tool calls detected in completion response");
 
                 // Execute all tools. CLIENT tools the client will answer are left pending, unless this is the last allowed call.
@@ -405,16 +432,7 @@ public class CompletionService {
                 List<AiModelMessage> toolResponseMessages = round.results();
 
                 // Save tool response messages.
-                toolResponseMessages.forEach(toolResponseMessage -> {
-                    Message toolResponse = messageAiMessageConverter.toEntity(toolResponseMessage);
-                    toolResponse.setProjectId(runtimeContext.projectId());
-                    toolResponse.setThreadId(message.getThreadId());
-                    toolResponse.setCreatedBy(runtimeContext.createdByAgentUserId());
-                    toolResponse.setUpdatedBy(runtimeContext.createdByAgentUserId());
-                    messageService.createMessage(toolResponse);
-                    listener.onMessage(toolResponse);
-                    allResponseMessages.add(toolResponse);
-                });
+                saveToolResponses(toolResponseMessages, message, runtimeContext, listener, allResponseMessages);
 
                 // The turn stops here until the client posts the results (or they time out)
                 if (!round.pending().isEmpty()) {
@@ -456,6 +474,24 @@ public class CompletionService {
         return allResponseMessages;
     }
 
+    /**
+     * Saves the results of a round of tool calls in the thread, in order, and hands each to the listener.
+     */
+    private void saveToolResponses(List<AiModelMessage> toolResponseMessages, Message message,
+                                   CompletionRuntimeContext runtimeContext, CompletionListener listener,
+                                   List<Message> allResponseMessages) {
+        toolResponseMessages.forEach(toolResponseMessage -> {
+            Message toolResponse = messageAiMessageConverter.toEntity(toolResponseMessage);
+            toolResponse.setProjectId(runtimeContext.projectId());
+            toolResponse.setThreadId(message.getThreadId());
+            toolResponse.setCreatedBy(runtimeContext.createdByAgentUserId());
+            toolResponse.setUpdatedBy(runtimeContext.createdByAgentUserId());
+            messageService.createMessage(toolResponse);
+            listener.onMessage(toolResponse);
+            allResponseMessages.add(toolResponse);
+        });
+    }
+
     private List<AiModelMessage> resolveTurnMessages(@Nullable CompletionRuntimeOverridesDTO overrides) {
         if (overrides == null || overrides.getTurnMessages() == null) {
             return List.of();
@@ -486,9 +522,9 @@ public class CompletionService {
     }
 
     private void saveCompletionAuditLogs(CompletionResponse completionResponse,
-                                          CompletionRuntimeContext runtimeContext,
-                                          Type completionRequestType,
-                                          Type completionResponseType) {
+                                         CompletionRuntimeContext runtimeContext,
+                                         Type completionRequestType,
+                                         Type completionResponseType) {
         AuditLogs requestAuditLogs = auditLogsService.createDefaultAuditLogs(completionRequestType);
         requestAuditLogs.setTokenCount((long) completionResponse.getUsage().getPromptTokens());
         requestAuditLogs.setCachedTokenCount((long) Optional.ofNullable(completionResponse.getUsage())

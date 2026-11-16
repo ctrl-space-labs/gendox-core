@@ -215,6 +215,17 @@ public class SubscriptionValidationService {
         return maxPages > 0;
     }
 
+
+    // check whether the plan includes artifacts at all
+    public boolean canUseArtifacts(UUID organizationId) {
+        if (!isSubscriptionValidationEnabled) {
+            return true;
+        }
+        OrganizationPlan activePlan = organizationPlanService.getActiveOrganizationPlan(organizationId);
+
+        return Boolean.TRUE.equals(activePlan.getSubscriptionPlan().getArtifactsEnabled());
+    }
+
     // check the monthly page budget for the current billing period
     public boolean canScrapeWebPages(UUID organizationId, int pageCount) {
         if (!isSubscriptionValidationEnabled) {

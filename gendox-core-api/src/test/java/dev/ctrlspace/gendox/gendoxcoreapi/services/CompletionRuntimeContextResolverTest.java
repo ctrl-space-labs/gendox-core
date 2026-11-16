@@ -10,6 +10,10 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionRuntimeOverridesDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AgentSkillRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.skills.SkillService;
+import org.springframework.test.util.ReflectionTestUtils;
+
+import static org.mockito.ArgumentMatchers.any;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,9 +32,14 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class CompletionRuntimeContextResolverTest {
 
-    @Mock private AiToolRegistry aiToolRegistry;
-    @Mock private AgentSkillRepository agentSkillRepository;
-    @Mock private TypeService typeService;
+    @Mock
+    private AiToolRegistry aiToolRegistry;
+    @Mock
+    private AgentSkillRepository agentSkillRepository;
+    @Mock
+    private TypeService typeService;
+    @Mock
+    private SubscriptionValidationService subscriptionValidationService;
 
     private CompletionRuntimeContextResolver resolver;
     private final ProjectAgent agent = new ProjectAgent();
@@ -48,7 +57,7 @@ class CompletionRuntimeContextResolverTest {
     @BeforeEach
     void setUp() {
         resolver = new CompletionRuntimeContextResolver(null, typeService, null, null, JsonMapper.shared(), null, aiToolRegistry,
-                new SkillService(null, agentSkillRepository, aiToolRegistry, null, typeService));
+                new SkillService(null, agentSkillRepository, aiToolRegistry, null, typeService), subscriptionValidationService);
         agent.setId(UUID.randomUUID());
         agent.setAiTools(new ArrayList<>(List.of(tool("advanced_search"))));
         lenient().when(aiToolRegistry.getDefinition(anyString()))
@@ -101,6 +110,61 @@ class CompletionRuntimeContextResolverTest {
         assertEquals(skills, resolver.skillsFor(agent, null, null));
         assertEquals(List.of(), resolver.skillsFor(agent, null, subAgent));
         assertEquals(List.of(), resolver.skillsFor(null, null, taskRun));
+    }
+
+    // artifacts: the output floor and the plan
+
+    @Test
+    void theArtifactWritingToolsRaiseTheOutputLimitToTheFloor() {
+        ReflectionTestUtils.setField(resolver, "minArtifactOutputTokens", 16_000L);
+
+        assertEquals(16_000L, resolver.withArtifactOutputFloor(500L, List.of(tool("advanced_search"), tool("create_artifact"))));
+        assertEquals(16_000L, resolver.withArtifactOutputFloor(500L, List.of(tool("update_artifact"))));
+    }
+
+    @Test
+    void readingAnArtifactOrHavingNoArtifactToolsKeepsTheAgentsLimit() {
+        ReflectionTestUtils.setField(resolver, "minArtifactOutputTokens", 16_000L);
+
+        assertEquals(500L, resolver.withArtifactOutputFloor(500L, List.of(tool("read_artifact"))));
+        assertEquals(500L, resolver.withArtifactOutputFloor(500L, List.of(tool("advanced_search"))));
+    }
+
+    @Test
+    void aHigherLimitOfTheAgentStays() {
+        ReflectionTestUtils.setField(resolver, "minArtifactOutputTokens", 16_000L);
+
+        assertEquals(32_000L, resolver.withArtifactOutputFloor(32_000L, List.of(tool("create_artifact"))));
+    }
+
+    @Test
+    void aPlanWithoutArtifactsLosesAllThreeArtifactTools() {
+        UUID organizationId = UUID.randomUUID();
+        when(subscriptionValidationService.canUseArtifacts(organizationId)).thenReturn(false);
+
+        List<AiTools> tools = resolver.withArtifactToolsIfPlanAllows(List.of(tool("advanced_search"),
+                tool("create_artifact"), tool("update_artifact"), tool("read_artifact")), organizationId);
+
+        assertEquals(List.of("advanced_search"), names(tools));
+    }
+
+    @Test
+    void aPlanWithArtifactsKeepsThem() {
+        UUID organizationId = UUID.randomUUID();
+        when(subscriptionValidationService.canUseArtifacts(organizationId)).thenReturn(true);
+
+        List<AiTools> tools = resolver.withArtifactToolsIfPlanAllows(List.of(tool("advanced_search"),
+                tool("create_artifact"), tool("update_artifact"), tool("read_artifact")), organizationId);
+
+        assertEquals(List.of("advanced_search", "create_artifact", "update_artifact", "read_artifact"), names(tools));
+    }
+
+    @Test
+    void thePlanIsNotReadWhenNoArtifactToolIsOffered() {
+        List<AiTools> tools = resolver.withArtifactToolsIfPlanAllows(List.of(tool("advanced_search")), UUID.randomUUID());
+
+        assertEquals(List.of("advanced_search"), names(tools));
+        verify(subscriptionValidationService, never()).canUseArtifacts(any());
     }
 
     @Test

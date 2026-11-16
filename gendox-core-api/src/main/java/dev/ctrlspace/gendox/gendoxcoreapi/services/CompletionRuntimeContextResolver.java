@@ -14,6 +14,10 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.CancellationToken;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.DocumentUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.ChatTemplateAuthor;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.SectionTemplateAuthor;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.artifacts.CreateArtifactTool;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.artifacts.ReadArtifactTool;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.artifacts.UpdateArtifactTool;
+import org.springframework.beans.factory.annotation.Value;
 import org.apache.logging.log4j.util.Strings;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -41,6 +45,15 @@ public class CompletionRuntimeContextResolver {
     private final AiModelService aiModelService;
     private final AiToolRegistry aiToolRegistry;
     private final SkillService skillService;
+    private final SubscriptionValidationService subscriptionValidationService;
+    static final Set<String> ARTIFACT_WRITING_TOOLS = Set.of(CreateArtifactTool.NAME, UpdateArtifactTool.NAME);
+    static final Set<String> ARTIFACT_TOOLS = Set.of(CreateArtifactTool.NAME, UpdateArtifactTool.NAME, ReadArtifactTool.NAME);
+
+    /**
+     * Output tokens a completion gets at least when it may write an artifact.
+     */
+    @Value("${gendox.artifacts.min-output-tokens:16000}")
+    private long minArtifactOutputTokens = 16_000;
 
     public CompletionRuntimeContextResolver(TemplateRepository templateRepository,
                                             TypeService typeService,
@@ -49,12 +62,14 @@ public class CompletionRuntimeContextResolver {
                                             ObjectMapper objectMapper,
                                             AiModelService aiModelService,
                                             AiToolRegistry aiToolRegistry,
-                                            SkillService skillService) {
+                                            SkillService skillService,
+                                            SubscriptionValidationService subscriptionValidationService) {
         this.templateRepository = templateRepository;
         this.typeService = typeService;
         this.embeddingService = embeddingService;
         this.documentUtils = documentUtils;
         this.objectMapper = objectMapper;
+        this.subscriptionValidationService = subscriptionValidationService;
         this.aiModelService = aiModelService;
         this.aiToolRegistry = aiToolRegistry;
         this.skillService = skillService;
@@ -74,13 +89,14 @@ public class CompletionRuntimeContextResolver {
         String agentRole = appendInstructions(appendSkillsHeader(resolveSystemPrompt(agent, overrides), agentSkills), overrides);
         AiModel completionModel = resolveCompletionModel(agent, overrides);
         String completionApiKey = resolveCompletionApiKey(agent, overrides);
-        Long maxTokens = resolveMaxTokens(agent, overrides);
         Double temperature = resolveTemperature(agent, overrides);
         Double topP = resolveTopP(agent, overrides);
         UUID projectId = resolveProjectId(project, overrides);
         UUID organizationId = resolveOrganizationId(project, overrides);
         UUID createdByAgentUserId = resolveCreatedByAgentUserId(agent, overrides);
-        List<AiTools> availableTools = resolveAvailableTools(agent, overrides, agentSkills);
+        // the tools before the output limit: the floor depends on which tools remain
+        List<AiTools> availableTools = withArtifactToolsIfPlanAllows(resolveAvailableTools(agent, overrides, agentSkills), organizationId);
+        Long maxTokens = withArtifactOutputFloor(resolveMaxTokens(agent, overrides), availableTools);
 
         AiModelRequestParams aiModelRequestParams = AiModelRequestParams.builder()
                 .maxTokens(maxTokens)
@@ -120,14 +136,14 @@ public class CompletionRuntimeContextResolver {
     }
 
     private UUID resolveProjectId(@Nullable Project project,
-                                   @Nullable CompletionRuntimeOverridesDTO overrides) throws GendoxException {
+                                  @Nullable CompletionRuntimeOverridesDTO overrides) throws GendoxException {
         if (project != null) return project.getId();
         if (overrides != null && overrides.getProjectId() != null) return overrides.getProjectId();
         throw missingOverrideException("projectId");
     }
 
     private UUID resolveOrganizationId(@Nullable Project project,
-                                        @Nullable CompletionRuntimeOverridesDTO overrides) throws GendoxException {
+                                       @Nullable CompletionRuntimeOverridesDTO overrides) throws GendoxException {
         if (project != null) return project.getOrganizationId();
         if (overrides != null && overrides.getOrganizationId() != null) return overrides.getOrganizationId();
         throw missingOverrideException("organizationId");
@@ -136,14 +152,15 @@ public class CompletionRuntimeContextResolver {
     private UUID resolveCreatedByAgentUserId(@Nullable ProjectAgent agent,
                                              @Nullable CompletionRuntimeOverridesDTO overrides) throws GendoxException {
         if (agent != null && agent.getUserId() != null) return agent.getUserId();
-        if (overrides != null && overrides.getCreatedByAgentUserId() != null) return overrides.getCreatedByAgentUserId();
+        if (overrides != null && overrides.getCreatedByAgentUserId() != null)
+            return overrides.getCreatedByAgentUserId();
         throw missingOverrideException("createdByAgentUserId");
     }
 
     // package-private for tests
     List<AiTools> resolveAvailableTools(@Nullable ProjectAgent agent,
-                                                 @Nullable CompletionRuntimeOverridesDTO overrides,
-                                                 List<AgentSkill> agentSkills) {
+                                        @Nullable CompletionRuntimeOverridesDTO overrides,
+                                        List<AgentSkill> agentSkills) {
         List<AiTools> tools;
         if (overrides != null && overrides.getAiTools() != null && !overrides.getAiTools().isEmpty()) {
             tools = overrides.getAiTools();
@@ -168,7 +185,9 @@ public class CompletionRuntimeContextResolver {
                 .collect(Collectors.toList());
     }
 
-    /** The function name in a tool's JSON schema, or null when the schema can't be read. */
+    /**
+     * The function name in a tool's JSON schema, or null when the schema can't be read.
+     */
     public String toolName(AiTools tool) {
         try {
             return objectMapper.readTree(tool.getJsonSchema()).path("name").asText();
@@ -287,6 +306,41 @@ public class CompletionRuntimeContextResolver {
             return agent.getMaxToken();
         }
         throw missingOverrideException("maxTokens");
+
+
+    }
+
+    /**
+     * The agent's max_token is set for chat answers, and an artifact does not fit in it: a completion
+     * that may write one gets at least min-output-tokens. A higher setting of the agent stays.
+     */
+    // package-private for tests
+    Long withArtifactOutputFloor(Long maxTokens, List<AiTools> tools) {
+        boolean writesArtifacts = tools.stream()
+                .map(this::toolName)
+                .anyMatch(ARTIFACT_WRITING_TOOLS::contains);
+        if (!writesArtifacts || maxTokens >= minArtifactOutputTokens) {
+            return maxTokens;
+        }
+        return minArtifactOutputTokens;
+    }
+
+    /**
+     * The artifact tools stay only when the organization's plan includes artifacts. Without them the
+     * agent cannot write one, even with the artifacts skill, and the output floor is not raised.
+     * The plan is read only when an artifact tool is offered at all.
+     */
+    // package-private for tests
+    List<AiTools> withArtifactToolsIfPlanAllows(List<AiTools> tools, UUID organizationId) {
+        boolean offersArtifactTools = tools.stream()
+                .map(this::toolName)
+                .anyMatch(ARTIFACT_TOOLS::contains);
+        if (!offersArtifactTools || subscriptionValidationService.canUseArtifacts(organizationId)) {
+            return tools;
+        }
+        return tools.stream()
+                .filter(tool -> !ARTIFACT_TOOLS.contains(toolName(tool)))
+                .collect(Collectors.toList());
     }
 
     private Double resolveTemperature(@Nullable ProjectAgent agent,
@@ -311,7 +365,9 @@ public class CompletionRuntimeContextResolver {
         throw missingOverrideException("topP");
     }
 
-    /** Optional, unlike the other params: null means "use the model's default". */
+    /**
+     * Optional, unlike the other params: null means "use the model's default".
+     */
     @Nullable
     private String resolveReasoningEffort(@Nullable ProjectAgent agent,
                                           @Nullable CompletionRuntimeOverridesDTO overrides) {
