@@ -37,6 +37,8 @@ import ChatTurn from 'src/components/chat/ChatTurn'
 import ChatComposer from 'src/components/chat/ChatComposer'
 import ChatSources from 'src/components/chat/ChatSources'
 import ChatDeepThinking from 'src/components/chat/ChatDeepThinking'
+import ArtifactView from 'src/components/artifacts/ArtifactView'
+import { latestVersionsOf } from 'src/components/artifacts/artifactUtils'
 
 const COMPLETION_POLL_MS = 2000
 
@@ -96,6 +98,7 @@ const greetingTime = () => {
  * @param deep - the Deep thinking switch
  * @param sources - the sources button under each answer
  * @param onOpenSources(threadId, answer) - where an answer's sources open instead of the sheet (the agent home: a tab)
+ * @param onOpenArtifact(threadId, { artifactId, version }) - where an artifact opens instead of the sheet (the agent home: a tab)
  * @param documentHref - (source) => link to a document inside the app; without it, documents show as quotes
  * @param poweredBy - true | 'small'; the agent's branding can make it small or take it away
  * @param chatSettings - the look to show instead of the agent's saved one (Deploy's live preview)
@@ -113,6 +116,7 @@ const Chat = ({
   deep = true,
   sources = true,
   onOpenSources,
+  onOpenArtifact,
   documentHref = null,
   footnote = 'Answers cite their sources. AI can make mistakes.',
   poweredBy = false,
@@ -149,6 +153,8 @@ const Chat = ({
   const [message, setMessage] = useState('')
   const [deepThinking, setDeepThinking] = useState(false)
   const [sourcesMessageId, setSourcesMessageId] = useState(null)
+  const [openArtifact, setOpenArtifact] = useState(null) // { artifactId, version } in the sheet
+  const [artifactTitle, setArtifactTitle] = useState('')
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
 
@@ -163,6 +169,7 @@ const Chat = ({
   const threadId = currentThread?.threadId
 
   const turns = useMemo(() => buildTurns(messages, auth.user?.id), [messages, auth.user?.id])
+  const artifactVersions = useMemo(() => latestVersionsOf(messages), [messages])
   const uploadedDocs = useMemo(
     () => attachments.filter(a => a.status === 'uploaded').map(a => a.uploadedDoc),
     [attachments]
@@ -183,6 +190,7 @@ const Chat = ({
     dispatch(clearAll(chatKey))
     setDeepThinking(false)
     setSourcesMessageId(null)
+    setOpenArtifact(null)
     setDrawerOpen(false)
   }, [threadId, projectId, chatKey, dispatch])
 
@@ -386,6 +394,7 @@ const Chat = ({
 
   const openSources = answer => {
     if (onOpenSources) return onOpenSources(threadId, answer)
+    setOpenArtifact(null)
     dispatch(fetchMessageMetadata({ thread: currentThread, message: answer, token, chatKey }))
     setSourcesMessageId(answer.messageId)
   }
@@ -395,8 +404,27 @@ const Chat = ({
     dispatch(chatActions.clearCurrentMessageMetadata(chatKey))
   }
 
+  // one sheet at a time: an artifact replaces the sources
+  const showArtifact = ref => {
+    if (onOpenArtifact) return onOpenArtifact(threadId, ref)
+    closeSources()
+    setArtifactTitle('')
+    setOpenArtifact(ref)
+  }
+
+  // the request goes to the composer; a narrow chat closes the sheet that covers it
+  const askForChange = text => {
+    if ((scrollRef.current?.closest('.gc')?.clientWidth ?? 0) < 600) setOpenArtifact(null)
+    setMessage(text)
+    const input = inputRef.current
+    if (!input) return
+    input.focus()
+    setTimeout(() => input.setSelectionRange(text.length, text.length), 0)
+  }
+
   const startNewThread = () => {
     setDrawerOpen(false)
+    setOpenArtifact(null)
     closeSources()
     onNewThread?.()
     inputRef.current?.focus()
@@ -526,6 +554,7 @@ const Chat = ({
                 token={token}
                 activeSourcesMessageId={sourcesMessageId}
                 onSources={sources ? openSources : null}
+                onOpenArtifact={threadId ? showArtifact : null}
                 onAskAgain={isBusy ? null : text => send(text, [])}
                 onFeedback={handleFeedback}
                 unfinished={index === lastTurnIndex && !isBusy && !ACTIVE_COMPLETION_STATUSES.includes(completionStatus)}
@@ -591,6 +620,34 @@ const Chat = ({
               isLoading={isLoadingMetadata}
               metadata={currentMessageMetadata?.metadata}
               documentHref={documentHref}
+            />
+          </div>
+        </aside>
+      )}
+
+      {openArtifact && threadId && (
+        <aside className='gc-sheet wide'>
+          <div className='gc-sheet-h'>
+            <button className='btn ghost s icon' data-act='unsheet' title='Back' onClick={() => setOpenArtifact(null)}>
+              <ArrowLeft className='lucide' />
+            </button>
+            <b className='trunc' style={{ flex: 1, paddingLeft: 6 }}>
+              {artifactTitle || 'Artifact'}
+            </b>
+            <button className='btn ghost s icon' data-act='unsheet' title='Close' onClick={() => setOpenArtifact(null)}>
+              <X className='lucide' />
+            </button>
+          </div>
+          <div className='gc-sheet-b'>
+            <ArtifactView
+              threadId={threadId}
+              artifactId={openArtifact.artifactId}
+              version={openArtifact.version}
+              knownVersion={artifactVersions[openArtifact.artifactId]}
+              token={token}
+              agentName={agentName}
+              onAsk={askForChange}
+              onTitle={setArtifactTitle}
             />
           </div>
         </aside>

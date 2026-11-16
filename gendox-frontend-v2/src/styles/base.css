@@ -559,6 +559,11 @@ pre.code .k { color: var(--accent-text); } pre.code .s { color: var(--warn); }
 .art-b iframe { flex: 1; border: 0; width: 100%; min-height: 320px; }
 .art-b pre.code { flex: 1; border: 0; border-radius: 0; overflow: auto; white-space: pre-wrap; }
 .art-note { display: flex; gap: 6px; align-items: flex-start; } .art-note .lucide { width: 13px; height: 13px; flex: none; margin-top: 2px; }
+/* markdown and code are not framed: a card shows their start, the panel scrolls them */
+.gc-art-b.clip { max-height: 250px; overflow: hidden; padding: 10px 12px; -webkit-mask-image: linear-gradient(to bottom, #000 75%, transparent); mask-image: linear-gradient(to bottom, #000 75%, transparent); }
+.gc-art .alert, .gc-ai > .alert { margin: 0; }
+.art-b > .gc-md { flex: 1; min-width: 0; overflow: auto; padding: 14px; }
+.art-b > .gc-md pre { margin: 0; }
 .gc-th { display: flex; flex-direction: column; gap: 2px; width: 100%; padding: 8px 10px; border: 0; border-radius: var(--radius-sm); background: none; text-align: left; cursor: pointer; }
 .gc-th:hover { background: var(--surface-2); }
 .gc-th b { font-weight: 500; }

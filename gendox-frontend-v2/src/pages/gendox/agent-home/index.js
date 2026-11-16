@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
 import { useDispatch } from 'react-redux'
-import { BookOpen, Check, FileText, Library, ListChecks, MessageSquareText, PanelsTopLeft, RotateCcw, ScanText, Table2 } from 'lucide-react'
+import { AppWindow, BookOpen, Check, FileText, Library, ListChecks, MessageSquareText, PanelsTopLeft, RotateCcw, ScanText, Table2 } from 'lucide-react'
 import useActiveScope from 'src/hooks/useActiveScope'
 import { chatActions } from 'src/store/chat/gendoxChat'
 import { clearAll } from 'src/store/chatAttachments/chatAttachments'
@@ -10,6 +10,7 @@ import TopbarSlot from 'src/layouts/components/TopbarSlot'
 import Dock from 'src/components/dock/Dock'
 import {
   DockActionsProvider,
+  DockArtifact,
   DockChat,
   DockKnowledge,
   DockScreen,
@@ -30,6 +31,7 @@ import Menu from 'src/components/ui/Menu'
  *   /gendox/tasks/document-insights?taskId=&doc=&q=
  *   /gendox/tasks/document-digitization?taskId=&doc=
  *   /sources?threadId=&messageId=           the sources of one answer; one such tab per chat, reused for its next answer
+ *   /artifact?threadId=&artifactId=         an artifact the agent made; one tab per artifact (gendox-core#523)
  * Earth observation is a workspace of its own windows, so it opens as a full page.
  */
 const PAGES = {
@@ -42,7 +44,8 @@ const PAGES = {
 
 // tabs with no page of their own outside the dock
 const DOCK_ONLY = {
-  '/sources': { title: 'Sources', icon: BookOpen, element: () => <DockSources /> }
+  '/sources': { title: 'Sources', icon: BookOpen, element: () => <DockSources /> },
+  '/artifact': { title: 'Artifact', icon: AppWindow, element: () => <DockArtifact /> }
 }
 
 // where a tab opens when it isn't open yet: beside windows holding similar tabs
@@ -50,6 +53,8 @@ const NEAR = {
   chat: ['/chat'],
   // sources open beside the chat, with the documents they lead to
   '/sources': ['/sources', '/gendox/document-instance', '/gendox/knowledge'],
+  // an artifact needs room: it joins other artifacts, or the windows beside the chat
+  '/artifact': ['/artifact', '/sources', '/gendox/document-instance', '/gendox/knowledge'],
   '/gendox/document-instance': ['/gendox/document-instance', '/gendox/knowledge'],
   '/gendox/knowledge': ['/gendox/knowledge', '/gendox/document-instance'],
   '/gendox/tasks': ['/gendox/tasks'],

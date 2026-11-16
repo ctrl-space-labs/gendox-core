@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <!--
+      The first thing in the page, so nothing an artifact writes can come before it. The artifact's own document
+      (the inner frame, srcdoc) inherits this policy and can only add to it: no network of any kind, no outside
+      scripts, styles, fonts or images.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:; form-action 'none'; base-uri 'none'"
+    />
+    <title>Artifact</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: transparent; }
+      iframe { display: block; width: 100%; height: 100%; border: 0; }
+    </style>
+  </head>
+  <body>
+    <script>
+      /*
+       * The shell of an artifact (gendox-core#523). The host loads it in a frame sandboxed to scripts only, so it has
+       * an opaque origin: no cookies, no storage, no access to the page around it. It renders the artifact it is sent
+       * in an inner frame, sandboxed the same way, and relays the few things the artifact may ask for.
+       *
+       * Host <-> shell: JSON-RPC 2.0 with the method names of MCP Apps (ui/initialize, ui/notifications/*, ui/open-link).
+       * Shell <-> artifact: two plain messages, { type: 'size' } and { type: 'link' }, checked before they are relayed.
+       */
+      ;(function () {
+        var host = window.parent
+        var inner = null
+        var nextId = 2
+        var variables = {}
+        var MAX_URL = 2048
+
+        function toHost(message) {
+          message.jsonrpc = '2.0'
+          host.postMessage(message, '*')
+        }
+
+        // only custom properties, and values that cannot close the style they are written into
+        function cleanVariables(input) {
+          var out = {}
+          if (!input || typeof input !== 'object') return out
+          Object.keys(input).forEach(function (name) {
+            var value = input[name]
+            if (/^--[a-z0-9-]+$/.test(name) && typeof value === 'string' && value.length < 300 && !/[<>{};]/.test(value)) {
+              out[name] = value
+            }
+          })
+
+          return out
+        }
+
+        function variablesCss() {
+          return Object.keys(variables)
+            .map(function (name) {
+              return name + ':' + variables[name]
+            })
+            .join(';')
+        }
+
+        // runs inside the artifact: reports its height, hands links to the host, follows theme changes
+        var bridge =
+          '(function(){var p=window.parent;' +
+          'function size(){var d=document.documentElement,b=document.body;' +
+          'p.postMessage({type:"size",height:Math.max(d.scrollHeight,b?b.scrollHeight:0)},"*")}' +
+          'addEventListener("load",size);' +
+          'if(window.ResizeObserver)new ResizeObserver(size).observe(document.documentElement);' +
+          'document.addEventListener("click",function(e){var a=e.target&&e.target.closest&&e.target.closest("a[href]");' +
+          'if(!a)return;var h=a.getAttribute("href")||"";if(h.charAt(0)==="#")return;e.preventDefault();' +
+          'p.postMessage({type:"link",href:a.href},"*")},true);' +
+          'addEventListener("message",function(e){if(e.source!==p||!e.data||e.data.type!=="variables")return;' +
+          'var s=document.documentElement.style,v=e.data.variables;for(var k in v)s.setProperty(k,v[k])})})()'
+
+        function head() {
+          return (
+            '<style>:root{color-scheme:light dark;' + variablesCss() + '}</style>' +
+            '<script>' + bridge + '<\/script>'
+          )
+        }
+
+        function documentOf(kind, content) {
+          if (kind === 'svg') {
+            return (
+              '<!DOCTYPE html><html><head><meta charset="utf-8">' + head() +
+              '<style>body{margin:0;display:flex;justify-content:center}svg{max-width:100%;height:auto}</style>' +
+              '</head><body>' + content + '</body></html>'
+            )
+          }
+          // html: our head first, in the artifact's own <head> when it has one
+          if (/<head[^>]*>/i.test(content)) return content.replace(/<head[^>]*>/i, function (tag) { return tag + head() })
+          if (/<html[^>]*>/i.test(content)) return content.replace(/<html[^>]*>/i, function (tag) { return tag + '<head>' + head() + '</head>' })
+
+          return '<!DOCTYPE html><html><head><meta charset="utf-8">' + head() + '</head><body>' + content + '</body></html>'
+        }
+
+        function render(input) {
+          if (!input || typeof input.content !== 'string') return
+          var kind = input.kind === 'svg' ? 'svg' : 'html'
+          if (inner) inner.remove()
+          inner = document.createElement('iframe')
+          inner.setAttribute('sandbox', 'allow-scripts')
+          inner.setAttribute('title', 'Artifact')
+          inner.srcdoc = documentOf(kind, input.content)
+          document.body.appendChild(inner)
+        }
+
+        window.addEventListener('message', function (event) {
+          var message = event.data
+          if (!message || typeof message !== 'object') return
+
+          if (event.source === host) {
+            if (message.id === 1 && message.result) {
+              variables = cleanVariables(message.result.hostContext && message.result.hostContext.styles && message.result.hostContext.styles.variables)
+              toHost({ method: 'ui/notifications/initialized' })
+            } else if (message.method === 'ui/notifications/host-context-changed') {
+              variables = cleanVariables(message.params && message.params.styles && message.params.styles.variables)
+              if (inner && inner.contentWindow) inner.contentWindow.postMessage({ type: 'variables', variables: variables }, '*')
+            } else if (message.method === 'ui/notifications/tool-input') {
+              render(message.params && message.params.arguments)
+            }
+
+            return
+          }
+
+          if (inner && event.source === inner.contentWindow) {
+            if (message.type === 'size' && typeof message.height === 'number' && isFinite(message.height)) {
+              toHost({ method: 'ui/notifications/size-changed', params: { height: Math.max(0, Math.ceil(message.height)) } })
+            } else if (message.type === 'link' && typeof message.href === 'string' && message.href.length <= MAX_URL) {
+              toHost({ id: nextId++, method: 'ui/open-link', params: { url: message.href } })
+            }
+          }
+        })
+
+        toHost({ id: 1, method: 'ui/initialize', params: { appInfo: { name: 'gendox-artifact', version: '1' }, appCapabilities: {} } })
+      })()
+    </script>
+  </body>
+</html>

@@ -158,6 +158,11 @@ export default {
 
   getThreadMessageMetadata: (threadId, messageId) => `${url}threads/${threadId}/message-metadata/${messageId}`,
 
+  // the artifacts an agent wrote in a thread (gendox-core#523)
+  artifacts: threadId => `${url}threads/${threadId}/artifacts`,
+  artifact: (threadId, artifactId) => `${url}threads/${threadId}/artifacts/${artifactId}`,
+  artifactVersion: (threadId, artifactId, version) => `${url}threads/${threadId}/artifacts/${artifactId}/versions/${version}`,
+
   deactivateUserById: userId => `${url}users/${userId}/deactivate`,
 
   deactivateOrganizationById: organizationId => `${url}organizations/${organizationId}/deactivate`,

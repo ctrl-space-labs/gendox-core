@@ -10,6 +10,8 @@ import { selectChatSession } from 'src/store/chat/gendoxChat'
 import { getToken } from 'src/components/agent/useAgent'
 import Chat from 'src/components/chat/Chat'
 import ChatSources from 'src/components/chat/ChatSources'
+import ArtifactView from 'src/components/artifacts/ArtifactView'
+import { latestVersionsOf } from 'src/components/artifacts/artifactUtils'
 import { useChatSession } from 'src/components/chat/useChat'
 import { fileNameOf, formatDateTime, timeAgo } from 'src/components/knowledge/documentUtils'
 import UploadDialog from 'src/components/knowledge/UploadDialog'
@@ -134,11 +136,47 @@ export const DockChat = ({ chatKey, threadId }) => {
       variant='window'
       prefill={prefill}
       onOpenSources={(threadId, answer) => actions.open(sourcesUrlOf(threadId, answer.messageId))}
+      onOpenArtifact={(threadId, ref) => actions.open(artifactUrlOf(threadId, ref.artifactId))}
     />
   )
 }
 
 export const sourcesUrlOf = (threadId, messageId) => `/sources?${new URLSearchParams({ threadId, messageId })}`
+
+// one tab per artifact, always at its latest version; older ones are in the tab's version list
+export const artifactUrlOf = (threadId, artifactId) => `/artifact?${new URLSearchParams({ threadId, artifactId })}`
+
+/**
+ * An artifact in a tab of its own (gendox-core#523), named after it. A newer version made in an open chat
+ * moves it to that version, unless an older one was chosen.
+ */
+export const DockArtifact = () => {
+  const tab = useDockTab()
+  const { query } = useView()
+  const { threadId, artifactId } = query
+  const session = useSelector(state =>
+    Object.values(state.gendoxChat.sessions).find(s => s.currentThread?.threadId === threadId)
+  )
+  const knownVersion = useMemo(
+    () => latestVersionsOf(session?.currentThread?.messages)[artifactId],
+    [session?.currentThread?.messages, artifactId]
+  )
+
+  return (
+    <div className='vw in-dock'>
+      <div className='gc-sheet-b' style={{ display: 'flex', flexDirection: 'column' }}>
+        <ArtifactView
+          threadId={threadId}
+          artifactId={artifactId}
+          knownVersion={knownVersion}
+          token={getToken()}
+          agentName={session?.currentThread?.agent?.fullName}
+          onTitle={title => tab.setTitle(short(title))}
+        />
+      </div>
+    </div>
+  )
+}
 
 /**
  * The sources of one answer in a tab of their own, beside the chat; a document opens in a tab at the passage.
