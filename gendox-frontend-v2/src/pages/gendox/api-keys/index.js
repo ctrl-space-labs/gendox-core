@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useDispatch, useSelector } from 'react-redux'
-import { Copy, KeyRound, Pencil, Plus, TriangleAlert } from 'lucide-react'
+import { Copy, Eye, KeyRound, Pencil, Plus, TriangleAlert } from 'lucide-react'
 import useActiveScope from 'src/hooks/useActiveScope'
 import useHasOrgRole from 'src/authentication/hooks/useHasOrgRole'
 import apiKeyService from 'src/gendox-sdk/apiKeyService'
@@ -25,6 +25,35 @@ const DURATIONS = [
 
 const tail = key => (key ? `••••${key.slice(-4)}` : '')
 const copy = (text, message) => navigator.clipboard?.writeText(text).then(() => toast.success(message))
+
+// A key in full, with a Copy button
+const KeyBox = ({ apiKey }) => (
+  <div className='code-wrap' style={{ marginTop: 14 }}>
+    <pre className='code' style={{ paddingRight: 90, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{apiKey}</pre>
+    <button className='btn s' onClick={() => copy(apiKey, 'Key copied')}>
+      <Copy className='lucide' />
+      Copy
+    </button>
+  </div>
+)
+
+// The list holds keys masked; this shows one in full after the API returned it
+const RevealKeyDialog = ({ apiKey, onClose }) => (
+  <Dialog
+    open={Boolean(apiKey)}
+    onClose={onClose}
+    size='s'
+    title={apiKey?.name || 'API key'}
+    subtitle='Revealing a key is recorded in the audit log.'
+    footer={
+      <button className='btn primary' onClick={onClose}>
+        Done
+      </button>
+    }
+  >
+    {apiKey && <KeyBox apiKey={apiKey.apiKey} />}
+  </Dialog>
+)
 
 // Create a key, then show it with a Copy button
 const CreateKeyDialog = ({ open, onClose, onCreate }) => {
@@ -81,15 +110,7 @@ const CreateKeyDialog = ({ open, onClose, onCreate }) => {
             </b>
             <span className='muted'>Paste it where it is needed, e.g. the WordPress plugin’s settings.</span>
           </div>
-          <div className='code-wrap' style={{ marginTop: 14 }}>
-            <pre className='code' style={{ paddingRight: 90, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-              {created.apiKey}
-            </pre>
-            <button className='btn s' onClick={() => copy(created.apiKey, 'Key copied')}>
-              <Copy className='lucide' />
-              Copy
-            </button>
-          </div>
+          <KeyBox apiKey={created.apiKey} />
         </>
       ) : (
         <div className='form'>
@@ -169,6 +190,7 @@ const RenameDialog = ({ apiKey, onClose, onRename }) => {
 /**
  * Keys that let apps and the WordPress plugin use the organization's agents.
  * GET/POST organizations/{o}/api-keys { name, durationInDays }, rename PUT …/{id}, revoke DELETE …/{id}.
+ * The list returns a key as its last four characters; POST …/{id}/reveal returns it in full.
  */
 const ApiKeysPage = () => {
   const dispatch = useDispatch()
@@ -184,6 +206,8 @@ const ApiKeysPage = () => {
   const [createOpen, setCreateOpen] = useState(false)
   const [renaming, setRenaming] = useState(null)
   const [revoking, setRevoking] = useState(null)
+  const [revealed, setRevealed] = useState(null) // the key the API returned in full
+  const [revealingId, setRevealingId] = useState(null)
 
   const load = useCallback(() => {
     if (!organizationId) return
@@ -216,6 +240,17 @@ const ApiKeysPage = () => {
 
       return null
     }
+  }
+
+  const reveal = async apiKey => {
+    setRevealingId(apiKey.id)
+    try {
+      const response = await apiKeyService.revealApiKey(organizationId, apiKey.id, getToken())
+      setRevealed(response.data)
+    } catch (error) {
+      toast.error(`Couldn’t reveal the key. ${getErrorMessage(error)}`)
+    }
+    setRevealingId(null)
   }
 
   const rename = async (apiKey, name) => {
@@ -303,15 +338,16 @@ const ApiKeysPage = () => {
                     <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                       {apiKey.active && (
                         <>
-                          <button
-                            className='btn ghost s icon'
-                            title='Copy key'
-                            onClick={() => copy(apiKey.apiKey, 'Key copied')}
-                          >
-                            <Copy className='lucide' />
-                          </button>
                           {canEdit && (
                             <>
+                              <button
+                                className='btn ghost s icon'
+                                title='Reveal key'
+                                disabled={revealingId === apiKey.id}
+                                onClick={() => reveal(apiKey)}
+                              >
+                                <Eye className='lucide' />
+                              </button>
                               <button className='btn ghost s icon' title='Rename' onClick={() => setRenaming(apiKey)}>
                                 <Pencil className='lucide' />
                               </button>
@@ -332,6 +368,7 @@ const ApiKeysPage = () => {
       </div>
 
       <CreateKeyDialog open={createOpen} onClose={() => setCreateOpen(false)} onCreate={create} />
+      <RevealKeyDialog apiKey={revealed} onClose={() => setRevealed(null)} />
       <RenameDialog apiKey={renaming} onClose={() => setRenaming(null)} onRename={rename} />
       <ConfirmDialog
         open={Boolean(revoking)}

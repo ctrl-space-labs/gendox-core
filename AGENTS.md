@@ -177,6 +177,20 @@ Swagger UI is available at `/api-documentation` when the server is running.
 - **Observability**: Micrometer + Brave tracing at 100% sample rate; Prometheus metrics endpoint; Spring Boot Actuator with `show-details: always`.
 - **S3 + Git integrations**: `services/integrations/` contains `GitIntegrationUpdateService`, `S3BucketIntegrationUpdateService`, `ApiIntegrationUpdateService`, orchestrated by `IntegrationManager`.
 
+### Maintenance Jobs
+Long-running maintenance work on the data (re-encryption, a backfill, a migration that SQL alone cannot do) is a Spring Batch job, not a script or a one-off endpoint. `secretsReencryptJob` (`spring/batch/jobs/secretsReencrypt/`) is the example to copy.
+
+- A chunk-oriented step (reader, writer, a commit per chunk), safe to stop and to run again.
+- The job's config class is added to the `@ComponentScan` of `SpringBatchConfiguration`.
+- Two ways to start it. An endpoint for platform administrators calls `jobOperator.start(...)`, and the job runs in the background. Or from the command line, where the application starts, runs the one job and exits (code 0 when the job completed):
+
+```bash
+java -jar target/gendox-core-api-*.jar --spring.batch.job.name=secretsReencryptJob --server.port=0
+mvn spring-boot:run -Dspring-boot.run.arguments="--spring.batch.job.name=secretsReencryptJob --server.port=0"
+```
+
+Arguments of the form `name=value` become job parameters. The run needs the same environment variables as a normal start; `--server.port=0` keeps it away from the port of a running instance. `SpringBatchConfiguration#run` is what reads `spring.batch.job.name`.
+
 ---
 
 ## Frontend Architecture

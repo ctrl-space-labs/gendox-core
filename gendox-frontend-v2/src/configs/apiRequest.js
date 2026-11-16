@@ -171,6 +171,8 @@ export default {
 
   updateApiKey: (organizationId, apiKeyId) => `${url}organizations/${organizationId}/api-keys/${apiKeyId}`,
 
+  revealApiKey: (organizationId, apiKeyId) => `${url}organizations/${organizationId}/api-keys/${apiKeyId}/reveal`,
+
   organizationWebSite: organizationId => `${url}organizations/${organizationId}/websites`,
 
   updateOrganizationWebSite: (organizationId, organizationWebSiteId) =>

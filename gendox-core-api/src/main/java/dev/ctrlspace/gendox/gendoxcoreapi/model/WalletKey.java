@@ -2,6 +2,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.gson.Gson;
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.EncryptedStringConverter;
 import jakarta.persistence.*;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
@@ -28,6 +29,7 @@ public class WalletKey {
     private String publicKey;
 
     @JsonIgnore
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "jwk_key_format")
     private String jwkKeyFormat;
     @Basic

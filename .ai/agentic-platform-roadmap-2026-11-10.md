@@ -259,7 +259,7 @@ Both are implemented in `1322408c` (2026-11-14); remaining validation is listed 
 - **GOV-2 Usage** (#531). **GOV-3 Visitor conversations** (#563, #555).
 - **GOV-4 Policies.** Which tool sources and connections an organization and an agent may use; enforced in the CORE-2 check.
 - **GOV-5.** Several roles per member (#484). The API keys part moved to SEC-1.
-- **SEC-1 Secrets at rest.** Every stored secret, API keys included, is encrypted two-way, with a key provider per deployment (environment, AWS KMS, others). Decided on 2026-11-13 in place of "API keys stored as a hash" (#561). Plan: [secrets-at-rest-2026-11-13.md](secrets-at-rest-2026-11-13.md). CONN-1 waits for it.
+- **SEC-1 Secrets at rest.** Every stored secret, API keys included, is encrypted two-way, with a key provider per deployment (environment, AWS KMS, others). Decided on 2026-11-13 in place of "API keys stored as a hash" (#561). Plan: [secrets-at-rest-2026-11-15.md](secrets-at-rest-2026-11-15.md). CONN-1 waits for it.
 
 ### PACKS (#554 export, #567 import)
 

@@ -49,7 +49,8 @@ API keys let your own apps, and the WordPress plugin, use the organization's age
 
 1. Click **Create key** and name it after where it will be used (for example, the website's address), so you know what to revoke later.
 2. Copy the key when it is shown.
-3. To stop a key working, click **Revoke**.
+3. The list shows only a key's last four characters. To see a key in full again, click the eye icon (**Reveal key**). Only the organization's owners and administrators can, and each reveal is recorded in the audit log.
+4. To stop a key working, click **Revoke**.
 
 ![API keys](./img/v2/org-api-keys.jpg)
 

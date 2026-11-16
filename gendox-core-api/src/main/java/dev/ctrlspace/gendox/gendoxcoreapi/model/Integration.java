@@ -1,6 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.EncryptedStringConverter;
 import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
 
@@ -52,7 +53,7 @@ public class Integration {
     @Basic
     @Column(name = "user_name")
     private String userName;
-    @Basic
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "password")
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;

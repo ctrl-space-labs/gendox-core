@@ -24,6 +24,7 @@ public class ApiKeyService {
     private OrganizationWebSiteRepository organizationWebSiteRepository;
     private TypeService typeService;
     private UserService userService;
+    private AuditLogsService auditLogsService;
 
 
     @Autowired
@@ -31,7 +32,9 @@ public class ApiKeyService {
                          ApiKeyConverter apiKeyConverter,
                          OrganizationWebSiteRepository organizationWebSiteRepository,
                          TypeService typeService,
-                         UserService userService) {
+                         UserService userService,
+                         AuditLogsService auditLogsService) {
+        this.auditLogsService = auditLogsService;
         this.apiKeyRepository = apiKeyRepository;
         this.apiKeyConverter = apiKeyConverter;
         this.organizationWebSiteRepository = organizationWebSiteRepository;
@@ -45,7 +48,7 @@ public class ApiKeyService {
 
     public ApiKey getOrganizationId(String apiKey) throws GendoxException {
         return apiKeyRepository
-                .findByApiKey(apiKey)
+                .findByApiKeyHash(ApiKey.hashOf(apiKey))
                 .orElseThrow(
                         () -> new GendoxException("API_KEY_NOT_FOUND", "ApiKey not found", HttpStatus.NOT_FOUND)
                 );
@@ -56,7 +59,7 @@ public class ApiKeyService {
     }
 
     public ApiKey getByApiKey(String apiKey) throws GendoxException {
-        return apiKeyRepository.findByApiKey(apiKey)
+        return apiKeyRepository.findByApiKeyHash(ApiKey.hashOf(apiKey))
                 .orElse(null);
     }
 
@@ -117,7 +120,14 @@ public class ApiKeyService {
 
         createUserForApiKey(apiKeyId, apiKey);
 
-        return apiKeyRepository.save(apiKey);
+        return apiKeyRepository.save(apiKey).revealed();
+    }
+
+    /** The key in full, for a member who may manage keys. Every call is written to the audit log. */
+    public ApiKey revealApiKey(UUID organizationId, UUID id) throws GendoxException {
+        ApiKey apiKey = getOwnedBy(organizationId, id);
+        auditLogsService.createAuditLog(organizationId, null, "API_KEY_REVEAL", null);
+        return apiKey.revealed();
     }
 
     /**
@@ -188,7 +198,7 @@ public class ApiKeyService {
     }
 
     public UUID getOrganizationIdByApiKey(String apiKey) throws GendoxException {
-        return apiKeyRepository.findOrganizationIdByApiKey(apiKey)
+        return apiKeyRepository.findOrganizationIdByApiKeyHash(ApiKey.hashOf(apiKey))
                 .orElseThrow(() -> new GendoxException("ORGANIZATION_NOT_FOUND", "OrganizationId not found", HttpStatus.NOT_FOUND));
     }
 }

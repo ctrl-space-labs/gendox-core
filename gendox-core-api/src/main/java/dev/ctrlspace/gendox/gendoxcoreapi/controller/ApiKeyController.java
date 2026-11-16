@@ -36,6 +36,13 @@ public class ApiKeyController {
         return apiKeyService.createApiKey(organizationId, apiKeyDTO);
     }
 
+    // every other call returns the key masked; this one returns it in full
+    @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_API_KEYS', 'getRequestedOrgIdFromPathVariable')")
+    @PostMapping("/organizations/{organizationId}/api-keys/{apiKeyId}/reveal")
+    public ApiKey revealApiKey(@PathVariable UUID organizationId, @PathVariable UUID apiKeyId) throws GendoxException {
+        return apiKeyService.revealApiKey(organizationId, apiKeyId);
+    }
+
     @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_API_KEYS', 'getRequestedOrgIdFromPathVariable')")
     @PutMapping("/organizations/{organizationId}/api-keys/{apiKeyId}")
     public ApiKey updateApiKey(@PathVariable UUID organizationId,

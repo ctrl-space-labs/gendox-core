@@ -65,9 +65,26 @@ const deleteApiKey = async (organizationId, apiKeyId, token) => {
   })
 }
 
+/**
+ * Get an Api Key in full. The list returns keys masked.
+ * @param organizationId
+ * @param apiKeyId
+ * @param token
+ * @returns {Promise<axios.AxiosResponse<ApiKey>>}
+ */
+const revealApiKey = async (organizationId, apiKeyId, token) => {
+  return axios.post(apiRequests.revealApiKey(organizationId, apiKeyId), null, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
+    }
+  })
+}
+
 export default {
   getApiKeysByOrganizationId,
   createApiKey,
+  revealApiKey,
   updateApiKey,
   deleteApiKey
 }

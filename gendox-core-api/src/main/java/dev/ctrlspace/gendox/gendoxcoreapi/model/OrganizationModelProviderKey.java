@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.EncryptedStringConverter;
 import jakarta.persistence.*;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
@@ -26,8 +27,8 @@ public class OrganizationModelProviderKey {
     @ManyToOne
     @JoinColumn(name = "ai_model_provider_id", referencedColumnName = "id", nullable = false)
     private AiModelProvider aiModelProvider;
-    @Basic
-    @Column(name = "key", nullable = false, length = 1024)
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "key", nullable = false)
     private String key;
     @Basic
     @Column(name = "created_at", nullable = true)

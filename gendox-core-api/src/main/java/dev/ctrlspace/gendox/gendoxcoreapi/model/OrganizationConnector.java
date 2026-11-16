@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.EncryptedJsonConverter;
 import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -35,6 +36,8 @@ public class OrganizationConnector {
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
 
+    // JSON text, encrypted as a whole: it holds the connector's credentials
+    @Convert(converter = EncryptedJsonConverter.class)
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "config", nullable = false, columnDefinition = "JSONB")
     private String config;

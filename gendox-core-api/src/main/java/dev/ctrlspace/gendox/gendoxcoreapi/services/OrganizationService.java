@@ -228,7 +228,7 @@ public class OrganizationService {
 
         // TODO construct user profile similar to to user with role 'roleType' in the organization
         List<OrganizationProfileProjectAgentDTO> rawOrganizationProfile =
-                organizationRepository.findRawOrganizationProfileById(organizationId, apiKeyStr);
+                organizationRepository.findRawOrganizationProfileById(organizationId, ApiKey.hashOf(apiKeyStr));
 
         UserProfile userProfile = organizationProfileConverter.toDTO(rawOrganizationProfile);
 

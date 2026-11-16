@@ -18,13 +18,14 @@ public interface ApiKeyRepository extends JpaRepository<ApiKey, UUID>, QuerydslP
 
     List<ApiKey> findAllByOrganizationId(UUID organizationId);
 
-    Optional<ApiKey> findByApiKey(String apiKey);
+    // the key column is encrypted, so a presented key is found by its hash: ApiKey.hashOf(key)
+    Optional<ApiKey> findByApiKeyHash(String apiKeyHash);
 
     @Query("SELECT a FROM ApiKey a WHERE a.id IN (SELECT o.apiKeyId FROM OrganizationWebSite o WHERE o.integrationId = :integrationId)")
     Optional<ApiKey> findByIntegrationId(@Param("integrationId") UUID integrationId);
 
 //    find organizationid by apikey
 
-    @Query("SELECT a.organizationId FROM ApiKey a WHERE a.apiKey = :apiKey")
-    Optional<UUID> findOrganizationIdByApiKey(@Param("apiKey") String apiKey);
+    @Query("SELECT a.organizationId FROM ApiKey a WHERE a.apiKeyHash = :apiKeyHash")
+    Optional<UUID> findOrganizationIdByApiKeyHash(@Param("apiKeyHash") String apiKeyHash);
 }

@@ -1,5 +1,8 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.EncryptedStringConverter;
 import jakarta.persistence.*;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
@@ -7,7 +10,11 @@ import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
+import java.util.HexFormat;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -26,9 +33,15 @@ public class ApiKey {
     @Basic
     @Column(name = "name", nullable = false, length = 1024)
     private String name;
-    @Basic
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "api_key", nullable = false)
     private String apiKey;
+    // what a presented key is looked up by: the key column is encrypted and cannot be searched
+    @JsonIgnore
+    @Column(name = "api_key_hash", nullable = false, length = 64)
+    private String apiKeyHash;
+    @Transient
+    private boolean revealed;
     @Basic
     @Column(name="start_date", nullable = false)
     private Instant startDate;
@@ -63,6 +76,20 @@ public class ApiKey {
         }
     }
 
+    /** The lookup value of an API key: SHA-256 in hex. The keys are long and random, so a plain hash is enough. */
+    public static String hashOf(String apiKey) {
+        try {
+            byte[] hash = MessageDigest.getInstance("SHA-256").digest(apiKey.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(hash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    public String getApiKeyHash() {
+        return apiKeyHash;
+    }
+
     public UUID getId() {
         return id;
     }
@@ -87,12 +114,30 @@ public class ApiKey {
         this.name = name;
     }
 
+    /**
+     * What a response shows as the key: its last four characters, unless this
+     * object was {@link #revealed()}. So an endpoint that returns an API key
+     * shows it masked without doing anything.
+     */
+    @JsonProperty("apiKey")
+    public String getDisplayedApiKey() {
+        return revealed || apiKey == null ? apiKey : "****" + apiKey.substring(Math.max(0, apiKey.length() - 4));
+    }
+
+    /** Marks this object to show the key in full: for creating a key and for revealing one. */
+    public ApiKey revealed() {
+        this.revealed = true;
+        return this;
+    }
+
+    @JsonIgnore
     public String getApiKey() {
         return apiKey;
     }
 
     public void setApiKey(String apiKey) {
         this.apiKey = apiKey;
+        this.apiKeyHash = apiKey == null ? null : hashOf(apiKey);
     }
 
     public Instant getStartDate() {

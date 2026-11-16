@@ -32,7 +32,7 @@ Two files per topic, no more: **the original, which never changes, and the curre
 
 - [Agent files: one listing, one set of tools, one output format](.ai/agent-files-2026-11-13.md) — implemented, not merged; SRCH-1 and SRCH-3 of the roadmap, #550 and #559.
 
-- [SEC-1: secrets at rest](.ai/secrets-at-rest-2026-11-13.md) — design agreed, not implemented; every stored secret encrypted two-way, with a key provider per deployment. Prerequisite of CONN-1.
+- [SEC-1: secrets at rest](.ai/secrets-at-rest-2026-11-15.md) — implemented, not merged. Every stored secret encrypted two-way, with a list of keys and a key provider per key. Prerequisite of CONN-1. Self-contained: it replaces the [original 2026-11-13 plan](.ai/secrets-at-rest-2026-11-13.md), which is kept unchanged.
 
 - [Application e2e coverage for v2](.ai/e2e-v2-coverage-2026-11-11.md) — current frontend selection, browser coverage and blocked cases; the original v1 plan remains unchanged.
 
@@ -186,6 +186,20 @@ Swagger UI is available at `/api-documentation` when the server is running.
 - **Flyway**: Disabled by default in local/dev profiles; runs automatically on startup in prod.
 - **Observability**: Micrometer + Brave tracing at 100% sample rate; Prometheus metrics endpoint; Spring Boot Actuator with `show-details: always`.
 - **S3 + Git integrations**: `services/integrations/` contains `GitIntegrationUpdateService`, `S3BucketIntegrationUpdateService`, `ApiIntegrationUpdateService`, orchestrated by `IntegrationManager`.
+
+### Maintenance Jobs
+Long-running maintenance work on the data (re-encryption, a backfill, a migration that SQL alone cannot do) is a Spring Batch job, not a script or a one-off endpoint. `secretsReencryptJob` (`spring/batch/jobs/secretsReencrypt/`) is the example to copy.
+
+- A chunk-oriented step (reader, writer, a commit per chunk), safe to stop and to run again.
+- The job's config class is added to the `@ComponentScan` of `SpringBatchConfiguration`.
+- Two ways to start it. An endpoint for platform administrators calls `jobOperator.start(...)`, and the job runs in the background. Or from the command line, where the application starts, runs the one job and exits (code 0 when the job completed):
+
+```bash
+java -jar target/gendox-core-api-*.jar --spring.batch.job.name=secretsReencryptJob --server.port=0
+mvn spring-boot:run -Dspring-boot.run.arguments="--spring.batch.job.name=secretsReencryptJob --server.port=0"
+```
+
+Arguments of the form `name=value` become job parameters. The run needs the same environment variables as a normal start; `--server.port=0` keeps it away from the port of a running instance. `SpringBatchConfiguration#run` is what reads `spring.batch.job.name`.
 
 ---
 

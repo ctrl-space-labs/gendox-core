@@ -335,6 +335,13 @@
             <version>1.12.701</version>
         </dependency>
 
+        <!-- decrypts a secrets key that is kept encrypted by AWS KMS -->
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-kms</artifactId>
+            <version>1.12.701</version>
+        </dependency>
+
         <!-- https://mvnrepository.com/artifact/org.keycloak/keycloak-admin-client -->
         <dependency>
             <groupId>org.keycloak</groupId>
