@@ -3,15 +3,14 @@
 
 -- A presented API key is looked up by its hash. The key column itself is encrypted
 -- by the application and cannot be searched.
+-- The column allows null so that code older than this migration can still create keys.
+-- The application fills a missing hash when it starts (ApiKeyService#fillMissingHashes).
 ALTER TABLE gendox_core.api_keys
     ADD COLUMN IF NOT EXISTS api_key_hash varchar(64);
 
 UPDATE gendox_core.api_keys
 SET api_key_hash = encode(sha256(convert_to(api_key, 'UTF8')), 'hex')
 WHERE api_key_hash IS NULL;
-
-ALTER TABLE gendox_core.api_keys
-    ALTER COLUMN api_key_hash SET NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_api_keys_api_key_hash
     ON gendox_core.api_keys (api_key_hash);

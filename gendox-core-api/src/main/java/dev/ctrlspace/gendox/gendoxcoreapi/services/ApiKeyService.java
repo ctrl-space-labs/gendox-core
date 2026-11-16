@@ -8,7 +8,11 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ApiKeyDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ApiKeyRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.OrganizationWebSiteRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -18,6 +22,8 @@ import java.util.UUID;
 
 @Service
 public class ApiKeyService {
+
+    private static final Logger logger = LoggerFactory.getLogger(ApiKeyService.class);
 
     private ApiKeyRepository apiKeyRepository;
     private ApiKeyConverter apiKeyConverter;
@@ -40,6 +46,28 @@ public class ApiKeyService {
         this.organizationWebSiteRepository = organizationWebSiteRepository;
         this.typeService = typeService;
         this.userService = userService;
+    }
+
+    /**
+     * Code older than the {@code api_key_hash} column creates keys without a hash, and a key
+     * without one cannot be found. On startup, gives such keys their hash.
+     * <p>
+     * TODO: remove this, and {@code ApiKeyRepository#findAllByApiKeyHashIsNull}, once this is
+     * merged to the main branch. A new migration can then make {@code api_key_hash} NOT NULL.
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    public void fillMissingHashes() {
+        try {
+            List<ApiKey> apiKeys = apiKeyRepository.findAllByApiKeyHashIsNull();
+            if (apiKeys.isEmpty()) {
+                return;
+            }
+            apiKeys.forEach(apiKey -> apiKey.setApiKey(apiKey.getApiKey()));
+            apiKeyRepository.saveAll(apiKeys);
+            logger.info("Filled the hash of {} API keys", apiKeys.size());
+        } catch (Exception e) {
+            logger.error("Could not fill the hash of the API keys that have none", e);
+        }
     }
 
     public ApiKey getById(UUID id) {

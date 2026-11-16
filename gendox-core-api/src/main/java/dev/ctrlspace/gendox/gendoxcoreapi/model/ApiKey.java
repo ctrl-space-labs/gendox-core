@@ -38,7 +38,7 @@ public class ApiKey {
     private String apiKey;
     // what a presented key is looked up by: the key column is encrypted and cannot be searched
     @JsonIgnore
-    @Column(name = "api_key_hash", nullable = false, length = 64)
+    @Column(name = "api_key_hash", length = 64)
     private String apiKeyHash;
     @Transient
     private boolean revealed;

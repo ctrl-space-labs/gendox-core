@@ -132,6 +132,7 @@ All of this is one class, `SecretCipher`: the three providers are three cases of
 - A presented key is hashed and looked up by the hash, in the repository and in the two native queries that matched on the key.
 - The hash is not returned by the API.
 - The migration fills the column for existing rows with the same function in SQL.
+- The column allows null, so that the code deployed before this change keeps creating keys after the migration has run. Those keys have no hash until the new code starts: on startup it fills every missing hash.
 
 ### 5. Changing a key: the one procedure
 
