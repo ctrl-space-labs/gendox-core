@@ -13,6 +13,7 @@ import org.springframework.data.querydsl.QuerydslPredicateExecutor;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.sql.Timestamp;
 import java.util.Collection;
 import java.util.List;
 
@@ -52,6 +53,13 @@ public interface BatchJobExecutionRepository extends JpaRepository<BatchJobExecu
     List<BatchJobExecution> findJobExecutionByJobNameAndStatusAndProjectParam(@Param("jobName") String jobName,
                                                                         @Param("status") String status,
                                                                         @Param("projectIdParam") String projectIdParam);
+
+    /**
+     * When a step of this execution last wrote its progress. Spring Batch writes it after every chunk,
+     * so a running execution keeps it recent; null before the first step starts.
+     */
+    @Query("select max(step.lastUpdated) from BatchStepExecution step where step.jobExecutionId = :jobExecutionId")
+    Timestamp findLastStepUpdate(@Param("jobExecutionId") Long jobExecutionId);
 
 
 }

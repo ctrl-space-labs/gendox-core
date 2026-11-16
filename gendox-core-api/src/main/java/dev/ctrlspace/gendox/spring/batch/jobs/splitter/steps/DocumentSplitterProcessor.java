@@ -13,6 +13,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.CryptographyUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.ServiceSelector;
 import dev.ctrlspace.gendox.integrations.gendox.api.model.dto.ContentDTO;
 import dev.ctrlspace.gendox.integrations.gendox.api.services.GendoxAPIIntegrationService;
+import dev.ctrlspace.gendox.spring.batch.utils.JobExecutionParamConstants;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -98,7 +99,7 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
             // A stored document is read from one local copy, downloaded fresh under a name of its own,
             // since downloadToTemp reuses any file already there with the same name
             boolean apiIntegration = isApiIntegration(instance);
-            boolean digitize = !apiIntegration && isAutoDigitized();
+            boolean digitize = !apiIntegration && isAutoDigitized(instance);
             if (!apiIntegration) {
                 file = downloadService.downloadToTemp(instance.getRemoteUrl(), tempFilePrefix);
             }
@@ -172,7 +173,7 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
         if (digitize) {
             return documentDigitizationService.digitizeDocumentToText(
                     instance,
-                    projectService.getProjectById(UUID.fromString(projectIdParam)),
+                    agentOf(instance).getProject(),
                     DocumentDigitizationService.DEFAULT_DIGITIZATION_PROMPT,
                     file);
         }
@@ -184,12 +185,17 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
         return "API_INTEGRATION_FILE".equals(instance.getFileType().getName());
     }
 
-    private boolean isAutoDigitized() {
-        if (projectIdParam == null) {
-            return false;
-        }
-        ProjectAgent agent = projectAgentService.getAgentByProjectId(UUID.fromString(projectIdParam));
+    private boolean isAutoDigitized(DocumentInstance instance) {
+        ProjectAgent agent = agentOf(instance);
         return agent != null && Boolean.TRUE.equals(agent.getAutoDigitization());
+    }
+
+    private @Nullable ProjectAgent agentOf(DocumentInstance instance) {
+        // a run for all agents (integrations) has no agent of its own: use the document's
+        if (projectIdParam == null || JobExecutionParamConstants.ALL_PROJECTS.equals(projectIdParam)) {
+            return projectAgentService.getAgentByDocumentId(instance.getId());
+        }
+        return projectAgentService.getAgentByProjectId(UUID.fromString(projectIdParam));
     }
 
     /**

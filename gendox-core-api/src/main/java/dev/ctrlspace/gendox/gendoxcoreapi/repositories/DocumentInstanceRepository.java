@@ -91,6 +91,19 @@ public interface DocumentInstanceRepository extends JpaRepository<DocumentInstan
     void deleteAllByIds(@Param("documentIds") List<UUID> documentIds);
 
     /**
+     * What splitting learned about a document. Leaves updated_at as it is: the splitter reads documents by
+     * updated_at, page by page, so moving it during a run would shift later pages and skip documents.
+     */
+    @Modifying
+    @Query(nativeQuery = true, value = "UPDATE gendox_core.document_instance " +
+            "SET document_sha256_hash = :documentSha256Hash, total_tokens = :totalTokens, external_url = :externalUrl " +
+            "WHERE id = :id")
+    void updateSplitResult(@Param("id") UUID id,
+                           @Param("documentSha256Hash") String documentSha256Hash,
+                           @Param("totalTokens") Long totalTokens,
+                           @Param("externalUrl") String externalUrl);
+
+    /**
      * Total number of document pages currently stored by an organization.
      * Documents uploaded as chat attachments are excluded, they are not knowledge base content.
      * A document with an unknown page count (e.g. plain text files, or a failed page count) counts as one page.

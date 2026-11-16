@@ -52,23 +52,19 @@ public class DocumentSplitterWriter implements ItemWriter<DocumentSectionDTO> {
                     documentSectionDTO.contentSections().size(),
                     documentSectionDTO.documentInstance().getId());
 
-            // fetch fresh DocumentInstance since the param has been detached from hibernate session
-            DocumentInstance freshDoc = documentService.getDocumentInstanceById(documentSectionDTO.documentInstance().getId());
-            // in case of API_INTEGRATION_FILE also the external url is populated
-            freshDoc.setExternalUrl(documentSectionDTO.documentInstance().getExternalUrl());
-            freshDoc.setDocumentSha256Hash(documentSectionDTO.documentInstance().getDocumentSha256Hash());
-            freshDoc.setTotalTokens(documentSectionDTO.documentInstance().getTotalTokens());
+            DocumentInstance document = documentSectionDTO.documentInstance();
+            // not saved as an entity: that would move updatedAt, and the reader pages by updatedAt
             if (documentSectionDTO.documentUpdated()) {
-                documentService.saveDocumentInstance(freshDoc);
+                documentService.updateSplitResult(document);
             }
 
             List<DocumentInstanceSection> documentSections =
-                    documentSectionService.createSections(freshDoc, documentSectionDTO.contentSections());
+                    documentSectionService.createSections(document, documentSectionDTO.contentSections());
 
             long documentSectionCount = documentSections.size();
 
             //update Document Sections Auditing
-             auditLogsService.createAuditLog(documentSectionDTO.documentInstance().getOrganizationId(),
+             auditLogsService.createAuditLog(document.getOrganizationId(),
                     null,"CREATE_DOCUMENT_SECTIONS",documentSectionCount);
 //            // TODO this is for auditing reasons, it doesn't worth it to do an extra query to get the project id
 
