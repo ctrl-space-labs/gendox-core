@@ -30,19 +30,9 @@ Two files per topic, no more: **the original, which never changes, and the curre
 
 - [Artifacts and mini apps in the chat — #523](.ai/issue-523-artifacts-2026-11-13.md) — planned, nothing implemented. The plan as first written.
 
-- [Agent files: one listing, one set of tools, one output format](.ai/agent-files-2026-11-13.md) — implemented, not merged; SRCH-1 and SRCH-3 of the roadmap, #550 and #559.
+- [Gendox as an agentic platform — roadmap](.ai/agentic-platform-roadmap-2026-11-10.md) — the workstreams and their order; each task gets its own plan before code is written.
 
-- [SEC-1: secrets at rest](.ai/secrets-at-rest-2026-11-15.md) — implemented, not merged. Every stored secret encrypted two-way, with a list of keys and a key provider per key. Prerequisite of CONN-1. Self-contained: it replaces the [original 2026-11-13 plan](.ai/secrets-at-rest-2026-11-13.md), which is kept unchanged.
-
-- [Application e2e coverage for v2](.ai/e2e-v2-coverage-2026-11-11.md) — current frontend selection, browser coverage and blocked cases; the original v1 plan remains unchanged.
-
-- [End-to-end tests and ephemeral environments: pending work](.ai/e2e-tests-pending-work-2026-11-10.md) — historical setup handover; current test scope is in the coverage plan above.
-
-- [One smoke suite for local, dev and prod](.ai/deployed-smoke-tests-2026-11-14.md) — implemented, not yet run against a deployed environment; each environment needs five test accounts and, for real models, a paid organization, made by hand.
-
-- [Ephemeral environments, smoke tests and agent tooling](.ai/ephemeral-environments-2026-11-09.md) — environment setup implemented; current smoke selection is in the coverage plan above. Self-contained: it replaces the [original 2026-11-06 plan](.ai/ephemeral-environments-2026-11-06.md), which is kept unchanged.
-
-- [Web Scraping Integration (Firecrawl) — #526](.ai/issue-526-web-scraping-integration-2026-11-10.md) — implemented, in review; the backend is verified end to end, and the screen is in `gendox-frontend` and `gendox-frontend-v2`. Self-contained: it replaces the revision of 2026-10-13. The [original 2026-09-10 plan](.ai/issue-526-web-scraping-integration-2026-09-10.md) is kept unchanged as first written.
+- [SEC-1: secrets at rest](.ai/secrets-at-rest-2026-11-15.md) — implemented, in review on `feature-agent-platform-roadmap`, not in `main`. Every stored secret encrypted two-way, with a list of keys and a key provider per key. Prerequisite of CONN-1. Self-contained: it replaces the [original 2026-11-13 plan](.ai/secrets-at-rest-2026-11-13.md), which is kept unchanged.
 
 ## Common Development Commands
 
@@ -126,10 +116,11 @@ Available compose environments in `gendox-compose-scripts/`:
 ## Architecture Overview
 
 ### Project Structure
-- **gendox-core-api/**: Spring Boot 3.5.8, Java 25, Spring AI 1.0.3, QueryDSL, PostgreSQL + pgvector
-- **gendox-frontend/**: Next.js 15.1.7, React 19, Material-UI 5, Redux Toolkit 2.5.0
-- **gendox-keycloak/**: Custom Keycloak 25.0.4 configuration for OAuth2/OIDC
-- **database/**: 98+ Flyway migration files under `src/main/resources/db/migrations/gendox-core/`
+- **gendox-core-api/**: Spring Boot 4.1, Java 25, Spring AI 2.0, Jackson 3, QueryDSL, PostgreSQL + pgvector
+- **gendox-frontend/**: the first frontend. Next.js 15, React 19, Material-UI 5, Redux Toolkit 2.5.0
+- **gendox-frontend-v2/**: the redesigned frontend, the one the ephemeral stack serves. The Frontend Architecture section below describes `gendox-frontend`.
+- **gendox-keycloak/**: Custom Keycloak 26.4 configuration for OAuth2/OIDC
+- **database/**: about 130 Flyway migration files under `src/main/resources/db/migrations/gendox-core/`
 - **gendox-e2e-tests/**: Playwright with Page Object Model
 - **documentation/**: Docusaurus site, deployed to Cloudflare Pages
 - **gendox-compose-scripts/**: Docker Compose configurations per environment
@@ -180,11 +171,11 @@ Swagger UI is available at `/api-documentation` when the server is running.
 ### Notable Backend Features
 - **Virtual threads**: Enabled (Java 21+ structured concurrency).
 - **Caching**: Caffeine with 5-min expiry / 1000-item limit; custom `GendoxKeyGenerator` formats keys as `ClassName:methodName:param1:param2`.
-- **Jackson**: Custom `ObjectMapper` — `JavaTimeModule` registered, dates as ISO strings (not timestamps), unknown properties ignored, Hibernate lazy-load properties excluded via MixIn.
+- **Jackson 3** (`tools.jackson`; annotations stay under `com.fasterxml.jackson.annotation`): Spring Boot's default mapper, dates as ISO strings, unknown properties ignored; a builder customizer keeps Hibernate lazy-load properties out. Hibernate JSON columns use the Jackson 3 format mapper.
 - **HTTP client**: Spring 6 `RestClient` (not `RestTemplate`), configured in `RestClientConfiguration.java`.
 - **Document upload**: Max 150 MB; supported extensions `.txt`, `.md`, `.rst`, `.pdf`, `.docx`, `.doc`, `.xls`, `.xlsx`; default split at 500 words / 768 tokens.
-- **Flyway**: Disabled by default in local/dev profiles; runs automatically on startup in prod.
-- **Observability**: Micrometer + Brave tracing at 100% sample rate; Prometheus metrics endpoint; Spring Boot Actuator with `show-details: always`.
+- **Flyway**: disabled inside the application; migrations run on their own (the ephemeral stack's `flyway` service, or `mvn flyway:migrate`).
+- **Observability**: OpenTelemetry through Spring Boot's defaults, with the trace sampling set per profile; Spring Boot Actuator. See `gendox-core-api/OBSERVABILITY.md`.
 - **S3 + Git integrations**: `services/integrations/` contains `GitIntegrationUpdateService`, `S3BucketIntegrationUpdateService`, `ApiIntegrationUpdateService`, orchestrated by `IntegrationManager`.
 
 ### Maintenance Jobs
@@ -296,7 +287,7 @@ Feature-flagged (`PROVEN_AI_ENABLED`). Main classes under `provenAi/utils/`: `Pr
 - **Repeatable**: `R__Description.sql` for functions/triggers
 - **Demo/test data**: separate subdirectories (`demo-data/`, `test-data/`)
 - Migrations are forward-only. Plan schema changes carefully before writing a migration.
-- Migrations run automatically on backend startup via Flyway.
+- Migrations run separately from the backend (see Flyway under Notable Backend Features).
 
 ### Core Table Groups
 - **Tenancy**: `organizations`, `organization_users`, `projects`, `project_users`

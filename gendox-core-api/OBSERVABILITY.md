@@ -72,5 +72,5 @@ Third-party SDK transports and individual SQL statements are not traced.
 - [Boot logging](https://docs.spring.io/spring-boot/reference/features/logging.html)
 - [Boot defaults and properties](https://docs.spring.io/spring-boot/appendix/application-properties/index.html)
 
-Validation is in `.ai/spring-boot-4-upgrade-2026-11-12.md`. No production load
+The upgrade is issue #580. No production load
 benchmark or collector deployment is included.

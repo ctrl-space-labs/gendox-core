@@ -13,7 +13,7 @@ kept unchanged. What changed since the original:
 - **The connector config stays `jsonb`.** Its encrypted value is stored as a JSON string.
 - **Moving values to a new key is a Spring Batch job**, started by the API or from the command line. It is the first maintenance job, and the way such jobs run from now on.
 
-**Status:** implemented on the branch `feature-sec-1-secrets-at-rest`, not merged.
+**Status:** implemented and in review, on the branch `feature-agent-platform-roadmap`; not in `main` yet. The migration can run on an environment before its code is deployed: the code already there keeps working.
 
 **Goal:** every secret Gendox stores can be encrypted in the database and read again by the application. Where the
 encryption key comes from is a deployment choice: the configuration, a file on the host, or AWS KMS. Changing a key
@@ -216,12 +216,14 @@ Done:
 - In `gendox-e2e-tests`, on an ephemeral stack with a key configured (`@p2`, not smoke):
   - API (`tests/regression/api-keys.api.spec.js`): a key is in full when created and revealed, masked in the list and after a rename, and the revealed key authenticates; an administrator can reveal, an editor and a reader cannot; a key cannot be revealed through another organization.
   - Browser (`tests/v2/regression/api-keys.spec.js`): a new key is shown once, then masked after a reload, and Reveal shows it again; an editor sees no Reveal button.
+- Code older than the migration: a key stored without a hash, as that code stores one, cannot be found by the new code until it starts; on startup its hash is filled and the key authenticates.
 
 Still to do:
 
 - An API test of a request with an API key before, during and after a change of key. It needs the stack restarted with another key list, which the suite cannot do yet.
 - The `aws-kms` provider against a real KMS key.
 - A chat completion that reaches a provider with an organization's own key, after a change of key.
+- Once this is in `main` and every environment has started the new code: remove the startup fill of missing hashes, and make `api_key_hash` NOT NULL in a new migration.
 
 ## Open points
 

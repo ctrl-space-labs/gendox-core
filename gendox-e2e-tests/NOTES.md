@@ -44,8 +44,7 @@ public: no secrets, no absolute paths, no details of unfixed security weaknesses
   each including its own four logins.
 - Browser project creation uses an organization owned by testUser3 so other smoke cases
   do not change that user's memberships while the frontend refreshes its profile.
-- The current review and prioritized remaining journeys are in
-  [the coverage plan](../.ai/e2e-coverage-2026-11-11.md). The older findings below remain
+- The remaining journeys are issue #582. The older findings below remain
   applicable to the unfinished full-suite journeys.
 
 ## 2026-11-10

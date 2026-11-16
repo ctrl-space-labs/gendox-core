@@ -130,9 +130,7 @@ invocation-specific, but reports/history still share destinations inside one che
 Project creation in the browser uses testUser3 as its owner: other smoke cases do not change
 that identity's organization/project memberships while it refreshes its profile.
 
-The current [v2 coverage plan](../.ai/e2e-v2-coverage-2026-11-11.md), alongside the unchanged
-[original v1 plan](../.ai/e2e-coverage-2026-11-11.md), lists remaining application
-journeys and their prerequisites. The older unfinished journeys now have executable
+Issue #582 lists the remaining application journeys. The older unfinished journeys now have executable
 full-suite tests for logout, workspace creation, insights generation and training.
 Use `--grep @p1`, `--grep @p2`, or `--grep-invert @background` to select regression work.
 `E2E_UI_WORKERS` defaults to four to keep local Chromium rendering responsive. The API

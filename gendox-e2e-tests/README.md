@@ -64,8 +64,7 @@ ENV_NAME=EPHEMERAL npm test -- --project=ui --grep-invert @blocked
 ```
 
 The unchanged API project retains its two database-dependent failures. No application or
-database fixes are included. See the [v2 coverage plan](../.ai/e2e-v2-coverage-2026-11-11.md)
-for the blocked case, changed v1 interactions and remaining scope.
+database fixes are included. The blocked case and the remaining scope are issue #582.
 
 Smoke scenarios run independently with test-scoped organizations and can be distributed:
 
@@ -101,9 +100,7 @@ fixture retains its original port, 3520.
 `npm run report` displays the most recent invocation, including filtered invocations. Run
 `npm test` before opening it to see the complete report. Persistent run summaries are below.
 
-[V2 coverage and remaining journeys](../.ai/e2e-v2-coverage-2026-11-11.md) records the current
-scope and service requirements. The [original v1 plan](../.ai/e2e-coverage-2026-11-11.md)
-remains unchanged.
+The remaining journeys are issue #582.
 
 ## Results and history
 

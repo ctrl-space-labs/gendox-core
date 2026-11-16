@@ -11,22 +11,22 @@ enough for enterprise use. Decision support is the reference scenario: it is not
 above these features — visualization, triggers and many skill files. It gets **one** ticket (section 8); everything
 else here is a primitive it reuses.
 
-**Status, 2026-11-14:** CORE-1 through CORE-4, SRCH-1 and SRCH-3 are implemented. PACK-1 is partly implemented:
-agent definitions export as JSON or YAML; import and connection requirements remain pending. Other roadmap tasks
-remain pending. Each workstream gets its own plan file in `.ai/` before code is written.
+**Status, 2026-11-17:** CORE-1 through CORE-4 (#579), SRCH-1 and SRCH-3 (#550, #559) are implemented. SEC-1 is
+implemented and in review. PACK-1 is partly implemented: agent definitions export as JSON or YAML; import and
+connection requirements remain pending. Other roadmap tasks remain pending. Each workstream gets its own plan file in
+`.ai/` before code is written.
 
-This status reflects committed code through `1322408c` on `feature-agent-platform-roadmap`; uncommitted changes are
-not counted. "Done" below means implemented, with the remaining validation stated separately; it does not imply a
+This status reflects committed code on `feature-agent-platform-roadmap`; uncommitted changes are not counted. "Done" below means implemented, with the remaining validation stated separately; it does not imply a
 release or that the corresponding GitHub issue is closed.
 
 | Task | State | Commit evidence |
 |---|---|---|
-| CORE-1 … CORE-4 | Done (2026-11-11) | `af889442` (loop tests), `df72faf8` (runtime resolver), `a5720cd8` (tool execution and unknown-tool result). |
-| SRCH-1 | Done (2026-11-14) | `1322408c`: thread file listings, automatic `gendox-files` skill, document-tool access, `list_files`, `view_page` and sub-agent file context. |
-| SRCH-3 | Done (2026-11-14) | `1322408c`: modified time and line ranges in search hits, file metadata in section templates, and the updated date on v2 citations. |
-| PACK-1 | Partial (2026-11-12) | `35db33b1`, `951de835`, `207b89fc`: JSON/YAML export, v2 preview and download, YAML string preservation and Jackson 3 compatibility. Import and connection requirements remain pending. |
+| CORE-1 … CORE-4 | Done (2026-11-11) | `36b77d20` (loop tests), `dff7944a` (runtime resolver), `9f8839bd` (tool execution and unknown-tool result). |
+| SRCH-1 | Done (2026-11-14) | `8fd48244`, `7fa123ef`, `ae3f8083`: thread file listings, automatic `gendox-files` skill, document-tool access, `list_files`, `view_page` and sub-agent file context. |
+| SRCH-3 | Done (2026-11-14) | `8fd48244`, `7fa123ef`, `ae3f8083`: modified time and line ranges in search hits, file metadata in section templates, and the updated date on v2 citations. |
+| PACK-1 | Partial (2026-11-12) | `0ba53f4e`, `fd2cf34b`, `7a2986fa`: JSON/YAML export, v2 preview and download, YAML string preservation and Jackson 3 compatibility. Import and connection requirements remain pending. |
 
-Validation recorded in the [agent-files plan](agent-files-2026-11-13.md): unit tests and mock-model API checks cover
+Validation of SRCH-1 and SRCH-3 (#550, #559): unit tests and mock-model API checks cover
 the file listing and search-hit format. Real-model `view_page`, Document Insights with supporting files, the v2
 citation date and direct uploaded-file checks for `regex_search` / `extract_relevant_sections` remain to be verified.
 This roadmap update reviews commits and code; it does not add a new test run.
@@ -137,7 +137,7 @@ that touches a core file says which and why.
 
 ### Workstream CORE
 
-One owner, in series, reviewed line by line. Deliberately small. Plan: [core-completion-contract-2026-11-10.md](core-completion-contract-2026-11-10.md) (implemented in the order CORE-1, CORE-3, CORE-2, CORE-4).
+One owner, in series, reviewed line by line. Deliberately small. Done: #579 (implemented in the order CORE-1, CORE-3, CORE-2, CORE-4).
 
 | Task | What | Why |
 |---|---|---|
@@ -246,8 +246,8 @@ The Discord bot is not the model to extract from. The contract is written with S
 
 ### SEARCH (#564, #559, #550)
 
-Plan for SRCH-1 and SRCH-3: [agent-files-2026-11-13.md](agent-files-2026-11-13.md). The context lists the files; tools read them.
-Both are implemented in `1322408c` (2026-11-14); remaining validation is listed at the top of this roadmap and in that plan.
+SRCH-1 and SRCH-3 are done (#550, #559). The context lists the files; tools read them.
+Both are implemented (#550, #559, 2026-11-14); remaining validation is listed at the top of this roadmap.
 
 - **SRCH-1 — Done.** Attached documents reach the model (#559, #550) through a thread-wide file listing and tools. Includes the automatic `gendox-files` skill, `list_files`, `view_page` and file context for sub-agents. Uploads are not embedded or inlined in the prompt.
 - **SRCH-2.** #564 as written: metadata filters, markdown chunking, embedding migration.
@@ -259,12 +259,12 @@ Both are implemented in `1322408c` (2026-11-14); remaining validation is listed 
 - **GOV-2 Usage** (#531). **GOV-3 Visitor conversations** (#563, #555).
 - **GOV-4 Policies.** Which tool sources and connections an organization and an agent may use; enforced in the CORE-2 check.
 - **GOV-5.** Several roles per member (#484). The API keys part moved to SEC-1.
-- **SEC-1 Secrets at rest.** Every stored secret, API keys included, is encrypted two-way, with a key provider per deployment (environment, AWS KMS, others). Decided on 2026-11-13 in place of "API keys stored as a hash" (#561). Plan: [secrets-at-rest-2026-11-15.md](secrets-at-rest-2026-11-15.md). CONN-1 waits for it.
+- **SEC-1 Secrets at rest.** Every stored secret, API keys included, is encrypted two-way, with a key provider per deployment (environment, AWS KMS, others). Decided on 2026-11-13 in place of "API keys stored as a hash" (#561). Plan: [secrets-at-rest-2026-11-15.md](secrets-at-rest-2026-11-15.md). Implemented, in review. CONN-1 waits for it.
 
 ### PACKS (#554 export, #567 import)
 
 - **PACK-1 — Partial.** Export and import an agent: behaviour, model, tools, skills, the connections it needs.
-  - **Done:** JSON/YAML definition export, including behaviour, named models, settings, chat settings, tools and skills; v2 preview, copy and download. Commits: `35db33b1`, `951de835`, `207b89fc` (2026-11-12).
+  - **Done:** JSON/YAML definition export, including behaviour, named models, settings, chat settings, tools and skills; v2 preview, copy and download. Commits: `0ba53f4e`, `fd2cf34b`, `7a2986fa` (2026-11-12).
   - **Pending:** import of a definition is tracked in [#567](https://github.com/ctrl-space-labs/gendox-core/issues/567): create a new agent from JSON/YAML, with a preview, model fallback, format-version and plan-limit checks, and transactional creation of its tools and skills. It excludes integrations and updating an existing agent. The file shape is an open decision to settle before import is built, per #554's export comment.
   - **Additional roadmap scope:** declaration of the connections an agent needs. This is not included in #567. PACK-1 as a whole remains open.
 - **PACK-2.** Skill packs for the domains Gendox is used in: contract review, financial analysis, historical ship-log digitization, briefing.
@@ -281,7 +281,7 @@ Both are implemented in `1322408c` (2026-11-14); remaining validation is listed 
 
 | Phase | Tasks |
 |---|---|
-| 0 | Done: CORE-1 … CORE-4, SRCH-1, SRCH-3. Pending: APP-1, SEC-1. |
+| 0 | Done: CORE-1 … CORE-4, SRCH-1, SRCH-3. In review: SEC-1. Pending: APP-1. |
 | 1 | APPR-1, APPR-2, CONN-1, MCP-1, MCP-2, CODE-1, ART-1, ART-2, CHAN-1, GOV-1, GOV-2, GOV-3, PACK-1 (export done; import and connection requirements pending) |
 | 2 | HTTP-1, HTTP-2, CONN-2, CONN-3, SKILL-1, SKILL-2, BOARD-1, BOARD-2, BOARD-3, RUN-1, RUN-2, RUN-3, MEM-1, CODE-2, ART-3, CHAN-2, CHAN-3, MCPS-1, PACK-2, SRCH-2 |
 | 3 | DSS-1, CHAN-4, CODE-3, GOV-4, GOV-5, VOICE-1 |
