@@ -4,7 +4,7 @@ The current plan, 2026-11-16, written after phase 1's backend was built. It is s
 
 It covers two things the agent can put in a conversation: **artifacts** — a rendered piece of content that stands on its own, the way Claude's artifacts do — and **mini apps** — small interactive programs that live in the chat and can talk back to it.
 
-**Status.** Phase 1 is implemented. The backend ([#568](https://github.com/ctrl-space-labs/gendox-core/issues/568)) is verified by unit tests, in the ephemeral environment, and with a real provider creating and editing an artifact from a chat. The v2 frontend ([#569](https://github.com/ctrl-space-labs/gendox-core/issues/569)) is verified in Chrome, Firefox and Safari, and on a narrow screen. Nothing of phases 2 to 6 is built.
+**Status.** Phase 1 is implemented. The backend ([#568](https://github.com/ctrl-space-labs/gendox-core/issues/568)) is verified by unit tests, in the ephemeral environment, and with a real provider creating and editing an artifact from a chat. The v2 frontend ([#569](https://github.com/ctrl-space-labs/gendox-core/issues/569)) is verified in Chrome, Firefox and Safari, and on a narrow screen. Phase 2 ([#570](https://github.com/ctrl-space-labs/gendox-core/issues/570)) is in progress: the cheaper replayed history and the Artifacts page, with the conversation's own list, are built and verified (see *Phase 2*); the rest is not. Nothing of phases 3 to 6 is built.
 
 - The frontend work is for `gendox-frontend-v2` only.
 - Phase 1 is a complete, shippable feature on its own. Every later phase adds to it without changing what phase 1 stored or exposed.
@@ -264,16 +264,26 @@ As built: `components/artifacts/` holds `ArtifactFrame`, `ArtifactContent`, `Art
 
 ## Phase 2 — Richer artifacts
 
+Built in this order, each a commit of its own: the cheaper history, the Artifacts page and the conversation's list (both **built**), then libraries and Mermaid, the two skills, *Try to fix*, and sharing last, since it adds a section to the Artifacts page.
+
 - **Libraries, shipped with the shell** — a chart library and Mermaid, as files under the shell's folder, a fixed list named in the skill. Never a CDN: an allowed outside origin is a way out of the frame.
 - `MERMAID` as a type; the task-shaped skills *Info card* and *Report with a chart*.
 - **Old content leaves the replayed history.** When history is rebuilt for the model, the `content` argument of earlier `create_artifact` / `update_artifact` calls is replaced by a short fixed note naming the artifact and version — fixed, so that prompt caching still holds. The model reads the current text with `read_artifact` when it needs it.
+  - **Built.** `ArtifactHistory.withoutArtifactContent` rewrites the history read for a completion, never what is stored. The note is one fixed sentence for every call: the call's own `artifact_id` and its result already name the artifact and version, so the note needs no detail and stays byte-identical across turns. Only the replayed history is rewritten; a sub-agent's history, passed in by its caller, is left as given.
+  - Verified with Gemini, whose thought signatures travel unchanged beside the shortened arguments: asked to change an earlier artifact, the agent read it with `read_artifact` and updated the same artifact.
+  - **Failed tries made good.** In the chat, a failed `create_artifact` / `update_artifact` that a later call in the same turn made good — an update of the same artifact, or a create after a failed create — shows with the other tools in the turn's "Used …" line instead of as a warning card. A failure that stays a failure keeps its card.
 - A list of the thread's artifacts in the chat header, once a thread has more than one.
+  - **Built.** The list is read from the thread's messages — each create and update call and its result — rather than requested, so it needs no request and follows the agent as it writes. Last changed first; a choice opens the artifact at its latest version where its card would. A chat with no header (the agent home's tab) shows it as a small bar above the conversation.
 - *Try to fix*: an error raised inside the frame is offered to the user as a prefilled message.
 - **Sharing inside the organization.** The owner of the thread shares one artifact with the signed-in members of the organization: a share record (the artifact, the version or "latest", who shared it, when it ends, revoked or not), an endpoint to create and revoke it, and a page that shows the artifact in the same sealed frame. The reader is a known user, so this does not wait for the separate origin.
 - Write endpoints, if any arrive here (editing by hand, sharing), require a signed-in user and are never let through the security configuration without a login.
 - **An Artifacts page for each agent**, beside Tasks and Knowledge in the agent's menu, as a page and as a dock tab. It lists the artifacts of the conversations the user can open with this agent — never every artifact of the agent: a conversation is personal, and its artifacts are shown to others only by sharing. With sharing, a second section lists what was shared with the user.
   - Backend: `GET …/organizations/{organizationId}/projects/{projectId}/artifacts`, without content, paged, newest change first, searchable by title and filtered by type. It returns the artifacts of the threads the user is a member of, filtering rather than refusing, so one thread out of reach never empties the list.
   - Frontend: a row per artifact with its type, title, version, date and the conversation it came from. A click opens it in `ArtifactView` (the panel, or the artifact tab); a second action opens the conversation.
+  - **Built.**
+    - Backend: `ArtifactCriteria` and `ArtifactPredicates`, the codebase's criteria-and-predicates pattern. The controller always sets the project from the path and the member from the signed-in user, whatever the request says; with either missing the predicate matches nothing. The member condition is a subquery on the thread's members. A page holds at most 100; unsorted, it is the last changed first. Each row carries `threadName`, read for the whole page in one query.
+    - Frontend: the page `/gendox/artifacts` in the agent's menu, with search and a kind filter; a row opens the artifact in a dialog, with *Open the conversation*. In the agent home, `/gendox/artifacts` is a dock tab with search, whose rows open the artifact's tab.
+    - Verified by unit tests (the predicates, the controller's overwrite of project and member, page size and order) and in the ephemeral environment: a project member who is not in the conversation sees none of its artifacts, also when the request names another user; the sealed frame keeps its isolation inside the dialog, in Chrome.
 
 ## Phase 3 — Mini apps that talk to the chat
 

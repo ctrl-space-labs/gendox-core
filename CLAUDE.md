@@ -28,7 +28,7 @@ Two files per topic, no more: **the original, which never changes, and the curre
 
 ### Pending plans
 
-- [Artifacts and mini apps in the chat — #523](.ai/issue-523-artifacts-2026-11-16.md) — phase 1 implemented: backend (#568) and v2 frontend (#569), verified in Chrome, Firefox and Safari. Self-contained: it replaces the [original 2026-11-13 plan](.ai/issue-523-artifacts-2026-11-13.md), which is kept unchanged.
+- [Artifacts and mini apps in the chat — #523](.ai/issue-523-artifacts-2026-11-16.md) — phase 1 implemented: backend (#568) and v2 frontend (#569), verified in Chrome, Firefox and Safari. Phase 2 (#570) in progress: the cheaper replayed history and the Artifacts page are built. Self-contained: it replaces the [original 2026-11-13 plan](.ai/issue-523-artifacts-2026-11-13.md), which is kept unchanged.
 
 - [Application e2e coverage for v2](.ai/e2e-v2-coverage-2026-11-11.md) — current frontend selection, browser coverage and blocked cases; the original v1 plan remains unchanged.
 
