@@ -70,8 +70,9 @@ const skillNameOf = call => {
 // The tools one assistant message called, with their arguments and what each returned.
 // Reading a skill shows as its own line: the skill's instructions are not worth showing as a tool result.
 // Making or changing an artifact shows as its card (gendox-core#523); a failed try that a later call made good
-// (`recovered`) shows with the other tools instead.
-const ToolCalls = ({ header, responses, recovered, onOpenArtifact }) => {
+// (`recovered`) shows with the other tools instead. An error the artifact raises offers Try to fix (onAsk), on its
+// latest version only (artifactVersions).
+const ToolCalls = ({ header, responses, recovered, onOpenArtifact, artifactVersions, onAsk }) => {
   const allCalls = header.toolCalls || []
   const showsAsCard = call => isArtifactCall(call) && !recovered.has(call.id)
   const skillCalls = allCalls.filter(call => call.function?.name === 'read_skill')
@@ -117,9 +118,17 @@ const ToolCalls = ({ header, responses, recovered, onOpenArtifact }) => {
           ))}
         </Trace>
       )}
-      {artifactCalls.map(call => (
-        <ArtifactCard key={call.id} call={artifactCallOf(call, responses)} onOpen={onOpenArtifact} />
-      ))}
+      {artifactCalls
+        .map(call => artifactCallOf(call, responses))
+        .map(artifactCall => (
+          <ArtifactCard
+            key={artifactCall.id}
+            call={artifactCall}
+            onOpen={onOpenArtifact}
+            latestVersion={artifactVersions[artifactCall.result?.artifactId]}
+            onAsk={onAsk}
+          />
+        ))}
     </>
   )
 }
@@ -246,6 +255,8 @@ const ChatTurn = ({
   activeSourcesMessageId,
   onSources,
   onOpenArtifact,
+  artifactVersions = {},
+  onAskArtifactFix,
   onAskAgain,
   onFeedback,
   unfinished = false,
@@ -284,6 +295,8 @@ const ChatTurn = ({
                 responses={item.responses}
                 recovered={recovered}
                 onOpenArtifact={onOpenArtifact}
+                artifactVersions={artifactVersions}
+                onAsk={onAskArtifactFix}
               />
             ) : (
               <Answer

@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { CircleAlert, LoaderCircle, Maximize2, RefreshCw } from 'lucide-react'
 import ArtifactContent from 'src/components/artifacts/ArtifactContent'
-import { CREATE_ARTIFACT, kindInfo } from 'src/components/artifacts/artifactUtils'
+import ArtifactError from 'src/components/artifacts/ArtifactError'
+import { CREATE_ARTIFACT, fixRequestOf, kindInfo } from 'src/components/artifacts/artifactUtils'
 
 // a tool error in plain words; the code stays small, for support
 const errorText = error =>
@@ -15,9 +17,12 @@ const errorText = error =>
  *
  * @param call - from artifactCallOf
  * @param onOpen({ artifactId, version }) - open it in the panel or a tab; without it there is no Open button
+ * @param latestVersion - the artifact's latest version the conversation knows of; Try to fix is offered only on it
+ * @param onAsk(text) - put a request in the chat's composer; without it an error is only shown
  */
-const ArtifactCard = ({ call, onOpen }) => {
+const ArtifactCard = ({ call, onOpen, latestVersion, onAsk }) => {
   const { name, args, result, error, pending } = call
+  const [raised, setRaised] = useState(null) // the preview's first unhandled error
 
   if (error) {
     return (
@@ -68,8 +73,22 @@ const ArtifactCard = ({ call, onOpen }) => {
       </div>
       {created && typeof args.content === 'string' && (
         <div className={`gc-art-b ${kind === 'html' || kind === 'svg' ? '' : 'clip'}`}>
-          <ArtifactContent kind={kind} content={args.content} codeLanguage={args.code_language} title={title} fit />
+          <ArtifactContent
+            kind={kind}
+            content={args.content}
+            codeLanguage={args.code_language}
+            title={title}
+            fit
+            onError={setRaised}
+          />
         </div>
+      )}
+      {raised && (
+        <ArtifactError
+          error={raised}
+          onFix={onAsk && result && result.version === latestVersion ? () => onAsk(fixRequestOf(title, raised)) : null}
+          hint={result && result.version !== latestVersion ? 'A later version changed it.' : null}
+        />
       )}
     </div>
   )

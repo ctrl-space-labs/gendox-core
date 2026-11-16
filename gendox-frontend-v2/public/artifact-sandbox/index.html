@@ -24,8 +24,10 @@
        * an opaque origin: no cookies, no storage, no access to the page around it. It renders the artifact it is sent
        * in an inner frame, sandboxed the same way, and relays the few things the artifact may ask for.
        *
-       * Host <-> shell: JSON-RPC 2.0 with the method names of MCP Apps (ui/initialize, ui/notifications/*, ui/open-link).
-       * Shell <-> artifact: two plain messages, { type: 'size' } and { type: 'link' }, checked before they are relayed.
+       * Host <-> shell: JSON-RPC 2.0 with the method names of MCP Apps (ui/initialize, ui/notifications/*, ui/open-link),
+       * and MCP's notifications/message for an error the artifact did not handle.
+       * Shell <-> artifact: three plain messages, { type: 'size' }, { type: 'link' } and { type: 'error' }, checked
+       * before they are relayed.
        */
       ;(function () {
         var host = window.parent
@@ -33,6 +35,7 @@
         var nextId = 2
         var variables = {}
         var MAX_URL = 2048
+        var MAX_ERROR = 300
 
         function toHost(message) {
           message.jsonrpc = '2.0'
@@ -61,9 +64,14 @@
             .join(';')
         }
 
-        // runs inside the artifact: reports its height, hands links to the host, follows theme changes
+        // runs inside the artifact, before its own scripts: reports its height and its first unhandled errors, hands
+        // links to the host, follows theme changes
         var bridge =
           '(function(){var p=window.parent;' +
+          'var errors=0;function fail(m,l){if(errors++>=3)return;' +
+          'p.postMessage({type:"error",message:String(m||"Unknown error"),line:Number(l)||0},"*")}' +
+          'addEventListener("error",function(e){fail(e.message||(e.error&&e.error.message),e.lineno)});' +
+          'addEventListener("unhandledrejection",function(e){var r=e.reason;fail(r&&r.message?r.message:r)});' +
           'function size(){var d=document.documentElement,b=document.body;' +
           'p.postMessage({type:"size",height:Math.max(d.scrollHeight,b?b.scrollHeight:0)},"*")}' +
           'addEventListener("load",size);' +
@@ -130,6 +138,18 @@
               toHost({ method: 'ui/notifications/size-changed', params: { height: Math.max(0, Math.ceil(message.height)) } })
             } else if (message.type === 'link' && typeof message.href === 'string' && message.href.length <= MAX_URL) {
               toHost({ id: nextId++, method: 'ui/open-link', params: { url: message.href } })
+            } else if (message.type === 'error' && typeof message.message === 'string') {
+              toHost({
+                method: 'notifications/message',
+                params: {
+                  level: 'error',
+                  logger: 'artifact',
+                  data: {
+                    message: message.message.replace(/[\u0000-\u001f\u007f]+/g, ' ').slice(0, MAX_ERROR),
+                    line: Math.max(0, Math.floor(Number(message.line) || 0))
+                  }
+                }
+              })
             }
           }
         })

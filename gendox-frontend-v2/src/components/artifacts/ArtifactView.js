@@ -5,7 +5,8 @@ import { copyToClipboard } from 'src/utils/copyToClipboard'
 import Spinner from 'src/components/ui/Spinner'
 import Markdown from 'src/components/chat/Markdown'
 import ArtifactContent from 'src/components/artifacts/ArtifactContent'
-import { fencedCode, fileNameOf, kindInfo, kindOf } from 'src/components/artifacts/artifactUtils'
+import ArtifactError from 'src/components/artifacts/ArtifactError'
+import { fencedCode, fileNameOf, fixRequestOf, kindInfo, kindOf } from 'src/components/artifacts/artifactUtils'
 
 const SOURCE_LANGUAGE = { html: 'html', svg: 'xml', markdown: 'markdown' }
 
@@ -19,14 +20,15 @@ const downloadFile = (name, mime, content) => {
 }
 
 /**
- * One artifact in full (gendox-core#523): Preview and Code, its versions, copy, download, and Ask for a change.
+ * One artifact in full (gendox-core#523): Preview and Code, its versions, copy, download, Ask for a change, and Try to
+ * fix when the latest version raises an error.
  * Loads when it opens; the latest version unless one is asked for. When the chat makes a newer version it moves to
  * it, unless the user chose an older one.
  *
  * @param knownVersion - the latest version the conversation knows of; a higher one reloads
  * @param version - the version to open with (from a card), the latest when absent
  * @param agentName - who made it, for the footer
- * @param onAsk(text) - put a request in the chat's composer; without it there is no Ask for a change
+ * @param onAsk(text) - put a request in the chat's composer; without it there is no Ask for a change or Try to fix
  * @param onTitle(title) - the artifact's title once loaded, for a header or a tab
  */
 const ArtifactView = ({ threadId, artifactId, token, version: openedVersion, knownVersion, agentName, onAsk, onTitle }) => {
@@ -35,6 +37,7 @@ const ArtifactView = ({ threadId, artifactId, token, version: openedVersion, kno
   const [tab, setTab] = useState('preview')
   const [chosen, setChosen] = useState(openedVersion ?? null) // null: follow the latest
   const [copied, setCopied] = useState(false)
+  const [error, setError] = useState(null) // the shown version's first unhandled error
   // following the latest, a newer version from the chat loads it; a chosen older one stays
   const followed = chosen === null ? knownVersion : null
 
@@ -142,6 +145,13 @@ const ArtifactView = ({ threadId, artifactId, token, version: openedVersion, kno
           </button>
         )}
       </div>
+      {error && (
+        <ArtifactError
+          error={error}
+          onFix={onAsk && isLatest ? () => onAsk(fixRequestOf(artifact.title, error)) : null}
+          hint={isLatest ? 'Ask for a fix in its conversation.' : 'This is an older version; the latest may not have it.'}
+        />
+      )}
       {!isLatest && (
         <div className='faint sm'>
           Showing v{artifact.version} of {artifact.latestVersion}.{' '}
@@ -152,7 +162,13 @@ const ArtifactView = ({ threadId, artifactId, token, version: openedVersion, kno
       )}
       <div className='art-b'>
         {tab === 'preview' ? (
-          <ArtifactContent kind={kind} content={artifact.content} codeLanguage={artifact.codeLanguage} title={artifact.title} />
+          <ArtifactContent
+            kind={kind}
+            content={artifact.content}
+            codeLanguage={artifact.codeLanguage}
+            title={artifact.title}
+            onError={setError}
+          />
         ) : (
           <Markdown text={fencedCode(artifact.content, kind === 'code' ? artifact.codeLanguage : SOURCE_LANGUAGE[kind])} />
         )}

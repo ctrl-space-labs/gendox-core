@@ -565,6 +565,7 @@ pre.code .k { color: var(--accent-text); } pre.code .s { color: var(--warn); }
 /* markdown and code are not framed: a card shows their start, the panel scrolls them */
 .gc-art-b.clip { max-height: 250px; overflow: hidden; padding: 10px 12px; -webkit-mask-image: linear-gradient(to bottom, #000 75%, transparent); mask-image: linear-gradient(to bottom, #000 75%, transparent); }
 .gc-art .alert, .gc-ai > .alert { margin: 0; }
+.gc-art > .art-err { border-width: 1px 0 0; border-radius: 0; }
 .art-b > .gc-md { flex: 1; min-width: 0; overflow: auto; padding: 14px; }
 .art-b > .gc-md pre { margin: 0; }
 .gc-th { display: flex; flex-direction: column; gap: 2px; width: 100%; padding: 8px 10px; border: 0; border-radius: var(--radius-sm); background: none; text-align: left; cursor: pointer; }

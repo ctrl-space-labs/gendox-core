@@ -151,3 +151,7 @@ export const artifactsOf = (messages = []) => {
 
   return [...byId.values()].reverse()
 }
+
+/** What Try to fix puts in the composer; the user reads it and sends it, or not */
+export const fixRequestOf = (title, error) =>
+  `Fix “${title || 'the artifact'}”: it shows an error${error.line ? ` at line ${error.line}` : ''}: ${error.message}`

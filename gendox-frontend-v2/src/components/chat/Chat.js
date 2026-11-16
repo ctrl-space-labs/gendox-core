@@ -564,6 +564,8 @@ const Chat = ({
                 activeSourcesMessageId={sourcesMessageId}
                 onSources={sources ? openSources : null}
                 onOpenArtifact={threadId ? showArtifact : null}
+                artifactVersions={artifactVersions}
+                onAskArtifactFix={askForChange}
                 onAskAgain={isBusy ? null : text => send(text, [])}
                 onFeedback={handleFeedback}
                 unfinished={index === lastTurnIndex && !isBusy && !ACTIVE_COMPLETION_STATUSES.includes(completionStatus)}

@@ -119,7 +119,7 @@ Errors returned to the model, each saying what to do next:
 | `SVG` | the frame (an SVG can carry script, so it is never put in the page) | 1 |
 | `MARKDOWN` | the chat's own `Markdown` component, with the sanitizing it already applies to answers | 1 |
 | `CODE` | a highlighted block with `code_language` | 1 |
-| `MERMAID` | the frame, with the library shipped in the shell | 2 |
+| `MERMAID` | the frame, with the library shipped in the shell | after phase 6 (see *After the phases*) |
 
 A new type is a `types` row in a migration and a value in `create_artifact`'s `enum`; `ArtifactService` needs no change. `code_language` is kept for `CODE` only.
 
@@ -136,7 +136,7 @@ A new type is a `types` row in a migration and a value in `create_artifact`'s `e
 
 **The variable names are a contract with the frame** (#569): the frame must define exactly these.
 
-The prototype's task-shaped skills (*Info card*, *Report with a chart*) come in phase 2 as further library skills that allow the same tools.
+The prototype's task-shaped skills come later as further library skills that allow the same tools: *Info card* in phase 2, *Report with a chart* with the libraries, after phase 6.
 
 ### Storage — built
 
@@ -264,10 +264,9 @@ As built: `components/artifacts/` holds `ArtifactFrame`, `ArtifactContent`, `Art
 
 ## Phase 2 — Richer artifacts
 
-Built in this order, each a commit of its own: the cheaper history, the Artifacts page and the conversation's list (both **built**), then libraries and Mermaid, the two skills, *Try to fix*, and sharing last, since it adds a section to the Artifacts page.
+Built in this order, each a commit of its own: the cheaper history, the Artifacts page and the conversation's list (both **built**), then the *Info card* skill, *Try to fix*, and sharing last, since it adds a section to the Artifacts page. Libraries, `MERMAID` and *Report with a chart* moved after phase 6 (see *After the phases*): nothing in phases 2 to 6 needs them, and an artifact can already draw a chart in SVG or plain script.
 
-- **Libraries, shipped with the shell** — a chart library and Mermaid, as files under the shell's folder, a fixed list named in the skill. Never a CDN: an allowed outside origin is a way out of the frame.
-- `MERMAID` as a type; the task-shaped skills *Info card* and *Report with a chart*.
+- The task-shaped skill *Info card*.
 - **Old content leaves the replayed history.** When history is rebuilt for the model, the `content` argument of earlier `create_artifact` / `update_artifact` calls is replaced by a short fixed note naming the artifact and version — fixed, so that prompt caching still holds. The model reads the current text with `read_artifact` when it needs it.
   - **Built.** `ArtifactHistory.withoutArtifactContent` rewrites the history read for a completion, never what is stored. The note is one fixed sentence for every call: the call's own `artifact_id` and its result already name the artifact and version, so the note needs no detail and stays byte-identical across turns. Only the replayed history is rewritten; a sub-agent's history, passed in by its caller, is left as given.
   - Verified with Gemini, whose thought signatures travel unchanged beside the shortened arguments: asked to change an earlier artifact, the agent read it with `read_artifact` and updated the same artifact.
@@ -312,6 +311,20 @@ Each of these opens a path from model-written code to something that costs or ac
 ## Phase 6 — Watching it being written
 
 A new delta kind in the stream for tool-call arguments, and a best-effort reading of unfinished JSON on the client, so the panel fills as the model writes. MCP Apps has the same idea as `tool-input-partial`. Left for last because it changes the stream contract of #519 and nothing else depends on it.
+
+## After the phases — libraries, Mermaid and *Report with a chart*
+
+Moved here from phase 2, as an improvement once phases 2 to 6 are done.
+
+- **Libraries, shipped with the shell** — a chart library and Mermaid, a fixed list named in the skill. Never a CDN: an allowed outside origin is a way out of the frame.
+- `MERMAID` as a type, rendered in the frame with the library, in the app's light or dark theme and with the library's strictest security level.
+- The skill *Report with a chart*.
+
+**What was checked (2026-11-16), in Chrome, against the real shell.** Under the frame's current policy no file loads into an artifact — not a path relative to the shell, not a full URL on the application's own server. A script written inline runs; one of 3 MB, the size of Mermaid, renders in about 180 ms. Letting files load would mean naming the application's origin in a policy that is a static file and differs per installation, and it would give the frame its first route to a server.
+
+**The way chosen, for when this is built.** The application, not the frame, fetches the library: the artifact names it with a placeholder from the fixed list (e.g. `<script data-library="chart.js"></script>`); the host reads the file from its own server once, keeps it in memory, and sends its text with the artifact; the shell puts it in place inline. The frame's policy does not change and the frame keeps no network at all. A name outside the list stays a placeholder and does nothing.
+
+**Still open.** Where the library files come from: development dependencies at an exact version, copied into the shell's folder at build time, or the files committed to the repository.
 
 ## Verification
 
