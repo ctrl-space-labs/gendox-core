@@ -31,26 +31,39 @@ format console logs as Boot's Logstash JSON at INFO level. This profile enables
 no export. A deployment agent can collect stdout later. Trace/span correlation
 is populated when tracing is enabled and a trace is active.
 
-## Later deployment
+## Collector (optional)
 
-A collector can gather console logs for Loki, scrape Prometheus metrics, and
-receive traces for Tempo. Grafana queries those backends. Deploy the collector
-beside Hetzner containers or as an ECS sidecar/log-router. Service authentication,
-network rules and retention belong to that deployment. Third-party SDK transports
-and individual SQL statements need separate instrumentation if required.
-
-When the collector is ready, use standard Boot properties/environment variables:
+`docker-compose.yml` includes an optional Grafana Alloy collector (`gendox-alloy`,
+config in `gendox-compose-scripts/observability/config.alloy`). It pushes to a Loki,
+Prometheus and Tempo you provide:
 
 ```text
-MANAGEMENT_OPENTELEMETRY_ENABLED=true
-MANAGEMENT_TRACING_EXPORT_ENABLED=true
-MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=https://collector.example.invalid/v1/traces
+container stdout (all containers)  -> Alloy -> Loki
+gendox-core-api OTLP metrics        -> Alloy -> Prometheus (remote write)
+gendox-core-api OTLP traces         -> Alloy -> Tempo
+host CPU/memory/disk/network        -> Alloy -> Prometheus
 ```
 
-The endpoint is a documentation placeholder. Store collector credentials in deployment
-secrets. Boot's default parent-based sampler samples 10% of new traces. Keep log and
-metric OTLP export off when using stdout collection and Prometheus scraping.
-To disable tracing again, restore the two enable flags to false.
+The API pushes its metrics as OTLP instead of being scraped. `/actuator/prometheus`
+stays where it is, still behind `GENDOX_SUPER_ADMIN`, and health checks are unchanged.
+
+Everything is off by default. To turn it on, set:
+
+```text
+COMPOSE_PROFILES=observability          # starts gendox-alloy
+GENDOX_OTEL_ENABLED=true                # tracing + OTLP metrics export
+GENDOX_ENVIRONMENT=<name>               # `environment` label on metrics and logs
+GENDOX_TRACING_SAMPLING_PROBABILITY=1.0 # optional; Boot's default is 0.1
+SPRING_PROFILES_ACTIVE=...,observability
+OBSERVABILITY_INGEST_URL                # base URL; Alloy appends /ingest/loki/...,
+                                        # /ingest/prometheus/... and /ingest/otlp/...
+OBSERVABILITY_INGEST_USERNAME / _PASSWORD   # basic auth for the ingest URL
+```
+
+Metrics are exported every 30s with seconds as the time unit, so names match the
+Prometheus registry (`http_server_requests_seconds_bucket`, `jvm_memory_used_bytes`).
+To turn it off, leave `GENDOX_OTEL_ENABLED` unset (the default is false).
+Third-party SDK transports and individual SQL statements are not traced.
 
 ## References
 

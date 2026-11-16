@@ -1,0 +1,166 @@
+// Grafana Alloy collector for one Gendox environment (the gendox-alloy compose service).
+//
+//   container stdout ----------------------------------> Loki        (logs)
+//   gendox-core-api --OTLP metrics--> Prometheus format -> Prometheus (remote write)
+//   gendox-core-api --OTLP traces---------------------> Tempo       (OTLP/HTTP)
+//   this host's CPU, memory, disk, network -----------> Prometheus
+//
+// Everything goes to the central Grafana server over HTTPS with basic auth:
+//   OBSERVABILITY_INGEST_URL       e.g. https://grafana.example.com
+//   OBSERVABILITY_INGEST_USERNAME / OBSERVABILITY_INGEST_PASSWORD
+// GENDOX_ENVIRONMENT (dev, prod, ...) labels every log line and series.
+
+// ---------------------------------------------------------------- logs
+
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+discovery.relabel "containers" {
+  targets = []
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "compose_service"
+  }
+}
+
+loki.source.docker "containers" {
+  host          = "unix:///var/run/docker.sock"
+  targets       = discovery.docker.containers.targets
+  relabel_rules = discovery.relabel.containers.rules
+  forward_to    = [loki.process.containers.receiver]
+}
+
+loki.process "containers" {
+  // Plain-text logs (Keycloak, Postgres, frontend): take the first level word.
+  stage.regex {
+    expression = "\\b(?P<level>TRACE|DEBUG|INFO|WARN|ERROR|FATAL)\\b"
+  }
+
+  // gendox-core-api with the "observability" profile writes Logstash JSON.
+  // Lines that are not JSON pass through unchanged.
+  stage.json {
+    expressions = {
+      level    = "level",
+      trace_id = "traceId",
+    }
+  }
+
+  stage.labels {
+    values = { level = "" }
+  }
+
+  // Trace ids are unique per request, so they go in structured metadata, not labels.
+  stage.structured_metadata {
+    values = { trace_id = "" }
+  }
+
+  forward_to = [loki.write.central.receiver]
+}
+
+loki.write "central" {
+  endpoint {
+    url = sys.env("OBSERVABILITY_INGEST_URL") + "/ingest/loki/loki/api/v1/push"
+
+    basic_auth {
+      username = sys.env("OBSERVABILITY_INGEST_USERNAME")
+      password = sys.env("OBSERVABILITY_INGEST_PASSWORD")
+    }
+  }
+
+  external_labels = {
+    environment = sys.env("GENDOX_ENVIRONMENT"),
+  }
+}
+
+// ---------------------------------------------------------------- metrics and traces from the API
+
+otelcol.receiver.otlp "app" {
+  http {
+    endpoint = "0.0.0.0:4318"
+  }
+
+  output {
+    metrics = [otelcol.processor.batch.app.input]
+    traces  = [otelcol.processor.batch.app.input]
+  }
+}
+
+otelcol.processor.batch "app" {
+  output {
+    metrics = [otelcol.exporter.prometheus.app.input]
+    traces  = [otelcol.exporter.otlphttp.tempo.input]
+  }
+}
+
+otelcol.exporter.prometheus "app" {
+  forward_to = [prometheus.remote_write.central.receiver]
+}
+
+otelcol.auth.basic "central" {
+  username = sys.env("OBSERVABILITY_INGEST_USERNAME")
+  password = sys.env("OBSERVABILITY_INGEST_PASSWORD")
+}
+
+otelcol.exporter.otlphttp "tempo" {
+  client {
+    // The exporter adds /v1/traces.
+    endpoint = sys.env("OBSERVABILITY_INGEST_URL") + "/ingest/otlp"
+    auth     = otelcol.auth.basic.central.handler
+  }
+}
+
+// ---------------------------------------------------------------- host metrics
+
+prometheus.exporter.unix "host" {
+  procfs_path = "/host/proc"
+  sysfs_path  = "/host/sys"
+  rootfs_path = "/host/root"
+
+  filesystem {
+    mount_points_exclude = "^/(dev|proc|run|sys|var/lib/docker/.+)($|/)"
+    fs_types_exclude     = "^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tmpfs|tracefs)$"
+  }
+}
+
+discovery.relabel "host" {
+  targets = prometheus.exporter.unix.host.targets
+
+  rule {
+    target_label = "job"
+    replacement  = "integrations/unix"
+  }
+
+  rule {
+    target_label = "instance"
+    replacement  = sys.env("GENDOX_ENVIRONMENT")
+  }
+}
+
+prometheus.scrape "host" {
+  targets         = discovery.relabel.host.output
+  scrape_interval = "30s"
+  forward_to      = [prometheus.remote_write.central.receiver]
+}
+
+prometheus.remote_write "central" {
+  endpoint {
+    url = sys.env("OBSERVABILITY_INGEST_URL") + "/ingest/prometheus/api/v1/write"
+
+    basic_auth {
+      username = sys.env("OBSERVABILITY_INGEST_USERNAME")
+      password = sys.env("OBSERVABILITY_INGEST_PASSWORD")
+    }
+  }
+
+  external_labels = {
+    environment = sys.env("GENDOX_ENVIRONMENT"),
+  }
+}
