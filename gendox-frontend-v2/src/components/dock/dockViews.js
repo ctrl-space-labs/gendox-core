@@ -12,7 +12,7 @@ import Chat from 'src/components/chat/Chat'
 import ChatSources from 'src/components/chat/ChatSources'
 import { useChatSession } from 'src/components/chat/useChat'
 import { fileNameOf, formatDateTime, timeAgo } from 'src/components/knowledge/documentUtils'
-import UploadDialog from 'src/components/knowledge/UploadDialog'
+import UploadDialog, { openOnFileDrag } from 'src/components/knowledge/UploadDialog'
 import FileTile from 'src/components/ui/FileTile'
 import { TaskFormDialog } from 'src/components/tasks/TaskDialogs'
 import { TaskTile, typeOfTask } from 'src/components/tasks/taskUtils'
@@ -220,7 +220,7 @@ export const DockKnowledge = () => {
   const docs = result?.content ?? []
 
   return (
-    <div className='vw in-dock compact'>
+    <div className='vw in-dock compact' {...openOnFileDrag(() => setUploading(true))}>
       <div className='dk-top'>
         <label className='dk-search'>
           <Search className='lucide' />

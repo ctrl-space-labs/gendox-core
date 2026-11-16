@@ -807,3 +807,7 @@ pre.code .n { color: var(--info); }
 .dk-meta { flex: none; display: inline-flex; align-items: center; gap: 4px; color: var(--text-3); font-size: 11.5px; }
 .dk-meta .lucide { width: 12px; height: 12px; }
 .dk-empty { padding: 14px 12px; color: var(--text-3); font-size: 13px; }
+
+/* a document's name in a list opens it, while the rest of its row selects it */
+.doc-link { color: inherit; }
+.doc-link:hover, .doc-link:focus-visible { color: var(--accent-text); text-decoration: underline; text-underline-offset: 2px; }

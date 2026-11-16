@@ -33,7 +33,7 @@ import { localStorageConstants } from 'src/utils/generalConstants'
 import { isValidOrganizationAndProject } from 'src/utils/validators'
 import AppLayout from 'src/layouts/AppLayout'
 import AgentScope from 'src/components/agent/AgentScope'
-import UploadDialog from 'src/components/knowledge/UploadDialog'
+import UploadDialog, { openOnFileDrag } from 'src/components/knowledge/UploadDialog'
 import AgentIntegrations, { loadIntegrationRows } from 'src/components/integrations/AgentIntegrations'
 import { AddIntegrationDialog } from 'src/components/integrations/IntegrationDialogs'
 import {
@@ -440,7 +440,7 @@ const KnowledgePage = () => {
   }
 
   return (
-    <main className='content'>
+    <main className='content' {...openOnFileDrag(() => setUploadOpen(true))}>
       <div className='vw in-page'>
         <AgentScope project={details} />
 
@@ -592,6 +592,8 @@ const KnowledgePage = () => {
                                   key={document.id}
                                   className={selected?.id === document.id ? 'sel' : ''}
                                   onClick={() => selectRow(document)}
+                                  onDoubleClick={() => router.push(documentHref(document.id))}
+                                  title='Click to preview, double-click to open'
                                   style={{ cursor: 'pointer' }}
                                 >
                                   <td className='chk' onClick={e => e.stopPropagation()}>
@@ -607,7 +609,14 @@ const KnowledgePage = () => {
                                       <FileTile name={fileNameOf(document)} type={tileTypeOf(document)} />
                                       <div style={{ minWidth: 0 }}>
                                         <div className='trunc' style={{ fontWeight: 500 }}>
-                                          {document.title}
+                                          {/* the name opens the document; the rest of the row previews it */}
+                                          <Link
+                                            className='doc-link'
+                                            href={documentHref(document.id)}
+                                            onClick={e => e.stopPropagation()}
+                                          >
+                                            {document.title}
+                                          </Link>
                                         </div>
                                         <div className='faint sm trunc'>
                                           {sourceOf(document)}

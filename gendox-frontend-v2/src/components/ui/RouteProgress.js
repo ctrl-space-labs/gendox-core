@@ -36,7 +36,8 @@ const RouteProgress = () => {
 
     const done = () => {
       clear()
-      if (!shown.current) return
+      // a quick page change can follow a slow one while its full bar is fading out; start() cancelled that fade
+      if (!shown.current) return setProgress(null)
       shown.current = false
       setProgress(100)
       timers.current.hide = setTimeout(() => setProgress(null), 250)

@@ -13,6 +13,18 @@ const BATCH_SIZE = 10
 
 const extensionOf = name => (name.includes('.') ? name.split('.').pop().toLowerCase() : '')
 
+const draggingFiles = e => Boolean(e.dataTransfer?.types?.includes('Files'))
+
+/**
+ * For an area whose files can be uploaded: dragging files over it opens this dialog, whose drop zone takes them.
+ * A drop beside the zone is ignored, rather than opening the file in the browser.
+ */
+export const openOnFileDrag = open => ({
+  onDragEnter: e => draggingFiles(e) && open(),
+  onDragOver: e => draggingFiles(e) && e.preventDefault(),
+  onDrop: e => draggingFiles(e) && e.preventDefault()
+})
+
 /**
  * Upload files into an agent's knowledge: POST …/documents/upload, ten at a time.
  * Files start uploading as soon as they are chosen or dropped.

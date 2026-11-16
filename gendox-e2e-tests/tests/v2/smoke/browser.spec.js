@@ -91,8 +91,8 @@ test.describe('V2 browser smoke', { tag: '@smoke' }, () => {
         await expect(page.getByRole('row', { name: /least-squares/ })).toBeVisible();
         await expectOk(await documents.splitDocumentSections(api, w.ownerToken, w.organizationId, w.projectId));
         await expectOk(await embeddings.getProjectEmbeddings(api, w.ownerToken, w.projectId));
-        await page.getByRole('row', { name: /least-squares/ }).getByText('least-squares', { exact: true }).click();
-        await page.getByRole('link', { name: 'Open', exact: true }).click();
+        // the document's name in the list opens it
+        await page.getByRole('row', { name: /least-squares/ }).getByRole('link', { name: 'least-squares', exact: true }).click();
         await expect(page.getByRole('heading', { name: 'least-squares', exact: true })).toBeVisible();
         await expect(page.getByText(/least squares/i).last()).toBeVisible();
         await openChat(page, w);
@@ -134,8 +134,7 @@ test.describe('V2 browser smoke', { tag: '@smoke' }, () => {
         await expectOk(await uploaded);
         await expect(page.getByRole('row', { name: /Written smoke document/ })).toBeVisible();
         await expectOk(await documents.splitDocumentSections(api, w.ownerToken, w.organizationId, w.projectId));
-        await page.getByRole('row', { name: /Written smoke document/ }).getByText('Written smoke document', { exact: true }).click();
-        await page.getByRole('link', { name: 'Open', exact: true }).click();
+        await page.getByRole('row', { name: /Written smoke document/ }).getByRole('link', { name: 'Written smoke document', exact: true }).click();
         await expect(page.getByText('This is a saved smoke document.', { exact: true })).toBeVisible();
         await page.reload();
         await expect(page.getByText('This is a saved smoke document.', { exact: true })).toBeVisible();
