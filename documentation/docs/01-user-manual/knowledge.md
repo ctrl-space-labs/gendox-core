@@ -68,7 +68,7 @@ Before the agent can cite a document, Gendox reads it and splits it into **secti
 
 When documents are waiting, the page offers **Process now** to start processing at once.
 
-Processing runs on its own when **Process new documents automatically** is on (the default for new agents). You can change this, process waiting documents at once, or turn on **Read scanned pages with AI** for scans, tables and images in [Configure the agent → General](./configure-the-agent.md#general).
+Processing runs on its own when **Process new documents automatically** is on (the default for new agents). You can change this, process new and changed documents at once, or turn on **Read scanned pages with AI** for scans, tables and images in [Configure the agent → General](./configure-the-agent.md#general).
 
 ---
 
