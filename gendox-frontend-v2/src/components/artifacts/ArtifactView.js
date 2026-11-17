@@ -1,27 +1,19 @@
 import { useEffect, useState } from 'react'
-import { Check, CircleAlert, Copy, Download, MessageSquarePlus, ShieldCheck } from 'lucide-react'
+import { Check, CircleAlert, Copy, Download, MessageSquarePlus, Share2, ShieldCheck } from 'lucide-react'
 import artifactService from 'src/gendox-sdk/artifactService'
 import { copyToClipboard } from 'src/utils/copyToClipboard'
 import Spinner from 'src/components/ui/Spinner'
 import Markdown from 'src/components/chat/Markdown'
 import ArtifactContent from 'src/components/artifacts/ArtifactContent'
 import ArtifactError from 'src/components/artifacts/ArtifactError'
-import { fencedCode, fileNameOf, fixRequestOf, kindInfo, kindOf } from 'src/components/artifacts/artifactUtils'
-
-const SOURCE_LANGUAGE = { html: 'html', svg: 'xml', markdown: 'markdown' }
-
-const downloadFile = (name, mime, content) => {
-  const url = URL.createObjectURL(new Blob([content], { type: `${mime};charset=utf-8` }))
-  const link = document.createElement('a')
-  link.href = url
-  link.download = name
-  link.click()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
-}
+import ArtifactShareDialog from 'src/components/artifacts/ArtifactShareDialog'
+import useActiveScope from 'src/hooks/useActiveScope'
+import { downloadFile, fencedCode, fileNameOf, fixRequestOf, kindInfo, kindOf, sourceLanguageOf } from 'src/components/artifacts/artifactUtils'
 
 /**
- * One artifact in full (gendox-core#523): Preview and Code, its versions, copy, download, Ask for a change, and Try to
- * fix when the latest version raises an error.
+ * One artifact in full (gendox-core#523): Preview and Code, its versions, copy, download, Share, Ask for a change, and
+ * Try to fix when the latest version raises an error. It is opened from the user's own conversations, so it can be
+ * shared; inside an organization only.
  * Loads when it opens; the latest version unless one is asked for. When the chat makes a newer version it moves to
  * it, unless the user chose an older one.
  *
@@ -38,6 +30,8 @@ const ArtifactView = ({ threadId, artifactId, token, version: openedVersion, kno
   const [chosen, setChosen] = useState(openedVersion ?? null) // null: follow the latest
   const [copied, setCopied] = useState(false)
   const [error, setError] = useState(null) // the shown version's first unhandled error
+  const [sharing, setSharing] = useState(false)
+  const { organizationId } = useActiveScope()
   // following the latest, a newer version from the chat loads it; a chosen older one stays
   const followed = chosen === null ? knownVersion : null
 
@@ -138,6 +132,12 @@ const ArtifactView = ({ threadId, artifactId, token, version: openedVersion, kno
         >
           <Download className='lucide' />
         </button>
+        {organizationId && (
+          <button className='btn s' onClick={() => setSharing(true)}>
+            <Share2 className='lucide' />
+            Share
+          </button>
+        )}
         {onAsk && (
           <button className='btn s' onClick={() => onAsk(`Change “${artifact.title}”: `)}>
             <MessageSquarePlus className='lucide' />
@@ -170,7 +170,7 @@ const ArtifactView = ({ threadId, artifactId, token, version: openedVersion, kno
             onError={setError}
           />
         ) : (
-          <Markdown text={fencedCode(artifact.content, kind === 'code' ? artifact.codeLanguage : SOURCE_LANGUAGE[kind])} />
+          <Markdown text={fencedCode(artifact.content, sourceLanguageOf(kind, artifact.codeLanguage))} />
         )}
       </div>
       <div className='art-note faint sm'>
@@ -179,6 +179,19 @@ const ArtifactView = ({ threadId, artifactId, token, version: openedVersion, kno
           Made by {agentName || 'the agent'}. It runs sealed: it can’t reach your account, other pages or the internet.
         </span>
       </div>
+      {organizationId && (
+        <ArtifactShareDialog
+          open={sharing}
+          onClose={() => setSharing(false)}
+          threadId={threadId}
+          artifactId={artifactId}
+          title={artifact.title}
+          version={artifact.version}
+          latestVersion={artifact.latestVersion}
+          organizationId={organizationId}
+          agentName={agentName}
+        />
+      )}
     </div>
   )
 }

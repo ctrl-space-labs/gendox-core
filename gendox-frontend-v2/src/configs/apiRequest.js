@@ -163,6 +163,10 @@ export default {
   artifacts: threadId => `${url}threads/${threadId}/artifacts`,
   artifact: (threadId, artifactId) => `${url}threads/${threadId}/artifacts/${artifactId}`,
   artifactVersion: (threadId, artifactId, version) => `${url}threads/${threadId}/artifacts/${artifactId}/versions/${version}`,
+  artifactShares: (threadId, artifactId) => `${url}threads/${threadId}/artifacts/${artifactId}/shares`,
+  artifactShare: (threadId, artifactId, shareId) => `${url}threads/${threadId}/artifacts/${artifactId}/shares/${shareId}`,
+  sharedArtifact: shareId => `${url}artifact-shares/${shareId}`,
+  sharedWithMe: organizationId => `${url}organizations/${organizationId}/artifact-shares`,
 
   deactivateUserById: userId => `${url}users/${userId}/deactivate`,
 

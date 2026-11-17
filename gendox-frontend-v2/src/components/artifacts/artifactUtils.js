@@ -155,3 +155,24 @@ export const artifactsOf = (messages = []) => {
 /** What Try to fix puts in the composer; the user reads it and sends it, or not */
 export const fixRequestOf = (title, error) =>
   `Fix “${title || 'the artifact'}”: it shows an error${error.line ? ` at line ${error.line}` : ''}: ${error.message}`
+
+/**
+ * The link that opens a shared artifact for its reader; the organization lets the page open in it.
+ * The reader's own access is checked when it opens.
+ */
+export const sharedArtifactLink = (organizationId, shareId) =>
+  `${window.location.origin}/gendox/shared-artifact/?organizationId=${organizationId}&shareId=${shareId}`
+
+/** Save an artifact's content as a file */
+export const downloadFile = (name, mime, content) => {
+  const url = URL.createObjectURL(new Blob([content], { type: `${mime};charset=utf-8` }))
+  const link = document.createElement('a')
+  link.href = url
+  link.download = name
+  link.click()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
+/** The language an artifact's source is highlighted as, in its Code tab */
+export const sourceLanguageOf = (kind, codeLanguage) =>
+  kind === 'code' ? codeLanguage : { html: 'html', svg: 'xml', markdown: 'markdown' }[kind]

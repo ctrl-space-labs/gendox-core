@@ -17,7 +17,12 @@ const Dialog = ({ open, onClose, title, subtitle, size = 'm', className = '', fo
 
   useEffect(() => {
     if (!open) return
-    const onKey = e => e.key === 'Escape' && closeRef.current()
+    // a dialog opened from another one is on top: Escape closes it alone
+    const onKey = e => {
+      if (e.key !== 'Escape') return
+      const modals = document.querySelectorAll('.modal')
+      if (modals[modals.length - 1] === modalRef.current) closeRef.current()
+    }
     document.addEventListener('keydown', onKey)
     const focusTimer = setTimeout(() => {
       modalRef.current?.querySelector('input:not([type=checkbox]):not([type=radio]),textarea')?.focus()
