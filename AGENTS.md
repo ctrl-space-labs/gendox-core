@@ -24,7 +24,7 @@ Implementation plans and audits live in `.ai/`, one file per topic, named `<topi
 
 ### Pending plans
 
-- [Artifacts and mini apps in the chat — #523](.ai/issue-523-artifacts-2026-11-16.md) — phase 1 implemented: backend (#568) and v2 frontend (#569), verified in Chrome, Firefox and Safari. Phase 2 (#570) in progress: the cheaper replayed history, the Artifacts page, the Info card skill, Try to fix and sharing inside the organization are built; Continue in a chat is next. Self-contained: it replaces the [original 2026-11-13 plan](.ai/issue-523-artifacts-2026-11-13.md), which is kept unchanged.
+- [Artifacts and mini apps in the chat — #523](.ai/issue-523-artifacts-2026-11-17.md) — phase 1 implemented: backend (#568) and v2 frontend (#569), verified in Chrome, Firefox and Safari. Phase 2 (#570) in progress: the cheaper replayed history, the Artifacts page, the Info card skill and Try to fix are built; sharing is being redesigned as shared artifacts that every member of the agent sees and changes, with what people do inside them kept as artifact data beside the versions. Self-contained: it replaces the [original 2026-11-13 plan](.ai/issue-523-artifacts-2026-11-13.md), which is kept unchanged.
 
 - [Application e2e coverage for v2](.ai/e2e-v2-coverage-2026-11-11.md) — current frontend selection, browser coverage and blocked cases; the original v1 plan remains unchanged.
 
