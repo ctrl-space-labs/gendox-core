@@ -100,7 +100,7 @@ The primitives this needs, each useful on its own:
 | Step | Primitive | Workstream |
 |---|---|---|
 | 1 | Connections owned by the organization or the project | CONNECT |
-| 1 | Tools from MCP servers and from declared HTTP calls | MCP-CLIENT, HTTP-TOOLS |
+| 1 | Tools from MCP servers; APIs called with code in the terminal | MCP-CLIENT, CODE |
 | 2 | A skill the agent writes; skills that list connector tools | SKILLS |
 | 3 | Artifacts; a board is an artifact bound to a stored tool call that refreshes | ARTIFACTS, BOARDS |
 | 3 | A workspace layout shared by the people of an agent | BOARDS |
@@ -117,7 +117,7 @@ Every new capability should be one of five things, outside the loop:
 
 | It is a… | It plugs into | Examples |
 |---|---|---|
-| **Tool** | The tool engine | MCP tools, HTTP tools, `run_code`, `create_artifact`, `write_skill` |
+| **Tool** | The tool engine | MCP tools, terminal commands, `run_code`, `create_artifact`, `write_skill` |
 | **Skill** | `SkillService` | Contract review, a data-source skill, briefing format |
 | **Channel** | `POST messages/completions` and a `CompletionListener` | Slack, Teams, email, widget, desktop shell |
 | **Trigger** | Starts a run from a stored message | Schedule, webhook, new document, source changed |
@@ -137,7 +137,7 @@ that touches a core file says which and why.
 
 ### Workstream CORE
 
-One owner, in series, reviewed line by line. Deliberately small. Done: #579 (implemented in the order CORE-1, CORE-3, CORE-2, CORE-4).
+One owner, in series, reviewed line by line. Deliberately small. Done: #579 (implemented in the order CORE-1, CORE-3, CORE-2, CORE-4). CORE-5 was added on 2026-11-17 and is not started.
 
 | Task | What | Why |
 |---|---|---|
@@ -145,6 +145,7 @@ One owner, in series, reviewed line by line. Deliberately small. Done: #579 (imp
 | CORE-2 | Tool execution moves out of `CompletionService` into one class, which is also the single place for the policy and security check. Per call it returns a result or pending. | Decision D5. Approval, MCP and code execution hook here instead of into the loop. |
 | CORE-3 | The `resolve*` family moves into a runtime-context resolver; the loop file keeps the loop and the chat entry points. | Decision D5. The file is 966 lines; the loop is about 150. |
 | CORE-4 | A tool name the model invents returns an error result to the model instead of ending the turn. | More tools from more sources make this common. |
+| CORE-5 | Steering during a turn. A message the user sends while a turn runs is queued; when a tool round ends, the loop adds it to the conversation before the next model call, and the turn goes on with it. It is saved as an ordinary user message, in its place in the turn. v2: the input stays open while the agent works, and a queued message shows as waiting until the agent picks it up. Phase 1, not started. | Long, tool-heavy turns can be corrected without being stopped. Only the loop knows when a round ends, so this is a core change. |
 
 **Done on 2026-11-11.** `CompletionService` went from 966 to 533 lines. The runtime context is resolved by
 `CompletionRuntimeContextResolver`, tool calls run through `ToolExecutionService`, and 25 loop tests pin the behaviour.
@@ -179,8 +180,9 @@ can talk to an agent uses the agent's connections; who may talk to the agent is 
 sensitive connections should be private; Deploy shows a warning when a public agent has connections that can act.
 
 - **CONN-1 Connections.** Extend `organization_connectors` rather than add a table: an optional `project_id`, a `name` (several of one type, e.g. two MCP servers), credentials stored encrypted. Lookup: the project's, then the organization's. OAuth authorization-code flow with refresh.
-- **CONN-2 Knowledge sync.** Google Drive, SharePoint and OneDrive on the existing `IntegrationUpdateService` contract. Synced documents belong to the agent; whoever has access to the agent has access to them (decision D6).
-- **CONN-3 Live tools.** Google Workspace (Drive, Gmail, Calendar), Microsoft 365 (SharePoint, Outlook, Teams), Slack, and a mailbox for an agent: search, read, act. Through MCP (decision D1). Tools that act default to "ask". Waits for MCP-1, APPR-1.
+- **CONN-2 Knowledge sync.** Google Drive, SharePoint and OneDrive on the existing `IntegrationUpdateService` contract. Native code, not MCP: it needs change feeds, permissions and bulk download, which MCP does not give. Built on the official SDKs: the Google API Java client (the Drive changes API) and the Microsoft Graph Java SDK (delta queries). Synced documents belong to the agent; whoever has access to the agent has access to them (decision D6).
+- **CONN-3 Live tools.** Google Workspace (Drive, Gmail, Calendar), Microsoft 365 (SharePoint, Outlook, Teams), Slack, and a mailbox for an agent: search, read, act. Through MCP (decision D1). Google through the MCP servers Google hosts (in developer preview as of 2026-11; Gmail creates drafts and does not send). Microsoft 365 through our own server, CONN-4. Tools that act default to "ask". Waits for MCP-1, APPR-1, and CONN-4 for Microsoft 365.
+- **CONN-4 Microsoft 365 MCP server (new ticket).** Microsoft publishes no MCP server for Microsoft 365, and we do not run community servers we cannot control. Our own, built with Spring AI's MCP server (Streamable HTTP, tools as annotated methods) on the Microsoft Graph Java SDK. One module that runs as its own service or inside the API; Gendox reaches it over MCP in both cases, so there is one code path. It is stateless and holds no secrets: Gendox sends a short-lived Graph access token from the CONN-1 connection with each request. Opening it to other MCP clients later needs OAuth on the server, which Spring AI's MCP security module provides. Waits for CONN-1, MCP-1.
 - **v2:** Organization → Connected services: connect and disconnect; Agent → Connections: use the organization's or override.
 
 ### MCP-CLIENT — connect an agent to MCP servers (#530)
@@ -190,16 +192,14 @@ sensitive connections should be private; Deploy shows a warning when a public ag
 - **Trust model, before implementation:** descriptions and results from a third-party server are untrusted text. Requirement: a server cannot change what other tools do or reach another connection's credentials. Specifics belong in the private tracker.
 - Check first whether Spring AI's MCP client (1.0.3 in use) fits, or the MCP Java SDK directly.
 
-### HTTP-TOOLS — a declared tool that Gendox calls
+### HTTP-TOOLS — dropped on 2026-11-17
 
-- **HTTP-1.** A third way a declared tool runs: Gendox calls an API. Method, URL template, headers, body template, the connection that authenticates it, size limit and timeout. Outbound calls go through one client that cannot reach internal addresses. Waits for CORE-2, CONN-1.
-- **HTTP-2.** Import tools from an OpenAPI document.
-- **v2:** "Runs in Gendox · calls your API" in the Add tool dialog, with "Try it".
+No separate tool for API calls. The agent calls APIs with code it writes in the terminal, when the agent's network is on (CODE-2). Credentials it cannot read come with VAULT-1.
 
 ### SKILLS — skills the agent writes
 
 - **SKILL-1 `write_skill`.** The agent creates or updates a skill on its own agent. Used when it meets a new data source: one skill per source. Asks for approval by default; the skill is visible and editable in Agent → Skills like any custom skill.
-- **SKILL-2.** A skill may list connector tools (MCP and HTTP) in `allowed-tools`; today only built-in tools pass validation.
+- **SKILL-2.** A skill may list connector tools (MCP) in `allowed-tools`; today only built-in tools pass validation.
 
 ### CODE — code execution
 
@@ -207,12 +207,16 @@ Two tickets, as decided in review:
 
 - **CODE-1 Browser sandbox (#522).** The agent writes JavaScript; it runs in the chat's browser as a `CLIENT` tool, in an iframe with an opaque origin and a CSP that allows no network. No credential enters the box; data goes in and out by message. The Earth Engine sandbox is the precedent. Python through Pyodide is a follow-up. Waits for APP-1.
 - **CODE-2 Terminal (new ticket).** The agent runs commands and reads and writes files in a server sandbox (decision D3; requirements in section 7). The tool contract is written so a local runner can implement it later.
-  - **Open question:** how a box is isolated. Proposal: containers under gVisor (section 7).
+  - **Runner drivers, decided on 2026-11-17:** Docker for the open-source and self-hosted installation, AWS Bedrock AgentCore Code Interpreter for the SaaS (section 7).
+  - **Network.** One setting per agent: the box reaches the internet, or nothing. Off by default. With it on, the agent calls APIs with code it writes; this replaces the HTTP tools. At first the user gives credentials in the chat and the agent writes its own authentication code. Until VAULT-1, such credentials stay in the thread's messages and reach the model provider; the setting says so.
   - **Commands are named tasks.** Every command carries a short description in plain words, written by the agent. A command can run in the background while the turn continues, and can be stopped.
   - **v2:** the workspace lists running and finished commands, under the name "Commands", with the description, the duration and a stop button; opening one shows the command, its output and the exit code.
 - **CODE-3 Local terminal in a desktop shell.** Later (decision D4). The shell registers the CODE-2 tools as `CLIENT` tools; every command asks.
+- **VAULT-1 Credentials the agent cannot read (new ticket).** A store of API credentials per organization, with a project override like CONN-1. The agent names a credential and never sees its value: a command gets a short-lived token (for example an OAuth access token minted from a stored refresh token), or a proxy on the box's way out adds the credential to the request. Credentials leave the thread's messages and the box's files. Also what lets a board or a scheduled run call an API with no one in the chat. Waits for CODE-2, CONN-1.
 
 ### ARTIFACTS — rendered output and files (#523, #524)
+
+Plan for ART-1 and ART-2: [Artifacts and mini apps in the chat](issue-523-artifacts-2026-11-13.md). It goes further than the two lines below: mini apps that talk to the chat through a bridge, in six phases.
 
 - **ART-1 Backend.** Artifacts with versions on a thread (html, markdown, csv, svg; binary files in S3); tools `create_artifact`, `update_artifact`, `read_artifact`.
 - **ART-2 v2.** An artifact opens as a workspace tab beside the chat; html renders in the CODE-1 sandbox; inline in the widget. Waits for ART-1, CODE-1.
@@ -220,14 +224,14 @@ Two tickets, as decided in review:
 
 ### BOARDS — live views in a shared workspace
 
-- **BOARD-1 Boards.** A board is an artifact bound to a stored tool call (MCP, HTTP, search) with a refresh interval. Gendox re-runs the call without the model and the board redraws. Tools: `create_board`, `update_board`. Waits for ART-2 and a tool source (MCP-1 or HTTP-1).
+- **BOARD-1 Boards.** A board is an artifact bound to a stored source with a refresh interval: a tool call (MCP, search) or a command (a script the agent wrote, run in the terminal). Gendox re-runs it without the model and the board redraws. A command that calls an API needs its credentials with no one in the chat, which VAULT-1 provides; until then a command board reads public data or data already in Gendox. Tools: `create_board`, `update_board`. Waits for ART-2 and a source (MCP-1 or CODE-2). It overlaps with phase 4 of the artifacts plan (apps that call the agent); the BOARD-1 plan decides whether it becomes part of that plan.
 - **BOARD-2 Shared workspace.** The workspace layout of an agent is saved on the server, so its people see the same boards. Today it is kept per browser.
 - **BOARD-3 Workspace tools.** Client tools the app handles: open a board or document in the workspace, bring one to the front, flag one for attention with a reason. Waits for APP-1.
 
 ### RUNS — scheduled and triggered work
 
 - **RUN-1 Scheduled runs.** An agent run: prompt, schedule, last and next run, status. A run is a turn in its own thread. Adds the explicit run mode to the overrides. A tool that needs approval pauses the run and notifies.
-- **RUN-2 Triggers.** Webhook, new document, and "source changed": a stored tool call polled on an interval, starting a run when its result changes or meets a condition.
+- **RUN-2 Triggers.** Webhook, new document, and "source changed": a stored tool call or command polled on an interval, starting a run when its result changes or meets a condition.
 - **RUN-3 Notifications.** In the app (the attention flag of BOARD-3), email, and the channels.
 - **v2:** Agent → Automations.
 
@@ -240,6 +244,7 @@ Two tickets, as decided in review:
 The Discord bot is not the model to extract from. The contract is written with Slack as its first implementation.
 
 - **CHAN-1 Channel contract and Slack.** An inbound event resolves the agent and the thread, calls the same completion endpoint, renders the answer. A channel says what it can do: streaming, approval buttons, client tools (none: `CLIENT` tools behave as `ACTION`). Slack: mention and direct message, a Slack thread is a chat thread, files become thread documents. Whoever can reach the agent in Slack uses it, in line with D2.
+  - **Install is part of the contract.** Each channel says how it is installed: an install link the workspace admin approves (Slack, Discord), an app package the admin uploads (Teams), or an invitation to the agent's own account (Matrix). Deploy shows it as one button or one step. Slack, Discord and Teams admit a bot only as a registered app, never as an ordinary user. The SaaS registers one app per platform, shared by many agents and routed by channel, with each answer carrying the agent's name and picture where the platform allows. A self-hosted installation registers its own app from a ready manifest.
 - **CHAN-2 Microsoft Teams.** **CHAN-3 Email:** an address per agent; sender authorization is part of the feature.
 - **CHAN-4 Discord** rebuilt on the contract, with tests; the `discord/` package leaves the core.
 - **v2:** Deploy gains Slack, Teams and Email.
@@ -251,7 +256,7 @@ Both are implemented (#550, #559, 2026-11-14); remaining validation is listed at
 
 - **SRCH-1 — Done.** Attached documents reach the model (#559, #550) through a thread-wide file listing and tools. Includes the automatic `gendox-files` skill, `list_files`, `view_page` and file context for sub-agents. Uploads are not embedded or inlined in the prompt.
 - **SRCH-2.** #564 as written: metadata filters, markdown chunking, embedding migration.
-- **SRCH-3 — Done.** Source time returned by search and shown with the citation: the document's last update (`modified`, also the sync time for a synced file), as agreed in the agent-files plan. Search hits carry numbered text and line ranges; the default section template includes file metadata; v2 citations show the updated date.
+- **SRCH-3 — Done.** Source time returned by search and shown with the citation: the document's last update (`modified`, also the sync time for a synced file), as agreed in #550 and #559. Search hits carry numbered text and line ranges; the default section template includes file metadata; v2 citations show the updated date.
 
 ### GOVERN (#531, #563, #555, #561, #484)
 
@@ -271,7 +276,7 @@ Both are implemented (#550, #559, 2026-11-14); remaining validation is listed at
 
 ### MCP-SERVER (#530)
 
-- **MCPS-1.** Gendox as an MCP server: an agent's search, document reading, tasks and "ask the agent", with API keys.
+- **MCPS-1.** Gendox as an MCP server: an agent's search, document reading, tasks and "ask the agent", with API keys. Built on the same Spring AI MCP server setup as CONN-4.
 
 ### Later
 
@@ -282,9 +287,9 @@ Both are implemented (#550, #559, 2026-11-14); remaining validation is listed at
 | Phase | Tasks |
 |---|---|
 | 0 | Done: CORE-1 … CORE-4, SRCH-1, SRCH-3. In review: SEC-1. Pending: APP-1. |
-| 1 | APPR-1, APPR-2, CONN-1, MCP-1, MCP-2, CODE-1, ART-1, ART-2, CHAN-1, GOV-1, GOV-2, GOV-3, PACK-1 (export done; import and connection requirements pending) |
-| 2 | HTTP-1, HTTP-2, CONN-2, CONN-3, SKILL-1, SKILL-2, BOARD-1, BOARD-2, BOARD-3, RUN-1, RUN-2, RUN-3, MEM-1, CODE-2, ART-3, CHAN-2, CHAN-3, MCPS-1, PACK-2, SRCH-2 |
-| 3 | DSS-1, CHAN-4, CODE-3, GOV-4, GOV-5, VOICE-1 |
+| 1 | CORE-5, APPR-1, APPR-2, CONN-1, MCP-1, MCP-2, CODE-1, ART-1, ART-2, CHAN-1, GOV-1, GOV-2, GOV-3, PACK-1 (export done; import and connection requirements pending) |
+| 2 | CONN-2, CONN-3, CONN-4, SKILL-1, SKILL-2, BOARD-1, BOARD-2, BOARD-3, RUN-1, RUN-2, RUN-3, MEM-1, CODE-2, ART-3, CHAN-2, CHAN-3, MCPS-1, PACK-2, SRCH-2 |
+| 3 | DSS-1, CHAN-4, CODE-3, VAULT-1, GOV-4, GOV-5, VOICE-1 |
 
 Where parallel branches would collide:
 
@@ -292,7 +297,7 @@ Where parallel branches would collide:
 |---|---|
 | `CompletionService`, the tool execution class, `CompletionTurnService` | Only CORE and APPR-1 change them. A later workstream that needs a change states the architectural need in its plan first. |
 | `Chat.js`, `ChatTurn.js` | APP-1 adds the handler and card registry in phase 0; cards are then separate files. |
-| Agent → Tools, Add tool dialog | APPR-2 first; MCP-2 and HTTP-1 add a section each after it. |
+| Agent → Tools, Add tool dialog | APPR-2 first; MCP-2 adds a section after it. |
 | Organization → Connected services, `organization_connectors` | CONN-1 first; MCP-1 builds on it. |
 | Flyway migrations | One per workstream, timestamped the day it merges. |
 
@@ -300,9 +305,9 @@ Where parallel branches would collide:
 
 | | Question | Outcome |
 |---|---|---|
-| D1 | Extension boundary | **Agreed.** MCP for tools. Native adapters only for transports (Slack, Teams, Discord, mail) and knowledge sync. No plugin SDK. |
+| D1 | Extension boundary | **Agreed.** MCP for tools. Native adapters only for transports (Slack, Teams, Discord, mail) and knowledge sync. No plugin SDK. Where no first-party MCP server exists, we write our own (Microsoft 365, CONN-4) rather than run a community one. No HTTP tools: APIs are called from the terminal (2026-11-17). |
 | D2 | Whose credentials | **Decided.** The organization's by default; a project may override. No user-level connections. Access to the agent is access to its connections. |
-| D3 | Where code runs | **Decided, in two parts.** Browser sandbox for JavaScript (CODE-1). Terminal in a server sandbox first (CODE-2), self-hosted; how a box is isolated is open, with gVisor proposed. A local runner later with the desktop shell (CODE-3). |
+| D3 | Where code runs | **Decided, in two parts.** Browser sandbox for JavaScript (CODE-1). Terminal in a server sandbox first (CODE-2); the runner has two drivers: Docker for self-hosted installations, AWS Bedrock AgentCore Code Interpreter for the SaaS (2026-11-17). A local runner later with the desktop shell (CODE-3). |
 | D4 | Desktop shell | **Agreed.** Later. |
 | D5 | Split `CompletionService` | **Agreed.** Resolver and tool execution move out; the loop and chat entry points stay. |
 | D6 | Access to synced documents | **Agreed.** Ownership sits with the agent; access to the agent is access to its documents. |
@@ -323,27 +328,29 @@ gives. The requirement for it: a separate runner, never the API's own host; one 
 network by default; no Gendox credentials inside; files in and out as artifacts. The local runner then arrives with
 the desktop shell as the same tools, run as `CLIENT` tools with a yes per command.
 
-**The runner — open question, answered in the CODE-2 plan. Self-hosted in every case; the proposal is containers
-under gVisor.** What the proposal means:
+**The runner — decided on 2026-11-17: one contract, two drivers chosen by a setting.** Docker for the open-source
+and self-hosted installation; AWS Bedrock AgentCore Code Interpreter for the SaaS. The CODE-2 plan settles the
+details listed at the end.
 
 - **The contract.** The API calls a runner service over HTTP with six calls: create a box, run a command, stop it,
-  write a file, read a file, delete the box. The API never talks to Docker or Kubernetes, so what is behind the
+  write a file, read a file, delete the box. The API never talks to Docker, Kubernetes or AWS, so what is behind the
   runner can change without touching Gendox.
-- **Three kinds of container.** The API (unchanged). The runner service: its own container, new in the Compose file.
-  The boxes: one container per thread, started by the runner, run under gVisor.
-- **Where gVisor is set up.** On the VM that hosts the runner: installed once and registered with that VM's Docker
-  as a runtime. It is not part of an image. The runner names it as the runtime of each box; one setting chooses the
-  runtime, so a developer machine without gVisor falls back to plain containers.
-- **Hosts.** In production the runner and its boxes sit on a VM apart from the API and the database, because the
-  runner controls Docker on its host. On a developer machine everything is one Compose stack.
-- **When gVisor cannot be installed.** Only the runner needs a host that allows it; the API may stay on a managed
-  container service, with the runner on one plain Linux VM. Where no VM is allowed, a cloud driver starts one
-  managed task per box (for example a Fargate task), and the cloud isolates each task. Plain hardened containers
-  share the host's kernel: acceptable only on a dedicated VM and where everyone who can reach the agents is
-  trusted, not for public agents or shared hosting.
-- **Later, with no new contract.** A Kubernetes driver in the same runner (a pod per box, gVisor or Kata as its
-  runtime) when one host is not enough or a customer runs Kubernetes. A small VM per box only if a customer
-  requires it. An open-source sandbox platform is judged again at that point.
+- **Docker driver (open source, self-hosted).** Three kinds of container: the API (unchanged); the runner service,
+  its own container, new in the Compose file; the boxes, one container per thread, started by the runner. gVisor is
+  an optional runtime for the boxes: installed once on the VM that hosts the runner and registered with its Docker,
+  not part of an image. One setting chooses the runtime, so a developer machine without gVisor uses plain
+  containers. Plain containers share the host's kernel: acceptable on a dedicated VM where everyone who can reach the
+  agents is trusted, not for public agents or shared hosting. In production the runner and its boxes sit on a VM
+  apart from the API and the database, because the runner controls Docker on its host.
+- **AgentCore driver (SaaS).** A box is an AgentCore Code Interpreter session, isolated by AWS. Sessions last 15
+  minutes by default and up to 8 hours. Its "sandbox" network mode (AWS services only) and "public" mode map to the
+  agent's network setting. Files go in and out through S3. No Docker host to run, and the API can stay on a managed
+  container service.
+- **Left for the CODE-2 plan.** Whether the Docker driver turns gVisor on by default. For AgentCore: whether we can
+  add our own packages (for example the libraries ART-3 needs), the cost per hour of a session, and how a thread that
+  lasts days maps to sessions that end (files are kept as artifacts and copied into the next session).
+- **Later, with no new contract.** A Kubernetes driver (a pod per box, gVisor or Kata as its runtime) when a customer
+  runs Kubernetes. A small VM per box only if a customer requires it.
 
 ## 8. The decision-support ticket (draft, not created)
 
@@ -357,7 +364,7 @@ Operators watch many data sources in one workspace, are told which one needs att
 - **Source onboarding skill:** when a source is connected (SharePoint, Google Drive, a mailbox, an MCP server, an API), the agent explores it and writes one skill for it: what it is, how to query it, which fields matter, units, freshness.
 - **Board skill:** how to propose and build a board for a source, and when to ask before adding one.
 - **Controller run:** on a schedule and on "source changed", reads the sources through their skills, ranks what changed, flags the most important board with a reason, opens a new feed when one appears, notifies.
-- **Actions:** operators ask in the chat; the agent acts with MCP or HTTP tools after approval.
+- **Actions:** operators ask in the chat; the agent acts with MCP tools or terminal commands after approval.
 - **v2:** a workspace preset for this template: boards on the left, chat on the right, an attention strip on top.
 
 ## Notes
@@ -366,11 +373,11 @@ Operators watch many data sources in one workspace, are told which one needs att
 - Emergency-management content (source lists, report formats) is out of scope; it is a skill pack on top.
 
 ## Relationships
-- Builds on: CONN-1, CONN-3, MCP-1, HTTP-1, SKILL-1, SKILL-2, BOARD-1, BOARD-2, BOARD-3, RUN-1, RUN-2, RUN-3, APPR-1.
+- Builds on: CONN-1, CONN-3, MCP-1, CODE-2, SKILL-1, SKILL-2, BOARD-1, BOARD-2, BOARD-3, RUN-1, RUN-2, RUN-3, APPR-1.
 
 ## 9. How to run this
 
-1. Review the workstreams (section 5) and the architecture map. D1–D7 are settled. One question is open and is answered in the CODE-2 plan: how the runner isolates a box (proposal: gVisor).
+1. Review the workstreams (section 5) and the architecture map. D1–D7 are settled, and so is the runner: Docker for self-hosted installations, AgentCore for the SaaS (section 7).
 2. Per workstream, a plan file in `.ai/` with its contract (tables, endpoints, events, files owned), reviewed before code. Tickets are created only when asked, with `needs-review`.
 3. CORE was implemented by one agent and reviewed line by line. It is done.
 4. Phase 1 workstreams run as parallel agents, one branch each, verified on the branch's ephemeral stack (`gendox-compose-scripts/ephemeral`) with the unit tests and the API tests of `gendox-e2e-tests`, merged in dependency order.
