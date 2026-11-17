@@ -1,0 +1,15 @@
+Halvorsen Project: archive notes
+
+The Halvorsen project is a fictional research archive created for the automated tests of this application. Nothing in this document describes a real organization, place or person.
+
+Access
+
+The archive access code of the Halvorsen project is QUOKKA-4182. The code is given only to the archive keeper, who checks it before opening the reading room.
+
+Holdings
+
+The archive holds three collections: survey maps of a coastal valley, weather journals kept by the lighthouse staff, and letters between two botanists about salt-tolerant grasses. The maps are stored flat in drawers, the journals upright on open shelves, and the letters in acid-free boxes.
+
+Opening hours
+
+The reading room opens on Tuesdays and Thursdays. Visitors register at the front desk and may photograph documents without flash.

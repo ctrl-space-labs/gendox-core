@@ -5,7 +5,7 @@ import { AppWindow, BookOpen, Check, FileText, Layers, Library, ListChecks, Mess
 import useActiveScope from 'src/hooks/useActiveScope'
 import { chatActions } from 'src/store/chat/gendoxChat'
 import { clearAll } from 'src/store/chatAttachments/chatAttachments'
-import AppLayout, { useTopbarTitle } from 'src/layouts/AppLayout'
+import AppLayout, { useFocusedTab, useTopbarTitle } from 'src/layouts/AppLayout'
 import TopbarSlot from 'src/layouts/components/TopbarSlot'
 import Dock from 'src/components/dock/Dock'
 import {
@@ -98,7 +98,9 @@ const AgentHomePage = () => {
   const dockRef = useRef(null)
   const prefills = useRef(new Map())
   const [title, setTitle] = useState('Chat')
+  const [focusedUrl, setFocusedUrl] = useState(null)
   useTopbarTitle(title)
+  useFocusedTab(focusedUrl)
 
   const route = useCallback(
     url => {
@@ -180,8 +182,14 @@ const AgentHomePage = () => {
   useEffect(() => {
     if (!router.isReady || !projectId) return
     const openHash = () => {
-      const linked = decodeURIComponent(window.location.hash.slice(1))
-      if (linked) setTimeout(() => open(linked), 0)
+      let linked = decodeURIComponent(window.location.hash.slice(1))
+      if (!linked) return
+      // #/chat/new is a command: name the new chat in the address bar first, so handling it twice opens one tab
+      if (linked === '/chat/new') {
+        linked = newChatUrl()
+        window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}#${linked}`)
+      }
+      setTimeout(() => open(linked), 0)
     }
     openHash()
     router.events.on('hashChangeComplete', openHash)
@@ -195,6 +203,7 @@ const AgentHomePage = () => {
 
   const onFocus = useCallback((url, v) => {
     setTitle(v?.title ?? 'Chat')
+    setFocusedUrl(url)
     const next = `${window.location.pathname}${window.location.search}#${url}`
     if (`${window.location.pathname}${window.location.search}${window.location.hash}` !== next) {
       window.history.replaceState(window.history.state, '', next)

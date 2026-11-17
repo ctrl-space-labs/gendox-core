@@ -7,17 +7,23 @@ const config = require('../tests.config');
  */
 const login = async (page, name) => {
     const user = config.gendox.users[name];
-    const profile = page.waitForResponse(
-        response => response.url().endsWith(`${config.gendox.contextPath}/profile`) && response.request().method() === 'GET'
-    );
-
     await page.goto(config.frontendURL);
     await page.waitForURL(url => url.href.startsWith(config.idp.baseURL));
     await page.locator('input[name="username"]').fill(user.username);
-    await page.locator('input[name="password"]').fill(user.password);
-    await page.locator('input[type="submit"], button[type="submit"]').first().click();
+    const password = page.locator('input[name="password"]');
+    const submit = page.locator('input[type="submit"], button[type="submit"]').first();
+    // Keycloak may show both fields together, or ask for the username before the password.
+    if (!await password.isVisible()) {
+        await submit.click();
+    }
+    await password.fill(user.password);
 
-    const response = await profile;
+    const [response] = await Promise.all([
+        page.waitForResponse(
+            response => response.url().endsWith(`${config.gendox.contextPath}/profile`) && response.request().method() === 'GET'
+        ),
+        submit.click(),
+    ]);
     await page.waitForURL(url => url.href.startsWith(config.frontendURL) && url.pathname.startsWith('/gendox/'));
     return response;
 };

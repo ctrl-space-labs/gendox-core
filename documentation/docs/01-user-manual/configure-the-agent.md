@@ -199,6 +199,6 @@ Lists who can use the agent and their **role in the organization**.
 
 - **Name** and **Description**: the name people see when they chat, and what the agent is for (shown under the name in the widget).
 - **Process new documents automatically**: documents are ready soon after you add them. Processing uses AI credits, so you may turn it off and run it yourself on large uploads.
-- **Process waiting documents now** → **Process now**: reads every document that hasn't been processed yet.
+- **Process new and changed documents now** → **Process now**: reads the documents added or changed since the last run.
 - **Read scanned pages with AI**: each page is read by a vision model while processing. Slower and uses more tokens, but reads scans, tables and images.
 - **Danger zone → Delete agent**: removes its knowledge, conversations and tasks; members lose access and the widget stops working. This can't be undone.

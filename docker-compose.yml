@@ -72,6 +72,17 @@ services:
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - FILE_STORAGE_PATH=${FILE_STORAGE_PATH}
       - KEYSTORE_PASSWORD=${KEYSTORE_PASSWORD}
+      # Observability. All export stays off unless the deployment sets GENDOX_OTEL_ENABLED=true
+      # and starts the gendox-alloy collector (compose profile "observability"). See OBSERVABILITY.md.
+      - GENDOX_ENVIRONMENT=${GENDOX_ENVIRONMENT:-local}
+      - MANAGEMENT_OPENTELEMETRY_ENABLED=${GENDOX_OTEL_ENABLED:-false}
+      - MANAGEMENT_TRACING_EXPORT_ENABLED=${GENDOX_OTEL_ENABLED:-false}
+      - MANAGEMENT_TRACING_SAMPLING_PROBABILITY=${GENDOX_TRACING_SAMPLING_PROBABILITY:-0.1}
+      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://gendox-alloy:4318/v1/traces
+      - MANAGEMENT_OTLP_METRICS_EXPORT_ENABLED=${GENDOX_OTEL_ENABLED:-false}
+      - MANAGEMENT_OTLP_METRICS_EXPORT_URL=http://gendox-alloy:4318/v1/metrics
+      - MANAGEMENT_OTLP_METRICS_EXPORT_BASE_TIME_UNIT=seconds
+      - MANAGEMENT_OTLP_METRICS_EXPORT_STEP=30s
     networks:
       - gendox_network
     ports:
@@ -176,9 +187,45 @@ services:
     networks:
       - gendox_network
 
+  # Collects container logs, host metrics, and the API's OTLP metrics and traces, and pushes
+  # them to the Loki, Prometheus and Tempo at OBSERVABILITY_INGEST_URL. Starts only with the "observability"
+  # profile (COMPOSE_PROFILES=observability), so local runs don't start it.
+  gendox-alloy:
+    image: grafana/alloy:v1.22.0
+    container_name: gendox-alloy
+    profiles: ["observability"]
+    command:
+      - run
+      - --storage.path=/var/lib/alloy/data
+      - --server.http.listen-addr=127.0.0.1:12345
+      - /etc/alloy/config.alloy
+    environment:
+      - GENDOX_ENVIRONMENT=${GENDOX_ENVIRONMENT:-local}
+      - OBSERVABILITY_INGEST_URL=${OBSERVABILITY_INGEST_URL}
+      - OBSERVABILITY_INGEST_USERNAME=${OBSERVABILITY_INGEST_USERNAME}
+      - OBSERVABILITY_INGEST_PASSWORD=${OBSERVABILITY_INGEST_PASSWORD}
+    volumes:
+      - ./gendox-compose-scripts/observability/config.alloy:/etc/alloy/config.alloy:ro
+      - alloy-data:/var/lib/alloy/data
+      # Container discovery and logs. Read-only mount, but the Docker API is still powerful.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Host metrics.
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host/root:ro,rslave
+      - /run/udev/data:/run/udev/data:ro
+    expose:
+      - "4318"
+    mem_limit: 256m
+    cpus: 0.5
+    networks:
+      - gendox_network
+    restart: unless-stopped
+
 networks:
   gendox_network:
 
 volumes:
   postgres-data:
   keycloak-data:
+  alloy-data:

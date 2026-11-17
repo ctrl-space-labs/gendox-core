@@ -72,17 +72,40 @@ const warmUp = async (apiBaseURL) => {
  * sources. It never builds anything itself.
  */
 module.exports = async (config) => {
-    // Only the ephemeral configuration has an api project.
+    // Only the ephemeral and deployed configurations have an api project.
     const apiBaseURL = config.projects.find(project => project.name === 'api')?.use.baseURL;
     if (!apiBaseURL) return;
+
+    const target = require('../config/target');
+    const testsConfig = require('../tests.config');
+    const providers = config.projects.filter(project => project.name.startsWith('llm-')).map(project => project.name.slice(4));
+    console.log(`[e2e] target ${target.target}, models ${target.models} (${providers.join(', ')}), ` +
+        `cleanup ${target.purge ? 'delete and deactivate' : 'deactivate'}${target.keepFailed ? ', failed kept' : ''}` +
+        `${target.writeGuard ? ', write guard on' : ''}`);
+    // The model request count of this run, shared by the workers (support/llm.js).
+    fs.mkdirSync(testsConfig.authDir, { recursive: true });
+    fs.writeFileSync(path.join(testsConfig.authDir, 'llm-requests'), '');
+
+    if (target.target === 'prod' && process.env.E2E_CONFIRM_PROD !== 'yes') {
+        throw new Error('This run targets production. Set E2E_CONFIRM_PROD=yes to run it.');
+    }
 
     const health = `${apiBaseURL}/gendox/api/v1/actuator/health`;
     const healthy = await fetch(health).then(response => response.ok).catch(() => false);
     if (!healthy) {
         throw new Error(
             `The API does not answer at ${health}.\n` +
-            'In gendox-compose-scripts/ephemeral run: docker compose up -d --wait'
+            (target.deployed ? `Check E2E_API_BASE_URL for ${target.target}.` : 'In gendox-compose-scripts/ephemeral run: docker compose up -d --wait')
         );
+    }
+
+    // A deployed environment is warm, and its build is not this checkout's. What was set
+    // up there by hand is checked before any test, so a gap shows as one clear message.
+    if (target.deployed) {
+        const preflight = require('./preflight');
+        await preflight.checkAccounts(testsConfig);
+        if (target.realModels) await preflight.checkSubscribedOrganization(testsConfig);
+        return;
     }
 
     await warmUp(apiBaseURL);

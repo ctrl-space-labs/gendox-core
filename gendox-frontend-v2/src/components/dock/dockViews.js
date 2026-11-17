@@ -15,7 +15,7 @@ import { kindInfo, kindOf, latestVersionsOf } from 'src/components/artifacts/art
 import useProjectArtifacts from 'src/components/artifacts/useProjectArtifacts'
 import { useChatSession } from 'src/components/chat/useChat'
 import { fileNameOf, formatDateTime, timeAgo } from 'src/components/knowledge/documentUtils'
-import UploadDialog from 'src/components/knowledge/UploadDialog'
+import UploadDialog, { openOnFileDrag } from 'src/components/knowledge/UploadDialog'
 import FileTile from 'src/components/ui/FileTile'
 import { TaskFormDialog } from 'src/components/tasks/TaskDialogs'
 import { TaskTile, typeOfTask } from 'src/components/tasks/taskUtils'
@@ -135,6 +135,7 @@ export const DockChat = ({ chatKey, threadId }) => {
       token={token}
       chatKey={chatKey}
       variant='window'
+      mentions
       prefill={prefill}
       onOpenSources={(threadId, answer) => actions.open(sourcesUrlOf(threadId, answer.messageId))}
       onOpenArtifact={(threadId, ref) => actions.open(artifactUrlOf(threadId, ref.artifactId))}
@@ -322,7 +323,7 @@ export const DockKnowledge = () => {
   const docs = result?.content ?? []
 
   return (
-    <div className='vw in-dock compact'>
+    <div className='vw in-dock compact' {...openOnFileDrag(() => setUploading(true))}>
       <div className='dk-top'>
         <label className='dk-search'>
           <Search className='lucide' />

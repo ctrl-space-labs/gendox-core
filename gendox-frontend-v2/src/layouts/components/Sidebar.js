@@ -78,7 +78,7 @@ const AgentSwitcher = () => {
 }
 
 /** Recent chats with the current agent; each opens as a tab in the workspace */
-const RecentChats = () => {
+const RecentChats = ({ focusedTab }) => {
   const { organizationId, projectId, href } = useActiveScope()
   const threads = useChatThreads(organizationId)
   const groups = useMemo(
@@ -95,7 +95,8 @@ const RecentChats = () => {
             {list.map(thread => (
               <Link
                 key={thread.threadId}
-                className='trunc'
+                className={`trunc ${focusedTab === `/chat/${thread.threadId}` ? 'active' : ''}`}
+                aria-current={focusedTab === `/chat/${thread.threadId}` ? 'page' : undefined}
                 href={`${href('/gendox/agent-home')}#/chat/${thread.threadId}`}
                 title={thread.threadName}
               >
@@ -113,7 +114,7 @@ const RecentChats = () => {
   )
 }
 
-const Sidebar = ({ page }) => {
+const Sidebar = ({ page, focusedTab }) => {
   const { href } = useActiveScope()
 
   return (
@@ -138,7 +139,7 @@ const Sidebar = ({ page }) => {
           </nav>
         </div>
       </div>
-      <RecentChats />
+      <RecentChats focusedTab={focusedTab} />
       <div className='side-foot'>
         <AccountMenu />
       </div>

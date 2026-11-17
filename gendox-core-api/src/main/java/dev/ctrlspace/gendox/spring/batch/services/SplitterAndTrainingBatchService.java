@@ -107,13 +107,24 @@ public class SplitterAndTrainingBatchService {
             List<Project> projects = getProjectsWithNewDocuments(batch);
 
             for (Project project : projects) {
-                if(project.getAutoTraining()) {
-                    // this waits for the job to complete
-                    JobExecution splitterExecution = this.runSplitterAndTraining(project.getId());
+                if (Boolean.TRUE.equals(project.getAutoTraining())) {
+                    runForProject(project);
                 }
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Waits for the job to complete. If it cannot start, the error is logged and the other projects of the
+     * batch still run; this project's documents are picked up by its next run.
+     */
+    private void runForProject(Project project) {
+        try {
+            this.runSplitterAndTraining(project.getId());
+        } catch (Exception e) {
+            logger.error("Splitter and training could not run for project {}: {}", project.getId(), e.getMessage(), e);
         }
     }
 

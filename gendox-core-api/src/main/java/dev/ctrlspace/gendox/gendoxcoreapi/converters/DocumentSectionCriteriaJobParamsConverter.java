@@ -74,12 +74,15 @@ public class DocumentSectionCriteriaJobParamsConverter implements GendoxConverte
         DocumentInstanceSectionCriteria.DocumentInstanceSectionCriteriaBuilder builder =
                 DocumentInstanceSectionCriteria.builder()
                         .documentId(jobParameters.getString(JobExecutionParamConstants.DOCUMENT_INSTANCE_ID))
-                        .projectAutoTraining(Boolean.valueOf(jobParameters.getString(JobExecutionParamConstants.PROJECT_AUTO_TRAINING)))
                         .createdBetween(createdBetween)
                         .updatedBetween(updatedBetween);
 
         if (projectId != null) {
             builder.projectId(projectId);
+        }
+        // only when the run set it: left out, it filters nothing (it does not mean false)
+        if (jobParameters.getString(JobExecutionParamConstants.PROJECT_AUTO_TRAINING) != null) {
+            builder.projectAutoTraining(Boolean.valueOf(jobParameters.getString(JobExecutionParamConstants.PROJECT_AUTO_TRAINING)));
         }
 
         return builder.build();

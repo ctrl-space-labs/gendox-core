@@ -299,6 +299,11 @@ public class DocumentService {
         return documentInstanceRepository.save(documentInstance);
     }
 
+    /** Stores the hash, token count and external URL found while splitting, without changing updatedAt. */
+    public void updateSplitResult(DocumentInstance split) {
+        documentInstanceRepository.updateSplitResult(split.getId(), split.getDocumentSha256Hash(), split.getTotalTokens(), split.getExternalUrl());
+    }
+
 
     @Transactional
     public void deleteAllDocumentInstances(List<UUID> documentIds) throws GendoxException {

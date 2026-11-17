@@ -331,8 +331,8 @@ const AgentSettingsPage = () => {
             </div>
             <div className='toggle-row'>
               <div>
-                <b>Process waiting documents now</b>
-                <p>Reads every document that hasn’t been processed yet.</p>
+                <b>Process new and changed documents now</b>
+                <p>Reads the documents added or changed since the last run.</p>
               </div>
               <button aria-busy={isProcessing} className='btn s' onClick={processNow} disabled={isProcessing}>
                 <Play className='lucide' />

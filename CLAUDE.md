@@ -34,6 +34,8 @@ Two files per topic, no more: **the original, which never changes, and the curre
 
 - [End-to-end tests and ephemeral environments: pending work](.ai/e2e-tests-pending-work-2026-11-10.md) — historical setup handover; current test scope is in the coverage plan above.
 
+- [One smoke suite for local, dev and prod](.ai/deployed-smoke-tests-2026-11-14.md) — implemented, not yet run against a deployed environment; each environment needs five test accounts and, for real models, a paid organization, made by hand.
+
 - [Ephemeral environments, smoke tests and agent tooling](.ai/ephemeral-environments-2026-11-09.md) — environment setup implemented; current smoke selection is in the coverage plan above. Self-contained: it replaces the [original 2026-11-06 plan](.ai/ephemeral-environments-2026-11-06.md), which is kept unchanged.
 
 - [Streaming chat, client tools and knowledge search mode — #519 / #518 / #542](.ai/issue-519-streaming-chat-2026-10-20.md) — implemented, not yet tested end to end. Self-contained: it replaces the [original 2026-10-16 plan](.ai/issue-519-streaming-chat-2026-10-16.md), which is kept unchanged.
@@ -91,6 +93,8 @@ npm run report                       # the last run, in a browser
 ```
 
 Results of every run, including the errors, traces and API log of failed ones, are kept in `gendox-e2e-tests/test-history/`. Start with `STATUS.md` there.
+
+The same smoke suite verifies a deploy: `npm run smoke:dev` (cheap real models of every provider) or `E2E_CONFIRM_PROD=yes npm run smoke:prod`. On a deployed environment the tests remove what they made through the application's delete APIs and may change only what they created. `E2E_TARGET` (local, dev, prod) says where, `E2E_MODELS` (mock, small, large) with which models; see "Deployed environments" in `gendox-e2e-tests/AGENTS.md`. Never run against prod unless the user asks.
 
 ### Documentation (documentation)
 ```bash

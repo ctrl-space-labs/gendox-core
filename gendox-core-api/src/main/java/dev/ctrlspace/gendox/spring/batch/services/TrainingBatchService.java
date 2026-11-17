@@ -63,10 +63,13 @@ public class TrainingBatchService {
 
         DocumentInstanceSectionCriteria sectionCriteria = DocumentInstanceSectionCriteria.builder()
                 .updatedBetween(trainingTimePeriodAndOverride.timePeriod())
-                .projectAutoTraining(true)
                 .build();
         if (projectId != null) {
+            // one agent: all its sections, also when it does not process automatically ("Process now")
             sectionCriteria.setProjectId(projectId.toString());
+        } else {
+            // all agents: only those that process automatically
+            sectionCriteria.setProjectAutoTraining(true);
         }
 
         JobParameters trainingParams = jobUtils.buildJobParameters(

@@ -10,6 +10,8 @@
     "smoke": "playwright test --config playwright.smoke.config.js",
     "smoke:v1": "E2E_FRONTEND=v1 playwright test --config playwright.smoke.config.js",
     "smoke:v2": "E2E_FRONTEND=v2 playwright test --config playwright.smoke.config.js",
+    "smoke:dev": "E2E_TARGET=dev E2E_MODELS=${E2E_MODELS:-small} playwright test --config playwright.smoke.config.js",
+    "smoke:prod": "E2E_TARGET=prod E2E_MODELS=${E2E_MODELS:-small} playwright test --config playwright.smoke.config.js",
     "list": "playwright test --list",
     "ui": "playwright test --ui",
     "report": "playwright show-report"

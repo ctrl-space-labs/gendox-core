@@ -226,6 +226,9 @@ gendox:
 
   batch-jobs:
     default-start-days: 365
+    # a STARTED run whose steps wrote no progress for this long is taken as abandoned (stopped server) and marked
+    # FAILED, so it no longer blocks its project; must be longer than the slowest single chunk of any job
+    abandoned-after: PT1H
     document-training:
       job:
         name: documentTrainingJob
