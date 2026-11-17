@@ -3,7 +3,7 @@
 2026-11-10, revised the same day after the first review (decisions D1–D7, ticket status, decision-support idea, core rules).
 Branch reviewed: `feature-frontend-v2-redesign` (backend 0.13.0, `gendox-frontend-v2`).
 
-**Architecture map with the tasks linked to each part:** https://claude.ai/artifact/NiR6dwBPTU4icrXbtVay9Z (private; shared from the page's Share menu)
+**Architecture map with the tasks linked to each part:** https://claude.ai/artifact/NiR6dwBPTU4icrXbtVay9Z (public)
 
 **Designs (2026-11-17):** the screens for the roadmap are drawn in the `gendox-agent-platform` prototype of the
 `gendox-feature-prototypes` repository: Gendox v2 as built, with each roadmap task marked on the screens it changes
