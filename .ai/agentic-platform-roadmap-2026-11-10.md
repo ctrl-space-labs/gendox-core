@@ -5,6 +5,11 @@ Branch reviewed: `feature-frontend-v2-redesign` (backend 0.13.0, `gendox-fronten
 
 **Architecture map with the tasks linked to each part:** https://claude.ai/artifact/NiR6dwBPTU4icrXbtVay9Z (private; shared from the page's Share menu)
 
+**Designs (2026-11-17):** the screens for the roadmap are drawn in the `gendox-agent-platform` prototype of the
+`gendox-feature-prototypes` repository: Gendox v2 as built, with each roadmap task marked on the screens it changes
+and a phase switch (Today, P1, P2, All). Its `ROADMAP.md` and `pages/roadmap.html` map every task to its screens.
+Static HTML with fake data; nothing in it ships.
+
 Goal: turn Gendox from "an agent that answers from documents" into an agent that **works**: connected to the
 organization's apps, reachable from the places people already talk, able to run code and produce files, and safe
 enough for enterprise use. Decision support is the reference scenario: it is not a separate product but one level
