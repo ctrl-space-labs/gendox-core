@@ -61,7 +61,18 @@ h1 { font-size: 28px; } h2 { font-size: 19px; } h3 { font-size: 14px; letter-spa
 .account > .lucide { color: var(--text-3); }
 
 /* menus */
-.pop { position: fixed; z-index: 60; padding: 6px; border: 1px solid var(--border-2); border-radius: var(--radius); background: var(--surface); box-shadow: var(--pop-shadow); max-height: 80vh; overflow-y: auto; animation: pop .12s ease-out; }
+.pop { position: fixed; z-index: 60; display: flex; flex-direction: column; padding: 6px; border: 1px solid var(--border-2); border-radius: var(--radius); background: var(--surface); box-shadow: var(--pop-shadow); max-height: 80vh; overflow-y: auto; animation: pop .12s ease-out; }
+.pop > * { flex: none; }
+/* organizations or agents: the list scrolls, and in a menu it is what gives up height, so the other items stay in view */
+.menu-list { max-height: 240px; overflow-y: auto; }
+.pop > .menu-list { flex: 0 1 auto; }
+.menu-empty { padding: 6px 10px; }
+.menu-search { width: 100%; height: 30px; margin-bottom: 6px; padding: 0 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: transparent; color: var(--text); font-size: 13px; }
+.menu-search:focus, .menu-search:focus-visible { border-color: var(--border-2); outline: 0; }
+.menu-search::placeholder { color: var(--text-3); }
+/* the same list in a page's card, e.g. the profile's organizations */
+.card > .menu-search { width: calc(100% - 40px); margin: 14px 20px 6px; }
+.card > .menu-list { max-height: 480px; }
 @keyframes pop { from { opacity: 0; transform: translateY(4px); } }
 .pop .mi { display: flex; align-items: center; gap: 10px; width: 100%; height: 34px; padding: 0 10px; border: 0; border-radius: var(--radius-sm); background: none; font-size: 13.5px; cursor: pointer; }
 .pop .mi:hover { background: var(--surface-2); }
