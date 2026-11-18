@@ -58,7 +58,8 @@ test.describe('V2 browser smoke', { tag: '@smoke' }, () => {
             const response = await created;
             await expectOk(response);
             const project = await response.json();
-            await page.waitForURL(/\/gendox\/agent-home\/.*#\/chat\/new/);
+            await expect(page.getByRole('heading', { name: `${name} is ready`, exact: true })).toBeVisible();
+            await page.getByRole('link', { name: 'Skip for now', exact: true }).click();
             await expect(page.getByRole('textbox', { name: 'Message', exact: true })).toBeVisible();
             const stored = await json(await call(api, { ...w, projectId: project.id }, 'get', projectPath({ ...w, projectId: project.id })));
             expect(stored).toMatchObject({ name, description: 'Created by smoke' });
