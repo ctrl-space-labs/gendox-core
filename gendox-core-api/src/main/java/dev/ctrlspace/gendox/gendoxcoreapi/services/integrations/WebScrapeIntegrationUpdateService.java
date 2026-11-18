@@ -167,7 +167,8 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
                             "text/markdown");
 
                     DocumentInstance instance = documentService.uploadSingleFile(
-                            file, false, null, integration.getOrganizationId(), integration.getProjectId());
+                            file, false, null, integration.getOrganizationId(), integration.getProjectId(),
+                            page.getUrl());
 
                     page.setDocumentInstanceId(instance.getId());
                     page.setContentHash(content.getContentHash());
