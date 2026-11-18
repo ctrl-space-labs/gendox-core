@@ -50,8 +50,7 @@ test('V2 create an organization and its first agent in the browser', { tag: '@p1
     test.info().annotations.push(kept);
     await page.getByRole('textbox', { name: 'Name', exact: true }).fill(`${name} agent`);
     await page.getByRole('button', { name: 'Create agent', exact: true }).click();
-    await expect(page.getByRole('heading', { name: `${name} agent is ready`, exact: true })).toBeVisible();
-    await page.getByRole('link', { name: 'Skip for now', exact: true }).click();
+    await page.waitForURL(/\/gendox\/agent-home\/.*#\/chat\/new/);
     await expect(page.getByRole('textbox', { name: 'Message', exact: true })).toBeVisible();
     await expectOk(await organizations.deactivateOrganization(api, await tokenFor(api, 'outsider'), organizationId));
     test.info().annotations.splice(test.info().annotations.indexOf(kept), 1);

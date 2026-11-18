@@ -787,6 +787,7 @@ pre.code .n { color: var(--info); }
 .pg-empty { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 28px; border: 1px dashed var(--border-2); border-radius: var(--radius); color: var(--text-3); }
 .pg-stream .more { display: flex; margin: 16px auto 20px; }
 @container insp (max-width: 560px) { .rd-b { grid-template-columns: minmax(0, 1fr); } .pg-rail { display: none; } .pg-stream { padding: 0 16px 40px; } }
+.prose hr, .gc-md hr { border: 0; border-top: 1px solid var(--border); margin: 1.1em 0; }
 .prose blockquote, .gc-md blockquote { padding: 2px 0 2px 14px; border-left: 3px solid var(--border-2); color: var(--text-2); }
 
 .opt-row { display: grid; grid-template-columns: 18px minmax(0, 1fr) minmax(90px, 150px) auto; gap: 8px; align-items: center; }
@@ -811,3 +812,17 @@ pre.code .n { color: var(--info); }
 /* a document's name in a list opens it, while the rest of its row selects it */
 .doc-link { color: inherit; }
 .doc-link:hover, .doc-link:focus-visible { color: var(--accent-text); text-decoration: underline; text-underline-offset: 2px; }
+
+/* the knowledge preview's first sections: Markdown as in the document, sections apart by a hairline */
+.peek { border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+.peek-sec { position: relative; max-height: 240px; overflow: hidden; padding: 10px 12px; font-size: 13px; cursor: pointer; transition: background .15s; }
+.peek-sec + .peek-sec { border-top: 1px solid var(--border); }
+.peek-sec:hover { background: var(--surface-2); }
+.peek-sec:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.peek-sec.cut { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 48px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 48px), transparent); }
+.peek-sec h4 { font-size: 13.5px; font-weight: 600; margin-bottom: 4px; }
+.peek-sec .prose { line-height: 1.6; color: var(--text-2); }
+.peek-sec .prose h1, .peek-sec .prose h2, .peek-sec .prose h3 { font-size: 13.5px; margin-top: .8em; color: var(--text); }
+.peek-sec .prose h4, .peek-sec .prose h5, .peek-sec .prose h6 { font-size: 13px; color: var(--text); }
+.peek-sec .prose img { max-width: 100%; }
+.peek-sec .prose pre { font-size: 12px; overflow: hidden; }
