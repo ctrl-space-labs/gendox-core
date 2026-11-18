@@ -543,13 +543,11 @@ const DocumentView = () => {
         </div>
 
         <div className={`docpage ${mode === 'edit' ? 'editing' : asking ? 'asking' : ''}`}>
-          {mode === 'view' && (
+          {mode === 'view' && titled.length > 0 && (
             <nav className='outline'>
-              {titled.length > 0 && (
-                <span className='label' style={{ paddingLeft: 12 }}>
-                  On this page
-                </span>
-              )}
+              <span className='label' style={{ paddingLeft: 12 }}>
+                On this page
+              </span>
               {titled.map(section => (
                 <a
                   key={section.id}

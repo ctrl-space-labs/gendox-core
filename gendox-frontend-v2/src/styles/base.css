@@ -649,6 +649,10 @@ pre.code .n { color: var(--info); }
 .doc-t { font-size: 22px; } .in-dock .doc-t { font-size: 17px; }
 .docpage { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 32px; align-items: start; }
 .docpage.asking { grid-template-columns: 200px minmax(0, 1fr) 400px; }
+/* no section titles, no outline: one readable column, starting under the header's icon (after the 28px back arrow and the 14px gap) */
+.docpage:where(:not(:has(> .outline))) { grid-template-columns: minmax(0, 820px); padding-left: 42px; }
+.in-dock .docpage:where(:not(:has(> .outline))) { padding-left: 0; }
+.docpage.asking:where(:not(:has(> .outline))) { grid-template-columns: minmax(0, 1fr) 400px; }
 .outline { position: sticky; top: 76px; display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
 .in-dock .outline { top: 0; }
 .outline a { padding: 5px 10px; border-left: 2px solid var(--border); color: var(--text-3); }
