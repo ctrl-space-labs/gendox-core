@@ -207,10 +207,10 @@ const DocumentPanel = ({ document, members, organizationUsers, documentHref, onD
           Open
         </Link>
         {isReady && (
-          <Link className='btn s fade-in' href={`${documentHref(document.id)}&ask=1`}>
+          <button className='btn s fade-in' onClick={() => window.gendox?.widget?.open(`In “${document.title}”, `)}>
             <MessageSquareText className='lucide' />
             Ask about it
-          </Link>
+          </button>
         )}
         <span className='sp' />
         <button className='btn ghost s danger' onClick={onDelete}>

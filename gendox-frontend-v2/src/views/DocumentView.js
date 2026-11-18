@@ -27,8 +27,6 @@ import { getErrorMessage } from 'src/utils/errorHandler'
 import { localStorageConstants } from 'src/utils/generalConstants'
 import { isValidOrganizationAndProject } from 'src/utils/validators'
 import { ViewMain, scrollWithin, useScreenTitle, useView } from 'src/views/ViewContext'
-import Chat from 'src/components/chat/Chat'
-import useChat from 'src/components/chat/useChat'
 import Markdown from 'src/components/chat/Markdown'
 import {
   authorOf,
@@ -52,32 +50,6 @@ const CITED_MS = 10000
 const getToken = () => window.localStorage.getItem(localStorageConstants.accessTokenKey)
 
 const sectionAnchor = section => `sec-${section.id}`
-
-// The chat beside the document. It keeps its thread in the URL, like the chat page.
-const DocumentAskPanel = ({ title, onClose }) => {
-  const { token, newThread, openThread } = useChat()
-  const { href } = useActiveScope()
-
-  const documentHref = source =>
-    href('/gendox/document-instance', { documentId: source.documentId, sectionId: source.sectionId })
-
-  return (
-    <Chat
-      token={token}
-      variant='panel'
-      header
-      threadsDrawer
-      greeting={false}
-      footnote=''
-      placeholder={`Ask about ${title}…`}
-      prefill={`In “${title}”, `}
-      documentHref={documentHref}
-      onNewThread={newThread}
-      onOpenThread={openThread}
-      onClose={onClose}
-    />
-  )
-}
 
 // One section in edit mode: title, Markdown with a preview, collapse and delete
 const EditSection = ({ draft, index, onChange, onDelete, onDragStart, onDrop, isDragging }) => {
@@ -148,7 +120,7 @@ const EditSection = ({ draft, index, onChange, onDelete, onDragStart, onDrop, is
 /**
  * One document by its sections (?documentId, ?sectionId for a cited passage), with edit mode.
  * Shown as a page and as a dock tab, so it keeps the document in its own state, not the store:
- * two tabs can show two documents. "Ask about it" is a panel beside it on a page, and a new chat tab in the dock.
+ * two tabs can show two documents. "Ask about it" opens the chat bubble on a page, and a new chat tab in the dock.
  */
 const DocumentView = () => {
   const dispatch = useDispatch()
@@ -156,14 +128,13 @@ const DocumentView = () => {
   const { user } = useAuth()
   const { organizationId, projectId, href } = useActiveScope()
   const organizationUsers = useOrganizationUsers(organizationId)
-  const { documentId, sectionId, ask } = view.query
+  const { documentId, sectionId } = view.query
 
   const [loaded, setLoaded] = useState({ document: null, sections: [], error: null })
   const { document: storedDocument, sections: storedSections, error } = loaded
   const { projectMembers } = useSelector(state => state.activeProject)
 
   const [mode, setMode] = useState('view')
-  const [asking, setAsking] = useState(false)
   const [drafts, setDrafts] = useState([])
   const [saveState, setSaveState] = useState('saved')
   const [dragIndex, setDragIndex] = useState(null)
@@ -206,10 +177,6 @@ const DocumentView = () => {
       dispatch(fetchProject({ organizationId, projectId, token: getToken() }))
     }
   }, [dispatch, organizationId, projectId, user])
-
-  useEffect(() => {
-    if (ask && document) setAsking(true)
-  }, [ask, document])
 
   // a cited section is scrolled to and highlighted for a while; #3 scrolls to the third section
   useEffect(() => {
@@ -281,7 +248,6 @@ const DocumentView = () => {
   }
 
   const startEditing = () => {
-    setAsking(false)
     setDrafts(
       sections.map(section => ({
         id: section.id,
@@ -476,7 +442,7 @@ const DocumentView = () => {
           {mode === 'view' ? (
             <div className='row'>
               {sections.length > 0 && (
-                <button className='btn s' onClick={() => (view.ask ? view.ask(`In “${title}”, `) : setAsking(a => !a))}>
+                <button className='btn s' onClick={() => (view.ask ?? window.gendox?.widget?.open)?.(`In “${title}”, `)}>
                   <MessageSquareText className='lucide' />
                   Ask about it
                 </button>
@@ -542,7 +508,7 @@ const DocumentView = () => {
           )}
         </div>
 
-        <div className={`docpage ${mode === 'edit' ? 'editing' : asking ? 'asking' : ''}`}>
+        <div className={`docpage ${mode === 'edit' ? 'editing' : ''}`}>
           {mode === 'view' && titled.length > 0 && (
             <nav className='outline'>
               <span className='label' style={{ paddingLeft: 12 }}>
@@ -620,12 +586,6 @@ const DocumentView = () => {
               </>
             )}
           </article>
-
-          {asking && mode === 'view' && (
-            <aside className='card askpanel'>
-              <DocumentAskPanel title={title} onClose={() => setAsking(false)} />
-            </aside>
-          )}
         </div>
 
       <ConfirmDialog

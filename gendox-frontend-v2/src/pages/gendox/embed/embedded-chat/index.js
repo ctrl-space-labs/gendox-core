@@ -21,6 +21,8 @@ const EmbeddedChatPage = () => {
   const { organizationId, projectId, variant, placeholder, footnote } = router.query
   const isPanel = variant === 'panel'
   const [isOpen, setIsOpen] = useState(false)
+  // text the host page puts in the message box, with widget.open(text)
+  const [prefill, setPrefill] = useState()
   const iFrameMessageManager = useIFrameMessageManager()
   const { isEmbedded, iFrameConfiguration, originUrl } = iFrameMessageManager
   const isOpenRef = useRef(false)
@@ -151,6 +153,7 @@ const EmbeddedChatPage = () => {
 
       if (action === 'open') {
         applyChatState(true)
+        setPrefill(data.data.prefill)
 
         return
       }
@@ -207,6 +210,7 @@ const EmbeddedChatPage = () => {
           sources={isSignedIn}
           mentions={isSignedIn}
           poweredBy
+          prefill={prefill}
           placeholder={placeholder || undefined}
           footnote={footnote || undefined}
           onNewThread={newThread}

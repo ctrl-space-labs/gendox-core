@@ -648,11 +648,9 @@ pre.code .n { color: var(--info); }
 .doc-h { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
 .doc-t { font-size: 22px; } .in-dock .doc-t { font-size: 17px; }
 .docpage { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 32px; align-items: start; }
-.docpage.asking { grid-template-columns: 200px minmax(0, 1fr) 400px; }
 /* no section titles, no outline: one readable column, starting under the header's icon (after the 28px back arrow and the 14px gap) */
 .docpage:where(:not(:has(> .outline))) { grid-template-columns: minmax(0, 820px); padding-left: 42px; }
 .in-dock .docpage:where(:not(:has(> .outline))) { padding-left: 0; }
-.docpage.asking:where(:not(:has(> .outline))) { grid-template-columns: minmax(0, 1fr) 400px; }
 .outline { position: sticky; top: 76px; display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
 .in-dock .outline { top: 0; }
 .outline a { padding: 5px 10px; border-left: 2px solid var(--border); color: var(--text-3); }
@@ -661,8 +659,6 @@ pre.code .n { color: var(--info); }
 .sec:first-child { border-top: 0; padding-top: 4px; }
 .sec h2 { font-size: 17px; margin-bottom: 10px; } .sec h3 { font-size: 15px; margin-bottom: 8px; }
 .sec.cited { margin-inline: -16px; padding-inline: 16px; border-radius: var(--radius); background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); transition: background 1.5s; }
-.askpanel { position: sticky; top: 76px; height: calc(100dvh - 100px); overflow: hidden; display: none; }
-.docpage.asking .askpanel { display: block; }
 .edit-sec { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
 .edit-sec .h { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 6px; border-bottom: 1px solid var(--border); }
 .edit-sec .grip { cursor: grab; color: var(--text-3); padding: 4px; }
@@ -673,7 +669,7 @@ pre.code .n { color: var(--info); }
 .edit-sec.min textarea, .edit-sec.min .prev { display: none; }
 .edit-sec.min .h { border-bottom: 0; }
 /* a narrow view has no outline, and the chat sits above the document (a fixed panel can't escape a container) */
-@container vw (max-width: 1000px) { .docpage, .docpage.asking { grid-template-columns: minmax(0, 1fr); } .outline { display: none; } .askpanel { position: static; height: 70dvh; order: -1; } }
+@container vw (max-width: 1000px) { .docpage { grid-template-columns: minmax(0, 1fr); } .outline { display: none; } }
 
 /* document insights: the table, and the inspector beside it */
 .ins { height: 100%; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr); }
