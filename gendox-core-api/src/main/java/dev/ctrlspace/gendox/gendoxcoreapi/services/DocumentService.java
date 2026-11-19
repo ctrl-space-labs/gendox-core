@@ -336,8 +336,15 @@ public class DocumentService {
 
     @Transactional(rollbackOn = Exception.class)
     public @NotNull DocumentInstance uploadSingleFile(MultipartFile file, boolean messageAttachment, UUID threadId, UUID organizationId, UUID projectId) throws IOException, GendoxException, NoSuchAlgorithmException {
+        return uploadSingleFile(file, messageAttachment, threadId, organizationId, projectId, null);
+    }
+
+    // with the address the content came from, e.g. a scraped web page
+    @Transactional(rollbackOn = Exception.class)
+    public @NotNull DocumentInstance uploadSingleFile(MultipartFile file, boolean messageAttachment, UUID threadId, UUID organizationId, UUID projectId,
+                                                      String externalUrl) throws IOException, GendoxException, NoSuchAlgorithmException {
         UUID userId = securityUtils.getUserId();
-        DocumentInstance documentInstance = uploadService.uploadFile(file, organizationId, projectId, messageAttachment, userId, threadId);
+        DocumentInstance documentInstance = uploadService.uploadFile(file, organizationId, projectId, messageAttachment, userId, threadId, externalUrl);
 
         DocumentCriteria.DocumentCriteriaBuilder documentCriteriaBuilder = DocumentCriteria
                 .builder()

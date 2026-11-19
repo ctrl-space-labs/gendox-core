@@ -198,6 +198,15 @@ export const DockKnowledge = () => {
   const [result, setResult] = useState(null)
   const [uploading, setUploading] = useState(false)
 
+  // ?upload=1 (the new-agent wizard): open the upload once, and drop it from the address so a reload doesn't
+  useEffect(() => {
+    const url = new URL(window.location.href)
+    if (url.searchParams.get('upload') !== '1') return
+    url.searchParams.delete('upload')
+    window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash)
+    setUploading(true)
+  }, [])
+
   const load = () =>
     documentService
       .getDocuments(organizationId, projectId, { organizationId, projectId, ...(query.trim() ? { documentNameContains: query.trim() } : {}) }, getToken(), 0, 60)

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useDispatch, useSelector } from 'react-redux'
@@ -53,6 +53,7 @@ import {
   updatedAtOf
 } from 'src/components/knowledge/documentUtils'
 import { toPlainPreview } from 'src/components/chat/chatUtils'
+import Markdown from 'src/components/chat/Markdown'
 import ConfirmDialog from 'src/components/ui/ConfirmDialog'
 import Empty from 'src/components/ui/Empty'
 import FileTile from 'src/components/ui/FileTile'
@@ -73,6 +74,39 @@ const useDebounced = (value, delay) => {
   }, [value, delay])
 
   return debounced
+}
+
+// One section in the preview, in Markdown as the document shows it; a long one is cut and fades out.
+// A click opens the document at this section, except on a link inside the text.
+const PreviewSection = ({ section, href }) => {
+  const router = useRouter()
+  const ref = useRef(null)
+  const [cut, setCut] = useState(false)
+  const title = sectionTitleOf(section)
+
+  useLayoutEffect(() => {
+    if (ref.current) setCut(ref.current.scrollHeight > ref.current.clientHeight + 1)
+  }, [section.sectionValue])
+
+  const open = e => {
+    if (e.target.closest('a')) return
+    router.push(href)
+  }
+
+  return (
+    <div
+      ref={ref}
+      className={`peek-sec ${cut ? 'cut' : ''}`}
+      role='link'
+      tabIndex={0}
+      title='Open at this section'
+      onClick={open}
+      onKeyDown={e => e.key === 'Enter' && open(e)}
+    >
+      {title && <h4>{title}</h4>}
+      <Markdown text={section.sectionValue || ''} className='prose' />
+    </div>
+  )
 }
 
 // The selected document: its details and first sections (GET documents/{id})
@@ -160,19 +194,9 @@ const DocumentPanel = ({ document, members, organizationUsers, documentHref, onD
       {isReady && (
         <section className='fade-in'>
           <div className='label'>First sections</div>
-          <div className='stack' style={{ gap: 8 }}>
+          <div className='peek'>
             {sections.slice(0, 3).map(section => (
-              <Link
-                key={section.id}
-                className='src'
-                href={documentHref(document.id, section.id)}
-                style={{ padding: '8px 10px' }}
-              >
-                <div style={{ minWidth: 0 }}>
-                  {sectionTitleOf(section) && <b style={{ fontWeight: 500 }}>{sectionTitleOf(section)}</b>}
-                  <q className='clamp2'>{toPlainPreview(section.sectionValue)}</q>
-                </div>
-              </Link>
+              <PreviewSection key={section.id} section={section} href={documentHref(document.id, section.id)} />
             ))}
           </div>
         </section>
@@ -183,10 +207,10 @@ const DocumentPanel = ({ document, members, organizationUsers, documentHref, onD
           Open
         </Link>
         {isReady && (
-          <Link className='btn s fade-in' href={`${documentHref(document.id)}&ask=1`}>
+          <button className='btn s fade-in' onClick={() => window.gendox?.widget?.open(`In “${document.title}”, `)}>
             <MessageSquareText className='lucide' />
             Ask about it
-          </Link>
+          </button>
         )}
         <span className='sp' />
         <button className='btn ghost s danger' onClick={onDelete}>

@@ -184,7 +184,7 @@ const UserProfilePage = () => {
             <p>Switch between them from the menu at the bottom of the sidebar.</p>
           </header>
           <div className='card'>
-            <MenuList items={organizations} currentId={organizationId} noun='organizations' toggleClassName='item'>
+            <MenuList items={organizations} currentId={organizationId} noun='organizations'>
               {o => {
                 const current = o.id === organizationId
 
