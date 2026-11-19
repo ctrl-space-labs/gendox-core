@@ -216,10 +216,11 @@ Two tickets, as decided in review:
   - **Network.** One setting per agent: the box reaches the internet, or nothing. Off by default. With it on, the agent calls APIs with code it writes; this replaces the HTTP tools. At first the user gives credentials in the chat and the agent writes its own authentication code. Until VAULT-1, such credentials stay in the thread's messages and reach the model provider; the setting says so.
   - **Commands are named tasks.** Every command carries a short description in plain words, written by the agent. A command can run in the background while the turn continues, and can be stopped.
   - **v2:** the workspace lists running and finished commands, under the name "Commands", with the description, the duration and a stop button; opening one shows the command, its output and the exit code.
-- **CODE-3 Local terminal in the desktop app.** Later (decision D4). A third runner driver, "desktop", with the same six calls as Docker and AgentCore, not `CLIENT` tools: the desktop app opens an outgoing connection to the Gendox server and registers as a runner (for example "Chris's MacBook"), and the server sends the calls over it. So a chat on the phone, the web app, Slack or the desktop app itself can run commands on that computer. Nothing is opened on the computer or its network. Waits for CODE-2, CLIENT-2, APPR-1.
+- **Terminal in the desktop app — brought forward on 2026-11-19 as a `CLIENT` tool** (#585, #592). When the user chats from the desktop app (CLIENT-2), `run_command` is a client tool the app runs, after the user says yes. From the browser, mobile and the channels the same tool runs in the CODE-2 sandbox. It needs neither the runner contract nor a connection of its own. First an example custom tool (#585), then a built-in tool the server routes to where the client can run it (#592). Plan: [Desktop app](client-2-desktop-app-2026-11-19.md).
+- **CODE-3 Desktop runner.** Later, an option. A third runner driver, "desktop", with the same six calls as Docker and AgentCore: the desktop app opens an outgoing connection to the Gendox server and registers as a runner, and the server sends the calls over it. So a chat on the phone, the web app or Slack can run commands on that computer while the app is not the one chatting. Nothing is opened on the computer or its network. Waits for CODE-2, CLIENT-2, APPR-1.
   - **Only its owner uses it.** A desktop runner serves its owner's own threads, never other members, public agents, the widget or scheduled runs. A deliberate exception to D2, because the computer is the user's own.
-  - **Approval follows the owner's settings, as for any tool (APPR-1).** Commands that match a list the owner allowed run without asking; the rest ask, and the card appears on whichever device the owner is chatting from. The CODE-3 plan sets the defaults.
-  - **The owner chooses the folders** the agent may use.
+  - **Approval follows the owner's settings, as for any tool (APPR-1).** Commands that match a list the owner allowed run without asking; the rest ask, and the card appears on whichever device the owner is chatting from.
+  - **The owner chooses the folders** the agent may use (CLIENT-2f, #589).
   - **The computer must be on and online.** Otherwise the command waits or fails, and the chat says so.
 - **VAULT-1 Credentials the agent cannot read (new ticket).** A store of API credentials per organization, with a project override like CONN-1. The agent names a credential and never sees its value: a command gets a short-lived token (for example an OAuth access token minted from a stored refresh token), or a proxy on the box's way out adds the credential to the request. Credentials leave the thread's messages and the box's files. Also what lets a board or a scheduled run call an API with no one in the chat. Waits for CODE-2, CONN-1.
 
@@ -265,10 +266,10 @@ as the fallback for iOS and Android if Tauri's mobile support falls short on pus
 UI frameworks (Leptos, Dioxus) were looked at and left out: they would mean rewriting the v2 frontend in Rust.
 
 - **CLIENT-1 Installable web app.** The v2 app as a PWA: manifest, icons, an offline app shell, install from the browser, web push for notifications (on iOS from 16.4, once added to the home screen). No store.
-- **CLIENT-2 Desktop app (new ticket).** Tauri 2 for macOS, Windows and Linux. Sign-in runs in the system browser with PKCE and returns to the app through a deep link, never inside the webview. The server address is asked on first launch, so one build serves the SaaS and every self-hosted installation. Native notifications, signed builds, automatic updates. Open, decided in its plan: ship the v2 build inside the app (fast start, but every server version must accept it, so it needs an API version check) or load the UI from the server (always the server's version, but the app's native features must then be allowed for that origin).
+- **CLIENT-2 Desktop app (#583).** Tauri 2 for macOS, Windows and Linux. Decided on 2026-11-19, in its plan [Desktop app](client-2-desktop-app-2026-11-19.md): the v2 static export ships inside the app, with an API version check and a lowest accepted app version on the server; the server is `app.gendox.dev` by default, changed in a setting; macOS first. Sign-in inside the window first, then in the system browser with PKCE (#591). Signed builds; automatic, proposed and forced updates. Sub-issues: shell #584, terminal #585 and #592, releases per OS #586 (macOS), #587 (Windows), #588 (Linux), desktop settings and folders #589, notifications and tray #590, system-browser sign-in #591.
 - **CLIENT-3 Mobile apps (new ticket).** iOS and Android from the same Tauri code. Push through APNs and FCM: the backend keeps device tokens and RUN-3 sends to them. Share into a thread from other apps; camera and files as attachments. Store review expects native features like these from a wrapped web app. Waits for CLIENT-2, RUN-3.
-- The local terminal (CODE-3) is built into the CLIENT-2 app.
-- No local terminal on mobile: iOS does not let an app start processes, and Android does not let current apps run binaries they downloaded. The server terminal (CODE-2) and the browser sandbox (CODE-1) work from the mobile apps as on the web, and the phone can run commands on the owner's desktop through CODE-3.
+- The terminal is a `CLIENT` tool in the CLIENT-2 app (#585, #592); the CODE-3 runner is a later option.
+- No local terminal on mobile: iOS does not let an app start processes, and Android does not let current apps run binaries they downloaded. The server terminal (CODE-2) and the browser sandbox (CODE-1) work from the mobile apps as on the web, and later the phone can run commands on the owner's desktop through the CODE-3 runner.
 
 ### SEARCH (#564, #559, #550)
 
@@ -301,15 +302,15 @@ Both are implemented (#550, #559, 2026-11-14); remaining validation is listed at
 
 ### Later
 
-- **VOICE-1** (#528): investigation and cost model. Local terminal in the desktop app (CODE-3). Single sign-on per organization.
+- **VOICE-1** (#528): investigation and cost model. The desktop runner (CODE-3). Single sign-on per organization.
 
 ## 6. Order
 
 | Phase | Tasks |
 |---|---|
 | 0 | Done: CORE-1 … CORE-4, SRCH-1, SRCH-3. In review: SEC-1. Pending: APP-1. |
-| 1 | CORE-5, CLIENT-1, APPR-1, APPR-2, CONN-1, MCP-1, MCP-2, CODE-1, ART-1, ART-2, CHAN-1, GOV-1, GOV-2, GOV-3, PACK-1 (export done; import and connection requirements pending) |
-| 2 | CONN-2, CONN-3, CONN-4, SKILL-1, SKILL-2, BOARD-1, BOARD-2, BOARD-3, RUN-1, RUN-2, RUN-3, MEM-1, CODE-2, ART-3, CHAN-2, CHAN-3, CLIENT-2, MCPS-1, PACK-2, SRCH-2 |
+| 1 | CORE-5, CLIENT-1, CLIENT-2 (#583, moved from phase 2 on 2026-11-19), APPR-1, APPR-2, CONN-1, MCP-1, MCP-2, CODE-1, ART-1, ART-2, CHAN-1, GOV-1, GOV-2, GOV-3, PACK-1 (export done; import and connection requirements pending) |
+| 2 | CONN-2, CONN-3, CONN-4, SKILL-1, SKILL-2, BOARD-1, BOARD-2, BOARD-3, RUN-1, RUN-2, RUN-3, MEM-1, CODE-2, ART-3, CHAN-2, CHAN-3, MCPS-1, PACK-2, SRCH-2 |
 | 3 | DSS-1, CHAN-4, CLIENT-3, CODE-3, VAULT-1, GOV-4, GOV-5, VOICE-1 |
 
 Where parallel branches would collide:
@@ -320,7 +321,7 @@ Where parallel branches would collide:
 | `Chat.js`, `ChatTurn.js` | APP-1 adds the handler and card registry in phase 0; cards are then separate files. |
 | Agent → Tools, Add tool dialog | APPR-2 first; MCP-2 adds a section after it. |
 | Organization → Connected services, `organization_connectors` | CONN-1 first; MCP-1 builds on it. |
-| `gendox-frontend-v2` build, Keycloak client | CLIENT-1 first (manifest, service worker); CLIENT-2 adds the deep-link redirect to the Keycloak client. |
+| `gendox-frontend-v2` build, Keycloak client | CLIENT-1 first (manifest, service worker); CLIENT-2 adds the `gendox-desktop` Keycloak client. |
 | Flyway migrations | One per workstream, timestamped the day it merges. |
 
 ## 7. Decisions
@@ -329,8 +330,8 @@ Where parallel branches would collide:
 |---|---|---|
 | D1 | Extension boundary | **Agreed.** MCP for tools. Native adapters only for transports (Slack, Teams, Discord, mail) and knowledge sync. No plugin SDK. Where no first-party MCP server exists, we write our own (Microsoft 365, CONN-4) rather than run a community one. No HTTP tools: APIs are called from the terminal (2026-11-17). |
 | D2 | Whose credentials | **Decided.** The organization's by default; a project may override. No user-level connections. Access to the agent is access to its connections. |
-| D3 | Where code runs | **Decided, in two parts.** Browser sandbox for JavaScript (CODE-1). Terminal in a server sandbox first (CODE-2); the runner has two drivers: Docker for self-hosted installations, AWS Bedrock AgentCore Code Interpreter for the SaaS (2026-11-17). A local runner later with the desktop shell (CODE-3). |
-| D4 | Desktop shell | **Decided (2026-11-17).** The CLIENT workstream: a PWA first, then Tauri 2 apps for desktop and mobile that wrap the v2 web app. The local terminal (CODE-3) lives in the desktop app. |
+| D3 | Where code runs | **Decided, in two parts.** Browser sandbox for JavaScript (CODE-1). Terminal in a server sandbox first (CODE-2); the runner has two drivers: Docker for self-hosted installations, AWS Bedrock AgentCore Code Interpreter for the SaaS (2026-11-17). In the desktop app, a `CLIENT` tool that runs on the user's computer (2026-11-19, CLIENT-2); a desktop runner later (CODE-3). |
+| D4 | Desktop shell | **Decided (2026-11-17).** The CLIENT workstream: a PWA first, then Tauri 2 apps for desktop and mobile that wrap the v2 web app. The terminal in the desktop app is a `CLIENT` tool, brought forward with CLIENT-2 on 2026-11-19; the CODE-3 runner is a later option. |
 | D5 | Split `CompletionService` | **Agreed.** Resolver and tool execution move out; the loop and chat entry points stay. |
 | D6 | Access to synced documents | **Agreed.** Ownership sits with the agent; access to the agent is access to its documents. |
 | D7 | First connectors | **Agreed.** Google Workspace, Microsoft 365, Slack. |

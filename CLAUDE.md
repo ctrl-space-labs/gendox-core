@@ -34,6 +34,8 @@ Two files per topic, no more: **the original, which never changes, and the curre
 
 - [Use your own AI subscription](.ai/ai-subscription-usage-2026-11-17.md) — planned, nothing implemented; comes after the agentic platform roadmap. A ChatGPT plan through OpenAI's sign-in in Gendox's own loop (workstream PLAN), then the Claude Code and Codex CLIs on the user's machine (workstream LOCAL). The plan as first written.
 
+- [Desktop app — CLIENT-2 (#583)](.ai/client-2-desktop-app-2026-11-19.md) — planned, nothing implemented. Tauri 2 wrapping the bundled v2 static export, `app.gendox.dev` by default, macOS first; the terminal as a `CLIENT` tool (`run_command`, #585 first); updates and signing per OS. Tickets #584–#592. The plan as first written.
+
 - [SEC-1: secrets at rest](.ai/secrets-at-rest-2026-11-15.md) — implemented, in review on `feature-agent-platform-roadmap`, not in `main`. Every stored secret encrypted two-way, with a list of keys and a key provider per key. Prerequisite of CONN-1. Self-contained: it replaces the [original 2026-11-13 plan](.ai/secrets-at-rest-2026-11-13.md), which is kept unchanged.
 
 ## Common Development Commands
