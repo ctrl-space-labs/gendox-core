@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Gendox — Face studio</title><style>
+:root {color-scheme:dark;--font-size-base:14px;--background:#14191c;--foreground:#f6f6f4;--card:#1c2327;--card-foreground:#f6f6f4;--muted:#253036;--muted-foreground:#b2c0c8;--primary:#eff4f5;--primary-foreground:#142027;--accent:#2e3c44;--accent-foreground:#f6f6f4;--border:#3a4850;--ring:#89bfc4;font:400 var(--font-size-base)/1.5 system-ui,sans-serif;}
+*{box-sizing:border-box}body{margin:0;background:var(--background);color:var(--foreground)}main{max-width:800px;margin:36px auto;padding:24px}h1{font-size:20px;font-weight:500;margin:0 0 8px}header{margin-bottom:24px}header p{margin:0;color:var(--muted-foreground)}
+.btn{font:inherit;line-height:1.25;min-height:38px;padding:9px 14px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--foreground);cursor:pointer}.btn:hover{background:var(--accent)}.btn[aria-pressed=true]{color:var(--primary-foreground);background:var(--primary);border-color:var(--primary)}.btn:focus-visible{outline:2px solid var(--ring);outline-offset:3px}.viz-controls{display:flex;align-items:center;flex-wrap:wrap;gap:8px}.text-small{font-size:12px}.text-muted{color:var(--muted-foreground)}hr{border:0;border-top:1px solid var(--border);width:100%;margin:8px 0}a{color:var(--foreground)}footer{margin-top:32px;color:var(--muted-foreground);font-size:12px}footer a{margin-right:16px}@media(pointer:coarse){.btn{min-height:44px}}@media(max-width:400px){main{margin:0 auto;padding:18px}}
+</style></head><body><main><header><h1>Gendox · Face studio</h1><p>Choose an expression and gaze, or play the sequence.</p></header><div id="gendox-expression-preview">
+  <style>
+    #gendox-expression-preview { display: grid; gap: calc(var(--font-size-base) * 1.2); color: var(--foreground); }
+    #gendox-expression-preview .face-stage { display: grid; place-items: center; min-height: 220px; }
+    #gendox-expression-preview .robot { display: block; width: min(100%, 420px); height: auto; overflow: visible; }
+    #gendox-expression-preview .loader-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; }
+    #gendox-expression-preview .loader-grid figure { margin:0; display:grid; justify-items:center; }
+    #gendox-expression-preview .pose-line { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: calc(var(--font-size-base) * .75); }
+    #gendox-expression-preview .control-group { display: grid; gap: calc(var(--font-size-base) * .5); }
+    #gendox-expression-preview .reference-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: calc(var(--font-size-base) * .75); }
+    #gendox-expression-preview .reference-grid figure { margin: 0; display: grid; justify-items: center; gap: calc(var(--font-size-base) * .25); }
+    #gendox-expression-preview .reference-grid svg { width: min(100%, 150px); height: auto; }
+    @media (max-width: 400px) { #gendox-expression-preview .face-stage { min-height: 175px; } }
+  </style>
+  <div class="pose-line">
+    <span id="gendox-pose-label" aria-live="polite">Neutral</span>
+    <button class="btn" type="button" id="gendox-play" aria-pressed="true">Pause</button>
+  </div>
+  <div class="face-stage">
+    <svg class="robot" viewBox="0 0 180 90" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" role="img" aria-labelledby="gendox-face-title">
+      <title id="gendox-face-title">Animated Gendox robot face</title>
+      <g data-part="face">
+        <rect x="18" y="20" width="144" height="38" rx="19"/>
+        <g data-part="eyes">
+          <g transform="translate(0 42)"><g data-part="blink"><g transform="translate(0 -42)">
+            <g data-part="eye-curves">
+              <path data-part="left" d="M47 44 C47 30 67 30 67 44"/>
+              <path data-part="right" d="M113 44 C113 30 133 30 133 44"/>
+              <circle data-part="pupil-left" cx="57" cy="45" r="3.5" fill="currentColor" stroke="none"/>
+              <circle data-part="pupil-right" cx="123" cy="45" r="3.5" fill="currentColor" stroke="none"/>
+            </g>
+          </g></g></g>
+          <path data-part="cross" opacity="0" d="M52 36 L62 46 M62 36 L52 46 M118 36 L128 46 M128 36 L118 46"/>
+        </g>
+        <path data-part="mouth" d="M82 72 C87 72 93 72 98 72"/>
+      </g>
+    </svg>
+  </div>
+  <div class="control-group">
+    <span class="text-small text-muted" id="gendox-expression-label">Expression</span>
+    <div class="viz-controls" role="group" aria-labelledby="gendox-expression-label">
+      <button class="btn" data-pose="neutral" type="button" aria-pressed="true">Neutral</button>
+      <button class="btn" data-pose="curious" type="button" aria-pressed="false">Curious</button>
+      <button class="btn" data-pose="happy" type="button" aria-pressed="false">Happy</button>
+      <button class="btn" data-pose="delighted" type="button" aria-pressed="false">Delighted</button>
+      <button class="btn" data-pose="thinking" type="button" aria-pressed="false">Thinking</button>
+      <button class="btn" data-pose="wink" type="button" aria-pressed="false">Wink</button>
+      <button class="btn" data-pose="surprised" type="button" aria-pressed="false">Surprised</button>
+      <button class="btn" data-pose="sleepy" type="button" aria-pressed="false">Sleepy</button>
+      <button class="btn" data-pose="offline" type="button" aria-pressed="false">Offline</button>
+    </div>
+  </div>
+  <div class="control-group">
+    <span class="text-small text-muted" id="gendox-gaze-label">Gaze</span>
+    <div class="viz-controls" role="group" aria-labelledby="gendox-gaze-label">
+      <button class="btn" data-gaze="natural" type="button" aria-pressed="true">Natural</button>
+      <button class="btn" data-gaze="left" type="button" aria-pressed="false">Left</button>
+      <button class="btn" data-gaze="up" type="button" aria-pressed="false">Up</button>
+      <button class="btn" data-gaze="center" type="button" aria-pressed="false">Center</button>
+      <button class="btn" data-gaze="down" type="button" aria-pressed="false">Down</button>
+      <button class="btn" data-gaze="right" type="button" aria-pressed="false">Right</button>
+    </div>
+  </div>
+  <hr>
+  <div class="control-group">
+    <span class="text-small text-muted">The six reference faces, redrawn as vectors</span>
+    <div class="reference-grid" id="gendox-originals"></div>
+  </div>
+  <hr>
+  <div class="control-group">
+    <span class="text-small text-muted">Loader loop · original proportions</span>
+    <div class="loader-grid">
+      <figure>
+        <img data-loader="gendox-loader.svg" src="expressions/neutral.svg" width="180" height="90" alt="Gendox face loader, SVG version">
+        <figcaption class="text-small text-muted">SVG</figcaption>
+      </figure>
+      <figure>
+        <img data-loader="gendox-loader.gif" src="expressions/neutral.svg" width="180" height="90" alt="Gendox face loader, GIF version">
+        <figcaption class="text-small text-muted">GIF</figcaption>
+      </figure>
+    </div>
+  </div>
+  <script>
+  (() => {
+    const root = document.getElementById('gendox-expression-preview');
+    const poses = {"neutral":{"label":"Neutral","left":[47,44,47,30,67,30,67,44],"right":[113,44,113,30,133,30,133,44],"mouth":[82,72,87,72,93,72,98,72],"pupils":[1,1],"gaze":[0,0],"tilt":0,"cross":0,"weight":3},"curious":{"label":"Curious","left":[47,44,47,30,67,30,67,44],"right":[113,44,113,30,133,30,133,44],"mouth":[82,74,87,72,93,71,98,69],"pupils":[1,1],"gaze":[0,0],"tilt":-3,"cross":0,"weight":3},"happy":{"label":"Happy","left":[47,44,47,30,67,30,67,44],"right":[113,44,113,30,133,30,133,44],"mouth":[84,68,84,79,96,79,96,68],"pupils":[1,1],"gaze":[0,0],"tilt":0,"cross":0,"weight":3},"delighted":{"label":"Delighted","left":[47,42,47,30,67,30,67,42],"right":[113,42,113,30,133,30,133,42],"mouth":[79,67,83,83,97,83,101,67],"pupils":[0,0],"gaze":[0,0],"tilt":0,"cross":0,"weight":3},"thinking":{"label":"Thinking","left":[47,42,47,28,67,28,67,42],"right":[113,45,113,34,133,34,133,45],"mouth":[83,74,88,71,94,71,98,71],"pupils":[1,1],"gaze":[4,-3],"tilt":-4,"cross":0,"weight":3},"wink":{"label":"Wink","left":[49,42,52,36,62,36,65,42],"right":[113,44,113,30,133,30,133,44],"mouth":[84,68,84,79,96,79,96,68],"pupils":[0,1],"gaze":[0,0],"tilt":0,"cross":0,"weight":3},"surprised":{"label":"Surprised","left":[47,45,47,27,67,27,67,45],"right":[113,45,113,27,133,27,133,45],"mouth":[85,70,85,79,95,79,95,70],"pupils":[1,1],"gaze":[0,0],"tilt":0,"cross":0,"weight":3},"sleepy":{"label":"Sleepy","left":[48,42,52,48,62,48,66,42],"right":[114,42,118,48,128,48,132,42],"mouth":[84,72,88,74,92,74,96,72],"pupils":[0,0],"gaze":[0,0],"tilt":3,"cross":0,"weight":3},"offline":{"label":"Offline","left":[47,44,47,30,67,30,67,44],"right":[113,44,113,30,133,30,133,44],"mouth":[85,72,88,72,92,72,95,72],"pupils":[0,0],"gaze":[0,0],"tilt":0,"cross":1,"weight":8},"look-left":{"label":"Look left","left":[47,44,47,30,67,30,67,44],"right":[113,44,113,30,133,30,133,44],"mouth":[82,72,87,72,93,72,98,72],"pupils":[1,1],"gaze":[-5,0],"tilt":0,"cross":0,"weight":3},"look-right":{"label":"Look right","left":[47,44,47,30,67,30,67,44],"right":[113,44,113,30,133,30,133,44],"mouth":[82,72,87,72,93,72,98,72],"pupils":[1,1],"gaze":[5,0],"tilt":0,"cross":0,"weight":3},"look-up":{"label":"Look up","left":[47,44,47,30,67,30,67,44],"right":[113,44,113,30,133,30,133,44],"mouth":[82,72,87,72,93,72,98,72],"pupils":[1,1],"gaze":[0,-4],"tilt":0,"cross":0,"weight":3},"look-down":{"label":"Look down","left":[47,44,47,30,67,30,67,44],"right":[113,44,113,30,133,30,133,44],"mouth":[82,72,87,72,93,72,98,72],"pupils":[1,1],"gaze":[0,4],"tilt":0,"cross":0,"weight":3}};
+    const part = name => root.querySelector('[data-part="' + name + '"]');
+    const path = p => 'M ' + p.slice(0,2).join(' ') + ' C ' + p.slice(2).join(' ');
+    const copy = value => JSON.parse(JSON.stringify(value));
+    const directions = {natural:null,left:[-5,0],up:[0,-4],center:[0,0],down:[0,4],right:[5,0]};
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const playButton = root.querySelector('#gendox-play');
+    const label = root.querySelector('#gendox-pose-label');
+    let name = 'neutral', gaze = 'natural', playing = !reduced.matches;
+    let current = copy(poses.neutral), tween = null, timer = null, frame = null, blinkStart = null;
+    let nextBlink = performance.now() + 3300;
+    let loopIndex = 0;
+    const loop = [
+      ['neutral','natural'],['neutral','left'],['neutral','up'],['thinking','natural'],
+      ['happy','natural'],['wink','natural'],['delighted','natural'],['surprised','natural'],
+      ['neutral','right'],['neutral','down'],['sleepy','natural'],['offline','natural']
+    ];
+    function paint(p, blink = 1) {
+      part('face').setAttribute('transform','rotate(' + p.tilt + ' 90 42)');
+      part('eyes').setAttribute('transform','translate(' + p.gaze[0]*.32 + ' ' + p.gaze[1]*.32 + ')');
+      part('blink').setAttribute('transform','scale(1 ' + blink + ')');
+      part('left').setAttribute('d',path(p.left));
+      part('right').setAttribute('d',path(p.right));
+      part('mouth').setAttribute('d',path(p.mouth));
+      part('mouth').setAttribute('stroke-width',p.weight);
+      part('cross').setAttribute('opacity',p.cross);
+      part('eye-curves').setAttribute('opacity',1-p.cross);
+      ['left','right'].forEach((side,i) => {
+        const dot = part('pupil-' + side);
+        dot.setAttribute('cx',[57,123][i]+p.gaze[0]);
+        dot.setAttribute('cy',45+p.gaze[1]);
+        dot.setAttribute('opacity',p.pupils[i]);
+      });
+    }
+    function interpolate(a,b,t) {
+      const p = copy(b);
+      ['left','right','mouth','gaze','pupils'].forEach(key => {p[key]=a[key].map((v,i) => v+(b[key][i]-v)*t);});
+      ['tilt','cross','weight'].forEach(key => {p[key]=a[key]+(b[key]-a[key])*t;});
+      return p;
+    }
+    function draw(now) {
+      frame = null;
+      if (tween) {
+        const t = Math.min(1,(now-tween.started)/420);
+        const eased = t < .5 ? 4*t*t*t : 1-Math.pow(-2*t+2,3)/2;
+        current = interpolate(tween.from,tween.to,eased);
+        if (t >= 1) tween = null;
+      }
+      let blink = 1;
+      if (playing && !reduced.matches && current.cross < .5) {
+        if (now >= nextBlink && blinkStart === null) blinkStart = now;
+        if (blinkStart !== null) {
+          const t = (now-blinkStart)/160;
+          blink = Math.max(.06,Math.abs(2*t-1));
+          if (t >= 1) {blinkStart=null;nextBlink=now+3100+Math.random()*1900;blink=1;}
+        }
+      }
+      paint(current,blink);
+      if (tween || (playing && !reduced.matches)) frame=requestAnimationFrame(draw);
+    }
+    function requestDraw() {if (frame === null) frame=requestAnimationFrame(draw);}
+    function refresh() {
+      label.textContent=poses[name].label+(gaze==='natural'?'':' · looking '+gaze);
+      root.querySelector('#gendox-face-title').textContent='Gendox robot — '+label.textContent;
+      root.querySelectorAll('[data-pose]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.pose===name)));
+      root.querySelectorAll('[data-gaze]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.gaze===gaze)));
+      playButton.textContent=playing?'Pause':'Play sequence';
+      playButton.setAttribute('aria-pressed',String(playing));
+      root.querySelectorAll('[data-loader]').forEach(image => {
+        const source=playing && !reduced.matches ? image.dataset.loader : 'expressions/neutral.svg';
+        if(image.getAttribute('src')!==source)image.setAttribute('src',source);
+      });
+    }
+    function move(nextName,nextGaze='natural',instant=false) {
+      name=nextName;gaze=nextGaze;
+      const target=copy(poses[name]);
+      if (directions[gaze]) target.gaze=copy(directions[gaze]);
+      if (instant || reduced.matches) {current=target;tween=null;paint(current);}
+      else tween={from:copy(current),to:target,started:performance.now()};
+      refresh();requestDraw();
+    }
+    function schedule() {
+      clearTimeout(timer);
+      if (!playing) return;
+      timer=setTimeout(()=>{
+        loopIndex=(loopIndex+1)%loop.length;
+        move(...loop[loopIndex]);schedule();
+      },2000);
+    }
+    function pause() {
+      playing=false;clearTimeout(timer);blinkStart=null;
+      if (frame !== null) {cancelAnimationFrame(frame);frame=null;}
+      tween=null;paint(current);refresh();
+    }
+    root.querySelectorAll('[data-pose]').forEach(button=>button.addEventListener('click',()=>{
+      pause();move(button.dataset.pose);
+    }));
+    root.querySelectorAll('[data-gaze]').forEach(button=>button.addEventListener('click',()=>{
+      pause();move(name,button.dataset.gaze);
+    }));
+    playButton.addEventListener('click',()=>{
+      if (playing) pause();
+      else {playing=true;nextBlink=performance.now()+2000;refresh();schedule();requestDraw();}
+      
+    });
+    const originalNames = [['curious','Curious'],['happy','Happy'],['wink','Wink'],['look-right','Looking right'],['neutral','Neutral'],['offline','Offline']];
+    const gallery=root.querySelector('#gendox-originals');
+    originalNames.forEach(([key,title])=>{
+      const p=copy(poses[key]);p.tilt=0;
+      if(key==='happy')p.gaze=[-4,0];
+      const figure=document.createElement('figure');
+      const svg=root.querySelector('.robot').cloneNode(true);
+      svg.removeAttribute('class');svg.removeAttribute('aria-labelledby');svg.setAttribute('aria-label',title);
+      svg.querySelector('title').remove();
+      svg.querySelector('[data-part="face"]').setAttribute('transform','rotate(0 90 42)');
+      svg.querySelector('[data-part="eyes"]').setAttribute('transform','translate('+p.gaze[0]*.32+' '+p.gaze[1]*.32+')');
+      ['left','right','mouth'].forEach(k=>svg.querySelector('[data-part="'+k+'"]').setAttribute('d',path(p[k])));
+      svg.querySelector('[data-part="mouth"]').setAttribute('stroke-width',p.weight);
+      svg.querySelector('[data-part="cross"]').setAttribute('opacity',p.cross);
+      svg.querySelector('[data-part="eye-curves"]').setAttribute('opacity',1-p.cross);
+      ['left','right'].forEach((side,i)=>{
+        const dot=svg.querySelector('[data-part="pupil-'+side+'"]');
+        dot.setAttribute('cx',[57,123][i]+p.gaze[0]);dot.setAttribute('cy',45+p.gaze[1]);dot.setAttribute('opacity',p.pupils[i]);
+      });
+      svg.querySelectorAll('[data-part]').forEach(n=>n.removeAttribute('data-part'));
+      const caption=document.createElement('figcaption');caption.className='text-small text-muted';caption.textContent=title;
+      figure.append(svg,caption);gallery.append(figure);
+    });
+    reduced.addEventListener('change',()=>{if(reduced.matches){pause();}});
+    paint(current);refresh();
+    schedule();requestDraw();
+  })();
+  </script>
+</div>
+<footer><a href="gendox-animated.svg">Animated SVG</a><a href="gendox-loader.gif">GIF loader</a><a href="README.md">Usage notes</a>Transparent vector artwork · 13 poses</footer></main></body></html>

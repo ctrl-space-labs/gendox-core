@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 497 650" width="497" height="650" color="#ffffff" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" role="img" aria-labelledby="sheet-title"><title id="sheet-title">Gendox — six original vector faces</title>
+<g id="01-curious" transform="translate(67 101)"><g id="01-curious-face" transform="rotate(0 90 42)">
+<rect id="01-curious-capsule" x="18" y="20" width="144" height="38" rx="19"/>
+<g id="01-curious-eyes" transform="translate(0.0 0.0)">
+<g id="01-curious-eye-curves" opacity="1">
+<path id="01-curious-left-eye" d="M 47 44 C 47 30 67 30 67 44"></path>
+<path id="01-curious-right-eye" d="M 113 44 C 113 30 133 30 133 44"></path>
+<circle id="01-curious-left-pupil" cx="57" cy="45" r="3.5" fill="currentColor" stroke="none" opacity="1"></circle>
+<circle id="01-curious-right-pupil" cx="123" cy="45" r="3.5" fill="currentColor" stroke="none" opacity="1"></circle>
+</g>
+<path id="01-curious-cross-eyes" d="M52 36 L62 46 M62 36 L52 46 M118 36 L128 46 M128 36 L118 46" opacity="0"></path>
+</g>
+<path id="01-curious-mouth" d="M 82 74 C 87 72 93 71 98 69" stroke-width="3"></path>
+</g></g>
+<g id="02-happy" transform="translate(234 105)"><g id="02-happy-face" transform="rotate(0 90 42)">
+<rect id="02-happy-capsule" x="18" y="20" width="144" height="38" rx="19"/>
+<g id="02-happy-eyes" transform="translate(-1.28 0.0)">
+<g id="02-happy-eye-curves" opacity="1">
+<path id="02-happy-left-eye" d="M 47 44 C 47 30 67 30 67 44"></path>
+<path id="02-happy-right-eye" d="M 113 44 C 113 30 133 30 133 44"></path>
+<circle id="02-happy-left-pupil" cx="53" cy="45" r="3.5" fill="currentColor" stroke="none" opacity="1"></circle>
+<circle id="02-happy-right-pupil" cx="119" cy="45" r="3.5" fill="currentColor" stroke="none" opacity="1"></circle>
+</g>
+<path id="02-happy-cross-eyes" d="M52 36 L62 46 M62 36 L52 46 M118 36 L128 46 M128 36 L118 46" opacity="0"></path>
+</g>
+<path id="02-happy-mouth" d="M 84 68 C 84 79 96 79 96 68" stroke-width="3"></path>
+</g></g>
+<g id="03-wink" transform="translate(234 190)"><g id="03-wink-face" transform="rotate(0 90 42)">
+<rect id="03-wink-capsule" x="18" y="20" width="144" height="38" rx="19"/>
+<g id="03-wink-eyes" transform="translate(0.0 0.0)">
+<g id="03-wink-eye-curves" opacity="1">
+<path id="03-wink-left-eye" d="M 49 42 C 52 36 62 36 65 42"></path>
+<path id="03-wink-right-eye" d="M 113 44 C 113 30 133 30 133 44"></path>
+<circle id="03-wink-left-pupil" cx="57" cy="45" r="3.5" fill="currentColor" stroke="none" opacity="0"></circle>
+<circle id="03-wink-right-pupil" cx="123" cy="45" r="3.5" fill="currentColor" stroke="none" opacity="1"></circle>
+</g>
+<path id="03-wink-cross-eyes" d="M52 36 L62 46 M62 36 L52 46 M118 36 L128 46 M128 36 L118 46" opacity="0"></path>
+</g>
+<path id="03-wink-mouth" d="M 84 68 C 84 79 96 79 96 68" stroke-width="3"></path>
+</g></g>
+<g id="04-looking-right" transform="translate(68 334)"><g id="04-looking-right-face" transform="rotate(0 90 42)">
+<rect id="04-looking-right-capsule" x="18" y="20" width="144" height="38" rx="19"/>
+<g id="04-looking-right-eyes" transform="translate(1.6 0.0)">
+<g id="04-looking-right-eye-curves" opacity="1">
+<path id="04-looking-right-left-eye" d="M 47 44 C 47 30 67 30 67 44"></path>
+<path id="04-looking-right-right-eye" d="M 113 44 C 113 30 133 30 133 44"></path>
+<circle id="04-looking-right-left-pupil" cx="62" cy="45" r="3.5" fill="currentColor" stroke="none" opacity="1"></circle>
+<circle id="04-looking-right-right-pupil" cx="128" cy="45" r="3.5" fill="currentColor" stroke="none" opacity="1"></circle>
+</g>
+<path id="04-looking-right-cross-eyes" d="M52 36 L62 46 M62 36 L52 46 M118 36 L128 46 M128 36 L118 46" opacity="0"></path>
+</g>
+<path id="04-looking-right-mouth" d="M 82 72 C 87 72 93 72 98 72" stroke-width="3"></path>
+</g></g>
+<g id="05-neutral" transform="translate(234 332)"><g id="05-neutral-face" transform="rotate(0 90 42)">
+<rect id="05-neutral-capsule" x="18" y="20" width="144" height="38" rx="19"/>
+<g id="05-neutral-eyes" transform="translate(0.0 0.0)">
+<g id="05-neutral-eye-curves" opacity="1">
+<path id="05-neutral-left-eye" d="M 47 44 C 47 30 67 30 67 44"></path>
+<path id="05-neutral-right-eye" d="M 113 44 C 113 30 133 30 133 44"></path>
+<circle id="05-neutral-left-pupil" cx="57" cy="45" r="3.5" fill="currentColor" stroke="none" opacity="1"></circle>
+<circle id="05-neutral-right-pupil" cx="123" cy="45" r="3.5" fill="currentColor" stroke="none" opacity="1"></circle>
+</g>
+<path id="05-neutral-cross-eyes" d="M52 36 L62 46 M62 36 L52 46 M118 36 L128 46 M128 36 L118 46" opacity="0"></path>
+</g>
+<path id="05-neutral-mouth" d="M 82 72 C 87 72 93 72 98 72" stroke-width="3"></path>
+</g></g>
+<g id="06-offline" transform="translate(234 437)"><g id="06-offline-face" transform="rotate(0 90 42)">
+<rect id="06-offline-capsule" x="18" y="20" width="144" height="38" rx="19"/>
+<g id="06-offline-eyes" transform="translate(0.0 0.0)">
+<g id="06-offline-eye-curves" opacity="0">
+<path id="06-offline-left-eye" d="M 47 44 C 47 30 67 30 67 44"></path>
+<path id="06-offline-right-eye" d="M 113 44 C 113 30 133 30 133 44"></path>
+<circle id="06-offline-left-pupil" cx="57" cy="45" r="3.5" fill="currentColor" stroke="none" opacity="0"></circle>
+<circle id="06-offline-right-pupil" cx="123" cy="45" r="3.5" fill="currentColor" stroke="none" opacity="0"></circle>
+</g>
+<path id="06-offline-cross-eyes" d="M52 36 L62 46 M62 36 L52 46 M118 36 L128 46 M128 36 L118 46" opacity="1"></path>
+</g>
+<path id="06-offline-mouth" d="M 85 72 C 88 72 92 72 95 72" stroke-width="8"></path>
+</g></g>
+</svg>

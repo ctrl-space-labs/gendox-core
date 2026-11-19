@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 90" width="360" height="180" color="#ffffff" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" role="img" aria-labelledby="face-title">
+  <title id="face-title">Gendox loading — looking around, blinking and smiling</title>
+  <rect id="capsule" x="18" y="20" width="144" height="38" rx="19"/>
+  <g id="eyes">
+    <animateTransform attributeName="transform" type="translate" values="0 0;0 0;-1.6 0;-1.6 0;1.28 -0.96;1.28 -0.96;1.6 0;1.6 0;0 0;0 0" keyTimes="0;0.08;0.16;0.27;0.35;0.46;0.54;0.65;0.73;1" dur="6s" repeatCount="indefinite"/>
+    <g transform="translate(0 42)">
+      <g id="blink">
+        <animateTransform attributeName="transform" type="scale" values="1 1;1 1;1 0.06;1 1;1 1;1 0.06;1 1;1 1" keyTimes="0;0.25;0.26333;0.27667;0.75;0.76333;0.77667;1" dur="6s" repeatCount="indefinite"/>
+        <g transform="translate(0 -42)">
+          <path id="left-eye" d="M47 44 C47 30 67 30 67 44"/>
+          <path id="right-eye" d="M113 44 C113 30 133 30 133 44"/>
+          <circle id="left-pupil" cx="57" cy="45" r="3.5" fill="currentColor" stroke="none">
+            <animate attributeName="cx" values="57;57;52;52;61;61;62;62;57;57" keyTimes="0;0.08;0.16;0.27;0.35;0.46;0.54;0.65;0.73;1" dur="6s" repeatCount="indefinite"/>
+            <animate attributeName="cy" values="45;45;45;45;42;42;45;45;45;45" keyTimes="0;0.08;0.16;0.27;0.35;0.46;0.54;0.65;0.73;1" dur="6s" repeatCount="indefinite"/>
+          </circle>
+          <circle id="right-pupil" cx="123" cy="45" r="3.5" fill="currentColor" stroke="none">
+            <animate attributeName="cx" values="123;123;118;118;127;127;128;128;123;123" keyTimes="0;0.08;0.16;0.27;0.35;0.46;0.54;0.65;0.73;1" dur="6s" repeatCount="indefinite"/>
+            <animate attributeName="cy" values="45;45;45;45;42;42;45;45;45;45" keyTimes="0;0.08;0.16;0.27;0.35;0.46;0.54;0.65;0.73;1" dur="6s" repeatCount="indefinite"/>
+          </circle>
+        </g>
+      </g>
+    </g>
+  </g>
+  <path id="mouth" d="M82 72 C87 72 93 72 98 72">
+    <animate attributeName="d" values="M82 72 C87 72 93 72 98 72;M82 72 C87 72 93 72 98 72;M83 74 C88 71 94 71 98 71;M83 74 C88 71 94 71 98 71;M84 68 C84 79 96 79 96 68;M84 68 C84 79 96 79 96 68;M82 72 C87 72 93 72 98 72;M82 72 C87 72 93 72 98 72" keyTimes="0;0.27;0.35;0.65;0.73;0.9;0.98;1" dur="6s" repeatCount="indefinite"/>
+  </path>
+</svg>

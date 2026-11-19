@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 90" width="360" height="180" color="#ffffff" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" role="img" aria-labelledby="face-title">
+<title id="face-title">Gendox robot — Sleepy</title>
+<g id="face" transform="rotate(3 90 42)">
+<rect id="capsule" x="18" y="20" width="144" height="38" rx="19"/>
+<g id="eyes" transform="translate(0.0 0.0)">
+<g id="eye-curves" opacity="1">
+<path id="left-eye" d="M 48 42 C 52 48 62 48 66 42"></path>
+<path id="right-eye" d="M 114 42 C 118 48 128 48 132 42"></path>
+<circle id="left-pupil" cx="57" cy="45" r="3.5" fill="currentColor" stroke="none" opacity="0"></circle>
+<circle id="right-pupil" cx="123" cy="45" r="3.5" fill="currentColor" stroke="none" opacity="0"></circle>
+</g>
+<path id="cross-eyes" d="M52 36 L62 46 M62 36 L52 46 M118 36 L128 46 M128 36 L118 46" opacity="0"></path>
+</g>
+<path id="mouth" d="M 84 72 C 88 74 92 74 96 72" stroke-width="3"></path>
+</g>
+</svg>
