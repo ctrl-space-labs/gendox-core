@@ -47,7 +47,7 @@ const App = props => {
             </OrganizationProjectGuard>
             <Toasts />
             <RouteProgress />
-            {/* the desktop app on macOS has no title bar: this strip moves the window on every page */}
+            {/* the desktop app has no title bar: this strip moves the window on every page */}
             <div className='window-drag' data-tauri-drag-region />
           </ClientToolsProvider>
         </AuthProvider>

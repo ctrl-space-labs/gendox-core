@@ -3,7 +3,7 @@ import commonConfig from 'src/configs/common.config'
 
 const Topbar = ({ title, crumb, onMenuClick, onSearchClick }) => {
   return (
-    <header className='topbar'>
+    <header className='topbar' data-tauri-drag-region='deep'>
       <button className='btn ghost icon menu-btn' aria-label='Menu' onClick={onMenuClick}>
         <MenuIcon className='lucide' />
       </button>

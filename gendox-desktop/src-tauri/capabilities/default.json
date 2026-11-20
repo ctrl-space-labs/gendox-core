@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "The bundled main UI: server selection and confirmed commands. Remote pages get nothing.",
+  "description": "The bundled main UI: server selection, confirmed commands, the window buttons and moving the window by its top bar. Remote pages get nothing.",
   "windows": [
     "main"
   ],
@@ -22,6 +22,12 @@
     "allow-activity",
     "allow-autostart-enabled",
     "allow-set-autostart",
-    "allow-deep-links"
+    "allow-deep-links",
+    "core:window:allow-start-dragging",
+    "core:window:allow-internal-toggle-maximize",
+    "core:window:allow-minimize",
+    "core:window:allow-toggle-maximize",
+    "core:window:allow-is-maximized",
+    "core:window:allow-close"
   ]
 }

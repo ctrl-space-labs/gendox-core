@@ -16,6 +16,14 @@ use tauri::utils::config::{Csp, CspDirectiveSources};
 use tauri::webview::{NewWindowResponse, PageLoadEvent};
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_opener::OpenerExt;
+
+/// Tells the page that the window has no title bar and its buttons sit over the top-left corner (macOS).
+#[cfg(target_os = "macos")]
+const TITLE_BAR_OVERLAY_SCRIPT: &str = "document.documentElement.classList.add('frameless', 'titlebar-overlay');";
+
+/// Windows and Linux: the window buttons the page shows in place of the title bar.
+#[cfg(not(target_os = "macos"))]
+const WINDOW_CONTROLS_SCRIPT: &str = include_str!("window-controls.js");
 use url::Url;
 
 const SERVER_PAGE: &str = "/server/";
@@ -197,7 +205,12 @@ pub fn run() {
                 let _ = window.set_focus();
             }
         }))
-        .plugin(tauri_plugin_window_state::Builder::default().build())
+        .plugin(
+            // The window never has a title bar: a state saved by an older version must not bring it back.
+            tauri_plugin_window_state::Builder::default()
+                .with_state_flags(tauri_plugin_window_state::StateFlags::all() - tauri_plugin_window_state::StateFlags::DECORATIONS)
+                .build(),
+        )
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_notification::init())
@@ -255,10 +268,21 @@ pub fn run() {
             let address = current.address.clone();
             let api_origin = links::origin_of(&config.api_url).expect("valid API origin");
             let oidc_origin = links::origin_of(&config.oidc_authority).expect("valid OIDC origin");
-            WebviewWindowBuilder::new(app, "main", WebviewUrl::App(offline::CONNECTING.trim_start_matches('/').into()))
+            let window = WebviewWindowBuilder::new(app, "main", WebviewUrl::App(offline::CONNECTING.trim_start_matches('/').into()))
                 .title(format!("Gendox — {}", current.name))
                 .inner_size(1280.0, 832.0)
-                .min_inner_size(800.0, 600.0)
+                .min_inner_size(800.0, 600.0);
+            // No title bar: the page's top bar takes its place. macOS keeps its window buttons, over the page.
+            #[cfg(target_os = "macos")]
+            let window = window
+                .title_bar_style(tauri::TitleBarStyle::Overlay)
+                .hidden_title(true)
+                .traffic_light_position(tauri::LogicalPosition::new(18.0, 26.0))
+                .initialization_script(TITLE_BAR_OVERLAY_SCRIPT);
+            // Windows and Linux: no title bar at all; the page draws the window buttons.
+            #[cfg(not(target_os = "macos"))]
+            let window = window.decorations(false).initialization_script(WINDOW_CONTROLS_SCRIPT);
+            window
                 .initialization_script(script)
                 .initialization_script(tool_script)
                 .on_web_resource_request(move |request, response| {

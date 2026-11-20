@@ -118,10 +118,13 @@ const Sidebar = ({ page, focusedTab }) => {
   return (
     <aside className='sidebar'>
       <div className='side-head'>
-        <Link className='brand' href={href('/gendox/agent-home')}>
-          <span className='mark'>G</span>
-          Gendox
-        </Link>
+        {/* in the desktop app, this row is the title bar: it moves the window */}
+        <div className='side-titlebar' data-tauri-drag-region='deep'>
+          <Link className='brand' href={href('/gendox/agent-home')}>
+            <span className='mark'>G</span>
+            Gendox
+          </Link>
+        </div>
         <AgentSwitcher />
       </div>
       <div className='side-nav'>
