@@ -91,8 +91,8 @@ class CompletionTurnServiceTest {
 
     private CompletionTurn suspendWithTwoCalls() {
         List<PendingCall> calls = List.of(
-                new PendingCall("a", assistant.getId(), "lookup", "{}"),
-                new PendingCall("b", assistant.getId(), "lookup", "{}"));
+                new PendingCall("a", assistant.getId(), "lookup", "{}", "CLIENT", false),
+                new PendingCall("b", assistant.getId(), "lookup", "{}", "CLIENT", false));
         return service.suspend(question, assistant, calls, 1);
     }
 

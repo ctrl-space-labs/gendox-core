@@ -428,6 +428,7 @@ public class ProjectAgentService {
                 AiTools managed = currentToolsById.get(id);
                 managed.setJsonSchema(incTool.getJsonSchema());
                 managed.setExecution(incTool.getExecution());
+                managed.setRequiresApproval(incTool.isRequiresApproval());
 
                 keepIds.add(id);
             } else {

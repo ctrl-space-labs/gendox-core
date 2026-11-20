@@ -75,6 +75,7 @@ public class AgentDefinitionConverter {
                         .map(tool -> AgentDefinitionDTO.ToolDefinition.builder()
                                 .type(tool.getType())
                                 .execution(tool.getExecution())
+                                .requiresApproval(tool.isRequiresApproval() ? Boolean.TRUE : null)
                                 .schema(schemaOf(tool))
                                 .build())
                         .toList())

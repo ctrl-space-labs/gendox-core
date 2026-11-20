@@ -197,6 +197,28 @@ test.describe('Projects CRUD API', () => {
 
     });
 
+    test('Agent tool keeps Ask before running', async ({ request }) => {
+        const project = await projectUpdate(request, 'Tools that ask first');
+        const schema = JSON.stringify({ type: 'function', function: { name: 'pick_file', description: 'Pick a file', parameters: { type: 'object', properties: {} } } });
+        project.projectAgent.aiTools = [{ type: 'function', execution: 'CLIENT', requiresApproval: true, jsonSchema: schema }];
+
+        let response = await projects.updateProject(request, adminToken, project);
+        expect(response.ok()).toBeTruthy();
+        let [tool] = (await response.json()).projectAgent.aiTools;
+        expect(tool).toMatchObject({ execution: 'CLIENT', requiresApproval: true });
+
+        // turned off on the same tool, by its id
+        const saved = await (await projects.getProjectById(request, adminToken, workspace.organizationId, workspace.projectId)).json();
+        saved.projectAgent.aiTools = [{ ...saved.projectAgent.aiTools[0], requiresApproval: false }];
+        response = await projects.updateProject(request, adminToken, saved);
+        expect(response.ok()).toBeTruthy();
+        [tool] = (await response.json()).projectAgent.aiTools;
+        expect(tool.requiresApproval).toBe(false);
+
+        saved.projectAgent.aiTools = [];
+        expect((await projects.updateProject(request, adminToken, saved)).ok()).toBeTruthy();
+    });
+
     //Scenario: Update a project where the logged in user has editing rights the corresponding organization.
     //Given that the user is logged in
     //When the existing project data is updated

@@ -21,15 +21,20 @@ use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager, State, WebviewWindow};
 use tokio::{
     io::{AsyncRead, AsyncReadExt},
-    sync::Mutex,
+    sync::{Mutex, Notify},
     time::timeout,
 };
 use url::Url;
 
 const OUTPUT_LIMIT: usize = 64 * 1024;
 const RESULT_LIMIT: usize = 64;
-const COMMAND_TIMEOUT: Duration = Duration::from_secs(60);
-const TIMEOUT_NOTE: &[u8] = b"\nCommand timed out and its process tree was stopped.";
+/// How long a command may run when the call gives no `timeout_seconds`.
+const COMMAND_TIMEOUT: Duration = Duration::from_secs(10 * 60);
+/// The longest `timeout_seconds` a call may ask for. The user can stop a command at any time.
+const MAX_TIMEOUT_SECONDS: u64 = 2 * 60 * 60;
+const STOP_NOTE: &[u8] = b"\nCommand stopped by the user; its process tree was ended.";
+/// Exit code of a command the user stopped, as a shell reports one ended by Ctrl-C.
+const STOPPED_EXIT_CODE: i32 = 130;
 
 /// Install only in the bundled main document. The native proof stays in a closure,
 /// separate from public runtime configuration and the exposed tool registry.
@@ -56,6 +61,22 @@ pub struct RunRequest {
     pub description: String,
     #[serde(default)]
     pub cwd: Option<String>,
+    #[serde(default)]
+    pub timeout_seconds: Option<u64>,
+}
+
+impl RunRequest {
+    fn deadline(&self) -> Duration {
+        self.timeout_seconds
+            .map(Duration::from_secs)
+            .unwrap_or(COMMAND_TIMEOUT)
+    }
+}
+
+/// What a running command reports while it runs: its output as it arrives, and a stop signal.
+pub(crate) struct Live {
+    pub on_output: Box<dyn Fn(&'static str, String) + Send + Sync>,
+    pub stop: Arc<Notify>,
 }
 
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]
@@ -83,7 +104,10 @@ type Outcome = Result<RunResult, String>;
 pub struct TerminalState {
     session_token: String,
     runner: Arc<Runner>,
-    active: Mutex<Vec<(String, RunRequest, tokio::task::AbortHandle)>>,
+    active: Mutex<Vec<(String, RunRequest, Arc<Notify>)>>,
+    // Calls this app process has seen. A call replayed after a restart is not among them:
+    // the app was closed while it waited, so it is answered as such and never run.
+    received: Mutex<HashSet<String>>,
 }
 
 impl TerminalState {
@@ -95,12 +119,14 @@ impl TerminalState {
             session_token,
             runner: Arc::new(Runner::default()),
             active: Mutex::new(Vec::new()),
+            received: Mutex::new(HashSet::new()),
         })
     }
 
+    /// Ends every running command's process tree; each returns the output it had so far.
     pub async fn stop(&self) {
-        for (_, _, task) in self.active.lock().await.drain(..) {
-            task.abort();
+        for (_, _, stop) in self.active.lock().await.iter() {
+            stop.notify_one();
         }
     }
 
@@ -135,7 +161,7 @@ impl Runner {
         F: FnOnce() -> Fut,
         Fut: Future<Output = Result<bool, String>>,
     {
-        self.run_inner(execution_id, request, directory, deadline, confirm, None)
+        self.run_inner(execution_id, request, directory, deadline, confirm, None, None)
             .await
     }
 
@@ -146,6 +172,7 @@ impl Runner {
         directory: PathBuf,
         deadline: Duration,
         writable: crate::folders::WriteScope,
+        live: Live,
     ) -> Outcome {
         self.run_inner(
             execution_id,
@@ -154,6 +181,7 @@ impl Runner {
             deadline,
             || async { Ok(true) },
             Some(writable),
+            Some(live),
         )
         .await
     }
@@ -166,6 +194,7 @@ impl Runner {
         deadline: Duration,
         confirm: F,
         writable: Option<crate::folders::WriteScope>,
+        live: Option<Live>,
     ) -> Outcome
     where
         F: FnOnce() -> Fut,
@@ -191,7 +220,14 @@ impl Runner {
         let result = match confirm().await {
             Ok(false) => Ok(RunResult::Declined { declined: true }),
             Ok(true) => {
-                execute_inner(&request.command, &directory, deadline, writable.as_ref()).await
+                execute_with(
+                    &request.command,
+                    &directory,
+                    deadline,
+                    writable.as_ref(),
+                    live.as_ref(),
+                )
+                .await
             }
             Err(error) => Err(error),
         };
@@ -223,6 +259,14 @@ fn validate_request(execution_id: &str, request: &RunRequest) -> Result<(), Stri
         .is_some_and(|cwd| cwd.len() > 4096 || cwd.contains('\0'))
     {
         return Err("A valid working folder is required".into());
+    }
+    if request
+        .timeout_seconds
+        .is_some_and(|seconds| seconds == 0 || seconds > MAX_TIMEOUT_SECONDS)
+    {
+        return Err(format!(
+            "timeout_seconds must be between 1 and {MAX_TIMEOUT_SECONDS}"
+        ));
     }
     if request.description.trim().is_empty()
         || request.description.len() > 4096
@@ -309,28 +353,40 @@ pub async fn run_command(
         .collect(),
     };
     let runner = state.runner.clone();
-    let active_id = execution_id.clone();
-    let active_request = request.clone();
-    let task = tauri::async_runtime::spawn(async move {
+    let stop = Arc::new(Notify::new());
+    let output_id = execution_id.clone();
+    let live = Live {
+        on_output: Box::new(move |stream, text| {
+            crate::desktop::emit(
+                &app,
+                serde_json::json!({
+                    "type": "command-output",
+                    "executionId": output_id,
+                    "stream": stream,
+                    "text": text,
+                }),
+            );
+        }),
+        stop: stop.clone(),
+    };
+    state
+        .active
+        .lock()
+        .await
+        .push((execution_id.clone(), request.clone(), stop.clone()));
+    let deadline = request.deadline();
+    let result = tauri::async_runtime::spawn(async move {
         runner
-            .run_scoped(execution_id, request, directory, COMMAND_TIMEOUT, writable)
+            .run_scoped(execution_id, request, directory, deadline, writable, live)
             .await
-    });
-    let abort = task.inner().abort_handle();
-    let task_id = abort.id();
+    })
+    .await
+    .map_err(|_| "The command was stopped".to_string());
     state
         .active
         .lock()
         .await
-        .push((active_id, active_request, abort));
-    let result = task
-        .await
-        .map_err(|_| "The command was stopped".to_string());
-    state
-        .active
-        .lock()
-        .await
-        .retain(|(_, _, abort)| abort.id() != task_id);
+        .retain(|(_, _, active)| !Arc::ptr_eq(active, &stop));
     result?
 }
 
@@ -341,9 +397,11 @@ pub async fn command_status(
     session_token: String,
     request: RunRequest,
     execution_id: String,
+    replayed: Option<bool>,
 ) -> Result<serde_json::Value, String> {
     authorize(&webview, &session_token, state.session_token())?;
     validate_request(&execution_id, &request)?;
+    let first_seen = state.received.lock().await.insert(execution_id.clone());
     if let Ok(memory) = state.runner.memory.try_lock() {
         if let Some((_, previous, result)) = memory
             .completed
@@ -361,7 +419,9 @@ pub async fn command_status(
         .await
         .iter()
         .any(|(id, previous, _)| id == &execution_id && previous == &request);
-    Ok(serde_json::json!({ "known": known }))
+    // Seen first as a replay of a waiting turn: the call is older than this app process.
+    let closed = !known && first_seen && replayed == Some(true);
+    Ok(serde_json::json!({ "known": known, "closed": closed }))
 }
 
 #[tauri::command]
@@ -401,15 +461,47 @@ impl Tail {
     }
 }
 
-async fn read_tail<R: AsyncRead + Unpin>(mut pipe: R, output: &mut Tail) -> io::Result<()> {
+async fn read_tail<R: AsyncRead + Unpin>(
+    mut pipe: R,
+    output: &mut Tail,
+    stream: &'static str,
+    live: Option<&Live>,
+) -> io::Result<()> {
     let mut bytes = [0_u8; 8192];
+    let mut carry = Vec::new();
     loop {
         let count = pipe.read(&mut bytes).await?;
         if count == 0 {
+            if let (Some(live), false) = (live, carry.is_empty()) {
+                (live.on_output)(stream, String::from_utf8_lossy(&carry).into_owned());
+            }
             return Ok(());
         }
         output.append(&bytes[..count]);
+        if let Some(live) = live {
+            carry.extend_from_slice(&bytes[..count]);
+            let text = complete_text(&mut carry);
+            if !text.is_empty() {
+                (live.on_output)(stream, text);
+            }
+        }
     }
+}
+
+/// The text of `bytes` up to a character cut by the end of a read, which stays in `bytes`.
+fn complete_text(bytes: &mut Vec<u8>) -> String {
+    let complete = match std::str::from_utf8(bytes) {
+        Ok(_) => bytes.len(),
+        // Up to three bytes of a character the next read completes.
+        Err(error) if error.error_len().is_none() && bytes.len() - error.valid_up_to() < 4 => {
+            error.valid_up_to()
+        }
+        Err(_) => bytes.len(),
+    };
+    let rest = bytes.split_off(complete);
+    let text = String::from_utf8_lossy(bytes).into_owned();
+    *bytes = rest;
+    text
 }
 
 struct TemporaryFolder(PathBuf);
@@ -433,11 +525,22 @@ async fn execute(script: &str, directory: &Path, deadline: Duration) -> Outcome 
     execute_inner(script, directory, deadline, None).await
 }
 
+#[cfg(test)]
 async fn execute_inner(
     script: &str,
     directory: &Path,
     deadline: Duration,
     writable: Option<&crate::folders::WriteScope>,
+) -> Outcome {
+    execute_with(script, directory, deadline, writable, None).await
+}
+
+async fn execute_with(
+    script: &str,
+    directory: &Path,
+    deadline: Duration,
+    writable: Option<&crate::folders::WriteScope>,
+    live: Option<&Live>,
 ) -> Outcome {
     let start = Instant::now();
     std::fs::create_dir_all(directory)
@@ -489,23 +592,41 @@ async fn execute_inner(
         .ok_or("Cannot capture command output")?;
     let mut out = Tail::default();
     let mut err = Tail::default();
+    let stopped = async {
+        match live {
+            Some(live) => live.stop.notified().await,
+            None => std::future::pending().await,
+        }
+    };
     // The deadline includes inherited pipes: a background descendant must not hang the IPC call.
-    let completion = timeout(deadline, async {
-        tokio::try_join!(
-            process.0.wait(),
-            read_tail(stdout, &mut out),
-            read_tail(stderr, &mut err)
-        )
-    })
-    .await;
+    let completion = tokio::select! {
+        completion = timeout(deadline, async {
+            tokio::try_join!(
+                process.0.wait(),
+                read_tail(stdout, &mut out, "stdout", live),
+                read_tail(stderr, &mut err, "stderr", live)
+            )
+        }) => Some(completion),
+        () = stopped => None,
+    };
     let _ = process.0.start_kill();
     let _ = timeout(Duration::from_secs(2), process.0.wait()).await;
     let exit_code = match completion {
-        Ok(Ok((status, _, _))) => status.code().unwrap_or(-1),
-        Ok(Err(_)) => return Err("Cannot read the command result".into()),
-        Err(_) => {
-            err.append(TIMEOUT_NOTE);
+        Some(Ok(Ok((status, _, _)))) => status.code().unwrap_or(-1),
+        Some(Ok(Err(_))) => return Err("Cannot read the command result".into()),
+        Some(Err(_)) => {
+            err.append(
+                format!(
+                    "\nCommand timed out after {} seconds and its process tree was stopped.",
+                    deadline.as_secs()
+                )
+                .as_bytes(),
+            );
             124
+        }
+        None => {
+            err.append(STOP_NOTE);
+            STOPPED_EXIT_CODE
         }
     };
     drop(temporary);
@@ -547,6 +668,7 @@ mod tests {
             command: command.into(),
             description: "Test command".into(),
             cwd: None,
+            timeout_seconds: None,
         }
     }
     fn output(result: RunResult) -> (i32, String, String) {
@@ -998,5 +1120,66 @@ mod tests {
         assert!(task.await.unwrap_err().is_cancelled());
         tokio::time::sleep(Duration::from_millis(1100)).await;
         assert!(!scratch.0.join("marker").exists());
+    }
+
+    #[test]
+    fn live_text_keeps_a_character_cut_by_a_read_for_the_next_one() {
+        let crab = "🦀".as_bytes();
+        let mut carry = b"ok ".to_vec();
+        carry.extend_from_slice(&crab[..2]);
+        assert_eq!(complete_text(&mut carry), "ok ");
+        carry.extend_from_slice(&crab[2..]);
+        assert_eq!(complete_text(&mut carry), "🦀");
+        assert!(carry.is_empty());
+        let mut invalid = vec![b'a', 255, b'b'];
+        assert_eq!(complete_text(&mut invalid), "a\u{FFFD}b");
+    }
+
+    #[test]
+    fn timeout_seconds_must_be_within_the_limit() {
+        let mut call = request("true");
+        call.timeout_seconds = Some(0);
+        assert!(validate_request("id", &call).is_err());
+        call.timeout_seconds = Some(MAX_TIMEOUT_SECONDS + 1);
+        assert!(validate_request("id", &call).is_err());
+        call.timeout_seconds = Some(MAX_TIMEOUT_SECONDS);
+        assert!(validate_request("id", &call).is_ok());
+        assert_eq!(call.deadline(), Duration::from_secs(MAX_TIMEOUT_SECONDS));
+        assert_eq!(request("true").deadline(), COMMAND_TIMEOUT);
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn output_arrives_while_the_command_runs_and_stop_keeps_it() {
+        let scratch = Scratch::new();
+        let seen = Arc::new(std::sync::Mutex::new(String::new()));
+        let stop = Arc::new(Notify::new());
+        let live = Live {
+            on_output: Box::new({
+                let seen = seen.clone();
+                move |stream, text| seen.lock().unwrap().push_str(&format!("{stream}:{text}"))
+            }),
+            stop: stop.clone(),
+        };
+        let started = Instant::now();
+        let run = execute_with(
+            "printf first; sleep 30; printf never",
+            &scratch.0,
+            Duration::from_secs(60),
+            None,
+            Some(&live),
+        );
+        let watch = async {
+            while !seen.lock().unwrap().contains("stdout:first") {
+                tokio::time::sleep(Duration::from_millis(20)).await;
+            }
+            stop.notify_one();
+        };
+        let (result, ()) = tokio::join!(run, watch);
+        let (code, stdout, stderr) = output(result.unwrap());
+        assert_eq!(code, STOPPED_EXIT_CODE);
+        assert_eq!(stdout, "first");
+        assert!(stderr.contains("stopped by the user"));
+        assert!(started.elapsed() < Duration::from_secs(10));
     }
 }

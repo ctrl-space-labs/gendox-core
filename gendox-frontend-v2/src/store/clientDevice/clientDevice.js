@@ -104,6 +104,9 @@ export const setAutostart = createAsyncThunk('clientDevice/setAutostart', async 
   }
 })
 
+// How much of a running command's output the chat shows; the tool result carries its own.
+const LIVE_OUTPUT_LIMIT = 16 * 1024
+
 const clientDeviceSlice = createSlice({
   name: 'clientDevice',
   initialState: {
@@ -115,6 +118,9 @@ const clientDeviceSlice = createSlice({
     foldersUpdating: false,
     autostart: false,
     commandRunning: false,
+    // Desktop app only: the commands running now, with the end of their output so far.
+    // { executionId, threadId, command, startedAt, output }
+    commands: [],
     // Threads currently on screen, so their answers and approvals need no notification.
     visibleThreadIds: []
   },
@@ -124,6 +130,17 @@ const clientDeviceSlice = createSlice({
     },
     commandRunningChanged: (state, action) => {
       state.commandRunning = action.payload
+    },
+    commandStarted: (state, action) => {
+      state.commands = state.commands.filter(command => command.executionId !== action.payload.executionId)
+      state.commands.push({ ...action.payload, output: '' })
+    },
+    commandOutput: (state, action) => {
+      const command = state.commands.find(item => item.executionId === action.payload.executionId)
+      if (command) command.output = (command.output + action.payload.text).slice(-LIVE_OUTPUT_LIMIT)
+    },
+    commandFinished: (state, action) => {
+      state.commands = state.commands.filter(command => command.executionId !== action.payload)
     },
     threadShown: (state, action) => {
       state.visibleThreadIds.push(action.payload)
@@ -171,6 +188,14 @@ const clientDeviceSlice = createSlice({
   }
 })
 
-export const { foldersChanged, commandRunningChanged, threadShown, threadHidden } = clientDeviceSlice.actions
+export const {
+  foldersChanged,
+  commandRunningChanged,
+  commandStarted,
+  commandOutput,
+  commandFinished,
+  threadShown,
+  threadHidden
+} = clientDeviceSlice.actions
 
 export default clientDeviceSlice.reducer

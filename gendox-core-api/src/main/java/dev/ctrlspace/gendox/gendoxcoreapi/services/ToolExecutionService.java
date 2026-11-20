@@ -87,9 +87,19 @@ public class ToolExecutionService {
 
             // Tools without a backend handler run on the page or app that sent the message
             boolean runsOnClient = !aiToolRegistry.supports(toolName);
-            if (runsOnClient && canWait && "CLIENT".equals(toolDefinition.getExecution())) {
+            // A tool that asks first waits for the user's answer, also when the page only acts on it
+            boolean asksFirst = runsOnClient && toolDefinition.isRequiresApproval();
+            if (runsOnClient && canWait && ("CLIENT".equals(toolDefinition.getExecution()) || asksFirst)) {
                 pendingCalls.add(new PendingCall(toolCall.get("id").asText(), assistantMessage.getId(), toolName,
-                        toolCall.get("function").get("arguments").asText()));
+                        toolCall.get("function").get("arguments").asText(), toolDefinition.getExecution(),
+                        toolDefinition.isRequiresApproval()));
+                return;
+            }
+            if (asksFirst) {
+                // The turn cannot wait for an answer any more, so the call does not run
+                toolExecutionMessages.add(toolMessage(toolCall, objectMapper.createObjectNode()
+                        .put("declined", true)
+                        .put("message", "This tool runs only after the user allows it, and this turn could not wait for an answer. Ask the user, then call it again in a new turn.")));
                 return;
             }
 

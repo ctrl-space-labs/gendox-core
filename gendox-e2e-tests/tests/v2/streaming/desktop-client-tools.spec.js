@@ -28,7 +28,7 @@ for (const declined of [false, true]) {
     expect(state.requests).toHaveLength(2)
     expect(state.requests[0]).toMatchObject({ stream: true, clientToolResults: true })
     const desktop = state.requests[0].localContexts.find(context => context.contextType === 'GENDOX_DESKTOP')
-    expect(JSON.parse(desktop.value)).toEqual({ source: 'gendox-desktop', approvalMode: 'ask', localCommandsAvailable: true })
+    expect(JSON.parse(desktop.value)).toEqual({ source: 'gendox-desktop', approvalMode: 'ask', localCommandsAvailable: true, clientTools: ['run_command'] })
     expect(state.requests[1].localContexts || []).toEqual([])
     expect(state.requests[1]).toMatchObject({ role: 'tool', stream: true })
     expect(state.requests[1].toolCallId).toBe(state.messages.find(message => message.toolCalls)?.toolCalls[0].id)
@@ -81,4 +81,71 @@ test('a pending native call survives reload without executing twice', async ({ p
   expect(state.requests[1]).toMatchObject({ role: 'tool', stream: true })
   expect(JSON.parse(state.requests[1].value).stdout).toBe('once\n')
   expect(executions).toBe(1)
+})
+
+for (const allowed of [true, false]) {
+  test(`a tool marked Ask before running reaches the host only after ${allowed ? 'Allow' : 'Don’t allow'}`, async ({ page, request }) => {
+    await request.get('/__reset?mode=approval')
+    await page.addInitScript(source => {
+      window.lookups = []
+      window.maxApprovalCards = 0
+      new MutationObserver(() => {
+        const count = document.querySelectorAll('section[aria-label="Allow this tool to run?"]').length
+        window.maxApprovalCards = Math.max(window.maxApprovalCards, count)
+      }).observe(document, { childList: true, subtree: true })
+      const install = (0, eval)(source + '; installClientToolHost')
+      const host = install({ folders: async () => null, commandStatus: async () => ({ known: false }), activity: async () => {}, badge: async () => {}, deepLinks: async () => [] }, location.protocol + '//' + location.host)
+      host.registerTool('lookup', async args => { window.lookups.push(args); return { found: 3 } })
+    }, hostSource)
+    await page.goto('/gendox/embed/embedded-chat/?organizationId=org&projectId=project&variant=panel')
+    const message = page.getByRole('textbox', { name: 'Message', exact: true })
+    await message.fill('Look up an order')
+    await message.press('Enter')
+    const card = page.getByRole('region', { name: 'Allow this tool to run?' })
+    await expect(card).toBeVisible()
+    await expect(card).toContainText('The agent wants to run lookup.')
+    await expect(card).toContainText('query: order')
+    expect(await page.evaluate(() => window.lookups)).toHaveLength(0)
+    await card.getByRole('button', { name: allowed ? 'Allow' : 'Don’t allow', exact: true }).click()
+    await expect(page.getByText('Tool-based answer.', { exact: true })).toBeVisible()
+    expect(await page.evaluate(() => window.maxApprovalCards)).toBe(1)
+    const state = await (await request.get('/__state')).json()
+    expect(state.requests).toHaveLength(2)
+    expect(JSON.parse(state.requests[1].value)).toEqual(
+      allowed ? { found: 3 } : { declined: true, message: 'The user did not allow this tool call. Nothing ran.' }
+    )
+    expect(await page.evaluate(() => window.lookups)).toEqual(allowed ? [{ query: 'order' }] : [])
+  })
+}
+
+test('a running command shows its output as it arrives, and Stop reaches the app', async ({ page, request }) => {
+  await request.get('/__reset?mode=desktop')
+  let finish
+  await page.exposeFunction('runLongCommand', () => new Promise(resolve => { finish = resolve }))
+  await page.addInitScript(source => {
+    window.stops = 0
+    const install = (0, eval)(source + '; installClientToolHost')
+    localStorage.setItem('gendox.client.preferences.v1', JSON.stringify({ mode: 'auto' }))
+    install({ folders: async () => ({ folders: ['/workspace'], working_directory: '/workspace', enforcement_available: true }), commandStatus: async () => ({ known: false }), activity: async () => {}, badge: async () => {}, deepLinks: async () => [], stop: async () => { window.stops++ }, runCommand: (_request, executionId) => {
+      const output = text => window.dispatchEvent(new CustomEvent('gendox.native', { detail: { type: 'command-output', executionId, stream: 'stdout', text } }))
+      setTimeout(() => output('building step 1\n'), 50)
+      setTimeout(() => output('building step 2\n'), 100)
+      return window.runLongCommand()
+    } }, location.protocol + '//' + location.host)
+  }, hostSource)
+  await page.goto('/gendox/embed/embedded-chat/?organizationId=org&projectId=project&variant=panel')
+  const message = page.getByRole('textbox', { name: 'Message', exact: true })
+  await message.fill('Run the build')
+  await message.press('Enter')
+  const card = page.getByRole('region', { name: 'Command running on this computer' })
+  await expect(card).toContainText('building step 1')
+  await expect(card).toContainText('building step 2')
+  await expect(card).toContainText(/Running on this computer · \d+ s/)
+  await card.getByRole('button', { name: 'Stop', exact: true }).click()
+  await expect.poll(() => page.evaluate(() => window.stops)).toBe(1)
+  finish({ exit_code: 130, stdout: 'building step 1\nbuilding step 2\n', stderr: 'Command stopped by the user; its process tree was ended.', duration_ms: 400 })
+  await expect(page.getByText('Tool-based answer.', { exact: true })).toBeVisible()
+  await expect(card).toBeHidden()
+  const state = await (await request.get('/__state')).json()
+  expect(JSON.parse(state.requests[1].value).exit_code).toBe(130)
 })

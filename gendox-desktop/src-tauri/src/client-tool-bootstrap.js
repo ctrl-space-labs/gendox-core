@@ -6,7 +6,7 @@
   __GENDOX_TOOL_INSTALLER__
   installClientToolHost({
     runCommand: (request, executionId) => call('run_command', { request, executionId, approved: true }),
-    commandStatus: (request, executionId) => call('command_status', { request, executionId }),
+    commandStatus: (request, executionId, replayed) => call('command_status', { request, executionId, replayed: Boolean(replayed) }),
     folders: () => call('get_folders'),
     chooseFolder: () => call('choose_folder'),
     removeFolder: path => call('remove_folder', { path }),

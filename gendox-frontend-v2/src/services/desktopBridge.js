@@ -55,7 +55,7 @@ const setWorkingDirectory = path => call('setWorkingDirectory', path)
 
 // Commands
 const runCommand = (request, executionId) => call('runCommand', request, executionId)
-const commandStatus = (request, executionId) => call('commandStatus', request, executionId)
+const commandStatus = (request, executionId, replayed) => call('commandStatus', request, executionId, replayed)
 const stopCommand = () => call('stop')
 const setActivity = running => call('activity', running)
 
@@ -70,7 +70,8 @@ const setAutostart = enabled => call('setAutostart', enabled)
 
 /**
  * Events the desktop app sends: { type: 'notification', action } when a notification is clicked,
- * { type: 'deep-link', urls } when a gendox:// link opens the app. Returns a function that stops listening.
+ * { type: 'deep-link', urls } when a gendox:// link opens the app,
+ * { type: 'command-output', executionId, stream, text } while a command runs. Returns a function that stops listening.
  */
 const onNativeEvent = handler => {
   const listener = event => handler(event.detail || {})

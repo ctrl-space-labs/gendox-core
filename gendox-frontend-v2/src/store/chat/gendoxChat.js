@@ -12,6 +12,8 @@ import { getErrorMessage } from 'src/utils/errorHandler'
 import toast from 'react-hot-toast'
 import { isDesktopApp } from 'src/services/desktopBridge'
 import { desktopMessageContext } from 'src/utils/clientTools/desktopContext'
+import { isWaiting, readableArguments, waitForAnswer } from 'src/utils/clientTools/approvalAnswers'
+import { approvalRequested, approvalSettled } from 'src/store/toolApprovals/toolApprovals'
 
 // a turn still running on the server: the chat follows it until it ends
 export const ACTIVE_COMPLETION_STATUSES = ['GENERATING', 'WAITING_FOR_TOOLS']
@@ -919,8 +921,11 @@ const DELTA_FLUSH_MS = 50
 const completionEvent = (dispatch, chatKey, projectId, event, data) =>
   dispatch(chatActions.completionEvent({ chatKey, projectId, event, data }))
 
-// Sends the tool calls the host page runs (client tools) to it, each once per turn
-function dispatchHostCalls(data, context) {
+// Sends the tool calls the host page runs (client tools) to it, each once per turn.
+// `replayed`: the calls come from the turn's saved state (after a reload or a restart of the app),
+// not from the answer as it streams. A call the agent's owner marked "Ask before running" goes to
+// the host only after the user allows it; a declined one runs nothing and continues the turn.
+function dispatchHostCalls(data, context, replayed = false) {
   const { projectId, organizationId, iFrameMessageManager } = context
   if (iFrameMessageManager?.isEmbedded)
     updateSessionThreadId(iFrameMessageManager.originUrl, organizationId, projectId, data.threadId)
@@ -931,7 +936,8 @@ function dispatchHostCalls(data, context) {
       type: 'function',
       messageId: call.messageId,
       function: { name: call.name, arguments: call.arguments },
-      execution: 'CLIENT'
+      execution: call.execution || 'CLIENT',
+      ...(call.requiresApproval ? { requiresApproval: true } : {})
     }))
   const session = readCompletionSession(data.threadId)
   const sent = new Set(session.dispatchedCalls || [])
@@ -940,18 +946,73 @@ function dispatchHostCalls(data, context) {
   const nativeHost = typeof window !== 'undefined' && window.top === window && window.__GENDOX_CLIENT_TOOL_HOST__
   const pending = calls.filter(call => nativeHost || !sent.has(call.id))
   if (!pending.length) return
-  pending.forEach(call => sent.add(call.id))
-  saveCompletionSession(data.threadId, { dispatchedCalls: [...sent] })
-  iFrameMessageManager?.messageManager?.sendMessage({
-    type: 'gendox.events.chat.message.tool_calls.request',
-    payload: pending.map(call => ({
+  // The desktop app's commands ask with their own card (approval mode, folders); other calls ask here
+  const asksHere = call => call.requiresApproval && !(nativeHost && call.function?.name === 'run_command')
+  const markSent = sentCalls => {
+    sentCalls.forEach(call => sent.add(call.id))
+    saveCompletionSession(data.threadId, { dispatchedCalls: [...sent] })
+  }
+  const toHost = hostCalls =>
+    iFrameMessageManager?.messageManager?.sendMessage({
+      type: 'gendox.events.chat.message.tool_calls.request',
+      payload: hostCalls.map(call => ({
+        threadId: data.threadId,
+        turnId: data.turnId,
+        messageId: data.messageId,
+        execution: data.execution || 'CLIENT',
+        ...call,
+        ...(replayed ? { replayed: true } : {})
+      }))
+    })
+
+  const direct = pending.filter(call => !asksHere(call))
+  if (direct.length) {
+    markSent(direct)
+    toHost(direct)
+  }
+  pending.filter(asksHere).forEach(call => askBeforeHostCall(call, data, context, { markSent, toHost }))
+}
+
+const TOOL_DECLINED = { declined: true, message: 'The user did not allow this tool call. Nothing ran.' }
+
+async function askBeforeHostCall(call, data, context, { markSent, toHost }) {
+  const { dispatch } = context
+  const id = `tool:${data.threadId}:${call.id}`
+  // A turn's state is read again while it waits; one card per call is enough
+  if (!dispatch || isWaiting(id)) return
+  const allowed = waitForAnswer(id)
+  dispatch(
+    approvalRequested({
+      id,
+      kind: 'tool',
       threadId: data.threadId,
-      turnId: data.turnId,
-      messageId: data.messageId,
-      execution: data.execution || 'CLIENT',
-      ...call
-    }))
-  })
+      toolName: call.function?.name,
+      arguments: readableArguments(call.function?.arguments)
+    })
+  )
+  const yes = await allowed
+  dispatch(approvalSettled(id))
+  markSent([call])
+  if (yes) toHost([call])
+  // A call the host only acts on sends no result of its own: the turn hears that it ran
+  if (!yes || call.execution === 'ACTION') {
+    dispatch(
+      submitClientToolResult({
+        result: {
+          threadId: data.threadId,
+          turnId: data.turnId,
+          messageId: call.messageId || data.messageId,
+          toolCallId: call.id,
+          value: JSON.stringify(yes ? { status: 'executed' } : TOOL_DECLINED)
+        },
+        token: context.token,
+        projectId: context.projectId,
+        organizationId: context.organizationId,
+        iFrameMessageManager: context.iFrameMessageManager,
+        chatKey: context.chatKey
+      })
+    )
+  }
 }
 
 async function _streamCompletion(context) {
@@ -1090,7 +1151,8 @@ export const recoverCompletion = createAsyncThunk(
       if (!canRecoverCompletion(session())) return
       const previous = session().completionStatus
       completionEvent(dispatch, chatKey, projectId, 'status', data)
-      if (data.status === 'WAITING_FOR_TOOLS') dispatchHostCalls(data, { projectId, organizationId, iFrameMessageManager })
+      if (data.status === 'WAITING_FOR_TOOLS')
+        dispatchHostCalls(data, { projectId, organizationId, iFrameMessageManager, dispatch, token, chatKey }, true)
       // Load the saved messages while a turn runs, and once more when it ends, to show its final answer
       if (ACTIVE_COMPLETION_STATUSES.includes(data.status) || ACTIVE_COMPLETION_STATUSES.includes(previous)) {
         const thread = await _fetchExistingThreadWithMessages(threadId, projectId, organizationId, dispatch, token)

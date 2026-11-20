@@ -48,5 +48,11 @@ public class CompletionTurn {
     @Transient
     private String resumeToken;
 
-    public record PendingCall(String id, UUID messageId, String name, String arguments) {}
+    /**
+     * A call the page or app answers. {@code execution} is CLIENT (it sends the tool's result) or ACTION
+     * (it acts on the call, after the user allowed it); {@code requiresApproval} tells it to ask the user
+     * first. Both are null in turns saved before they existed, which means CLIENT, without asking.
+     */
+    public record PendingCall(String id, UUID messageId, String name, String arguments, String execution,
+                              Boolean requiresApproval) {}
 }

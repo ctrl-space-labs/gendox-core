@@ -38,6 +38,7 @@ import ChatComposer from 'src/components/chat/ChatComposer'
 import ChatSources from 'src/components/chat/ChatSources'
 import ChatDeepThinking from 'src/components/chat/ChatDeepThinking'
 import ClientToolApprovals from 'src/components/client-tools/ClientToolApprovals'
+import RunningCommands from 'src/components/client-tools/RunningCommands'
 import useVisibleThread from 'src/hooks/useVisibleThread'
 
 const COMPLETION_POLL_MS = 2000
@@ -541,6 +542,7 @@ const Chat = ({
               </ChatTurn>
             ))}
             <ClientToolApprovals threadId={threadId} />
+            <RunningCommands threadId={threadId} />
             {turns.length === 0 && progress && <div className='gc-ai'>{progress}</div>}
           </div>
         </div>

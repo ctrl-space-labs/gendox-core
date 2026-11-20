@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useDispatch, useSelector } from 'react-redux'
 import toast from 'react-hot-toast'
-import { AppWindow, Hourglass, TriangleAlert, Pencil, Plus, Send, Server, Trash2, Wrench, X } from 'lucide-react'
+import { AppWindow, Hourglass, TriangleAlert, Pencil, Plus, Send, Server, ShieldCheck, Trash2, Wrench, X } from 'lucide-react'
 import useHasOrgRole from 'src/authentication/hooks/useHasOrgRole'
 import { fetchExampleTools } from 'src/store/activeProjectAgent/activeProjectAgent'
 import { getErrorMessage } from 'src/utils/errorHandler'
@@ -135,6 +135,7 @@ const ToolDialog = ({ open, tool, examples, examplesLoading, onClose, onSave }) 
   const [base, setBase] = useState({})
   const [form, setForm] = useState({ name: '', description: '', params: [] })
   const [execution, setExecution] = useState('ACTION')
+  const [requiresApproval, setRequiresApproval] = useState(false)
   const [json, setJson] = useState('')
   const [jsonError, setJsonError] = useState('')
   const [isSaving, setIsSaving] = useState(false)
@@ -145,6 +146,7 @@ const ToolDialog = ({ open, tool, examples, examplesLoading, onClose, onSave }) 
     setBase(schema)
     setForm(tool ? toForm(schema) : { name: '', description: '', params: [{ name: '', type: 'string', description: '', required: true }] })
     setExecution(tool?.execution || 'ACTION')
+    setRequiresApproval(Boolean(tool?.requiresApproval))
     setMode('form')
     setJsonError('')
   }, [open, tool])
@@ -195,7 +197,8 @@ const ToolDialog = ({ open, tool, examples, examplesLoading, onClose, onSave }) 
       return toast.error('Give the tool a name with letters, numbers and underscores.')
     }
     setIsSaving(true)
-    await onSave(JSON.stringify(schema, null, 2), runsInGendox(name) ? 'ACTION' : execution)
+    const inGendox = runsInGendox(name)
+    await onSave(JSON.stringify(schema, null, 2), inGendox ? 'ACTION' : execution, !inGendox && requiresApproval)
     setIsSaving(false)
   }
 
@@ -391,6 +394,17 @@ const ToolDialog = ({ open, tool, examples, examplesLoading, onClose, onSave }) 
                   </label>
                 ))}
               </div>
+              <label className='row sm' style={{ marginTop: 10, gap: 8 }}>
+                <input
+                  type='checkbox'
+                  checked={requiresApproval}
+                  onChange={event => setRequiresApproval(event.target.checked)}
+                />
+                <span>
+                  <b>Ask before running</b>
+                  <span className='muted'> · the chat shows the call and runs it only after the user allows it</span>
+                </span>
+              </label>
               {execution === 'CLIENT' && (
                 <div className='alert' style={{ '--c': 'var(--warn)', marginTop: 10 }}>
                   <b>
@@ -445,12 +459,12 @@ const AgentToolsPage = () => {
     }
   }
 
-  const saveTool = async (jsonSchema, execution) => {
+  const saveTool = async (jsonSchema, execution, requiresApproval) => {
     const index = editing.index
     const next =
       index == null
-        ? [...tools, { type: 'function', execution, jsonSchema }]
-        : tools.map((t, i) => (i === index ? { ...t, type: 'function', execution, jsonSchema } : t))
+        ? [...tools, { type: 'function', execution, requiresApproval, jsonSchema }]
+        : tools.map((t, i) => (i === index ? { ...t, type: 'function', execution, requiresApproval, jsonSchema } : t))
     if (await saveTools(next, index == null ? 'Tool added' : 'Tool saved')) setEditing(null)
   }
 
@@ -496,6 +510,12 @@ const AgentToolsPage = () => {
                     )}
                     <div className='runs'>
                       <RunsBadge name={name} execution={tool.execution} />
+                      {tool.requiresApproval && (
+                        <span className='badge'>
+                          <ShieldCheck className='lucide' />
+                          Asks first
+                        </span>
+                      )}
                     </div>
                   </div>
                   {canEdit && (

@@ -27,6 +27,8 @@ public interface MessageLocalContextRepository extends JpaRepository<MessageLoca
 
     boolean existsByMessage_IdAndContextTypeName(UUID messageId, String contextTypeName);
 
+    java.util.Optional<MessageLocalContext> findFirstByMessage_IdAndContextTypeName(UUID messageId, String contextTypeName);
+
     boolean existsByMessage_ThreadIdAndDocument_Id(UUID threadId, UUID documentId);
 
     boolean existsByMessage_ThreadIdAndDocumentIsNotNull(UUID threadId);

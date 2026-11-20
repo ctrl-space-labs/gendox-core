@@ -99,7 +99,7 @@ class ToolExecutionServiceTest {
         ToolRound round = service.run(assistant, history, offering(tool("pick_file", "CLIENT")), listener, true);
 
         assertTrue(round.results().isEmpty());
-        assertEquals(List.of(new PendingCall("call-pick_file", assistant.getId(), "pick_file", "{\"q\":\"pick_file\"}")), round.pending());
+        assertEquals(List.of(new PendingCall("call-pick_file", assistant.getId(), "pick_file", "{\"q\":\"pick_file\"}", "CLIENT", false)), round.pending());
         assertTrue(toldToTheClient.isEmpty());
         verify(aiToolRegistry, never()).execute(any(), any(), any());
     }
@@ -130,6 +130,35 @@ class ToolExecutionServiceTest {
         assertEquals(List.of("{\"found\":3}", "{\"status\":\"executed\"}"), round.results().stream().map(AiModelMessage::getContent).toList());
         assertEquals(List.of("pick_file"), round.pending().stream().map(PendingCall::name).toList());
         assertEquals(List.of("call-open_page"), toldToTheClient.stream().map(call -> call.get("id").asText()).toList());
+    }
+
+    @Test
+    void anActionThatAsksFirstWaitsForTheUserInsteadOfBeingToldItRan() {
+        Message assistant = assistantCalling("open_page");
+        AiTools openPage = tool("open_page", "ACTION");
+        openPage.setRequiresApproval(true);
+
+        ToolRound round = service.run(assistant, history, offering(openPage), listener, true);
+
+        assertTrue(round.results().isEmpty());
+        assertEquals(List.of(new PendingCall("call-open_page", assistant.getId(), "open_page", "{\"q\":\"open_page\"}", "ACTION", true)), round.pending());
+        assertTrue(toldToTheClient.isEmpty());
+    }
+
+    @Test
+    void aToolThatAsksFirstDoesNotRunWhenTheTurnCannotWait() {
+        Message assistant = assistantCalling("open_page", "pick_file");
+        AiTools openPage = tool("open_page", "ACTION");
+        openPage.setRequiresApproval(true);
+        AiTools pickFile = tool("pick_file", "CLIENT");
+        pickFile.setRequiresApproval(true);
+
+        ToolRound round = service.run(assistant, history, offering(openPage, pickFile), listener, false);
+
+        assertTrue(round.pending().isEmpty());
+        assertTrue(toldToTheClient.isEmpty());
+        assertEquals(2, round.results().size());
+        round.results().forEach(result -> assertTrue(result.getContent().contains("\"declined\":true")));
     }
 
     @Test

@@ -4,6 +4,7 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelRequestParams;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.ClientTools;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.AiToolRegistry;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
@@ -83,7 +84,7 @@ public class CompletionRuntimeContextResolver {
         UUID projectId = resolveProjectId(project, overrides);
         UUID organizationId = resolveOrganizationId(project, overrides);
         UUID createdByAgentUserId = resolveCreatedByAgentUserId(agent, overrides);
-        List<AiTools> availableTools = resolveAvailableTools(agent, overrides, agentSkills);
+        List<AiTools> availableTools = resolveAvailableTools(agent, overrides, agentSkills, clientToolNames(message, overrides));
 
         AiModelRequestParams aiModelRequestParams = AiModelRequestParams.builder()
                 .maxTokens(maxTokens)
@@ -146,6 +147,14 @@ public class CompletionRuntimeContextResolver {
     List<AiTools> resolveAvailableTools(@Nullable ProjectAgent agent,
                                                  @Nullable CompletionRuntimeOverridesDTO overrides,
                                                  List<AgentSkill> agentSkills) {
+        return resolveAvailableTools(agent, overrides, agentSkills, List.of());
+    }
+
+    // package-private for tests
+    List<AiTools> resolveAvailableTools(@Nullable ProjectAgent agent,
+                                                 @Nullable CompletionRuntimeOverridesDTO overrides,
+                                                 List<AgentSkill> agentSkills,
+                                                 List<String> clientToolNames) {
         List<AiTools> tools;
         if (overrides != null && overrides.getAiTools() != null && !overrides.getAiTools().isEmpty()) {
             tools = overrides.getAiTools();
@@ -156,6 +165,7 @@ public class CompletionRuntimeContextResolver {
         }
 
         tools = withSkillTools(tools, agentSkills);
+        tools = withClientTools(tools, clientToolNames);
 
         List<String> excluded = overrides != null ? overrides.getExcludedToolNames() : Collections.emptyList();
         if (excluded == null || excluded.isEmpty()) {
@@ -168,6 +178,43 @@ public class CompletionRuntimeContextResolver {
                     return name == null || !excluded.contains(name);
                 })
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * The client tools the client application says it runs with this prompt: {@code clientTools} in its
+     * GENDOX_DESKTOP context. Saved with the prompt, so a turn resumed with a tool result keeps them. A caller
+     * that replaces the system prompt (a sub-agent) runs in Gendox, with no client, and gets none.
+     */
+    // package-private for tests
+    List<String> clientToolNames(Message prompt, @Nullable CompletionRuntimeOverridesDTO overrides) {
+        if (hasSystemPromptOverride(overrides)) {
+            return List.of();
+        }
+        return messageLocalContextService.contextValue(prompt, SkillService.GENDOX_DESKTOP_CONTEXT)
+                .map(value -> {
+                    try {
+                        JsonNode names = objectMapper.readTree(value).path("clientTools");
+                        List<String> result = new ArrayList<>();
+                        names.forEach(name -> result.add(name.asText()));
+                        return result;
+                    } catch (JacksonException e) {
+                        logger.warn("Could not read the client tools of a desktop context: {}", e.getMessage());
+                        return List.<String>of();
+                    }
+                })
+                .orElse(List.of());
+    }
+
+    /**
+     * The system client tools the client runs. Their names are reserved: an agent tool of the same name (one
+     * added by hand before they existed) is never offered, so a client that cannot run it never waits for it.
+     */
+    private List<AiTools> withClientTools(List<AiTools> tools, List<String> clientToolNames) {
+        List<AiTools> withClientTools = tools.stream()
+                .filter(tool -> !ClientTools.isClientTool(toolName(tool)))
+                .collect(Collectors.toCollection(ArrayList::new));
+        withClientTools.addAll(ClientTools.toolsFor(clientToolNames));
+        return withClientTools;
     }
 
     /** The function name in a tool's JSON schema, or null when the schema can't be read. */

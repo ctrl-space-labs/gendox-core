@@ -78,6 +78,8 @@ public class AgentDefinitionDTO {
     public static class ToolDefinition {
         private String type;
         private String execution;
+        // only written when true, so definitions of tools that run without asking stay as they were
+        private Boolean requiresApproval;
         private JsonNode schema;
     }
 

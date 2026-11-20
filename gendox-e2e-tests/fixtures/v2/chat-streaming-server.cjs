@@ -19,7 +19,10 @@ const authority = loopback(process.env.E2E_DESKTOP_OIDC_AUTHORITY, 'E2E_DESKTOP_
 if (Boolean(upstream) !== Boolean(authority)) throw new Error('Set both desktop fixture URLs together.')
 const command = process.platform === 'win32' ? "Write-Output 'gendox-native-command-check'" : "printf 'gendox-native-command-check\\n'"
 let state
-const reset = mode => { state = { mode, threadId: mode === 'desktop' ? randomUUID() : 'thread', turnId: mode === 'desktop' ? randomUUID() : 'turn', status: 'IDLE', messages: [], requests: [], pendingCalls: [] } }
+// Modes: plain (no tools), navigation (an ACTION open_web_page), desktop (run_command), approval (a CLIENT
+// lookup the agent's owner marked "Ask before running"), and the default: a CLIENT lookup.
+const fresh = mode => ['desktop', 'approval'].includes(mode)
+const reset = mode => { state = { mode, threadId: fresh(mode) ? randomUUID() : 'thread', turnId: fresh(mode) ? randomUUID() : 'turn', status: 'IDLE', messages: [], requests: [], pendingCalls: [] } }
 reset(upstream ? 'desktop' : 'plain')
 const row = (id, role, value, extra = {}) => ({ id, role, value, threadId: state.threadId, createdBy: role === 'user' ? 'anonymous' : 'agent', createdAt: new Date().toISOString(), ...extra })
 const json = (res, data, status = 200) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(data)) }
@@ -42,7 +45,7 @@ async function completion(req, res, body) {
     emit('message', { turnId: current.turnId, threadId: current.threadId, messageIndex: 0, message: assistant })
     if (!navigation) {
       current.status = 'WAITING_FOR_TOOLS'
-      current.pendingCalls = [{ id: call.id, messageId: 'call-message', name: call.function.name, arguments: call.function.arguments }]
+      current.pendingCalls = [{ id: call.id, messageId: 'call-message', name: call.function.name, arguments: call.function.arguments, execution: 'CLIENT', ...(current.mode === 'approval' ? { requiresApproval: true } : {}) }]
       emit('waiting_for_tools', { threadId: current.threadId, turnId: current.turnId, status: current.status, pendingCalls: current.pendingCalls, resumeToken: 'test-session' })
       res.end(); return
     }

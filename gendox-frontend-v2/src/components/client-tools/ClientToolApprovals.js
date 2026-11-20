@@ -6,7 +6,8 @@ import { useToolApprovals } from 'src/components/client-tools/ToolApprovalsProvi
 const ClientToolApprovals = ({ threadId }) => {
   const approvals = useToolApprovals()
   const pending = useSelector(state => state.toolApprovals.pending)
-  if (!approvals) return null
+  const visible = useSelector(state => state.clientDevice.visibleThreadIds.includes(threadId))
+  if (!approvals || !visible) return null
 
   return pending
     .filter(request => request.threadId === threadId)

@@ -1,11 +1,11 @@
 import { createSlice } from '@reduxjs/toolkit'
 
 // Tool calls waiting for the user's yes or no. One list for every kind of approval: a command
-// on this computer today, and tools an admin marks "ask first" once the server supports it
-// (APPR-1, APPR-2). Each request is plain data; the promise that waits for the answer is kept by
-// ToolApprovalsProvider.
+// on this computer, and tools the agent's owner marked "Ask before running" (APPR-1, APPR-2).
+// Each request is plain data; the promise that waits for the answer is kept in approvalAnswers.
 //
-// A request: { id, kind: 'command' | 'folder', threadId, title?, description, command?, directory?, retry? }
+// A request: { id, kind: 'command' | 'folder' | 'tool', threadId, description?, command?, directory?, retry?,
+//              toolName?, arguments? }
 
 const toolApprovalsSlice = createSlice({
   name: 'toolApprovals',

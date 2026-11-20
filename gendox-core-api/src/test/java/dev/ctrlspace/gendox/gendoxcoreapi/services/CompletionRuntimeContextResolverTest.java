@@ -67,6 +67,42 @@ class CompletionRuntimeContextResolverTest {
     }
 
     @Test
+    void aDesktopPromptGetsTheClientToolsItRunsAndABrowserPromptNone() {
+        MessageLocalContextService contexts = mock(MessageLocalContextService.class);
+        CompletionRuntimeContextResolver withContexts = new CompletionRuntimeContextResolver(null, typeService, null, null,
+                JsonMapper.shared(), null, aiToolRegistry, new SkillService(null, agentSkillRepository, aiToolRegistry, null, typeService), contexts);
+        dev.ctrlspace.gendox.gendoxcoreapi.model.Message desktop = new dev.ctrlspace.gendox.gendoxcoreapi.model.Message();
+        dev.ctrlspace.gendox.gendoxcoreapi.model.Message browser = new dev.ctrlspace.gendox.gendoxcoreapi.model.Message();
+        desktop.setValue("From the desktop app");
+        browser.setValue("From a browser");
+        when(contexts.contextValue(desktop, SkillService.GENDOX_DESKTOP_CONTEXT)).thenReturn(Optional.of(
+                "{\"source\":\"gendox-desktop\",\"clientTools\":[\"run_command\",\"format_disk\"]}"));
+        when(contexts.contextValue(browser, SkillService.GENDOX_DESKTOP_CONTEXT)).thenReturn(Optional.empty());
+
+        List<String> fromDesktop = withContexts.clientToolNames(desktop, null);
+        List<AiTools> desktopTools = withContexts.resolveAvailableTools(agent, null, List.of(), fromDesktop);
+        assertEquals(List.of("advanced_search", "run_command"), names(desktopTools));
+        assertEquals("CLIENT", desktopTools.get(1).getExecution());
+        // only tools Gendox defines: an unknown name a client sends is ignored
+        assertEquals(List.of("advanced_search"), names(withContexts.resolveAvailableTools(agent, null, List.of(),
+                withContexts.clientToolNames(browser, null))));
+        // a sub-agent runs in Gendox, with no client
+        CompletionRuntimeOverridesDTO subAgent = new CompletionRuntimeOverridesDTO();
+        subAgent.setSystemPrompt("You are a sub-agent.");
+        assertEquals(List.of(), withContexts.clientToolNames(desktop, subAgent));
+    }
+
+    @Test
+    void anAgentToolNamedLikeAClientToolIsNeverOffered() {
+        agent.getAiTools().add(tool("run_command"));
+
+        assertEquals(List.of("advanced_search"), names(resolver.resolveAvailableTools(agent, null, List.of(), List.of())));
+        List<AiTools> tools = resolver.resolveAvailableTools(agent, null, List.of(), List.of("run_command"));
+        assertEquals(List.of("advanced_search", "run_command"), names(tools));
+        assertTrue(tools.get(1).getJsonSchema().contains("timeout_seconds"));
+    }
+
+    @Test
     void anAgentWithoutSkillsGetsOnlyItsOwnTools() {
         assertEquals(List.of("advanced_search"), names(resolver.resolveAvailableTools(agent, null, List.of())));
         verifyNoInteractions(aiToolRegistry);

@@ -34,8 +34,13 @@ paths. Nothing is sent automatically.
 
 ## Client terminal tool
 
-Configure a custom tool on an agent with execution mode `CLIENT`, function name `run_command`,
-and this parameter schema. In Ask mode, every command opens a frontend approval card showing the command
+`run_command` is a system tool, like the tools that run in Gendox, but the app runs it. Nothing is
+added to the agent and there is no setting: every message sent from the app lists the client tools the
+app runs (`clientTools` in its `GENDOX_DESKTOP` context), and the server offers the model those tools,
+for that message and its resumed turn. A browser, a widget or a channel lists none, so its agents never
+see `run_command`; neither does the app in Plan mode or where local commands are unavailable. An agent
+tool named `run_command` is never offered. The server defines the schema (`ClientTools` in the API);
+its parameters are below. In Ask mode, every command opens a frontend approval card showing the command
 and its description. Decline returns `{ "declined": true }` to the agent.
 
 ```json
@@ -44,7 +49,8 @@ and its description. Decline returns `{ "declined": true }` to the agent.
   "properties": {
     "command": { "type": "string", "description": "Shell command to run" },
     "description": { "type": "string", "description": "Why this command is needed" },
-    "cwd": { "type": "string", "description": "Optional absolute working folder; requires permission" }
+    "cwd": { "type": "string", "description": "Optional absolute working folder; requires permission" },
+    "timeout_seconds": { "type": "integer", "minimum": 1, "maximum": 7200, "description": "Optional; 600 when omitted" }
   },
   "required": ["command", "description"],
   "additionalProperties": false
@@ -55,8 +61,11 @@ The app uses a login shell on macOS/Linux and PowerShell on Windows, in the user
 `Gendox` folder by default. Profile → Desktop selects the working folder, additional writable folders
 and approval mode: Ask (default), Auto-approve inside permitted folders, or Plan (no local commands).
 Commands run one at a time, with a
-60-second timeout. The result has `exit_code`, `stdout`, `stderr` and `duration_ms`; each output
-stream keeps its last 64 KiB as valid UTF-8. A timed-out command and its process tree are stopped. Command text and output are not diagnostic events.
+10-minute timeout unless the call sets `timeout_seconds` (at most two hours). The chat shows the output as
+it arrives, the time it has run, and Stop. The result has `exit_code`, `stdout`, `stderr` and `duration_ms`;
+each output stream keeps its last 64 KiB as valid UTF-8. A timed-out command (exit code 124) or a stopped one
+(130) has its process tree ended. A call that waited while the app was closed is answered with `app_closed`
+and never started afterwards. Command text and output are not diagnostic events.
 
 The native runner applies a filesystem write boundary to the shell and its descendants. It allows
 the chosen folders and a private command temporary directory, while protecting the app's own state.

@@ -58,6 +58,7 @@ test('a mentioned task and document are sent as links with their ids', async ({ 
     expect(value).toContain(`(/gendox/document-instance?documentId=${document.id})`);
     await expect(mockAnswer(page)).toBeVisible();
 
+    await expect(page).toHaveURL(/#\/chat\/[a-f0-9-]{36}$/i);
     const threadId = page.url().split('#/chat/')[1];
     expect((await messages(api, w, threadId)).find(m => m.role === 'user').value).toBe(value);
     await page.reload();

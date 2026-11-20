@@ -165,6 +165,27 @@ public class MessageLocalContextService {
     }
 
 
+    /**
+     * The value of a prompt's context of this type: the saved one when the prompt is stored (a resumed turn
+     * reads it back), else the one on the prompt.
+     */
+    public Optional<String> contextValue(Message prompt, String contextType) {
+        if (prompt == null) {
+            return Optional.empty();
+        }
+        if (prompt.getId() != null) {
+            return messageLocalContextRepository.findFirstByMessage_IdAndContextTypeName(prompt.getId(), contextType)
+                    .map(MessageLocalContext::getValue);
+        }
+        if (prompt.getLocalContexts() == null) {
+            return Optional.empty();
+        }
+        return prompt.getLocalContexts().stream()
+                .filter(context -> contextType.equals(context.getContextTypeName()))
+                .map(MessageLocalContext::getValue)
+                .findFirst();
+    }
+
     public @NotNull List<ContentPart> getImageContentPartsFromLocalContext(Message message) {
         List<ContentPart> attachedImages = message.getLocalContexts().stream()
                 .filter(c -> "ATTACHED_DOCUMENT".equals(c.getContextTypeName()))

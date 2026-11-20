@@ -73,10 +73,12 @@ test('desktop context is capability metadata only and never labels browser widge
   assert.equal(desktopMessageContext(null, device), null)
   const context = desktopMessageContext({}, device)
   assert.equal(context.contextType, 'GENDOX_DESKTOP')
-  assert.deepEqual(JSON.parse(context.value), { source: 'gendox-desktop', approvalMode: 'auto', localCommandsAvailable: true })
+  assert.deepEqual(JSON.parse(context.value), { source: 'gendox-desktop', approvalMode: 'auto', localCommandsAvailable: true, clientTools: ['run_command'] })
   assert.ok(!context.value.includes('/private/work'))
   assert.ok(!context.value.includes('private saved notes'))
-  assert.deepEqual(JSON.parse(desktopMessageContext({}, { preferences: { mode: 'bypass' } }).value), { source: 'gendox-desktop', approvalMode: 'ask', localCommandsAvailable: false })
+  assert.deepEqual(JSON.parse(desktopMessageContext({}, { preferences: { mode: 'bypass' } }).value), { source: 'gendox-desktop', approvalMode: 'ask', localCommandsAvailable: false, clientTools: [] })
+  // Plan offers the agent no local commands at all
+  assert.deepEqual(JSON.parse(desktopMessageContext({}, { ...device, preferences: { mode: 'plan' } }).value).clientTools, [])
 })
 test('only sandbox write denials offer a folder grant; ordinary permission errors return as they are', async () => {
   for (const stderr of ['touch: /etc/x: Operation not permitted', 'mkdir: cannot create directory: Read-only file system']) {
@@ -89,4 +91,47 @@ test('only sandbox write denials offer a folder grant; ordinary permission error
   const ssh = { ...completed, exit_code: 255, stderr: 'git@example.com: Permission denied (publickey).' }
   const flow = await runtime({ preferences: () => ({ mode: 'auto' }), approve: async () => { asked++; return true }, native: { runCommand: async () => ssh } })
   assert.deepEqual(await flow.execute(args, 'ssh'), ssh); assert.equal(asked, 0)
+})
+test('timeout_seconds reaches native execution only within the limit', async () => {
+  const { MAX_TIMEOUT_SECONDS } = await moduleOf('commandRunner.js')
+  const requests = []
+  const flow = await runtime({ native: { runCommand: async request => { requests.push(request); return completed } } })
+  assert.deepEqual(await flow.execute({ ...args, timeout_seconds: 900 }, 'long'), completed)
+  assert.equal(requests[0].timeout_seconds, 900)
+  for (const timeout_seconds of [0, -1, 1.5, '60', MAX_TIMEOUT_SECONDS + 1]) {
+    assert.equal((await flow.execute({ ...args, timeout_seconds }, `bad-${timeout_seconds}`)).exit_code, -1)
+  }
+  assert.equal(requests.length, 1)
+})
+test('a call replayed after the app was closed is answered as such and never run or asked', async () => {
+  const { APP_CLOSED } = await moduleOf('commandRunner.js')
+  const replays = []
+  const flow = await runtime({
+    approve: () => assert.fail('a closed-app call must not ask'),
+    native: {
+      commandStatus: async (_request, _id, replayed) => { replays.push(replayed); return { known: false, closed: replayed } },
+      runCommand: () => assert.fail('a closed-app call must not run')
+    }
+  })
+  assert.deepEqual(await flow.execute(args, 'old', { threadId: 'thread', replayed: true }), APP_CLOSED)
+  assert.deepEqual(replays, [true])
+})
+test('the runner reports which command starts and ends, for the live output card', async () => {
+  const changes = []
+  const flow = await runtime({ changed: change => changes.push(change) })
+  await flow.execute(args, 'live', { threadId: 'thread' })
+  assert.deepEqual(changes.map(({ running, executionId, command }) => [running, executionId, command]), [[true, 'live', 'printf check'], [false, 'live', undefined]])
+})
+test('a command the agent owner marked Ask before running still asks in Auto', async () => {
+  let asks = 0
+  const flow = await runtime({ preferences: () => ({ mode: 'auto' }), approve: async () => { asks++; return false } })
+  assert.deepEqual(await flow.execute(args, 'owner-asks', { threadId: 'thread', requiresApproval: true }), { declined: true })
+  assert.equal(asks, 1)
+  assert.deepEqual(await flow.execute(args, 'auto-runs', { threadId: 'thread' }), completed)
+  assert.equal(asks, 1)
+})
+test('tool arguments are shown as lines a person reads', async () => {
+  const { readableArguments } = await moduleOf('approvalAnswers.js')
+  assert.equal(readableArguments('{"url":"https://example.com","tabs":2}'), 'url: https://example.com\ntabs: 2')
+  assert.equal(readableArguments('not json'), 'not json')
 })

@@ -18,7 +18,7 @@ pub struct DesktopState {
     initial_links: Mutex<bool>,
 }
 
-fn emit(app: &AppHandle, detail: serde_json::Value) {
+pub(crate) fn emit(app: &AppHandle, detail: serde_json::Value) {
     if let Some(window) = app.get_webview_window("main") {
         if window.url().is_ok_and(|url| {
             crate::links::origin_of(url.as_str()).as_deref() == Some(crate::server::app_origin())

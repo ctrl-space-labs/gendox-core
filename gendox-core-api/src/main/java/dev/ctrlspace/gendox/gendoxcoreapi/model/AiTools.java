@@ -33,6 +33,11 @@ public class AiTools {
     @Column(name = "execution", nullable = false)
     private String execution = "ACTION";
 
+    // Ask the user before the call runs (APPR-1). Applies today to tools the page or app runs.
+    @Builder.Default
+    @Column(name = "requires_approval", nullable = false)
+    private boolean requiresApproval = false;
+
     @JdbcTypeCode(SqlTypes.JSON)        // transform it to jsonb in postgresql
     @Column(name = "json_schema", columnDefinition = "JSONB", nullable = false)
     private String jsonSchema;
