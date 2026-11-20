@@ -8,7 +8,8 @@ import { dirname, join, posix, resolve, win32 } from 'node:path'
 import { promisify } from 'node:util'
 import { pathToFileURL } from 'node:url'
 
-const identifier = 'dev.gendox.desktop'
+const identifier = process.env.GENDOX_SMOKE_IDENTIFIER || 'dev.gendox.desktop'
+assert.match(identifier, /^[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+$/, 'Use an application identifier without path separators')
 const fixtureName = 'Desktop CI fixture'
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms))
 const runFile = promisify(execFile)

@@ -2,6 +2,26 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "The bundled main UI: server selection and confirmed commands. Remote pages get nothing.",
-  "windows": ["main"],
-  "permissions": ["allow-set-server", "allow-remove-server", "allow-run-command"]
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "allow-set-server",
+    "allow-remove-server",
+    "allow-run-command",
+    "allow-stop-command",
+    "allow-command-status",
+    "allow-get-folders",
+    "allow-choose-folder",
+    "allow-remove-folder",
+    "allow-set-working-directory",
+    "allow-notification-permission",
+    "allow-request-notification-permission",
+    "allow-notify",
+    "allow-badge",
+    "allow-activity",
+    "allow-autostart-enabled",
+    "allow-set-autostart",
+    "allow-deep-links"
+  ]
 }

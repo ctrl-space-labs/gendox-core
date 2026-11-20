@@ -35,15 +35,16 @@ paths. Nothing is sent automatically.
 ## Client terminal tool
 
 Configure a custom tool on an agent with execution mode `CLIENT`, function name `run_command`,
-and this parameter schema. Every command opens a native Run/Cancel dialog showing the command,
-and its description. Cancel returns `{ "declined": true }` to the agent.
+and this parameter schema. In Ask mode, every command opens a frontend approval card showing the command
+and its description. Decline returns `{ "declined": true }` to the agent.
 
 ```json
 {
   "type": "object",
   "properties": {
     "command": { "type": "string", "description": "Shell command to run" },
-    "description": { "type": "string", "description": "Why this command is needed" }
+    "description": { "type": "string", "description": "Why this command is needed" },
+    "cwd": { "type": "string", "description": "Optional absolute working folder; requires permission" }
   },
   "required": ["command", "description"],
   "additionalProperties": false
@@ -51,13 +52,36 @@ and its description. Cancel returns `{ "declined": true }` to the agent.
 ```
 
 The app uses a login shell on macOS/Linux and PowerShell on Windows, in the user's
-`Gendox` folder; that working directory is not a sandbox. Commands run one at a time, with a
+`Gendox` folder by default. Profile → Desktop selects the working folder, additional writable folders
+and approval mode: Ask (default), Auto-approve inside permitted folders, or Plan (no local commands).
+Commands run one at a time, with a
 60-second timeout. The result has `exit_code`, `stdout`, `stderr` and `duration_ms`; each output
 stream keeps its last 64 KiB as valid UTF-8. A timed-out command and its process tree are stopped. Command text and output are not diagnostic events.
+
+The native runner applies a filesystem write boundary to the shell and its descendants. It allows
+the chosen folders and a private command temporary directory, while protecting the app's own state.
+A write elsewhere is blocked; the frontend asks the user to select another allowed folder before an
+explicit retry. Retrying may repeat work from the first attempt. This does not restrict reads or
+network access and is not a complete system sandbox. macOS uses Seatbelt; Linux needs `/usr/bin/bwrap`.
+
+**It guards against accidents, not against a command written to get around it.** A mistaken or
+careless command cannot change files outside the allowed folders; a deliberately crafted one may still
+reach the rest of the system. Approving a command (or choosing Auto) is trusting it with everything
+your user account can read and reach.
+Without supported enforcement (including native Windows for now), local execution fails closed.
+Windows/Linux native verification remains deferred.
 
 The main page uses the existing client-tool request/result protocol, including readiness,
 acknowledgment and duplicate handling. Bundled child frames and remote pages do not receive
 the native tool host.
+
+## Agent guidance
+
+The API ships a `gendox-desktop` system skill through its existing skill catalog. The main desktop
+chat sends capability context for the current message, so the agent can discover the skill with
+`read_skill`; browser widgets do not send that context. Tool-result resumption uses the saved
+message context. The skill explains approval modes, folder permissions and tool-managed local
+notes. It does not configure `run_command` automatically or read and attach saved notes.
 
 ## Local native tool check
 
@@ -82,3 +106,25 @@ and tool results only in memory; do not use it with sensitive inputs.
 
 The `streaming-contract` Playwright project also checks the top-level host with a fake native
 runner for both outcomes. This complements the real native dialog and process checks.
+
+## Notifications and OS integration
+
+Notification preferences and event detection live in the v2 frontend and also work in the browser.
+Profile → Notifications enables them on this device; they are off by default. Only an answer
+completed or an approval requested outside the visible chat produces a notification. Text is generic;
+message contents and command arguments are not included. Notification clicks reopen the conversation
+where supported by the OS. The native adapter also supplies a badge and a menu-bar/tray menu with
+Open, Stop command and Quit. Launch at login is opt-in in Profile → Desktop.
+
+Conversation links use `gendox://chat/<threadId>?organizationId=<orgId>&projectId=<projectId>`.
+The frontend validates and routes them through the normal authentication and membership guards.
+Links cannot change server. No notification is delivered after the application has exited; that
+would need a separate push-delivery design. Updater controls remain unavailable until #586.
+
+## Agent-managed local notes
+
+Skills and system prompts can instruct the agent to keep notes or scratchpads in a hidden folder
+inside the allowed workspace using `run_command`. The client provides the general tool and enforces
+write permissions; it does not prescribe a memory layout, create note files, inject memory
+instructions or automatically read/upload saved notes. A read requested through the tool follows
+the normal command-result flow.

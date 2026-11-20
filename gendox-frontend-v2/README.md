@@ -15,5 +15,5 @@ yarn build        # static export into out/
 
 Configuration is the `NEXT_PUBLIC_*` variables in `.env.*`; the Docker image takes them as build args.
 
-The [Gendox face assets](public/images/gendox-face/README.md) include the original
+The [Gendox face assets](docs/gendox-face.md) include the original
 vector poses, an interactive animation example, and transparent SVG/GIF loaders.

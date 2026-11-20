@@ -15,6 +15,7 @@ import AppLayout from 'src/layouts/AppLayout'
 import Avatar from 'src/components/ui/Avatar'
 import MenuList from 'src/components/ui/MenuList'
 import ConfirmDialog from 'src/components/ui/ConfirmDialog'
+import ClientSettings from 'src/components/client-tools/ClientSettings'
 
 // Keycloak's account console: password, two-step verification, sessions
 const ACCOUNT_URL = `${commonConfig.oidcAuthority}/account`
@@ -237,6 +238,8 @@ const UserProfilePage = () => {
             </div>
           </div>
         </section>
+
+        <ClientSettings />
 
         <section className='sect'>
           <header>

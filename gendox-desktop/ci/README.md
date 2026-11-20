@@ -29,3 +29,27 @@ Native prerequisites and runner choices follow the
 [Tauri WebDriver setup](https://v2.tauri.app/develop/tests/webdriver/manual-setup/),
 [Tauri CI guide](https://v2.tauri.app/develop/tests/webdriver/ci/), and
 [GitHub runner reference](https://docs.github.com/en/actions/reference/runners/github-hosted-runners).
+
+## Linux: the glib advisory
+
+The Linux builds include glib 0.18.5 through GTK 0.18 and WebKitGTK 2.0, which are what Tauri 2's
+Linux backend uses; macOS and Windows builds do not include glib. glib 0.18.5 is affected by
+[RUSTSEC-2024-0429](https://rustsec.org/advisories/RUSTSEC-2024-0429.html), fixed in glib 0.20,
+in its `VariantStrIter` iterator (reached through `Variant::array_iter_str`).
+
+Reviewed on 2026-11-20: nothing in Gendox or its resolved Linux dependencies calls those APIs, so
+no affected code is reachable. No compatible patched glib exists for GTK 0.18; the real fix is
+Tauri's move to GTK 4 and WebKitGTK 6
+([tauri#14684](https://github.com/tauri-apps/tauri/pull/14684), open at review time). Nothing was
+forked, upgraded out of line or ignored.
+
+This does not block macOS. **Before any Linux release**, check whether Tauri has shipped the
+patched backend; if not, repeat the review and make the release decision explicitly. To repeat it:
+
+```sh
+cargo tree --locked --manifest-path src-tauri/Cargo.toml --target x86_64-unknown-linux-gnu -i glib
+```
+
+then search the sources of every resolved Linux package (`cargo metadata --locked
+--filter-platform x86_64-unknown-linux-gnu`) for `VariantStrIter` and `array_iter_str`, and repeat
+for `aarch64-unknown-linux-gnu`. Keep the generated metadata local: it contains machine paths.

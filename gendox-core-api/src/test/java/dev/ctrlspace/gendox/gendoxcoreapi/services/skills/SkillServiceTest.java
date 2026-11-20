@@ -52,6 +52,12 @@ class SkillServiceTest {
         return "---\nname: " + name + "\ndescription: " + description + "\n---\n" + body;
     }
 
+    private static MessageLocalContext context(String type) {
+        MessageLocalContext context = new MessageLocalContext();
+        context.setContextTypeName(type);
+        return context;
+    }
+
     private static Skill version(String name, int version, boolean latest, String content) {
         return Skill.builder().id(UUID.randomUUID()).name(name).description("d").content(content)
                 .version(version).latest(latest).deleted(false).build();
@@ -178,6 +184,66 @@ class SkillServiceTest {
 
         assertEquals(List.of(linked), skillService.getCompletionSkills(agentId, fromPage));
         verify(skillRepository, never()).findByNameAndLatestTrue(any());
+    }
+
+    @Test
+    void desktopSkillIsAddedOnlyForTheCurrentDesktopPromptAndSurvivesResume() {
+        UUID agentId = UUID.randomUUID();
+        Skill desktop = version("gendox-desktop", 1, true, md("gendox-desktop", "Desktop context", "Use local tools."));
+        when(skillRepository.findByNameAndLatestTrue("gendox-desktop")).thenReturn(Optional.of(desktop));
+        Message unsaved = new Message();
+        unsaved.getLocalContexts().add(context("GENDOX_DESKTOP"));
+        assertEquals(List.of("gendox-desktop"), skillService.getCompletionSkills(agentId, unsaved)
+                .stream().map(AgentSkill::getName).toList());
+        UUID threadId = UUID.randomUUID();
+        Message desktopPrompt = new Message();
+        desktopPrompt.setId(UUID.randomUUID());
+        desktopPrompt.setThreadId(threadId);
+        when(messageLocalContextRepository.existsByMessage_IdAndContextTypeName(desktopPrompt.getId(), "GENDOX_DESKTOP"))
+                .thenReturn(true);
+        // A resumed turn reads the same stored prompt without its lazy local-context collection.
+        assertEquals(List.of("gendox-desktop"), skillService.getCompletionSkills(agentId, desktopPrompt)
+                .stream().map(AgentSkill::getName).toList());
+        verify(agentSkillRepository, never()).save(any());
+
+        Message browserPrompt = new Message();
+        browserPrompt.setId(UUID.randomUUID());
+        browserPrompt.setThreadId(threadId);
+        assertTrue(skillService.getCompletionSkills(agentId, browserPrompt).isEmpty(),
+                "A later browser prompt must not inherit desktop context from its thread");
+        assertTrue(skillService.getCompletionSkills(agentId, null).isEmpty(),
+                "Background runs without a desktop prompt must not gain the skill");
+    }
+
+    @Test
+    void desktopContextAlsoWorksBeforeThePromptIsStoredAndDoesNotDuplicateAssignedSkills() {
+        UUID agentId = UUID.randomUUID();
+        AgentSkill linked = AgentSkill.builder().name("gendox-desktop").content("customized").build();
+        when(agentSkillRepository.findAllByAgentIdOrderByNameAsc(agentId)).thenReturn(List.of(linked));
+        Message prompt = new Message();
+        prompt.getLocalContexts().add(context("GENDOX_DESKTOP"));
+        assertEquals(List.of(linked), skillService.getCompletionSkills(agentId, prompt));
+        verify(skillRepository, never()).findByNameAndLatestTrue("gendox-desktop");
+    }
+
+    @Test
+    void desktopSkillsComposeWithPageAndFilesSkillsAndRespectLibraryDeletion() {
+        UUID agentId = UUID.randomUUID();
+        for (String name : List.of("gendox-assistant", "gendox-files", "gendox-desktop")) {
+            when(skillRepository.findByNameAndLatestTrue(name)).thenReturn(Optional.of(version(name, 1, true, md(name, "d", "body"))));
+        }
+        Message prompt = new Message();
+        prompt.setThreadId(UUID.randomUUID());
+        prompt.getLocalContexts().add(context("GENDOX_PAGE"));
+        prompt.getLocalContexts().add(context("GENDOX_DESKTOP"));
+        when(messageLocalContextRepository.existsByMessage_ThreadIdAndDocumentIsNotNull(prompt.getThreadId())).thenReturn(true);
+        assertEquals(List.of("gendox-assistant", "gendox-files", "gendox-desktop"),
+                skillService.getCompletionSkills(agentId, prompt).stream().map(AgentSkill::getName).toList());
+        Skill deleted = version("gendox-desktop", 1, true, md("gendox-desktop", "d", "body"));
+        deleted.setDeleted(true);
+        when(skillRepository.findByNameAndLatestTrue("gendox-desktop")).thenReturn(Optional.of(deleted));
+        assertEquals(List.of("gendox-assistant", "gendox-files"),
+                skillService.getCompletionSkills(agentId, prompt).stream().map(AgentSkill::getName).toList());
     }
 
     @Test

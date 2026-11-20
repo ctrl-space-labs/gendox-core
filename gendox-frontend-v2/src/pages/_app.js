@@ -15,6 +15,7 @@ import { registerAxiosInterceptors } from 'src/configs/axiosInterceptors'
 import Toasts from 'src/components/ui/Toasts'
 import RouteProgress from 'src/components/ui/RouteProgress'
 import OptionalAnalyticsTracking from 'src/components/analytics/OptionalAnalyticsTracking'
+import ClientToolsProvider from 'src/components/client-tools/ClientToolsProvider'
 
 // Register the global 401 -> '/' redirect interceptor once for the whole app
 registerAxiosInterceptors()
@@ -37,12 +38,18 @@ const App = props => {
 
       <IFrameMessageManagerProvider>
         <AuthProvider option={authProviderOption}>
-          {(process.env.NEXT_PUBLIC_GTAG_ID || process.env.NEXT_PUBLIC_META_PIXEL_ID) && <OptionalAnalyticsTracking />}
-          <OrganizationProjectGuard authProviderOption={authProviderOption} pageConfig={pageConfig}>
-            <RouteHandler routeType={routeType}>{getLayout(<Component {...pageProps} />)}</RouteHandler>
-          </OrganizationProjectGuard>
-          <Toasts />
-          <RouteProgress />
+          <ClientToolsProvider>
+            {(process.env.NEXT_PUBLIC_GTAG_ID || process.env.NEXT_PUBLIC_META_PIXEL_ID) && (
+              <OptionalAnalyticsTracking />
+            )}
+            <OrganizationProjectGuard authProviderOption={authProviderOption} pageConfig={pageConfig}>
+              <RouteHandler routeType={routeType}>{getLayout(<Component {...pageProps} />)}</RouteHandler>
+            </OrganizationProjectGuard>
+            <Toasts />
+            <RouteProgress />
+            {/* the desktop app on macOS has no title bar: this strip moves the window on every page */}
+            <div className='window-drag' data-tauri-drag-region />
+          </ClientToolsProvider>
         </AuthProvider>
       </IFrameMessageManagerProvider>
     </Provider>

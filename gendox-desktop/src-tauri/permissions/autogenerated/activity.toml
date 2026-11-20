@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-activity"
+description = "Enables the activity command without any pre-configured scope."
+commands.allow = ["activity"]
+
+[[permission]]
+identifier = "deny-activity"
+description = "Denies the activity command without any pre-configured scope."
+commands.deny = ["activity"]

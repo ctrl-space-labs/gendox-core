@@ -10,6 +10,8 @@ import documentService from '../../gendox-sdk/documentService'
 import { updateSessionThreadId } from 'src/utils/embeddedChatSession'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import toast from 'react-hot-toast'
+import { isDesktopApp } from 'src/services/desktopBridge'
+import { desktopMessageContext } from 'src/utils/clientTools/desktopContext'
 
 // a turn still running on the server: the chat follows it until it ends
 export const ACTIVE_COMPLETION_STATUSES = ['GENERATING', 'WAITING_FOR_TOOLS']
@@ -261,6 +263,9 @@ export const sendMessage = createAsyncThunk(
       maxResponses,
       maxWaitTimeoutMs
     )
+
+    const desktopContext = desktopMessageContext(isDesktopApp(), getState().clientDevice)
+    if (desktopContext) chatLocalContextResponses = [...chatLocalContextResponses, desktopContext]
 
     const documentInstanceIds = (uploadedDocs || []).map(d => d?.documentId).filter(Boolean)
 

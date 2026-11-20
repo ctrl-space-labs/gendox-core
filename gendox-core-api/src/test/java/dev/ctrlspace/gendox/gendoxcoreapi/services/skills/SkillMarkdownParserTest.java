@@ -91,8 +91,13 @@ class SkillMarkdownParserTest {
         var resources = new org.springframework.core.io.support.PathMatchingResourcePatternResolver()
                 .getResources("classpath*:skills/*/SKILL.md");
         assertTrue(resources.length >= 1, "no SKILL.md on the classpath");
-        SkillMarkdownParser.ParsedSkill assistant = SkillMarkdownParser.parse(
-                resources[0].getContentAsString(java.nio.charset.StandardCharsets.UTF_8));
-        assertTrue(assistant.tools().containsAll(java.util.List.of("list_tasks", "read_task_result", "run_task", "advanced_search")));
+        var skills = new java.util.HashMap<String, SkillMarkdownParser.ParsedSkill>();
+        for (var resource : resources) {
+            var parsed = SkillMarkdownParser.parse(resource.getContentAsString(java.nio.charset.StandardCharsets.UTF_8));
+            skills.put(parsed.name(), parsed);
+        }
+        assertTrue(skills.get("gendox-assistant").tools().containsAll(java.util.List.of("list_tasks", "read_task_result", "run_task", "advanced_search")));
+        assertTrue(skills.containsKey("gendox-desktop"), "desktop skill must be shipped and parse successfully");
+        assertTrue(skills.get("gendox-desktop").tools().isEmpty(), "context guidance must not provision the built-in terminal");
     }
 }

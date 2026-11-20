@@ -4,6 +4,8 @@ mod links;
 mod offline;
 mod server;
 mod terminal;
+mod folders;
+mod desktop;
 
 use std::{borrow::Cow, collections::HashMap, fs, path::PathBuf, sync::Mutex, time::Duration};
 
@@ -198,9 +200,13 @@ pub fn run() {
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_autostart::Builder::new().build())
+        .plugin(tauri_plugin_deep_link::init())
+        .manage(desktop::DesktopState::default())
         .manage(ViewControls::default())
         .manage(terminal::TerminalState::new().expect("cannot initialize the terminal session"))
-        .invoke_handler(tauri::generate_handler![set_server, remove_server, terminal::run_command])
+        .invoke_handler(tauri::generate_handler![set_server, remove_server, terminal::run_command, terminal::stop_command, terminal::command_status, folders::get_folders, folders::choose_folder, folders::remove_folder, folders::set_working_directory, desktop::notification_permission, desktop::request_notification_permission, desktop::notify, desktop::badge, desktop::activity, desktop::autostart_enabled, desktop::set_autostart, desktop::deep_links])
         .menu(build_menu)
         .on_menu_event(|app, event| {
             match event.id().0.as_str() {
@@ -232,6 +238,7 @@ pub fn run() {
         })
         .setup(|app| {
             let _ = diagnostics::initialize(app.handle());
+            desktop::setup(app.handle())?;
             let presets = server::presets();
             let saved = load_saved(app.handle());
             let current = saved.current_or(&presets);

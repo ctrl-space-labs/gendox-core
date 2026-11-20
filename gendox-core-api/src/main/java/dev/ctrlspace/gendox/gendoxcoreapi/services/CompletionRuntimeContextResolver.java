@@ -215,7 +215,7 @@ public class CompletionRuntimeContextResolver {
 
     /**
      * The skills a completion gets: every skill of the agent, in chats and task runs alike, plus the
-     * Gendox assistant skill for a chat from a Gendox page. A caller that replaces the system prompt
+     * contextual system skills, including the desktop skill for a desktop prompt. A caller that replaces the system prompt
      * (a sub-agent) speaks as someone else and gets none.
      */
     // package-private for tests

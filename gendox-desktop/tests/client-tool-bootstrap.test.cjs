@@ -8,7 +8,7 @@ const source = name => fs.readFileSync(path.join(__dirname, '../src-tauri/src', 
 const origin = 'tauri://localhost'
 const proof = 'test-session-proof'
 const script = source('client-tool-bootstrap.js')
-  .replaceAll('__GENDOX_TOOL_INSTALLER__', source('client-tools.js'))
+  .replaceAll('__GENDOX_TOOL_INSTALLER__', fs.readFileSync(path.join(__dirname, '../src-tauri/src/client-tool-host.js'), 'utf8'))
   .replaceAll('__GENDOX_TOOL_ORIGIN__', JSON.stringify(origin))
   .replaceAll('__GENDOX_TOOL_SESSION__', JSON.stringify(proof))
 
@@ -23,17 +23,13 @@ test('bootstrap keeps the native proof private and captures the initial invoke f
   vm.runInNewContext(script, { window, location: { protocol: 'tauri:', host: 'localhost' } })
   window.__TAURI__.core.invoke = () => assert.fail('page replacement must not receive the proof')
   const request = { command: 'echo check', description: 'Print a check' }
-  for (const handler of listeners) handler({ source: window, origin, isTrusted: true, data: {
-    type: 'gendox.events.chat.message.tool_calls.request', payload: [{
-      execution: 'CLIENT', id: 'call', threadId: 'thread', turnId: 'turn',
-      function: { name: 'run_command', arguments: request }
-    }]
-  } })
+  for (const handler of listeners) handler({ source: window, origin, isTrusted: true, data: { type: 'gendox.events.native.request', payload: { id: 'rpc', method: 'runCommand', args: [request, 'execution'] } } })
   await new Promise(setImmediate)
   assert.deepEqual(JSON.parse(JSON.stringify(calls)), [['run_command', {
-    request, executionId: JSON.stringify(['thread', 'turn', 'call']), sessionToken: proof
+    request, executionId: 'execution', sessionToken: proof, approved: true
   }]])
   assert.equal(Object.values(window).includes(proof), false)
+  assert.equal(window.__GENDOX_CLIENT_TOOL_HOST__.native, undefined)
   assert.deepEqual(Object.keys(window).sort(), ['__TAURI__', 'addEventListener', 'postMessage', 'top'])
   assert.deepEqual(Object.keys(window.__GENDOX_CLIENT_TOOL_HOST__), ['registerTool'])
 })

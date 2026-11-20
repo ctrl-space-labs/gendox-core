@@ -2,7 +2,7 @@
 
 Work status is recorded in section 10. Revised on 2026-11-20 from the [original plan](client-2-desktop-app-2026-11-19.md):
 choosing the server became a page in the v2 frontend with a list of servers each build offers (section 4), since
-Tauri has no native dialog that asks for text. Roadmap: [CLIENT](agentic-platform-roadmap-2026-11-10.md) (section 5, decision D4).
+Tauri has no native dialog that asks for text. Phase 2 also follows the user decision to keep reusable settings, permissions and notification behavior in v2; native code supplies operating-system adapters and enforcement. Roadmap: [CLIENT](agentic-platform-roadmap-2026-11-10.md) (section 5, decision D4).
 
 ## 1. What it is
 
@@ -139,17 +139,49 @@ bundle. Specifics of any weakness found belong in the private tracker.
   the end is kept when cut), `duration_ms`, or `declined`.
 - **The handler.** The desktop app registers a handler for `run_command`, as a website registers `open_web_page`
   through the widget's `registerTool`. The handler calls the app's Rust side and returns the result to the turn.
-- **Asking first.** Before every command the app shows a native dialog with the command and its description: Run or
-  Cancel. A native dialog, so the v2 frontend gains no desktop screens.
+- **Asking first.** The first milestone used a native Run/Cancel dialog. Phase 2 moves this to the shared frontend
+  approval card, with the user-selected Ask, Auto-approve and Plan modes described below. No second native prompt.
 - **Running.** macOS and Linux: the user's login shell (`$SHELL -l -c`), so the PATH is the one the user's terminal
   has (an app started from the Finder does not get it otherwise). Windows: PowerShell. Working folder: a `Gendox`
-  folder in the user's home, created on first use. A timeout ends the whole process tree. One command at a time.
+  folder in the user's home by default, or a folder the user selected. A timeout ends the whole process tree. One
+  command at a time; native write enforcement applies to all descendants.
 - **Only in the app.** An agent with this tool, used from the browser, calls a tool that no handler answers, as with
   any custom client tool a page did not register. Section 6 removes that.
 
-**What a confirmation does and does not protect.** A shell command can reach anything the user can; no folder setting
-confines it. The real control is the user reading the command before Run. Allowed folders (CLIENT-2f) limit the
-working folder; they do not sandbox the shell.
+**Phase-2 permissions (user decision, 2026-11-20).** Settings, permission modes, approval cards and notification
+rules belong to the v2 frontend. The native client remains an adapter for folder selection, command execution,
+filesystem enforcement and OS integration. #589 adds a user-selected working directory and additional writable
+folders, selected explicitly by the user. Commands and descendants must not write outside those folders; extending
+access requires a frontend approval and native folder selection. Unsupported enforcement fails closed.
+
+The frontend offers Ask (default), Auto-approve inside permitted folders, and Plan (no local command execution),
+subject to the user's mode selection. Auto-approval never extends folder access. Approval waits in the shared
+frontend flow; the native Run/Cancel dialog is replaced, so a command never asks twice. A blocked command is never
+silently rerun, because retrying may repeat work already completed. Reads and network access are separate from this
+filesystem write boundary; do not describe it as a complete sandbox. The boundary guards against accidents, not
+against a command written to get around it: approving a command, or choosing Auto, trusts it with everything the
+user's account can read and reach. The app, its documentation and its settings say so plainly.
+
+Agent notes and scratchpads are tool-managed, following user-provided skills and system prompts. The generic
+`run_command` tool can create and reuse a hidden folder within the granted workspace. The client does not prescribe
+a memory layout, inject memory instructions, create note directories or automatically read/upload saved notes.
+The user confirmed the three approval modes and this prompt/tool-driven memory design on 2026-11-20.
+
+**Desktop system skill.** The shipped `gendox-desktop` skill uses the existing system-skill importer and
+`read_skill` discovery flow. V2 attaches a bounded `GENDOX_DESKTOP` local-context item only when its top-level native
+host is present. It carries the source, approval mode and local execution availability, never note contents or local
+paths. The backend adds the skill for the current prompt; saved prompt context keeps it available during tool-result
+resumption, while a later browser prompt in the same thread does not inherit it. This is capability guidance, not
+native authorization. Existing explicitly assigned skills remain unchanged. The skill explains `run_command` when
+configured and available; it does not provision a built-in terminal or implement #592. Notes stay tool-managed under
+the user's skills and system prompt.
+
+#590 keeps event detection, visibility checks, notification preferences, deduplication and conversation links in v2.
+Notifications are opt-in and use generic text without command output or message contents. The web adapter uses
+browser notifications; the native adapter delivers OS notifications and badge/tray state. Only events observed while
+the client is running are included; delivery after the app has exited would require a separate server push design.
+Native-only tray, launch-at-login and deep-link plumbing stay in the shell. #586 remains deferred; update controls
+must not imply a working updater until that ticket is implemented.
 
 ## 6. The terminal, full logic (CLIENT-2i, later)
 
@@ -240,14 +272,14 @@ Created on 2026-11-19 with the label `needs-review`; each is a sub-issue of #583
 
 | Ticket | Issue | What | Waits for | Status |
 |---|---|---|---|---|
-| Epic | #583 | Gendox Desktop | | |
-| CLIENT-2a | #584 | Build the Tauri desktop app, run locally on macOS; unsigned CI builds for every OS | Nothing | Done: review follow-ups merged on feature-desktop-app; Windows CI helper pinned to a reviewed immutable commit. macOS .app/.dmg rebuilt and native launch reached local sign-in. [Linux glib assessment](../gendox-desktop/ci/linux-dependency-review.md) complete; distribution requires reassessment and a Linux release risk decision or supported mitigation. Remote Windows/Linux CI remains unexecuted. Google account-specific check deferred by user. |
+| Epic | #583 | Gendox Desktop | | In progress: #584/#585 integrated on feature-desktop-app; #589/#590 implemented locally on the separate feature-desktop-app-phase-2 branch, pending review. Releases and Windows/Linux verification remain deferred. |
+| CLIENT-2a | #584 | Build the Tauri desktop app, run locally on macOS; unsigned CI builds for every OS | Nothing | Done: review follow-ups merged on feature-desktop-app; Windows CI helper pinned to a reviewed immutable commit. macOS .app/.dmg rebuilt and native launch reached local sign-in. [Linux glib assessment](../gendox-desktop/ci/README.md#linux-the-glib-advisory) complete; distribution requires reassessment and a Linux release risk decision or supported mitigation. Remote Windows/Linux CI remains unexecuted. Google account-specific check deferred by user. |
 | CLIENT-2b | #585 | Terminal: `run_command` as an example client tool | #584 | Done: confirmed native runner and main-frame bridge merged on feature-desktop-app. Timeout regression stabilized with gated child/grandchild writes and a positive control; 12 stress runs passed and disabling process-group termination made the safety assertion fail. Post-merge: 30 Rust tests, separate live configuration check and 16 desktop script checks passed. Earlier native Run/Cancel, six streaming and 21 smoke checks passed. Windows/Linux execution awaits remote CI. |
 | CLIENT-2c | #586 | macOS signed release and updates | #584 | Not started |
 | CLIENT-2d | #587 | Windows app (x64, ARM64), then its signed release | #584; signed release after #586 | Not started |
 | CLIENT-2e | #588 | Linux app (x86_64, arm64), then its signed release | #584; signed release after #586 | Not started |
-| CLIENT-2f | #589 | Desktop settings and allowed folders | #585 | Not started |
-| CLIENT-2g | #590 | Notifications, tray, deep links, launch at login | #584 | Not started |
+| CLIENT-2f | #589 | Desktop settings and allowed folders | #585 | In progress, implemented locally on feature-desktop-app-phase-2: frontend Ask/Auto/Plan preferences and shared approval cards, with native folder selection and write enforcement. Desktop-only system skill added through the existing skill catalog; notes remain prompt/tool-managed. macOS guard tests, frontend settings checks and native launch passed. Windows execution fails closed until write enforcement is supported; Linux requires bubblewrap and remains unverified. Native folder-picker interaction review remains pending. |
+| CLIENT-2g | #590 | Notifications, tray, deep links, launch at login | #584 | In progress, implemented locally on feature-desktop-app-phase-2: shared frontend notification preferences, visibility/deduplication rules and conversation routing; native notification, badge, tray, Stop, deep-link and opt-in autostart adapters. macOS build/launch and automated frontend checks passed. Native OS notification clicks, tray/deep-link/login-item interaction checks remain pending; Windows/Linux verification is deferred. |
 | CLIENT-2h | #591 | Sign-in in the system browser | #584 | Not started |
 | CLIENT-2i | #592 | Terminal: where commands run and what may run | #585, #589; APPR-1; CODE-2 for the cloud part | Not started |
 
@@ -257,3 +289,22 @@ stands, kept current by whoever works on it.
 
 CLIENT-2a is the app for every OS, developed and run on macOS first. The three release tickets are the per-OS work:
 packaging, signing, updates and testing on that system.
+
+### End-of-day checkpoint — 2026-11-20
+
+- Phase 1 stays on `feature-desktop-app` (its last commit, "review follow-ups for the first milestone");
+  phase 2 remains separate on `feature-desktop-app-phase-2`, based on it. History made linear and grouped
+  into six commits on 2026-11-20. Nothing pushed or merged back.
+- Phase-2 settings and OS adapters are in the phase-2 commit. It also adds the shipped
+  desktop skill and per-message selection, without automatic note attachment or terminal provisioning.
+- Desktop skill checks: format validation, 30 focused backend tests, API package/startup import,
+  27 desktop JavaScript checks, 33 Rust tests plus the separate live configuration test,
+  six streaming tests, 21 API/v2 smoke tests, and macOS `.app`/`.dmg` build and actual native
+  sign-in launch passed. Initial overlapping Playwright runs conflicted on shared artifacts;
+  sequential reruns passed. The live configuration check passed on retry after an initial timeout.
+- Resume with native folder-picker/approval interaction review, then notification clicks, tray Stop,
+  deep links and launch-at-login checks. Keep Windows/Linux testing deferred; Windows local execution
+  remains unavailable until supported write enforcement exists. Linux distribution also needs the
+  recorded glib assessment revisited before release.
+- #586–#588, #591 and #592 remain unstarted. No signing, release or account-specific verification
+  was performed. Existing worktrees, local environments and data are preserved.

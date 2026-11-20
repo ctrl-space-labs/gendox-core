@@ -1,5 +1,7 @@
 # Gendox face assets
 
+The files are in `public/images/gendox-face/`. This note sits outside `public/` so it is not published with the app.
+
 Vector reconstructions of the designer's six robot faces, plus expression and
 animation examples. These use the **original wide proportions**, not the later
 narrower experiments: a 144 × 38 capsule (about 3.8:1), a 3-unit stroke, and a

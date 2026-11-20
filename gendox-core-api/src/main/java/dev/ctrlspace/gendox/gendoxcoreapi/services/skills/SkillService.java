@@ -40,6 +40,9 @@ public class SkillService {
     public static final String ASSISTANT_SKILL = "gendox-assistant";
     /** The skill a chat with attached files gets, whether or not the agent has it. */
     public static final String FILES_SKILL = "gendox-files";
+    /** Capability context sent by the top-level desktop client, not a permission grant. */
+    public static final String GENDOX_DESKTOP_CONTEXT = "GENDOX_DESKTOP";
+    public static final String DESKTOP_SKILL = "gendox-desktop";
 
     private final SkillRepository skillRepository;
     private final AgentSkillRepository agentSkillRepository;
@@ -217,9 +220,10 @@ public class SkillService {
     }
 
     /**
-     * The skills of a completion: the agent's own, plus two from the library when the agent doesn't have
+     * The skills of a completion: the agent's own, plus contextual skills from the library when the agent doesn't have
      * them. {@link #ASSISTANT_SKILL} when the prompt came from a Gendox page ({@link #GENDOX_PAGE_CONTEXT}),
-     * and {@link #FILES_SKILL} when its thread has attached files. Those are not stored on the agent;
+     * and {@link #FILES_SKILL} when its thread has attached files. {@link #DESKTOP_SKILL} applies only
+     * to the current desktop prompt, including its resumed turn. Those are not stored on the agent;
      * read_skill finds them in the library.
      */
     public List<AgentSkill> getCompletionSkills(UUID agentId, Message prompt) {
@@ -229,6 +233,9 @@ public class SkillService {
         }
         if (hasFiles(prompt)) {
             addFromLibrary(skills, FILES_SKILL);
+        }
+        if (hasContext(prompt, GENDOX_DESKTOP_CONTEXT)) {
+            addFromLibrary(skills, DESKTOP_SKILL);
         }
         return skills;
     }
@@ -252,14 +259,18 @@ public class SkillService {
 
     // the saved contexts when the prompt is stored (a job reads it back without them), else the ones on it
     private boolean fromGendoxPage(Message prompt) {
+        return hasContext(prompt, GENDOX_PAGE_CONTEXT);
+    }
+
+    private boolean hasContext(Message prompt, String contextType) {
         if (prompt == null) {
             return false;
         }
         if (prompt.getId() != null) {
-            return messageLocalContextRepository.existsByMessage_IdAndContextTypeName(prompt.getId(), GENDOX_PAGE_CONTEXT);
+            return messageLocalContextRepository.existsByMessage_IdAndContextTypeName(prompt.getId(), contextType);
         }
         return prompt.getLocalContexts() != null && prompt.getLocalContexts().stream()
-                .anyMatch(context -> GENDOX_PAGE_CONTEXT.equals(context.getContextTypeName()));
+                .anyMatch(context -> contextType.equals(context.getContextTypeName()));
     }
 
     /**

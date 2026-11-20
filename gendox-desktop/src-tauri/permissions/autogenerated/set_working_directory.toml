@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-set-working-directory"
+description = "Enables the set_working_directory command without any pre-configured scope."
+commands.allow = ["set_working_directory"]
+
+[[permission]]
+identifier = "deny-set-working-directory"
+description = "Denies the set_working_directory command without any pre-configured scope."
+commands.deny = ["set_working_directory"]

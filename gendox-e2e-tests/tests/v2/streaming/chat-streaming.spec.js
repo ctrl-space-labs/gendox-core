@@ -19,6 +19,7 @@ test('renders answer deltas before the final message and retains reasoning', asy
   await expect(chat.getByText('Working through the evidence.', { exact: true })).toBeVisible()
   const state = await (await request.get('/__state')).json()
   expect(state.requests[0]).toMatchObject({ stream: true, clientToolResults: true, value: 'question' })
+  expect(state.requests[0].localContexts.some(context => context.contextType === 'GENDOX_DESKTOP')).toBe(false)
 })
 
 test('awaits a host Promise and submits a tool message through the same endpoint', async ({ page, request }) => {

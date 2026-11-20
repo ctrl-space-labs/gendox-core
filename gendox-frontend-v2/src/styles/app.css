@@ -322,3 +322,9 @@ fieldset.lock:disabled .btn { opacity: .5; pointer-events: none; }
 /* the comment asked for after a 👎, on its own line under the answer's buttons */
 .gc-acts .gc-feedback { flex-basis: 100%; gap: 6px; margin-top: 4px; }
 .gc-acts .gc-feedback .input { flex: 1; min-width: 0; max-width: 420px; }
+
+/* Shared client tool approvals and device preferences. */
+.client-approval { display: grid; gap: var(--space-3); margin-block: var(--space-3); }
+.client-command { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 16rem; overflow: auto; background: var(--surface-2); padding: var(--space-3); border-radius: var(--radius); }
+.client-path { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.client-pending { position: fixed; inset-inline-end: var(--space-4); inset-block-end: var(--space-4); z-index: 100; width: min(32rem, calc(100vw - 2rem)); max-height: 80vh; overflow: auto; background: var(--surface); box-shadow: var(--pop-shadow); }

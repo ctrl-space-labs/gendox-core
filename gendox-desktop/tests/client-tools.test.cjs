@@ -4,7 +4,7 @@ const path = require('node:path')
 const test = require('node:test')
 const vm = require('node:vm')
 
-const script = fs.readFileSync(path.join(__dirname, '../src-tauri/src/client-tools.js'), 'utf8')
+const script = fs.readFileSync(path.join(__dirname, '../src-tauri/src/client-tool-host.js'), 'utf8')
 const REQUEST = 'gendox.events.chat.message.tool_calls.request'
 const RESPONSE = 'gendox.events.chat.message.tool_calls.response'
 const READY = 'gendox.events.chat.message.tool_calls.ready'
@@ -22,8 +22,9 @@ function setup(invoke = async () => completed, { frame = false, remote = false }
   }
   window.top = frame ? {} : window
   const context = { window, location: { protocol: remote ? 'https:' : 'tauri:', host: remote ? 'remote.example' : 'localhost' } }
-  const install = vm.runInNewContext(script, context)
-  const host = install(invoke, origin)
+  const install = vm.runInNewContext(script + '; installClientToolHost', context)
+  const host = install({ runCommand: invoke }, origin)
+  host?.registerTool('run_command', (args, executionId) => invoke(args, executionId))
   const deliver = (type, payload, overrides = {}) => listeners.forEach(listener => listener({
     source: window, origin, isTrusted: true, data: { type, payload }, ...overrides
   }))
@@ -105,11 +106,11 @@ test('answers malformed known-tool arguments without invoking native code', asyn
   let invoked = false
   const host = setup(async () => { invoked = true; return completed })
   host.deliver(READY, { threadId: 'thread' })
-  host.deliver(REQUEST, [call({ function: { name: 'run_command', arguments: '{broken' } }), call({ id: 'missing-description', function: { name: 'run_command', arguments: { command: 'echo done' } } })])
+  host.deliver(REQUEST, [call({ function: { name: 'run_command', arguments: '{broken' } })])
   await settle()
   assert.equal(invoked, false)
-  assert.equal(host.responses().length, 2)
-  assert.equal(JSON.parse(host.responses()[1].data.payload[0].value).exit_code, -1)
+  assert.equal(host.responses().length, 1)
+  assert.equal(JSON.parse(host.responses()[0].data.payload[0].value).exit_code, -1)
 })
 
 test('native failures still produce a completed tool-result shape', async () => {
@@ -136,8 +137,31 @@ test('remote documents, child frames, forged sources and synthetic events cannot
 
 test('installation is idempotent and does not expose a native invoke function', () => {
   const host = setup()
-  assert.equal(host.install(async () => completed, origin), host.host)
+  assert.equal(host.install({ runCommand: async () => completed }, origin), host.host)
   assert.equal(Object.isFrozen(host.host), true)
   assert.deepEqual(Object.keys(host.host), ['registerTool'])
   assert.equal(Object.getOwnPropertyDescriptor(host.window, '__GENDOX_CLIENT_TOOL_HOST__').writable, false)
+})
+
+test('native RPC rejects child-frame sources and never exposes the private adapter', async () => {
+  let invoked = 0
+  const host = setup(async () => { invoked++; return completed })
+  const request = { id: 'rpc', method: 'runCommand', args: [{ command: 'echo check', description: 'Check' }, 'execution'] }
+  assert.equal(host.host.native, undefined)
+  host.deliver('gendox.events.native.request', request, { source: {} })
+  host.deliver('gendox.events.native.request', request, { isTrusted: false })
+  host.deliver('gendox.events.native.request', request, { origin: 'https://remote.example' })
+  await settle(); assert.equal(invoked, 0)
+  host.deliver('gendox.events.native.request', request)
+  await settle(); assert.equal(invoked, 1)
+})
+
+test('native RPC answers an unknown method with an error instead of leaving the caller waiting', async () => {
+  const host = setup()
+  host.deliver('gendox.events.native.request', { id: 'rpc', method: 'notAMethod', args: [] })
+  host.deliver('gendox.events.native.request', { id: 'proto', method: 'toString', args: [] })
+  await settle()
+  const answers = host.sent.filter(entry => entry.data.type === 'gendox.events.native.response').map(entry => entry.data.payload)
+  assert.deepEqual(answers.map(answer => answer.id), ['rpc', 'proto'])
+  assert.ok(answers.every(answer => answer.error && answer.result === undefined))
 })

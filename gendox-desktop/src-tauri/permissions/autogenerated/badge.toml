@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-badge"
+description = "Enables the badge command without any pre-configured scope."
+commands.allow = ["badge"]
+
+[[permission]]
+identifier = "deny-badge"
+description = "Denies the badge command without any pre-configured scope."
+commands.deny = ["badge"]

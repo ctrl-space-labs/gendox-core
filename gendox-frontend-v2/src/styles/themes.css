@@ -6,6 +6,7 @@
 /* Dark is also applied to dark "islands" (.hero, .on-dark) inside light mode */
 :root, [data-theme="dark"], [data-theme="light"] .hero, [data-theme="light"] .on-dark {
   --scheme: dark;
+  --space-2: .5rem; --space-3: .75rem; --space-4: 1rem;
   --font: 'Inter', system-ui, sans-serif;
   --font-display: var(--font);
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;

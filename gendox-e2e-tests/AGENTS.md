@@ -283,6 +283,17 @@ users (client `gendox-dev-test-client`) and run `E2E_MODELS=mock npm run smoke:d
   costs; they do not assess relevance or answer quality.
 - **Training** (splitting and embedding uploaded documents) is a background job. Tests that
   need sections ask for the split through the API (`documents.splitDocumentSections`).
+- **Chat before the agent is set.** A message typed before the chat knows its agent is
+  dropped. Wait for the agent name in `#chat-conversation-header` first: the first element
+  with that name can be in the hidden drawer, and the textbox renders before the thread is set up.
+- **Attaching to a new chat.** Attaching right after creating a chat races the thread's URL and
+  state. Open a persisted thread and wait for its saved answer before uploading.
+- **Sign-in after logout.** Keycloak redirects back to its login page after logout, and a test's
+  next navigation can race that chain (`ERR_ABORTED`). Real logins are covered by
+  `tests/ui/auth.setup.js`; don't build a test on navigating during that redirect.
+- **Playwright UI.** Its project filter can show only `setup`; enable the application projects
+  to see their cases. `npm run report` shows the latest invocation only; `npm test` produces
+  the combined report.
 
 ## Deleting
 

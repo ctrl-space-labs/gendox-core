@@ -13,6 +13,8 @@ import activeTaskNode from 'src/store/activeTaskNode/activeTaskNode'
 import activeTaskEdge from 'src/store/activeTaskEdge/activeTaskEdge'
 import earthObservation from 'src/store/earthObservation'
 import chatAttachments from 'src/store/chatAttachments/chatAttachments'
+import clientDevice from 'src/store/clientDevice/clientDevice'
+import toolApprovals from 'src/store/toolApprovals/toolApprovals'
 
 const reducer = {
   userData,
@@ -26,7 +28,9 @@ const reducer = {
   activeTaskNode,
   activeTaskEdge,
   earthObservation,
-  chatAttachments
+  chatAttachments,
+  clientDevice,
+  toolApprovals
 }
 
 export const store = configureStore({

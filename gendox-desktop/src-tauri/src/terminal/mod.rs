@@ -1,4 +1,4 @@
-//! First-version client terminal: explicit native confirmation, one command at a time.
+//! Local terminal primitives: frontend approvals, native folder enforcement and process lifetime.
 //! Commands, output, session proofs and working folders never enter diagnostic logs.
 
 #[cfg(unix)]
@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager, State, WebviewWindow};
 use tokio::{
     io::{AsyncRead, AsyncReadExt},
-    sync::{oneshot, Mutex},
+    sync::Mutex,
     time::timeout,
 };
 use url::Url;
@@ -37,7 +37,7 @@ pub fn init_script(session_token: &str) -> String {
     include_str!("../client-tool-bootstrap.js")
         .replace(
             "__GENDOX_TOOL_INSTALLER__",
-            include_str!("../client-tools.js"),
+            include_str!("../client-tool-host.js"),
         )
         .replace(
             "__GENDOX_TOOL_ORIGIN__",
@@ -54,6 +54,8 @@ pub fn init_script(session_token: &str) -> String {
 pub struct RunRequest {
     pub command: String,
     pub description: String,
+    #[serde(default)]
+    pub cwd: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]
@@ -61,6 +63,10 @@ pub struct RunRequest {
 pub enum RunResult {
     Declined {
         declined: bool,
+    },
+    PermissionRequired {
+        permission_required: bool,
+        directory: String,
     },
     Completed {
         exit_code: i32,
@@ -77,6 +83,7 @@ type Outcome = Result<RunResult, String>;
 pub struct TerminalState {
     session_token: String,
     runner: Arc<Runner>,
+    active: Mutex<Vec<(String, RunRequest, tokio::task::AbortHandle)>>,
 }
 
 impl TerminalState {
@@ -87,7 +94,14 @@ impl TerminalState {
         Ok(Self {
             session_token,
             runner: Arc::new(Runner::default()),
+            active: Mutex::new(Vec::new()),
         })
+    }
+
+    pub async fn stop(&self) {
+        for (_, _, task) in self.active.lock().await.drain(..) {
+            task.abort();
+        }
     }
 
     pub fn session_token(&self) -> &str {
@@ -108,6 +122,7 @@ struct Memory {
 }
 
 impl Runner {
+    #[cfg(test)]
     async fn run<F, Fut>(
         &self,
         execution_id: String,
@@ -120,8 +135,44 @@ impl Runner {
         F: FnOnce() -> Fut,
         Fut: Future<Output = Result<bool, String>>,
     {
+        self.run_inner(execution_id, request, directory, deadline, confirm, None)
+            .await
+    }
+
+    async fn run_scoped(
+        &self,
+        execution_id: String,
+        request: RunRequest,
+        directory: PathBuf,
+        deadline: Duration,
+        writable: crate::folders::WriteScope,
+    ) -> Outcome {
+        self.run_inner(
+            execution_id,
+            request,
+            directory,
+            deadline,
+            || async { Ok(true) },
+            Some(writable),
+        )
+        .await
+    }
+
+    async fn run_inner<F, Fut>(
+        &self,
+        execution_id: String,
+        request: RunRequest,
+        directory: PathBuf,
+        deadline: Duration,
+        confirm: F,
+        writable: Option<crate::folders::WriteScope>,
+    ) -> Outcome
+    where
+        F: FnOnce() -> Fut,
+        Fut: Future<Output = Result<bool, String>>,
+    {
         validate_request(&execution_id, &request)?;
-        // The gate includes the dialog, process, output drain and replay lookup.
+        // The gate includes the decision callback, process, output drain and replay lookup.
         let mut memory = self.memory.lock().await;
         if let Some((_, previous, result)) = memory
             .completed
@@ -139,7 +190,9 @@ impl Runner {
         }
         let result = match confirm().await {
             Ok(false) => Ok(RunResult::Declined { declined: true }),
-            Ok(true) => execute(&request.command, &directory, deadline).await,
+            Ok(true) => {
+                execute_inner(&request.command, &directory, deadline, writable.as_ref()).await
+            }
             Err(error) => Err(error),
         };
         if memory.completed.len() == RESULT_LIMIT {
@@ -164,6 +217,13 @@ fn validate_request(execution_id: &str, request: &RunRequest) -> Result<(), Stri
             "The command must contain between 1 and 16384 bytes without null characters".into(),
         );
     }
+    if request
+        .cwd
+        .as_ref()
+        .is_some_and(|cwd| cwd.len() > 4096 || cwd.contains('\0'))
+    {
+        return Err("A valid working folder is required".into());
+    }
     if request.description.trim().is_empty()
         || request.description.len() > 4096
         || request.description.contains('\0')
@@ -184,7 +244,11 @@ fn authorized(label: &str, url: &Url, supplied: &str, expected: &str) -> bool {
             == 0
 }
 
-fn authorize(window: &WebviewWindow, supplied: &str, expected: &str) -> Result<(), String> {
+pub(crate) fn authorize(
+    window: &WebviewWindow,
+    supplied: &str,
+    expected: &str,
+) -> Result<(), String> {
     let valid = window
         .url()
         .is_ok_and(|url| authorized(window.label(), &url, supplied, expected));
@@ -195,35 +259,7 @@ fn authorize(window: &WebviewWindow, supplied: &str, expected: &str) -> Result<(
     }
 }
 
-async fn confirm(
-    app: AppHandle,
-    window: WebviewWindow,
-    request: RunRequest,
-) -> Result<bool, String> {
-    let (send, receive) = oneshot::channel();
-    app.run_on_main_thread(move || {
-        if send.is_closed() {
-            return;
-        }
-        let choice = rfd::MessageDialog::new()
-            .set_title("Run command on this computer?")
-            .set_description(format!("{}\n\n{}", request.description, request.command))
-            .set_level(rfd::MessageLevel::Warning)
-            .set_parent(&window)
-            .set_buttons(rfd::MessageButtons::OkCancelCustom(
-                "Run".into(),
-                "Cancel".into(),
-            ))
-            .show();
-        let _ = send.send(choice == rfd::MessageDialogResult::Custom("Run".into()));
-    })
-    .map_err(|_| "Cannot show the command confirmation".to_string())?;
-    receive
-        .await
-        .map_err(|_| "The command confirmation was interrupted".to_string())
-}
-
-/// The browser bridge passes only request/IDs/proof. The OS chooses the home folder and shell.
+/// Frontend owns approval policy; native code enforces origin, grants and process lifetime.
 #[tauri::command]
 pub async fn run_command(
     app: AppHandle,
@@ -232,36 +268,111 @@ pub async fn run_command(
     request: RunRequest,
     execution_id: String,
     session_token: String,
+    approved: bool,
 ) -> Outcome {
     authorize(&webview, &session_token, state.session_token())?;
     validate_request(&execution_id, &request)?;
-    let directory = app
-        .path()
-        .home_dir()
-        .map_err(|_| "The home folder is unavailable".to_string())?
-        .join("Gendox");
+    if !approved {
+        return Ok(RunResult::Declined { declined: true });
+    }
+    let folders = crate::folders::load(&app)?;
+    let requested = request.cwd.as_deref().unwrap_or(&folders.working_directory);
+    let Some(directory) = crate::folders::resolve_directory(requested, &folders)? else {
+        return Ok(RunResult::PermissionRequired {
+            permission_required: true,
+            directory: requested.into(),
+        });
+    };
+    let mut folders = folders;
+    // Save canonical grants before execution so later symlink changes cannot widen them.
+    folders.folders = folders
+        .folders
+        .iter()
+        .filter_map(|path| std::path::Path::new(path).canonicalize().ok())
+        .map(|path| path.to_string_lossy().into_owned())
+        .collect();
+    folders.working_directory = std::path::Path::new(&folders.working_directory)
+        .canonicalize()
+        .map_err(|_| "The working folder is unavailable")?
+        .to_string_lossy()
+        .into_owned();
+    crate::folders::save(&app, &folders)?;
+    let writable = crate::folders::WriteScope {
+        roots: folders.canonical_roots()?,
+        protected: vec![
+            app.path().app_config_dir(),
+            app.path().app_data_dir(),
+            app.path().app_cache_dir(),
+        ]
+        .into_iter()
+        .filter_map(Result::ok)
+        .collect(),
+    };
     let runner = state.runner.clone();
-    let expected = state.session_token().to_string();
-    let dialog_request = request.clone();
-    // Detach execution from the IPC reply's lifetime: reload/retries keep the gate and cache.
-    tauri::async_runtime::spawn(async move {
+    let active_id = execution_id.clone();
+    let active_request = request.clone();
+    let task = tauri::async_runtime::spawn(async move {
         runner
-            .run(
-                execution_id,
-                request,
-                directory,
-                COMMAND_TIMEOUT,
-                || async {
-                    authorize(&webview, &session_token, &expected)?;
-                    let accepted = confirm(app, webview.clone(), dialog_request).await?;
-                    authorize(&webview, &session_token, &expected)?;
-                    Ok(accepted)
-                },
-            )
+            .run_scoped(execution_id, request, directory, COMMAND_TIMEOUT, writable)
             .await
-    })
-    .await
-    .map_err(|_| "The command was interrupted".to_string())?
+    });
+    let abort = task.inner().abort_handle();
+    let task_id = abort.id();
+    state
+        .active
+        .lock()
+        .await
+        .push((active_id, active_request, abort));
+    let result = task
+        .await
+        .map_err(|_| "The command was stopped".to_string());
+    state
+        .active
+        .lock()
+        .await
+        .retain(|(_, _, abort)| abort.id() != task_id);
+    result?
+}
+
+#[tauri::command]
+pub async fn command_status(
+    webview: WebviewWindow,
+    state: State<'_, TerminalState>,
+    session_token: String,
+    request: RunRequest,
+    execution_id: String,
+) -> Result<serde_json::Value, String> {
+    authorize(&webview, &session_token, state.session_token())?;
+    validate_request(&execution_id, &request)?;
+    if let Ok(memory) = state.runner.memory.try_lock() {
+        if let Some((_, previous, result)) = memory
+            .completed
+            .iter()
+            .find(|(id, _, _)| id == &execution_id)
+        {
+            if previous == &request {
+                return Ok(serde_json::json!({ "known": true, "result": result.clone().ok() }));
+            }
+        }
+    }
+    let known = state
+        .active
+        .lock()
+        .await
+        .iter()
+        .any(|(id, previous, _)| id == &execution_id && previous == &request);
+    Ok(serde_json::json!({ "known": known }))
+}
+
+#[tauri::command]
+pub async fn stop_command(
+    webview: WebviewWindow,
+    state: State<'_, TerminalState>,
+    session_token: String,
+) -> Result<(), String> {
+    authorize(&webview, &session_token, state.session_token())?;
+    state.stop().await;
+    Ok(())
 }
 
 #[derive(Default)]
@@ -301,6 +412,13 @@ async fn read_tail<R: AsyncRead + Unpin>(mut pipe: R, output: &mut Tail) -> io::
     }
 }
 
+struct TemporaryFolder(PathBuf);
+impl Drop for TemporaryFolder {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.0);
+    }
+}
+
 struct ProcessTree(Box<dyn ChildWrapper>);
 
 impl Drop for ProcessTree {
@@ -310,7 +428,17 @@ impl Drop for ProcessTree {
     }
 }
 
+#[cfg(test)]
 async fn execute(script: &str, directory: &Path, deadline: Duration) -> Outcome {
+    execute_inner(script, directory, deadline, None).await
+}
+
+async fn execute_inner(
+    script: &str,
+    directory: &Path,
+    deadline: Duration,
+    writable: Option<&crate::folders::WriteScope>,
+) -> Outcome {
     let start = Instant::now();
     std::fs::create_dir_all(directory)
         .map_err(|_| "Cannot create the Gendox working folder".to_string())?;
@@ -318,6 +446,27 @@ async fn execute(script: &str, directory: &Path, deadline: Duration) -> Outcome 
     let mut command = unix::command(script, directory);
     #[cfg(windows)]
     let mut command = windows::command(script, directory);
+    let temporary = if let Some(scope) = writable {
+        let mut nonce = [0_u8; 16];
+        getrandom::fill(&mut nonce).map_err(|_| "Cannot create the command temporary folder")?;
+        let name: String = nonce.iter().map(|byte| format!("{byte:02x}")).collect();
+        let path = std::env::temp_dir().join(format!("gendox-run-{name}"));
+        std::fs::create_dir(&path).map_err(|_| "Cannot create the command temporary folder")?;
+        let path = path
+            .canonicalize()
+            .map_err(|_| "Cannot resolve the temporary folder")?;
+        let mut roots = scope.roots.clone();
+        roots.push(path.clone());
+        crate::folders::restrict(command.command_mut(), &roots, &scope.protected)?;
+        command
+            .command_mut()
+            .env("TMPDIR", &path)
+            .env("TMP", &path)
+            .env("TEMP", &path);
+        Some(TemporaryFolder(path))
+    } else {
+        None
+    };
     command
         .command_mut()
         .stdin(Stdio::null())
@@ -359,6 +508,7 @@ async fn execute(script: &str, directory: &Path, deadline: Duration) -> Outcome 
             124
         }
     };
+    drop(temporary);
     Ok(RunResult::Completed {
         exit_code,
         stdout: out.text(),
@@ -396,6 +546,7 @@ mod tests {
         RunRequest {
             command: command.into(),
             description: "Test command".into(),
+            cwd: None,
         }
     }
     fn output(result: RunResult) -> (i32, String, String) {
@@ -408,6 +559,86 @@ mod tests {
             } => (exit_code, stdout, stderr),
             _ => panic!("expected command output"),
         }
+    }
+
+    #[cfg(target_os = "macos")]
+    #[tokio::test]
+    async fn approved_shell_can_keep_files_in_a_hidden_workspace_folder() {
+        let scratch = Scratch::new();
+        let root = scratch.0.canonicalize().unwrap();
+        let scope = crate::folders::WriteScope {
+            roots: vec![root.clone()],
+            protected: vec![],
+        };
+        let result = execute_inner(
+            "mkdir -p .local-notes; printf remember > .local-notes/note.md",
+            &root,
+            Duration::from_secs(10),
+            Some(&scope),
+        )
+        .await
+        .unwrap();
+        assert_eq!(output(result).0, 0);
+        let result = execute_inner(
+            "cat .local-notes/note.md",
+            &root,
+            Duration::from_secs(10),
+            Some(&scope),
+        )
+        .await
+        .unwrap();
+        assert_eq!(output(result).1, "remember");
+    }
+
+    #[cfg(target_os = "macos")]
+    #[tokio::test]
+    async fn folder_scope_blocks_outside_writes_including_symlinks_and_descendants() {
+        let scratch = Scratch::new();
+        let allowed = scratch.0.join("allowed");
+        let outside = scratch.0.join("outside");
+        std::fs::create_dir_all(&allowed).unwrap();
+        std::fs::create_dir_all(&outside).unwrap();
+        std::os::unix::fs::symlink(&outside, allowed.join("escape")).unwrap();
+        let allowed = allowed.canonicalize().unwrap();
+        let outside = outside.canonicalize().unwrap();
+        let scope = crate::folders::WriteScope {
+            roots: vec![allowed.clone()],
+            protected: vec![],
+        };
+        let script = format!("printf allowed > inside; printf blocked > '{}'/direct; printf blocked > escape/link; (/bin/sh -c \"printf blocked > '{}'/child\") & wait", outside.display(), outside.display());
+        let (_, _, stderr) = output(
+            execute_inner(&script, &allowed, Duration::from_secs(10), Some(&scope))
+                .await
+                .unwrap(),
+        );
+        assert_eq!(
+            std::fs::read_to_string(allowed.join("inside")).unwrap(),
+            "allowed"
+        );
+        for marker in ["direct", "link", "child"] {
+            assert!(!outside.join(marker).exists());
+        }
+        assert!(stderr.contains("not permitted") || stderr.contains("denied"));
+        let extended = crate::folders::WriteScope {
+            roots: vec![allowed.clone(), outside.clone()],
+            protected: vec![allowed.join("protected")],
+        };
+        std::fs::create_dir(allowed.join("protected")).unwrap();
+        let script = format!(
+            "printf granted > '{}'/after-grant; printf blocked > protected/settings",
+            outside.display()
+        );
+        let (code, _, _) = output(
+            execute_inner(&script, &allowed, Duration::from_secs(10), Some(&extended))
+                .await
+                .unwrap(),
+        );
+        assert_ne!(code, 0);
+        assert_eq!(
+            std::fs::read_to_string(outside.join("after-grant")).unwrap(),
+            "granted"
+        );
+        assert!(!allowed.join("protected/settings").exists());
     }
 
     #[test]

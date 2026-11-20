@@ -37,6 +37,8 @@ import ChatTurn from 'src/components/chat/ChatTurn'
 import ChatComposer from 'src/components/chat/ChatComposer'
 import ChatSources from 'src/components/chat/ChatSources'
 import ChatDeepThinking from 'src/components/chat/ChatDeepThinking'
+import ClientToolApprovals from 'src/components/client-tools/ClientToolApprovals'
+import useVisibleThread from 'src/hooks/useVisibleThread'
 
 const COMPLETION_POLL_MS = 2000
 
@@ -154,6 +156,7 @@ const Chat = ({
   const [isDragging, setIsDragging] = useState(false)
 
   const scrollRef = useRef(null)
+  const visibilityRef = useRef(null)
   const inputRef = useRef(null)
   const dragDepth = useRef(0)
   const attachmentsRef = useRef([])
@@ -162,6 +165,7 @@ const Chat = ({
   const agentName = agent?.fullName || ''
   const messages = currentThread?.messages
   const threadId = currentThread?.threadId
+  useVisibleThread(threadId, visibilityRef)
 
   const turns = useMemo(() => buildTurns(messages, auth.user?.id), [messages, auth.user?.id])
   const uploadedDocs = useMemo(
@@ -452,6 +456,7 @@ const Chat = ({
   return (
     <ChatKeyContext.Provider value={chatKey}>
     <div
+      ref={visibilityRef}
       className={`gc gc-${variant} ${isChatting ? 'chatting' : ''} ${isDragging ? 'dragover' : ''}`}
       data-theme={theme}
       style={style}
@@ -535,6 +540,7 @@ const Chat = ({
                 {index === lastTurnIndex ? progress : null}
               </ChatTurn>
             ))}
+            <ClientToolApprovals threadId={threadId} />
             {turns.length === 0 && progress && <div className='gc-ai'>{progress}</div>}
           </div>
         </div>
