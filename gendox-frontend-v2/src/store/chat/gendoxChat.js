@@ -930,7 +930,10 @@ function dispatchHostCalls(data, context) {
     }))
   const session = readCompletionSession(data.threadId)
   const sent = new Set(session.dispatchedCalls || [])
-  const pending = calls.filter(call => !sent.has(call.id))
+  // The native host and runner deduplicate execution IDs, so replay its pending calls after
+  // a page reload as well. Website widgets retain their existing dispatch-once behavior.
+  const nativeHost = typeof window !== 'undefined' && window.top === window && window.__GENDOX_CLIENT_TOOL_HOST__
+  const pending = calls.filter(call => nativeHost || !sent.has(call.id))
   if (!pending.length) return
   pending.forEach(call => sent.add(call.id))
   saveCompletionSession(data.threadId, { dispatchedCalls: [...sent] })

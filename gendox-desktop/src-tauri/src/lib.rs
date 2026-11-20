@@ -3,6 +3,7 @@ mod downloads;
 mod links;
 mod offline;
 mod server;
+mod terminal;
 
 use std::{borrow::Cow, collections::HashMap, fs, path::PathBuf, sync::Mutex, time::Duration};
 
@@ -198,7 +199,8 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .manage(ViewControls::default())
-        .invoke_handler(tauri::generate_handler![set_server, remove_server])
+        .manage(terminal::TerminalState::new().expect("cannot initialize the terminal session"))
+        .invoke_handler(tauri::generate_handler![set_server, remove_server, terminal::run_command])
         .menu(build_menu)
         .on_menu_event(|app, event| {
             match event.id().0.as_str() {
@@ -236,6 +238,7 @@ pub fn run() {
             let origin = server::app_origin();
             let runtime_env = server::runtime_env(&current, &presets, &saved, origin);
             let script = server::init_script(&runtime_env);
+            let tool_script = terminal::init_script(app.state::<terminal::TerminalState>().session_token());
             let config = current.config.as_ref().expect("the server in use has a configuration");
             let mut allowed = vec![origin.to_string()];
             allowed.extend(links::origin_of(&config.oidc_authority));
@@ -250,6 +253,7 @@ pub fn run() {
                 .inner_size(1280.0, 832.0)
                 .min_inner_size(800.0, 600.0)
                 .initialization_script(script)
+                .initialization_script(tool_script)
                 .on_web_resource_request(move |request, response| {
                     if let Some(script) = server::bundled_config_script(&request.uri().to_string(), &runtime_env) {
                         *response.body_mut() = Cow::Owned(script.into_bytes());

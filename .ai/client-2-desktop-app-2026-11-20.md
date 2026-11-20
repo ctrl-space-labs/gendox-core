@@ -241,8 +241,8 @@ Created on 2026-11-19 with the label `needs-review`; each is a sub-issue of #583
 | Ticket | Issue | What | Waits for | Status |
 |---|---|---|---|---|
 | Epic | #583 | Gendox Desktop | | |
-| CLIENT-2a | #584 | Build the Tauri desktop app, run locally on macOS; unsigned CI builds for every OS | Nothing | Done: macOS build, launch, native shell and local tests checked on feature-desktop-app. Five-target unsigned CI configured; remote runs unexecuted. Google account-specific check deferred by user. |
-| CLIENT-2b | #585 | Terminal: `run_command` as an example client tool | #584 | Not started |
+| CLIENT-2a | #584 | Build the Tauri desktop app, run locally on macOS; unsigned CI builds for every OS | Nothing | Done: review follow-ups merged on feature-desktop-app; Windows CI helper pinned to a reviewed immutable commit. macOS .app/.dmg rebuilt and native launch reached local sign-in. [Linux glib assessment](../gendox-desktop/ci/linux-dependency-review.md) complete; distribution requires reassessment and a Linux release risk decision or supported mitigation. Remote Windows/Linux CI remains unexecuted. Google account-specific check deferred by user. |
+| CLIENT-2b | #585 | Terminal: `run_command` as an example client tool | #584 | Done: confirmed native runner and main-frame bridge merged on feature-desktop-app. Timeout regression stabilized with gated child/grandchild writes and a positive control; 12 stress runs passed and disabling process-group termination made the safety assertion fail. Post-merge: 30 Rust tests, separate live configuration check and 16 desktop script checks passed. Earlier native Run/Cancel, six streaming and 21 smoke checks passed. Windows/Linux execution awaits remote CI. |
 | CLIENT-2c | #586 | macOS signed release and updates | #584 | Not started |
 | CLIENT-2d | #587 | Windows app (x64, ARM64), then its signed release | #584; signed release after #586 | Not started |
 | CLIENT-2e | #588 | Linux app (x86_64, arm64), then its signed release | #584; signed release after #586 | Not started |

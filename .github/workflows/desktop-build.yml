@@ -108,7 +108,8 @@ jobs:
       - name: Install matching WebView2 driver
         if: runner.os == 'Windows'
         run: |
-          cargo install --git https://github.com/chippers/msedgedriver-tool --locked
+          # Reviewed msedgedriver-tool v0.2.2 source; --locked also fixes its dependencies.
+          cargo install --git https://github.com/chippers/msedgedriver-tool --rev 8c4b34f51b45f5cf08013366d703de464ab871d1 --locked
           msedgedriver-tool
 
       - name: Launch macOS app and reach the fixture server

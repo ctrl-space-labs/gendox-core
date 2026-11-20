@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "The bundled UI only (local origin): choosing the server. Remote pages get nothing.",
+  "description": "The bundled main UI: server selection and confirmed commands. Remote pages get nothing.",
   "windows": ["main"],
-  "permissions": ["allow-set-server", "allow-remove-server"]
+  "permissions": ["allow-set-server", "allow-remove-server", "allow-run-command"]
 }

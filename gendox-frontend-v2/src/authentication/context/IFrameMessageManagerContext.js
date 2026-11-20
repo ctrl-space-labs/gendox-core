@@ -69,9 +69,14 @@ export const IFrameMessageManagerProvider = ({ children }) => {
     };
 
     useEffect(() => {
+        // A native client can host CLIENT tools for its main page through the same protocol
+        // as a website hosting the widget. Browsers without a registered host keep their flow.
+        const nativeHost = !_inIframe() && window.__GENDOX_CLIENT_TOOL_HOST__;
         //get url param named 'origin'
         const urlParams = new URLSearchParams(window.location.search);
-        const originParam = decodeURIComponent(urlParams.get('origin'));
+        const originParam = nativeHost
+            ? window.location.protocol + '//' + window.location.host
+            : decodeURIComponent(urlParams.get('origin'));
 
         if (originParam && !originUrl) {
             setOriginUrl(originParam);
@@ -80,7 +85,7 @@ export const IFrameMessageManagerProvider = ({ children }) => {
             messageManager.addTrustedOrigin(originParam);
         }
 
-        if (_inIframe()) {
+        if (_inIframe() || nativeHost) {
             setIsEmbedded(true);
             messageManager.addHandler(initializationHandler);
             messageManager.addHandler(configUpdateHandler);

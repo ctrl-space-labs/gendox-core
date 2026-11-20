@@ -21,5 +21,11 @@ tauri-plugin-window-state = "2"
 tauri-plugin-opener = "2"
 url = "2"
 reqwest = { version = "0.12", features = ["json"] }
-rfd = "0.17"
+rfd = { version = "0.17", features = ["common-controls-v6"] }
 tauri-plugin-clipboard-manager = "2"
+getrandom = "0.3"
+process-wrap = { version = "=10.0.1", default-features = false, features = ["tokio1", "process-group", "job-object", "kill-on-drop", "creation-flags"] }
+tokio = { version = "1", features = ["process", "io-util", "time", "sync", "macros"] }
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.62.2", features = ["Win32_System_Threading"] }

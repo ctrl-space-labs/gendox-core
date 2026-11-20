@@ -10,7 +10,7 @@ fn main() {
     fs::copy(&presets, out).unwrap_or_else(|e| panic!("cannot read presets {presets}: {e}"));
 
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(
-        tauri_build::AppManifest::new().commands(&["set_server", "remove_server"]),
+        tauri_build::AppManifest::new().commands(&["set_server", "remove_server", "run_command"]),
     ))
     .expect("failed to run tauri-build");
 }
