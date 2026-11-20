@@ -109,7 +109,10 @@ EOF
 }
 
 # Function to create the desktop app's PKCE client: its UI is served from the app's own origin,
-# tauri://localhost on macOS and Linux, http://tauri.localhost on Windows.
+# tauri://localhost on macOS and Linux, http://tauri.localhost on Windows. Sign-in and sign-out happen in
+# the system browser, which returns to a loopback address the app listens on: http://127.0.0.1:<port>/callback.
+# The port changes every time; Keycloak matches a loopback redirect on any port (RFC 8252, section 7.3).
+# offline_access, one of the realm's optional scopes, gives the app a refresh token that keeps it signed in.
 create_desktop_client() {
   CLIENT_ID=$1
 
@@ -126,14 +129,14 @@ create_desktop_client() {
   "enabled": true,
   "publicClient": true,
   "protocol": "openid-connect",
-  "redirectUris": ["tauri://localhost/*", "http://tauri.localhost/*"],
+  "redirectUris": ["tauri://localhost/*", "http://tauri.localhost/*", "http://127.0.0.1/callback"],
   "webOrigins": ["tauri://localhost", "http://tauri.localhost"],
   "alwaysDisplayInConsole": true,
   "frontchannelLogout": true,
   "standardFlowEnabled": true,
   "attributes": {
     "pkce.code.challenge.method": "S256",
-    "post.logout.redirect.uris": "tauri://localhost/login##http://tauri.localhost/login"
+    "post.logout.redirect.uris": "tauri://localhost/login##http://tauri.localhost/login##http://127.0.0.1/callback"
   }
 }
 EOF
@@ -141,6 +144,14 @@ EOF
   else
     echo "Desktop client '$CLIENT_ID' already exists. Doing nothing..."
   fi
+
+  # The realm may have different defaults. Attach the standard optional scope to this client explicitly.
+  local scope_uuid
+  scope_uuid=$($KCADM get client-scopes --insecure -r "$REALM_NAME" --fields id,name --format json |
+    jq -er '.[] | select(.name == "offline_access") | .id') || return 1
+  CLIENT_UUID=$($KCADM get clients --insecure -r "$REALM_NAME" -q clientId="$CLIENT_ID" --fields id --format json |
+    jq -er '.[0].id') || return 1
+  $KCADM update "clients/$CLIENT_UUID/optional-client-scopes/$scope_uuid" --insecure -r "$REALM_NAME" -n
 }
 
 # Function to create Private Client with Secret
@@ -190,7 +201,7 @@ assign_role_to_service_account() {
 echo "=== Creating PKCE Clients ==="
 create_pkce_client "$GENDOX_PKCE_CLIENT" "$GENDOX_BASE_URL" "$GENDOX_BASE_URL/login"
 create_pkce_client "$PROVEN_PKCE_CLIENT" "$PROVEN_BASE_URL" "$PROVEN_BASE_URL/login"
-create_desktop_client "$DESKTOP_PKCE_CLIENT"
+create_desktop_client "$DESKTOP_PKCE_CLIENT" || exit 1
 echo "=== PKCE Clients Processing Complete ==="
 
 # Create Private Clients and Set Secrets

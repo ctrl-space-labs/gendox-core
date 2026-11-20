@@ -131,6 +131,8 @@ pub fn runtime_env(current: &Server, presets: &[Server], saved: &Saved, origin: 
         "NEXT_PUBLIC_OIDC_REDIRECT_URI": format!("{origin}/oidc-callback/"),
         "NEXT_PUBLIC_OIDC_POST_LOGOUT_REDIRECT_URI": format!("{origin}/login"),
         "NEXT_PUBLIC_OIDC_SILENT_REDIRECT_URI": format!("{origin}/silent-renew"),
+        // The desktop client keeps the user signed in for days with a refresh token (offline_access, #593)
+        "NEXT_PUBLIC_OIDC_SCOPE": "openid profile email offline_access",
         "GENDOX_DESKTOP": {
             "version": env!("CARGO_PKG_VERSION"),
             "current": { "name": current.name, "address": current.address },

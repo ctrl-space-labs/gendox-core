@@ -19,6 +19,9 @@
     activity: running => call('activity', { running }),
     autostartEnabled: () => call('autostart_enabled'),
     setAutostart: enabled => call('set_autostart', { enabled }),
-    deepLinks: () => call('deep_links')
+    deepLinks: () => call('deep_links'),
+    prepareSignIn: () => call('prepare_sign_in'),
+    openSignIn: url => call('open_sign_in', { url }),
+    cancelSignIn: () => call('cancel_sign_in')
   }, __GENDOX_TOOL_ORIGIN__);
 })();

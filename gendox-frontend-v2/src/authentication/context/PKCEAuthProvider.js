@@ -8,7 +8,8 @@ import userService from 'src/gendox-sdk/userService'
 import apiRequests from 'src/configs/apiRequest.js'
 import { userDataActions } from 'src/store/userData/userData'
 
-import userManager from 'src/services/authService'
+import userManager, { signOutWithBrowser } from 'src/services/authService'
+import { isDesktopApp } from 'src/services/desktopBridge'
 import { AuthContext } from './AuthContext'
 
 const PKCEAuthProvider = ({ children, initialAuth }) => {
@@ -29,6 +30,13 @@ const PKCEAuthProvider = ({ children, initialAuth }) => {
    * @param returnUrl - the url to redirect to after login
    */
   const handleLogin = returnUrl => {
+    // The desktop app signs in through the system browser, from a page with a button: never a browser
+    // tab opened unasked when the app starts
+    if (isDesktopApp()) {
+      const query = returnUrl && returnUrl !== '/' ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ''
+      if (!router.pathname.startsWith('/desktop-sign-in')) router.replace(`/desktop-sign-in/${query}`)
+      return
+    }
     let args = {}
     if (returnUrl) {
       args = {
@@ -55,7 +63,20 @@ const PKCEAuthProvider = ({ children, initialAuth }) => {
     } finally {
       // Clear the authentication state and log
       clearAuthState()
-      await userManager.signoutRedirect()
+      try {
+        if (isDesktopApp()) {
+          // Revokes the tokens and ends the session in the browser, where the user signed in
+          await signOutWithBrowser()
+          window.location.replace('/desktop-sign-in/')
+        } else {
+          await userManager.signoutRedirect()
+        }
+      } catch (error) {
+        // Signed out here even when the sign-in server could not be told (offline, cancelled)
+        console.error('Failed to end the session at the sign-in server:', error)
+        await userManager.removeUser()
+        window.location.replace(isDesktopApp() ? '/desktop-sign-in/' : '/login')
+      }
     }
   }
 
@@ -81,10 +102,26 @@ const PKCEAuthProvider = ({ children, initialAuth }) => {
     userManager.removeUser()
   }
 
+  const renewSession = async () => {
+    try {
+      await userManager.signinSilent()
+    } catch (error) {
+      if (isDesktopApp() && error?.error !== 'invalid_grant') {
+        setAuthState({ user: null, isLoading: false, renewalFailed: true })
+        return
+      }
+
+      await userManager.removeUser()
+      unloadUser()
+    }
+  }
+
   const initAuthOIDC = () => {
-    userManager.getUser().then(user => {
+    userManager.getUser().then(async user => {
       if (user && !user.expired) {
         setAuthState({ user, isLoading: false })
+      } else if (user?.refresh_token) {
+        await renewSession()
       } else {
         // no user data found or user expired, loadUserProfileFromAuthState will handle cleanup
         setAuthState({ user: null, isLoading: false })

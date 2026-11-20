@@ -1,7 +1,6 @@
 # Opt-in: Keycloak also on https, with a certificate this computer trusts (mkcert).
-# For clients that drop Keycloak's Secure cookies over plain http, such as the desktop app's
-# web view on macOS. The http port, the API and the browser frontend stay as they are.
-# See "Https for Keycloak" in README.md.
+# For testing HTTPS sign-in in the system browser. The HTTP ports stay available.
+# See "Desktop sign-in and local Keycloak HTTPS" in README.md.
 services:
   keycloak:
     environment:

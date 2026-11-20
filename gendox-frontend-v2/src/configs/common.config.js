@@ -12,6 +12,8 @@ const commonConfig = {
     oidcRedirectUri: runtimeEnv.NEXT_PUBLIC_OIDC_REDIRECT_URI || process.env.NEXT_PUBLIC_OIDC_REDIRECT_URI,
     oidcPostLogoutRedirectUri: runtimeEnv.NEXT_PUBLIC_OIDC_POST_LOGOUT_REDIRECT_URI || process.env.NEXT_PUBLIC_OIDC_POST_LOGOUT_REDIRECT_URI,
     oidcSilentRedirectUri: runtimeEnv.NEXT_PUBLIC_OIDC_SILENT_REDIRECT_URI || process.env.NEXT_PUBLIC_OIDC_SILENT_REDIRECT_URI,
+    // The desktop app adds offline_access, for a refresh token that keeps it signed in for days
+    oidcScope: runtimeEnv.NEXT_PUBLIC_OIDC_SCOPE || process.env.NEXT_PUBLIC_OIDC_SCOPE || 'openid profile email',
     provenAiUrl: process.env.NEXT_PUBLIC_PROVEN_AI_URL,
     provenAiEnabled: process.env.NEXT_PUBLIC_PROVEN_AI_ENABLED? process.env.NEXT_PUBLIC_PROVEN_AI_ENABLED === 'true' : false /* true | false */,
     GEE_clientId: process.env.NEXT_PUBLIC_GEE_CLIENT_ID

@@ -80,14 +80,16 @@ The last case, a migration that fails, or a change to the realm file (Keycloak i
 only into an empty database) means the environment has to be rebuilt: ask the user, then
 `docker compose down -v` and `docker compose up -d --wait`.
 
-## Https for Keycloak
+## Desktop sign-in and local Keycloak HTTPS
 
-Keycloak sets its sign-in cookies `Secure`. Chrome keeps them on `http://localhost`, but the
-macOS web view of the desktop app (`gendox-desktop/`) does not, so signing in there fails with
-"Cookie not found". `docker-compose.https.yml` adds an https port to Keycloak with a certificate
-this computer trusts, and makes `/public/client-config` name it as the sign-in server.
-The desktop API address uses `127.0.0.1`, while Keycloak uses `localhost`: Keycloak's HSTS header
-would otherwise make the web view upgrade the HTTP API connection to HTTPS as well.
+In the desktop app, choose **Server…**, add the local API address, then select
+**Sign in with your browser**. Keycloak signs you in through the system browser and sends you
+back to the app through a one-time loopback callback. Use one of the seeded test users above.
+
+To exercise this flow with HTTPS, `docker-compose.https.yml` adds a local HTTPS port to Keycloak
+and advertises it to the desktop app through `/public/client-config`. Use `localhost` for the
+HTTPS Keycloak address and `127.0.0.1` for the HTTP API address so Keycloak's HSTS policy stays
+on the Keycloak host.
 
 Once per computer, yourself: it adds a certificate authority to the system's trusted ones.
 
@@ -117,4 +119,5 @@ client configuration.
   `docker system df`.
 - The first start takes about 50 s, a later `up` about 4 s.
 - Editing the realm: Keycloak requires the file name `gendox-idp-prod-realm.json`. The
-  redirect URI `http://localhost/*` matches any port, so the realm does not depend on the slot.
+  web redirect `http://localhost/*` and the desktop redirect `http://127.0.0.1/callback`
+  match their respective loopback hosts on any port.

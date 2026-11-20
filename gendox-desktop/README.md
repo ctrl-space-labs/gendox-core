@@ -22,6 +22,12 @@ The app opens `app.gendox.dev`. Before the UI loads it sets `window.__GENDOX_ENV
 `gendox-frontend-v2/src/configs/common.config.js` reads. Public settings also reach bundled
 frames through `/env-config.js`; the Server page and native integration belong to the main frame.
 
+Sign-in uses the system browser and returns to Gendox through a one-time loopback address.
+The `gendox-desktop` Keycloak client uses authorization code with PKCE and requests the
+`offline_access` scope. Keycloak users need the `offline_access` realm role to receive an offline
+refresh token. The app uses that token to renew your session when it reopens after access-token
+expiry. Signing out revokes the token and ends the browser session.
+
 ## Downloads and diagnostics
 
 Downloads use a native save dialog; Cancel prevents the download. The filename comes from the
@@ -107,14 +113,14 @@ node fixtures/v2/chat-streaming-server.cjs
 
 Both upstream URLs must be loopback addresses. Add the fixture's HTTP loopback address through
 Server in the app, sign into the local test realm if needed, and send a chat message. Choose
-Run and check the resumed answer; inspect `/__state` to verify the initial request has
+Allow and check the resumed answer. Inspect `/__state` to verify the initial request has
 `clientToolResults: true` and the next request has `role: "tool"` with the printed output.
-Reset via `/__reset?mode=desktop`, start a new thread, and repeat with Cancel to verify
+Reset via `/__reset?mode=desktop`, start a new thread, and repeat with Don’t allow to verify
 `{ "declined": true }`. Restore the original server afterward. The fixture keeps test messages
 and tool results only in memory; do not use it with sensitive inputs.
 
 The `streaming-contract` Playwright project also checks the top-level host with a fake native
-runner for both outcomes. This complements the real native dialog and process checks.
+runner for both outcomes, live output, and Stop.
 
 ## Notifications and OS integration
 

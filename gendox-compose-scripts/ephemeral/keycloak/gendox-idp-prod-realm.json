@@ -34,15 +34,16 @@
       "enabled": true,
       "publicClient": true,
       "protocol": "openid-connect",
-      "redirectUris": ["tauri://localhost/*", "http://tauri.localhost/*"],
+      "redirectUris": ["tauri://localhost/*", "http://tauri.localhost/*", "http://127.0.0.1/callback"],
       "webOrigins": ["tauri://localhost", "http://tauri.localhost"],
+      "optionalClientScopes": ["offline_access"],
       "alwaysDisplayInConsole": true,
       "frontchannelLogout": true,
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": false,
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "tauri://localhost/login##http://tauri.localhost/login"
+        "post.logout.redirect.uris": "tauri://localhost/login##http://tauri.localhost/login##http://127.0.0.1/callback"
       }
     },
     {
@@ -81,6 +82,7 @@
       "lastName": "Tester",
       "enabled": true,
       "emailVerified": true,
+      "realmRoles": ["offline_access"],
       "credentials": [{ "type": "password", "value": "123456789", "temporary": false }]
     },
     {
@@ -90,6 +92,7 @@
       "lastName": "User1",
       "enabled": true,
       "emailVerified": true,
+      "realmRoles": ["offline_access"],
       "credentials": [{ "type": "password", "value": "123456789", "temporary": false }]
     },
     {
@@ -99,6 +102,7 @@
       "lastName": "User2",
       "enabled": true,
       "emailVerified": true,
+      "realmRoles": ["offline_access"],
       "credentials": [{ "type": "password", "value": "123456789", "temporary": false }]
     },
     {
@@ -108,6 +112,7 @@
       "lastName": "User3",
       "enabled": true,
       "emailVerified": true,
+      "realmRoles": ["offline_access"],
       "credentials": [{ "type": "password", "value": "123456789", "temporary": false }]
     },
     {
@@ -117,6 +122,7 @@
       "lastName": "User4",
       "enabled": true,
       "emailVerified": true,
+      "realmRoles": ["offline_access"],
       "credentials": [{ "type": "password", "value": "123456789", "temporary": false }]
     }
   ]

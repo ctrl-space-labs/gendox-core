@@ -25,7 +25,7 @@ rfd = { version = "0.17", features = ["common-controls-v6"] }
 tauri-plugin-clipboard-manager = "2"
 getrandom = "0.3"
 process-wrap = { version = "=10.0.1", default-features = false, features = ["tokio1", "process-group", "job-object", "kill-on-drop", "creation-flags"] }
-tokio = { version = "1", features = ["process", "io-util", "time", "sync", "macros"] }
+tokio = { version = "1", features = ["process", "io-util", "time", "sync", "macros", "net"] }
 tauri-plugin-notification = "2"
 tauri-plugin-autostart = "2"
 tauri-plugin-deep-link = "2"

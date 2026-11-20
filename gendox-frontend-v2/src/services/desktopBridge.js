@@ -59,6 +59,11 @@ const commandStatus = (request, executionId, replayed) => call('commandStatus', 
 const stopCommand = () => call('stop')
 const setActivity = running => call('activity', running)
 
+// Sign-in in the system browser (oidc-client-ts runs the flow; the app opens pages and receives the redirect)
+const prepareSignIn = () => call('prepareSignIn')
+const openSignIn = url => call('openSignIn', url)
+const cancelSignIn = () => call('cancelSignIn')
+
 // Notifications, badge, links and launch at login
 const notificationPermission = () => call('notificationPermission')
 const requestNotificationPermission = () => call('requestNotificationPermission')
@@ -82,6 +87,9 @@ const onNativeEvent = handler => {
 
 const desktopBridge = {
   onNativeEvent,
+  prepareSignIn,
+  openSignIn,
+  cancelSignIn,
   getFolders,
   chooseFolder,
   removeFolder,

@@ -28,6 +28,9 @@ fn main() {
             "autostart_enabled",
             "set_autostart",
             "deep_links",
+            "prepare_sign_in",
+            "open_sign_in",
+            "cancel_sign_in",
         ]),
     ))
     .expect("failed to run tauri-build");

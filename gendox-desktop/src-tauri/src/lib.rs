@@ -1,3 +1,4 @@
+mod auth;
 mod diagnostics;
 mod downloads;
 mod links;
@@ -219,7 +220,7 @@ pub fn run() {
         .manage(desktop::DesktopState::default())
         .manage(ViewControls::default())
         .manage(terminal::TerminalState::new().expect("cannot initialize the terminal session"))
-        .invoke_handler(tauri::generate_handler![set_server, remove_server, terminal::run_command, terminal::stop_command, terminal::command_status, folders::get_folders, folders::choose_folder, folders::remove_folder, folders::set_working_directory, desktop::notification_permission, desktop::request_notification_permission, desktop::notify, desktop::badge, desktop::activity, desktop::autostart_enabled, desktop::set_autostart, desktop::deep_links])
+        .invoke_handler(tauri::generate_handler![set_server, remove_server, terminal::run_command, terminal::stop_command, terminal::command_status, folders::get_folders, folders::choose_folder, folders::remove_folder, folders::set_working_directory, desktop::notification_permission, desktop::request_notification_permission, desktop::notify, desktop::badge, desktop::activity, desktop::autostart_enabled, desktop::set_autostart, desktop::deep_links, auth::prepare_sign_in, auth::open_sign_in, auth::cancel_sign_in])
         .menu(build_menu)
         .on_menu_event(|app, event| {
             match event.id().0.as_str() {
@@ -260,14 +261,15 @@ pub fn run() {
             let script = server::init_script(&runtime_env);
             let tool_script = terminal::init_script(app.state::<terminal::TerminalState>().session_token());
             let config = current.config.as_ref().expect("the server in use has a configuration");
-            let mut allowed = vec![origin.to_string()];
-            allowed.extend(links::origin_of(&config.oidc_authority));
+            // Sign-in happens in the system browser (auth.rs): the window never shows the sign-in pages.
+            let allowed = vec![origin.to_string()];
 
             let on_navigation = app.handle().clone();
             let on_new_window = app.handle().clone();
             let address = current.address.clone();
             let api_origin = links::origin_of(&config.api_url).expect("valid API origin");
             let oidc_origin = links::origin_of(&config.oidc_authority).expect("valid OIDC origin");
+            app.manage(auth::AuthState::new(oidc_origin.clone()));
             let window = WebviewWindowBuilder::new(app, "main", WebviewUrl::App(offline::CONNECTING.trim_start_matches('/').into()))
                 .title(format!("Gendox — {}", current.name))
                 .inner_size(1280.0, 832.0)

@@ -8,7 +8,7 @@ const config = require('../tests.config');
 const login = async (page, name) => {
     const user = config.gendox.users[name];
     await page.goto(config.frontendURL);
-    await page.waitForURL(url => url.href.startsWith(config.idp.baseURL));
+    await page.waitForURL(url => url.href.startsWith(config.idp.baseURL), { waitUntil: 'commit' });
     await page.locator('input[name="username"]').fill(user.username);
     const password = page.locator('input[name="password"]');
     const submit = page.locator('input[type="submit"], button[type="submit"]').first();
