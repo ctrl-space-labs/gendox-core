@@ -19,6 +19,7 @@ PROVEN_BASE_URL="http://localhost:3001"
 # Client names
 GENDOX_PKCE_CLIENT="gendox-pkce-public-client-local"
 PROVEN_PKCE_CLIENT="proven-pkce-public-client-local"
+DESKTOP_PKCE_CLIENT="gendox-desktop"
 GENDOX_PRIVATE_CLIENT="gendox-private-client"
 PROVEN_PRIVATE_CLIENT="proven-ai-private-client"
 
@@ -107,6 +108,41 @@ EOF
   fi
 }
 
+# Function to create the desktop app's PKCE client: its UI is served from the app's own origin,
+# tauri://localhost on macOS and Linux, http://tauri.localhost on Windows.
+create_desktop_client() {
+  CLIENT_ID=$1
+
+  echo "Processing desktop client '$CLIENT_ID'..."
+
+  CLIENT_UUID=$($KCADM get clients --insecure -r "$REALM_NAME" -q clientId="$CLIENT_ID" --fields id --format json | jq -r '.[0].id')
+
+  if [ "$CLIENT_UUID" = "null" ] || [ -z "$CLIENT_UUID" ]; then
+    echo "Creating desktop client '$CLIENT_ID'..."
+    $KCADM create clients --insecure -r "$REALM_NAME" -f - <<EOF
+{
+  "clientId": "$CLIENT_ID",
+  "name": "Gendox Desktop",
+  "enabled": true,
+  "publicClient": true,
+  "protocol": "openid-connect",
+  "redirectUris": ["tauri://localhost/*", "http://tauri.localhost/*"],
+  "webOrigins": ["tauri://localhost", "http://tauri.localhost"],
+  "alwaysDisplayInConsole": true,
+  "frontchannelLogout": true,
+  "standardFlowEnabled": true,
+  "attributes": {
+    "pkce.code.challenge.method": "S256",
+    "post.logout.redirect.uris": "tauri://localhost/login##http://tauri.localhost/login"
+  }
+}
+EOF
+    echo "Desktop client '$CLIENT_ID' created successfully."
+  else
+    echo "Desktop client '$CLIENT_ID' already exists. Doing nothing..."
+  fi
+}
+
 # Function to create Private Client with Secret
 create_private_client() {
   CLIENT_ID=$1
@@ -154,6 +190,7 @@ assign_role_to_service_account() {
 echo "=== Creating PKCE Clients ==="
 create_pkce_client "$GENDOX_PKCE_CLIENT" "$GENDOX_BASE_URL" "$GENDOX_BASE_URL/login"
 create_pkce_client "$PROVEN_PKCE_CLIENT" "$PROVEN_BASE_URL" "$PROVEN_BASE_URL/login"
+create_desktop_client "$DESKTOP_PKCE_CLIENT"
 echo "=== PKCE Clients Processing Complete ==="
 
 # Create Private Clients and Set Secrets

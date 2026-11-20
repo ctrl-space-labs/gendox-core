@@ -36,6 +36,8 @@ gendox:
 
   domain:
     base-url: http://localhost:5000
+  client-config:
+    api-url: ${GENDOX_CLIENT_API_URL:https://app.gendox.dev/gendox/api/v1/}
 
 proven-ai:
   base-url: https://proven-ai.ctrlspace.dev

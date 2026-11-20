@@ -142,6 +142,7 @@ services:
       EPHEMERAL_KEYCLOAK_URL: http://keycloak:8080/idp
       EPHEMERAL_API_URL: http://localhost:${EPH_API_PORT:?}
       EPHEMERAL_FRONTEND_URL: http://localhost:${EPH_FRONTEND_PORT:?}
+      GENDOX_CLIENT_OIDC_AUTHORITY: http://localhost:${EPH_KEYCLOAK_PORT:?}/idp/realms/gendox-idp-prod
       RSA_KEY_PATH: file:/var/gendox/jwt/private_key.pem
       PROVEN_AI_ENABLED: "false"
       # Blank means the mock adapter only: point agents at mock-gemini-2.0-flash.

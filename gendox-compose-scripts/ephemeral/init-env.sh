@@ -33,7 +33,7 @@ for n in $(seq 1 99); do
   candidate="$(printf '%02d' "$n")"
   if echo "$taken" | grep -qx "81$candidate"; then continue; fi
   busy=0
-  for port in "81$candidate" "31$candidate" "85$candidate" "55$candidate"; do
+  for port in "81$candidate" "31$candidate" "85$candidate" "86$candidate" "55$candidate"; do
     if nc -z 127.0.0.1 "$port" >/dev/null 2>&1; then busy=1; fi
   done
   if [ "$busy" -eq 0 ]; then slot="$candidate"; break; fi
@@ -52,6 +52,7 @@ fi
   echo "EPH_API_PORT=81$slot"
   echo "EPH_FRONTEND_PORT=31$slot"
   echo "EPH_KEYCLOAK_PORT=85$slot"
+  echo "EPH_KEYCLOAK_HTTPS_PORT=86$slot"
   echo "EPH_DB_PORT=55$slot"
   echo
   # Provider keys: reuse those of the main checkout, else start blank.

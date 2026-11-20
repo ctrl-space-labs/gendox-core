@@ -80,6 +80,35 @@ The last case, a migration that fails, or a change to the realm file (Keycloak i
 only into an empty database) means the environment has to be rebuilt: ask the user, then
 `docker compose down -v` and `docker compose up -d --wait`.
 
+## Https for Keycloak
+
+Keycloak sets its sign-in cookies `Secure`. Chrome keeps them on `http://localhost`, but the
+macOS web view of the desktop app (`gendox-desktop/`) does not, so signing in there fails with
+"Cookie not found". `docker-compose.https.yml` adds an https port to Keycloak with a certificate
+this computer trusts, and makes `/public/client-config` name it as the sign-in server.
+The desktop API address uses `127.0.0.1`, while Keycloak uses `localhost`: Keycloak's HSTS header
+would otherwise make the web view upgrade the HTTP API connection to HTTPS as well.
+
+Once per computer, yourself: it adds a certificate authority to the system's trusted ones.
+
+```bash
+brew install mkcert
+mkcert -install
+```
+
+Then, from this folder:
+
+```bash
+mkcert -cert-file certs/localhost.pem -key-file certs/localhost-key.pem localhost 127.0.0.1 ::1
+docker compose -f docker-compose.yml -f docker-compose.https.yml up -d --wait
+```
+
+`EPH_KEYCLOAK_HTTPS_PORT` comes from `init-env.sh`; a `.env` written before it existed needs the
+line added by hand (`86` followed by the two digits of the other ports). In the desktop app,
+"Server…" and the API address `http://127.0.0.1:<EPH_API_PORT>` switch to the stack. If the stack
+was previously added under `localhost`, add it with the `127.0.0.1` address to fetch the updated
+client configuration.
+
 ## Limits
 
 - Memory: one stack uses about 1.1 GB after startup, and the API heap can grow to 1 GB

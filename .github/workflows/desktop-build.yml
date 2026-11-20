@@ -1,0 +1,138 @@
+name: Desktop unsigned builds
+
+on:
+  push:
+    paths:
+      - 'gendox-desktop/**'
+      - 'gendox-frontend-v2/**'
+      - '.github/workflows/desktop-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS universal
+            runner: macos-15
+            target: universal-apple-darwin
+            host: aarch64-apple-darwin
+            rust-targets: aarch64-apple-darwin x86_64-apple-darwin
+          - name: Windows x64
+            runner: windows-2022
+            target: x86_64-pc-windows-msvc
+            host: x86_64-pc-windows-msvc
+            rust-targets: x86_64-pc-windows-msvc
+          - name: Windows ARM64
+            runner: windows-11-arm
+            target: aarch64-pc-windows-msvc
+            host: aarch64-pc-windows-msvc
+            rust-targets: aarch64-pc-windows-msvc
+          - name: Linux x86_64
+            runner: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            host: x86_64-unknown-linux-gnu
+            rust-targets: x86_64-unknown-linux-gnu
+          - name: Linux arm64
+            runner: ubuntu-22.04-arm
+            target: aarch64-unknown-linux-gnu
+            host: aarch64-unknown-linux-gnu
+            rust-targets: aarch64-unknown-linux-gnu
+    defaults:
+      run:
+        shell: bash
+        working-directory: gendox-desktop
+    env:
+      CI: 'true'
+      NEXT_TELEMETRY_DISABLED: '1'
+      RUSTUP_TOOLCHAIN: stable-${{ matrix.host }}
+      # Run AppImage packaging tools without mounting a FUSE filesystem in CI.
+      APPIMAGE_EXTRACT_AND_RUN: '1'
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev \
+            libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf libfuse2 rpm \
+            webkit2gtk-driver xvfb
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: gendox-desktop/package-lock.json
+
+      - name: Install Yarn and the desktop CLI
+        run: |
+          npm install --global yarn@1.22.22
+          npm ci
+
+      - name: Install native Rust toolchain and build targets
+        run: |
+          rustup toolchain install "$RUSTUP_TOOLCHAIN" --profile minimal
+          rustup target add --toolchain "$RUSTUP_TOOLCHAIN" ${{ matrix.rust-targets }}
+
+      # The platform-specific Tauri config selects DMG, NSIS, or Linux packages.
+      # No release, updater signature, or platform signing runs in this repository.
+      - name: Build unsigned app
+        run: npm run tauri build -- --target ${{ matrix.target }} --no-sign -- --locked
+
+      - name: Run Rust tests on the native architecture
+        run: cargo test --locked --manifest-path src-tauri/Cargo.toml --target ${{ matrix.host }}
+
+      - name: Check the smoke fixture and desktop integration scripts
+        run: node --test ci/smoke.test.mjs tests/*.test.cjs
+
+      - name: Install desktop WebDriver
+        if: runner.os != 'macOS'
+        run: cargo install tauri-driver --locked
+
+      - name: Install matching WebView2 driver
+        if: runner.os == 'Windows'
+        run: |
+          cargo install --git https://github.com/chippers/msedgedriver-tool --locked
+          msedgedriver-tool
+
+      - name: Launch macOS app and reach the fixture server
+        if: runner.os == 'macOS'
+        run: node ci/smoke.mjs src-tauri/target/${{ matrix.target }}/release/bundle/macos/Gendox.app/Contents/MacOS/gendox-desktop
+
+      - name: Check desktop routes with WebDriver on Linux
+        if: runner.os == 'Linux'
+        run: xvfb-run -a node ci/smoke.mjs src-tauri/target/${{ matrix.target }}/release/gendox-desktop
+
+      - name: Check desktop routes with WebDriver on Windows
+        if: runner.os == 'Windows'
+        run: node ci/smoke.mjs src-tauri/target/${{ matrix.target }}/release/gendox-desktop.exe
+
+      - name: Retain unsigned installers
+        uses: actions/upload-artifact@v7
+        with:
+          name: gendox-desktop-${{ matrix.target }}-unsigned
+          retention-days: 5
+          if-no-files-found: error
+          compression-level: 0
+          path: |
+            gendox-desktop/src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
+            gendox-desktop/src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*.exe
+            gendox-desktop/src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage
+            gendox-desktop/src-tauri/target/${{ matrix.target }}/release/bundle/deb/*.deb
+            gendox-desktop/src-tauri/target/${{ matrix.target }}/release/bundle/rpm/*.rpm

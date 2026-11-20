@@ -29,6 +29,23 @@
       }
     },
     {
+      "clientId": "gendox-desktop",
+      "name": "Gendox Desktop",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "redirectUris": ["tauri://localhost/*", "http://tauri.localhost/*"],
+      "webOrigins": ["tauri://localhost", "http://tauri.localhost"],
+      "alwaysDisplayInConsole": true,
+      "frontchannelLogout": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "tauri://localhost/login##http://tauri.localhost/login"
+      }
+    },
+    {
       "clientId": "gendox-dev-test-client",
       "enabled": true,
       "publicClient": true,

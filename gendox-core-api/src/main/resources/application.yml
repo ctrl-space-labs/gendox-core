@@ -124,6 +124,13 @@ rsa:
 
 
 gendox:
+  # Public configuration for clients such as the desktop app (GET /public/client-config).
+  client-config:
+    # Public addresses, as users reach them; set them where the API sits behind a proxy.
+    api-url: ${GENDOX_CLIENT_API_URL:${gendox.domain.base-url}${server.servlet.context-path}/}
+    oidc-authority: ${GENDOX_CLIENT_OIDC_AUTHORITY:${spring.security.oauth2.resourceserver.jwt.issuer-uri}}
+    desktop-client-id: gendox-desktop
+    min-desktop-app-version: 0.1.0
   rest-template:
     connection-timeout-ms: 30000    # 30 seconds
     read-timeout-ms: 600000         # 10 minutes

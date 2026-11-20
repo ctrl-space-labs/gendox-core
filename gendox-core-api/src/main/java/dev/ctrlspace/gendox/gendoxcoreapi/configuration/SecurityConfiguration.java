@@ -83,6 +83,7 @@ public class SecurityConfiguration {
                                             && UserNamesConstants.GENDOX_SUPER_ADMIN.equals(profile.getGlobalUserRoleType().getName()));
                                 })
                                 .requestMatchers("/auth/signup").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/public/client-config").permitAll()
                                 .requestMatchers("/users/login").permitAll()
                                 .requestMatchers("/messages/completions").permitAll() // Allow requests when the Project Agent is Public
                                 .requestMatchers("/organizations/*/projects").permitAll()

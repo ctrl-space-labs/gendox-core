@@ -2,6 +2,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.security;
 
 import dev.ctrlspace.gendox.authentication.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.configuration.SecurityConfiguration;
+import dev.ctrlspace.gendox.gendoxcoreapi.controller.ClientConfigController;
 import dev.ctrlspace.gendox.gendoxcoreapi.controller.InvitationController;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.JwtDTOUserProfileConverter;
@@ -31,6 +32,8 @@ import static org.mockito.Mockito.mock;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringJUnitConfig(ManagementSecurityTest.Config.class)
@@ -70,6 +73,10 @@ class ManagementSecurityTest {
                     mock(ProjectService.class), mock(UserOrganizationService.class), mock(SecurityUtils.class));
         }
         @Bean ManagementProbe probe() { return new ManagementProbe(); }
+        @Bean ClientConfigController clientConfigController() {
+            return new ClientConfigController(new ClientConfigService("https://api.example/gendox/api/v1",
+                    "https://auth.example/realms/r", "gendox-desktop", "0.1.0", java.util.Optional.empty()));
+        }
     }
     @RestController static class ManagementProbe {
         @GetMapping({"/actuator/health", "/actuator/health/liveness", "/actuator/health/readiness",
@@ -97,6 +104,16 @@ class ManagementSecurityTest {
             mvc.perform(get(endpoint).with(authentication(token("GENDOX_API_KEY")))).andExpect(status().isForbidden());
             mvc.perform(get(endpoint).with(authentication(token("GENDOX_SUPER_ADMIN")))).andExpect(status().isOk());
         }
+    }
+    @Test void clientConfigIsPublicAndReadOnly() throws Exception {
+        mvc.perform(get("/public/client-config"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.apiUrl").value("https://api.example/gendox/api/v1/"))
+                .andExpect(jsonPath("$.oidcAuthority").value("https://auth.example/realms/r"))
+                .andExpect(jsonPath("$.desktopClientId").value("gendox-desktop"))
+                .andExpect(jsonPath("$.apiVersion").value("v1"))
+                .andExpect(jsonPath("$.minDesktopAppVersion").value("0.1.0"));
+        mvc.perform(post("/public/client-config")).andExpect(status().isUnauthorized());
     }
     @Test void invitationAcceptanceRemainsPublicWithoutAuthentication() throws Exception {
         mvc.perform(get("/invitations/acceptance").param("email", "invitee@example.invalid").param("token", "invitation-token"))

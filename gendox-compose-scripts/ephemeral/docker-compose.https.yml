@@ -1,0 +1,22 @@
+# Opt-in: Keycloak also on https, with a certificate this computer trusts (mkcert).
+# For clients that drop Keycloak's Secure cookies over plain http, such as the desktop app's
+# web view on macOS. The http port, the API and the browser frontend stay as they are.
+# See "Https for Keycloak" in README.md.
+services:
+  keycloak:
+    environment:
+      KC_HTTPS_CERTIFICATE_FILE: /opt/keycloak/conf/certs/localhost.pem
+      KC_HTTPS_CERTIFICATE_KEY_FILE: /opt/keycloak/conf/certs/localhost-key.pem
+      # The health check speaks http to the management port, which would follow https.
+      KC_HTTP_MANAGEMENT_SCHEME: http
+    volumes:
+      - ./certs:/opt/keycloak/conf/certs:ro
+    ports:
+      - "127.0.0.1:${EPH_KEYCLOAK_HTTPS_PORT:?}:8443"
+
+  api:
+    environment:
+      # What /public/client-config gives the desktop app as its sign-in server.
+      GENDOX_CLIENT_OIDC_AUTHORITY: https://localhost:${EPH_KEYCLOAK_HTTPS_PORT:?}/idp/realms/gendox-idp-prod
+      # Keep the HTTP API on a different host from Keycloak's HTTPS/HSTS host.
+      GENDOX_CLIENT_API_URL: http://127.0.0.1:${EPH_API_PORT:?}/gendox/api/v1/
