@@ -229,6 +229,8 @@ pub fn restrict(
     let original = command.as_std();
     let program = original.get_program().to_owned();
     let args: Vec<_> = original.get_args().map(ToOwned::to_owned).collect();
+    // Unused only where no write protection exists and the function returns early.
+    #[cfg_attr(not(any(target_os = "macos", target_os = "linux")), allow(unused_variables))]
     let cwd = original.get_current_dir().map(ToOwned::to_owned);
     #[cfg(target_os = "macos")]
     let mut wrapped = {
