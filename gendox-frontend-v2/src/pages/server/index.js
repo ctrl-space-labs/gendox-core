@@ -1,21 +1,58 @@
 import { useState } from 'react'
 import { Check, Plus, Server, Trash2 } from 'lucide-react'
 import { routeTypes } from 'src/authentication/components/RouteHandler'
+import { localStorageConstants } from 'src/utils/generalConstants'
+import { apiBaseOf, clientConfig, isAllowed, STORAGE_KEY } from 'src/utils/server/serverChoice'
 
-// The desktop app's server picker. The app injects the list in window.__GENDOX_ENV__.GENDOX_DESKTOP
-// and switches through its own command, which checks the server and restarts the app on it.
+// The server picker. The desktop app injects its list in window.__GENDOX_ENV__.GENDOX_DESKTOP and switches
+// through its own command, which checks the server and restarts the app on it. In a browser the list is
+// GENDOX_WEB (set in _document.js from this browser's choice) and switching reloads the page; a site
+// allows it only for the servers its own API lists in allowedServers, mainly for development.
 const desktop = () => (typeof window !== 'undefined' && window.__GENDOX_ENV__?.GENDOX_DESKTOP) || null
+const web = () => (typeof window !== 'undefined' && window.__GENDOX_ENV__?.GENDOX_WEB) || null
 
 const invoke = (command, args) => window.__TAURI__.core.invoke(command, args)
 
+const webServers = info => {
+  const site = { name: "This site's server", address: new URL(info.site).origin, custom: false }
+
+  return { servers: [site, ...info.custom.map(server => ({ ...server, custom: true }))], current: { address: info.current || site.address } }
+}
+
+// Keeps the choice and starts over on that server, where the organization selected before does not exist
+const saveWeb = (custom, current) => {
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ custom, current }))
+  window.localStorage.removeItem(localStorageConstants.selectedOrganizationId)
+  window.localStorage.removeItem(localStorageConstants.selectedProjectId)
+  window.location.assign('/')
+}
+
+async function setWebServer(info, { name, address }) {
+  const { allowedServers = [] } = await clientConfig(info.site)
+  if (!allowedServers.length) throw new Error('This site does not allow other servers.')
+  const allowed = url => new URL(url).origin === window.location.origin || isAllowed(new URL(url).origin, allowedServers)
+  const apiBase = apiBaseOf(address)
+  if (!allowed(apiBase)) throw new Error(`This site does not allow ${new URL(apiBase).origin}.`)
+  const config = await clientConfig(apiBase)
+  if (!allowed(config.apiUrl)) throw new Error(`That server's API, ${config.apiUrl}, is not allowed on this site.`)
+  const server = {
+    name: name || new URL(apiBase).host,
+    address,
+    config: { apiUrl: config.apiUrl, oidcAuthority: config.oidcAuthority, clientId: config.webClientId || null }
+  }
+  saveWeb([...info.custom.filter(s => s.address !== address), server], address)
+}
+
 const ServerPage = () => {
-  const info = desktop()
+  const native = desktop()
+  const browser = !native && web()
+  const info = native || (browser && webServers(browser))
   const [name, setName] = useState('')
   const [address, setAddress] = useState('')
   const [busy, setBusy] = useState(null)
   const [error, setError] = useState('')
 
-  if (!info || !window.__TAURI__) {
+  if (!info || (native && !window.__TAURI__)) {
     return (
       <main className='center'>
         <div className='modal s' style={{ padding: 28, gap: 12, animation: 'none' }}>
@@ -26,22 +63,35 @@ const ServerPage = () => {
     )
   }
 
-  const run = async (key, command, args) => {
+  const run = async (key, action) => {
     setBusy(key)
     setError('')
     try {
-      await invoke(command, args) // the app restarts on success
+      await action() // the app restarts, or the page reloads, on success
     } catch (e) {
-      setError(String(e))
+      setError(e?.message || String(e))
       setBusy(null)
     }
   }
 
-  const choose = server => run(server.address, 'set_server', { name: server.name, address: server.address })
-  const remove = server => run(`remove:${server.address}`, 'remove_server', { address: server.address })
+  const choose = server =>
+    run(server.address, () =>
+      native
+        ? invoke('set_server', { name: server.name, address: server.address })
+        : server.custom
+          ? setWebServer(browser, server)
+          : saveWeb(browser.custom, null)
+    )
+  const remove = server =>
+    run(`remove:${server.address}`, () =>
+      native
+        ? invoke('remove_server', { address: server.address })
+        : saveWeb(browser.custom.filter(s => s.address !== server.address), browser.current === server.address ? null : browser.current)
+    )
   const add = e => {
     e.preventDefault()
-    if (address.trim()) run('add', 'set_server', { name: name.trim() || null, address: address.trim() })
+    const server = { name: name.trim() || null, address: address.trim() }
+    if (server.address) run('add', () => (native ? invoke('set_server', server) : setWebServer(browser, server)))
   }
 
   return (
@@ -49,7 +99,11 @@ const ServerPage = () => {
       <div className='modal s' style={{ padding: 28, gap: 16, animation: 'none', width: 'min(460px, 100%)' }}>
         <div className='stack' style={{ gap: 4 }}>
           <h2 style={{ fontSize: 18 }}>Server</h2>
-          <p className='muted sm'>The Gendox server this app signs in to. Switching restarts the app.</p>
+          <p className='muted sm'>
+            {native
+              ? 'The Gendox server this app signs in to. Switching restarts the app.'
+              : 'The Gendox server this page talks to, in this browser only. After switching you sign in to it.'}
+          </p>
         </div>
 
         <div className='stack' style={{ gap: 6 }}>

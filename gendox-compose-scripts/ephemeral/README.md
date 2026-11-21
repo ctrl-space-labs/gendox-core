@@ -111,6 +111,15 @@ line added by hand (`86` followed by the two digits of the other ports). In the 
 was previously added under `localhost`, add it with the `127.0.0.1` address to fetch the updated
 client configuration.
 
+## Switching the web app to another stack
+
+The web app normally talks to its own stack's API. **Profile > Server > Choose server** switches this
+browser to another local stack, for example `http://127.0.0.1:8109`, and back. You then sign in to
+that stack. A server allows this through `allowedServers` in its `/public/client-config`; here it is
+`http://localhost:*,http://127.0.0.1:*`, from `GENDOX_CLIENT_ALLOWED_SERVERS`. Set `EPH_ALLOWED_SERVERS`
+in `.env` to change it, or to an empty value to hide the section. A small badge in the top bar names
+the server whenever its domain differs from the page's.
+
 ## Limits
 
 - Memory: one stack uses about 1.1 GB after startup, and the API heap can grow to 1 GB

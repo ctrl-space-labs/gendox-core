@@ -75,7 +75,8 @@ class ManagementSecurityTest {
         @Bean ManagementProbe probe() { return new ManagementProbe(); }
         @Bean ClientConfigController clientConfigController() {
             return new ClientConfigController(new ClientConfigService("https://api.example/gendox/api/v1",
-                    "https://auth.example/realms/r", "gendox-desktop", "0.1.0", java.util.Optional.empty()));
+                    "https://auth.example/realms/r", "gendox-desktop", "gendox-web", " https://dev.example, ,https://*.example ",
+                    "0.1.0", java.util.Optional.empty()));
         }
     }
     @RestController static class ManagementProbe {
@@ -111,6 +112,10 @@ class ManagementSecurityTest {
                 .andExpect(jsonPath("$.apiUrl").value("https://api.example/gendox/api/v1/"))
                 .andExpect(jsonPath("$.oidcAuthority").value("https://auth.example/realms/r"))
                 .andExpect(jsonPath("$.desktopClientId").value("gendox-desktop"))
+                .andExpect(jsonPath("$.webClientId").value("gendox-web"))
+                .andExpect(jsonPath("$.allowedServers.length()").value(2))
+                .andExpect(jsonPath("$.allowedServers[0]").value("https://dev.example"))
+                .andExpect(jsonPath("$.allowedServers[1]").value("https://*.example"))
                 .andExpect(jsonPath("$.apiVersion").value("v1"))
                 .andExpect(jsonPath("$.minDesktopAppVersion").value("0.1.0"));
         mvc.perform(post("/public/client-config")).andExpect(status().isUnauthorized());

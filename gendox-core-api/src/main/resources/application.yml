@@ -130,6 +130,11 @@ gendox:
     api-url: ${GENDOX_CLIENT_API_URL:${gendox.domain.base-url}${server.servlet.context-path}/}
     oidc-authority: ${GENDOX_CLIENT_OIDC_AUTHORITY:${spring.security.oauth2.resourceserver.jwt.issuer-uri}}
     desktop-client-id: gendox-desktop
+    # The web app's public OIDC client. Blank: the web app keeps the client it was configured with.
+    web-client-id: ${GENDOX_CLIENT_WEB_CLIENT_ID:}
+    # Comma-separated origins the web app served beside this API may switch to, for development
+    # (https://dev-app-2.gendox.dev, https://*.gendox.dev, http://localhost:*). Blank: no switching.
+    allowed-servers: ${GENDOX_CLIENT_ALLOWED_SERVERS:}
     min-desktop-app-version: 0.1.0
   rest-template:
     connection-timeout-ms: 30000    # 30 seconds

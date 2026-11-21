@@ -16,6 +16,7 @@ import Avatar from 'src/components/ui/Avatar'
 import MenuList from 'src/components/ui/MenuList'
 import ConfirmDialog from 'src/components/ui/ConfirmDialog'
 import ClientSettings from 'src/components/client-tools/ClientSettings'
+import { clientConfig } from 'src/utils/server/serverChoice'
 
 // Keycloak's account console: password, two-step verification, sessions
 const ACCOUNT_URL = `${commonConfig.oidcAuthority}/account`
@@ -120,6 +121,14 @@ const UserProfilePage = () => {
   const { organizationId, href } = useActiveScope()
   const [theme, setTheme] = useThemePreference()
   const [deleteOpen, setDeleteOpen] = useState(false)
+
+  // In a browser, "Choose server" shows only where the site allows other servers (allowedServers)
+  const [chooseServer, setChooseServer] = useState(false)
+  useEffect(() => {
+    const web = window.__GENDOX_ENV__?.GENDOX_WEB
+    if (web?.current) setChooseServer(true)
+    else if (web) clientConfig(web.site).then(config => setChooseServer(Boolean(config.allowedServers?.length)), () => {})
+  }, [])
 
   if (!user) return null
 
@@ -240,6 +249,20 @@ const UserProfilePage = () => {
         </section>
 
         <ClientSettings />
+
+        {chooseServer && (
+          <section className='sect'>
+            <header>
+              <h2>Server</h2>
+              <p>The Gendox server this page talks to, in this browser only. For development and testing.</p>
+            </header>
+            <div className='card card-b'>
+              <Link className='btn' href='/server/' style={{ alignSelf: 'flex-start' }}>
+                Choose server
+              </Link>
+            </div>
+          </section>
+        )}
 
         <section className='sect'>
           <header>
