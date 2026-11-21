@@ -1,4 +1,5 @@
 // CI-only launch check. The fixture never signs in or contacts an external service.
+// Sign-in opens the system browser after a click, so the check stops at the sign-in page.
 import assert from 'node:assert/strict'
 import { spawn, execFile } from 'node:child_process'
 import { createServer } from 'node:http'
@@ -15,53 +16,16 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms))
 const runFile = promisify(execFile)
 
 export async function startFixture() {
-  const reached = { config: false, discovery: false, authorize: false, ready: false }
+  // Before sign-in the app reads only the client configuration. Sign-in itself happens in the
+  // system browser after a click, which a CI machine has no browser for.
+  const reached = { config: false }
   let base
   const server = createServer((req, res) => {
     const url = new URL(req.url, base)
-    const origin = req.headers.origin
-    if (['tauri://localhost', 'http://tauri.localhost', 'https://tauri.localhost'].includes(origin)) {
-      res.setHeader('Access-Control-Allow-Origin', origin)
-      res.setHeader('Access-Control-Allow-Credentials', 'true')
-    }
     res.setHeader('Cache-Control', 'no-store')
-    if (req.method === 'OPTIONS') {
-      res.writeHead(204, { 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS' }).end()
-    } else if (url.pathname === '/gendox/api/v1/public/client-config') {
+    if (req.method === 'GET' && url.pathname === '/gendox/api/v1/public/client-config') {
       reached.config = true
       res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify(config()))
-    } else if (url.pathname === '/idp/realms/ci/.well-known/openid-configuration') {
-      reached.discovery = true
-      res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({
-        issuer: `${base}/idp/realms/ci`,
-        authorization_endpoint: `${base}/authorize`,
-        token_endpoint: `${base}/token`,
-        jwks_uri: `${base}/keys`,
-        response_types_supported: ['code'],
-        subject_types_supported: ['public'],
-        id_token_signing_alg_values_supported: ['RS256'],
-        code_challenge_methods_supported: ['S256']
-      }))
-    } else if (url.pathname === '/authorize') {
-      const query = url.searchParams
-      const redirect = query.get('redirect_uri') || ''
-      const valid = query.get('client_id') === 'gendox-desktop' &&
-        query.get('response_type') === 'code' && query.get('code_challenge_method') === 'S256' &&
-        query.get('code_challenge') && query.get('state') &&
-        /^(tauri:\/\/localhost|https?:\/\/tauri\.localhost)\/oidc-callback\//.test(redirect)
-      if (!valid) {
-        res.writeHead(400).end('Expected the desktop authorization-code request with PKCE')
-        return
-      }
-      reached.authorize = true
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }).end(`<!doctype html>
-        <html><head><title>Gendox desktop CI</title></head><body>
-        <h1 id="desktop-ci-ready">Gendox desktop reached its sign-in server</h1>
-        <script>requestAnimationFrame(() => requestAnimationFrame(() =>
-          fetch('/ready', { method: 'POST' })))</script></body></html>`)
-    } else if (url.pathname === '/ready' && req.method === 'POST' && reached.authorize) {
-      reached.ready = true
-      res.writeHead(204).end()
     } else {
       res.writeHead(404).end()
     }
@@ -97,6 +61,27 @@ export function settingsPath(platform = process.platform, env = process.env, hom
   assert.ok(folder, 'The operating system must provide its app configuration folder')
   return paths.join(folder, identifier, 'servers.json')
 }
+
+/** The app's diagnostics log: fixed event names only, such as server_connected and page_loaded. */
+export function diagnosticsPath(platform = process.platform, env = process.env, home = homedir()) {
+  const paths = platform === 'win32' ? win32 : posix
+  const folder = platform === 'darwin' ? paths.join(home, 'Library', 'Application Support') :
+    platform === 'win32' ? env.APPDATA : env.XDG_DATA_HOME || paths.join(home, '.local', 'share')
+  assert.ok(folder, 'The operating system must provide its app data folder')
+  return paths.join(folder, identifier, 'logs', 'desktop.log')
+}
+
+/** True when the events after `offset` show the server check passing and then the bundled UI loading. */
+export function bundleLoadedAfter(log, offset = 0) {
+  const events = log.slice(offset).split('\n').map(line => line.split(' ')[1])
+  const connected = events.indexOf('server_connected')
+  return connected >= 0 && events.indexOf('page_loaded', connected) > connected
+}
+
+const readLog = path => readFile(path, 'utf8').catch(error => {
+  if (error.code === 'ENOENT') return ''
+  throw error
+})
 
 export async function saveFixture(path, fixture) {
   const current = { name: fixtureName, address: fixture.base, config: fixture.config }
@@ -155,8 +140,11 @@ export async function smoke(binary) {
     assert.ok(response.ok && !data.value?.error, `WebDriver ${path}: ${JSON.stringify(data.value)}`)
     return data.value
   }
+  const log = diagnosticsPath()
   try {
     cleanSettings = await saveFixture(settingsPath(), fixture)
+    // Only events of this launch count.
+    const logStart = (await readLog(log)).length
     if (process.platform === 'darwin') {
       // tauri-driver has no macOS WKWebView backend. Require a rendered fixture page instead.
       child = launch(resolve(binary))
@@ -171,22 +159,25 @@ export async function smoke(binary) {
       })).sessionId
       assert.ok(session, 'WebDriver must create a desktop session')
     }
-    await waitFor(() => fixture.reached.discovery && fixture.reached.authorize && fixture.reached.ready,
-      'the bundled UI to load its sign-in server and render the fixture', child)
+    await waitFor(async () => fixture.reached.config && bundleLoadedAfter(await readLog(log), logStart),
+      'the app to read the fixture configuration and load its bundled UI', child)
     if (session) {
       const path = `/session/${session}`
       const execute = script => webdriver('POST', `${path}/execute/sync`, { script, args: [] })
-      assert.equal(await execute('return document.querySelector("#desktop-ci-ready")?.textContent'),
-        'Gendox desktop reached its sign-in server')
+      const text = () => execute('return document.body.innerText')
+      await waitFor(async () => {
+        const page = await text()
+        return page.includes('Sign in with your browser') && page.includes(`Server: ${fixtureName}`)
+      }, 'the desktop sign-in page', child)
       const appOrigin = process.platform === 'win32' ? 'http://tauri.localhost' : 'tauri://localhost'
       await webdriver('POST', `${path}/url`, { url: `${appOrigin}/server/` })
-      const loadedServer = () => execute(`return document.body.innerText.includes(${JSON.stringify(fixtureName)})`)
+      const loadedServer = async () => (await text()).includes(fixtureName)
       await waitFor(loadedServer, 'the bundled server route', child)
       assert.equal(await execute('return window.__GENDOX_ENV__.NEXT_PUBLIC_GENDOX_URL'), fixture.config.apiUrl)
       await webdriver('POST', `${path}/refresh`, {})
       await waitFor(loadedServer, 'reload of the bundled server route', child)
     }
-    console.log('Desktop smoke passed: bundle loaded, desktop PKCE request reached the fixture, sign-in page rendered')
+    console.log('Desktop smoke passed: the app read the fixture configuration and loaded its bundled UI')
   } finally {
     if (session) await webdriver('DELETE', `/session/${session}`).catch(() => {})
     await stop(child)

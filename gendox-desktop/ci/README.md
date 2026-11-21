@@ -3,16 +3,20 @@
 `.github/workflows/desktop-build.yml` builds five unsigned downloads: a universal macOS DMG,
 Windows x64 and ARM64 NSIS installers, and Linux x86_64 and arm64 AppImage, Debian and RPM
 packages. Linux builds use Ubuntu 22.04 to keep the glibc baseline low. Artifacts expire after
-five days. The workflow never publishes a release or signs a package.
+five days. The workflow never publishes a release or signs a package. It runs only when started
+by hand for a branch: Actions > Desktop unsigned builds > Run workflow, or
+`gh workflow run desktop-build.yml --ref <branch>`.
 
 Each job builds the bundled v2 frontend, runs the Rust tests on its native architecture, and
-launches the desktop app against a loopback fixture. The fixture checks that the bundled UI
-requests OIDC discovery, sends a desktop authorization-code request with PKCE, and renders
-the sign-in page. It uses no accounts and does not issue tokens or contact a hosted server.
+launches the desktop app against a loopback fixture. The fixture serves only the server's public
+client configuration. The check passes when the app has read that configuration and its diagnostics
+log shows the server check passing and then the bundled UI loading. Sign-in opens the system
+browser after a click, so the check stops at the sign-in page: it uses no accounts, issues no
+tokens and contacts no hosted server.
 
-Linux and Windows use `tauri-driver` to inspect that page, load the bundled `/server/` route,
-verify runtime configuration, and reload the route. macOS has no `tauri-driver` WKWebView
-backend, so its launch check requires a readiness request after the fixture page renders.
+Linux and Windows also use `tauri-driver` to read the "Sign in with your browser" page with the
+fixture server's name, load the bundled `/server/` route, verify runtime configuration, and reload
+the route. macOS has no `tauri-driver` WKWebView backend, so it relies on the diagnostics log.
 
 `smoke.mjs` runs only with `CI=true`, creates fixture server settings with an exclusive write,
 and refuses to replace any existing settings. Its own app and driver processes are stopped

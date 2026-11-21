@@ -1,11 +1,9 @@
 name: Desktop unsigned builds
+run-name: Desktop build · ${{ github.ref_name }}
 
+# Started by hand for the branch to build (Actions > Desktop unsigned builds > Run workflow,
+# or `gh workflow run desktop-build.yml --ref <branch>`): a full run takes several minutes on five runners.
 on:
-  push:
-    paths:
-      - 'gendox-desktop/**'
-      - 'gendox-frontend-v2/**'
-      - '.github/workflows/desktop-build.yml'
   workflow_dispatch:
 
 permissions:
@@ -85,10 +83,30 @@ jobs:
           npm install --global yarn@1.22.22
           npm ci
 
+      - name: Find the Yarn cache folder
+        id: yarn-cache
+        run: echo "dir=$(yarn cache dir)" >> "$GITHUB_OUTPUT"
+
+      # The frontend's downloaded packages, reused while its yarn.lock is unchanged.
+      - uses: actions/cache@v6
+        with:
+          path: ${{ steps.yarn-cache.outputs.dir }}
+          key: yarn-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('gendox-frontend-v2/yarn.lock') }}
+          restore-keys: yarn-${{ runner.os }}-${{ runner.arch }}-
+
       - name: Install native Rust toolchain and build targets
         run: |
           rustup toolchain install "$RUSTUP_TOOLCHAIN" --profile minimal
           rustup target add --toolchain "$RUSTUP_TOOLCHAIN" ${{ matrix.rust-targets }}
+
+      # Compiled Rust dependencies, one cache per target, and ~/.cargo/bin, so the
+      # WebDriver tools installed below are reused instead of compiled again.
+      # Swatinem/rust-cache v2.9.3, pinned to its commit.
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0
+        with:
+          workspaces: gendox-desktop/src-tauri -> target
+          key: ${{ matrix.target }}
+          cache-bin: true
 
       # The platform-specific Tauri config selects DMG, NSIS, or Linux packages.
       # No release, updater signature, or platform signing runs in this repository.

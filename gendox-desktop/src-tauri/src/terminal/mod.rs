@@ -645,6 +645,10 @@ mod tests {
 
     static NEXT: AtomicU64 = AtomicU64::new(0);
 
+    /// For commands that must simply finish: Windows PowerShell can take more than ten seconds to
+    /// start on a busy CI runner (seen on Windows ARM64), and these tests do not measure time.
+    const FINISHES: Duration = Duration::from_secs(60);
+
     struct Scratch(PathBuf);
     impl Scratch {
         fn new() -> Self {
@@ -820,7 +824,7 @@ mod tests {
             "[Console]::Out.Write('hello \"quoted\"'); [Console]::Error.Write('problem'); exit 7";
         assert_eq!(
             output(
-                execute(script, &scratch.0, Duration::from_secs(10))
+                execute(script, &scratch.0, FINISHES)
                     .await
                     .unwrap()
             ),
@@ -836,7 +840,7 @@ mod tests {
         #[cfg(windows)]
         let script = "(Get-Location).Path";
         let (code, stdout, _) = output(
-            execute(script, &scratch.0, Duration::from_secs(10))
+            execute(script, &scratch.0, FINISHES)
                 .await
                 .unwrap(),
         );
@@ -856,7 +860,7 @@ mod tests {
         let script = "[Console]::Out.Write('Ελληνικά 🦀')";
         assert_eq!(
             output(
-                execute(script, &scratch.0, Duration::from_secs(10))
+                execute(script, &scratch.0, FINISHES)
                     .await
                     .unwrap()
             ),
@@ -872,7 +876,7 @@ mod tests {
         let script =
             "[Console]::Out.Write(('x'*70000)+'END'); [Console]::Error.Write(('y'*70000)+'TAIL')";
         let (code, stdout, stderr) = output(
-            execute(script, &scratch.0, Duration::from_secs(20))
+            execute(script, &scratch.0, FINISHES)
                 .await
                 .unwrap(),
         );
@@ -921,7 +925,7 @@ mod tests {
                 id.to_string(),
                 request(script),
                 scratch.0.clone(),
-                Duration::from_secs(10),
+                FINISHES,
                 || async {
                     count.fetch_add(1, Ordering::SeqCst);
                     Ok(true)
@@ -1078,21 +1082,25 @@ mod tests {
     #[tokio::test]
     async fn windows_timeout_ends_the_job_and_its_inherited_pipes() {
         let scratch = Scratch::new();
-        // A child cmd process retains the standard handles and would write after its parent exits.
+        // Start PowerShell once first: its first start on a busy runner can outlast the deadline below.
+        output(execute("exit 0", &scratch.0, FINISHES).await.unwrap());
+        // A child cmd process retains the standard handles and would write after its parent exits,
+        // about 24 seconds after it starts: always after the 20-second deadline.
         let script = "Start-Process -FilePath (Join-Path $env:SystemRoot 'System32\\cmd.exe') \
-            -ArgumentList '/c ping -n 5 127.0.0.1 >nul & echo survived>marker' -NoNewWindow; \
+            -ArgumentList '/c ping -n 25 127.0.0.1 >nul & echo survived>marker' -NoNewWindow; \
             [Console]::Out.Write('ready'); exit 0";
         let start = Instant::now();
         let (code, stdout, stderr) = output(
-            execute(script, &scratch.0, Duration::from_secs(2))
+            execute(script, &scratch.0, Duration::from_secs(20))
                 .await
                 .unwrap(),
         );
         assert_eq!(code, 124);
         assert_eq!(stdout, "ready");
         assert!(stderr.contains("timed out"));
-        assert!(start.elapsed() < Duration::from_secs(5));
-        tokio::time::sleep(Duration::from_secs(3)).await;
+        assert!(start.elapsed() < Duration::from_secs(25));
+        // The child started before the deadline, so it would have written by 20 + 24 seconds.
+        tokio::time::sleep(Duration::from_secs(46).saturating_sub(start.elapsed())).await;
         assert!(!scratch.0.join("marker").exists());
     }
 
