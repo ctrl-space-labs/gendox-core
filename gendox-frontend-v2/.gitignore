@@ -8,6 +8,9 @@
 # testing
 /coverage
 
+# Monaco, copied from node_modules by scripts/copy-monaco.cjs
+/public/monaco/
+
 # next.js
 /.next/
 /out/

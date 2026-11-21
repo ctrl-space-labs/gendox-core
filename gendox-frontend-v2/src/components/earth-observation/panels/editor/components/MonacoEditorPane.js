@@ -1,7 +1,10 @@
-import Editor from '@monaco-editor/react'
+import Editor, { loader } from '@monaco-editor/react'
 import useAppTheme from 'src/hooks/useAppTheme'
 import Spinner from 'src/components/ui/Spinner'
 import FirstScriptOnboarding from './FirstScriptOnboarding'
+
+// Monaco from the app's own files (copied by scripts/copy-monaco.cjs), never from a CDN
+loader.config({ paths: { vs: '/monaco/vs' } })
 
 // The editor in the app's colours (themes.css; Monaco takes hex only): the page background, keywords in the accent,
 // strings in warn, numbers in info, comments faint

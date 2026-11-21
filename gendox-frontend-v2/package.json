@@ -17,7 +17,9 @@
   },
   "homepage": "https://gendox.dev/",
   "scripts": {
+    "predev": "node scripts/copy-monaco.cjs",
     "dev": "next dev",
+    "prebuild": "node scripts/copy-monaco.cjs",
     "build": "next build",
     "start": "next start",
     "format": "prettier --write \"src/**/*.{js,jsx}\""
@@ -33,6 +35,7 @@
     "katex": "0.18.7",
     "leaflet": "1.9.4",
     "lucide-react": "^0.469.0",
+    "monaco-editor": "0.55.1",
     "next": "15.5.18",
     "oidc-client-ts": "^3.0.1",
     "react": "^19.0.0",
