@@ -9,7 +9,7 @@ import apiRequests from 'src/configs/apiRequest.js'
 import { userDataActions } from 'src/store/userData/userData'
 
 import userManager, { signOutWithBrowser } from 'src/services/authService'
-import { isDesktopApp } from 'src/services/desktopBridge'
+import { isDesktopApp, isMobileApp } from 'src/services/desktopBridge'
 import { AuthContext } from './AuthContext'
 
 const PKCEAuthProvider = ({ children, initialAuth }) => {
@@ -36,6 +36,9 @@ const PKCEAuthProvider = ({ children, initialAuth }) => {
       const query = returnUrl && returnUrl !== '/' ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ''
       if (!router.pathname.startsWith('/desktop-sign-in')) router.replace(`/desktop-sign-in/${query}`)
       return
+    }
+    if (isMobileApp()) {
+      return userManager.signinRedirect({ state: { returnUrl } })
     }
     let args = {}
     if (returnUrl) {
@@ -207,6 +210,14 @@ const PKCEAuthProvider = ({ children, initialAuth }) => {
 
   useEffect(() => {
     if (user && router.pathname.includes('oidc-callback')) {
+      if (isMobileApp()) {
+        const returnUrl = authState.user?.state?.returnUrl
+        // Only return to a bundled path. Reject slash and backslash variants of external URLs.
+        const isLocalPath = typeof returnUrl === 'string' && returnUrl.startsWith('/') &&
+          !returnUrl.startsWith('//') && !/[\\\s]/.test(returnUrl)
+        window.location.replace(isLocalPath ? returnUrl : '/gendox/agent-home/')
+        return
+      }
       const { returnUrl } = router.query
       const homeUrl = returnUrl ? decodeURIComponent(returnUrl) : '/gendox/agent-home'
       window.location.href = homeUrl

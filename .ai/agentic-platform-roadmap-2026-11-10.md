@@ -16,10 +16,12 @@ enough for enterprise use. Decision support is the reference scenario: it is not
 above these features — visualization, triggers and many skill files. It gets **one** ticket (section 8); everything
 else here is a primitive it reuses.
 
-**Status, 2026-11-17:** CORE-1 through CORE-4 (#579), SRCH-1 and SRCH-3 (#550, #559) are implemented. SEC-1 is
-implemented and in review. PACK-1 is partly implemented: agent definitions export as JSON or YAML; import and
-connection requirements remain pending. Other roadmap tasks remain pending. Each workstream gets its own plan file in
-`.ai/` before code is written.
+**Status, 2026-11-22:** CORE-1 through CORE-4 (#579), SRCH-1 and SRCH-3 (#550, #559), SEC-1 (#561) and the
+desktop app apart from its releases (CLIENT-2) are implemented. APPR-1 is implemented for the tools the app or page
+runs. The mobile apps have development builds (CLIENT-3a). PACK-1 is partly implemented: agent definitions export as
+JSON or YAML; import and connection requirements remain pending. Other roadmap tasks remain pending. Each workstream
+gets its own plan file in `.ai/` before code is written; once a plan is implemented, its file is removed and what
+remains of it is kept in this roadmap.
 
 This status reflects committed code on `feature-agent-platform-roadmap`; uncommitted changes are not counted. "Done" below means implemented, with the remaining validation stated separately; it does not imply a
 release or that the corresponding GitHub issue is closed.
@@ -30,6 +32,10 @@ release or that the corresponding GitHub issue is closed.
 | SRCH-1 | Done (2026-11-14) | `8fd48244`, `7fa123ef`, `ae3f8083`: thread file listings, automatic `gendox-files` skill, document-tool access, `list_files`, `view_page` and sub-agent file context. |
 | SRCH-3 | Done (2026-11-14) | `8fd48244`, `7fa123ef`, `ae3f8083`: modified time and line ranges in search hits, file metadata in section templates, and the updated date on v2 citations. |
 | PACK-1 | Partial (2026-11-12) | `0ba53f4e`, `fd2cf34b`, `7a2986fa`: JSON/YAML export, v2 preview and download, YAML string preservation and Jackson 3 compatibility. Import and connection requirements remain pending. |
+| SEC-1 | Done (2026-11-17) | `301c3fa3`, `5acd8e18`: every stored secret encrypted two-way, API keys found by hash and revealed on request, a re-encryption job. Operator guide: `documentation/docs/05-maintenance/secrets-encryption.md`. |
+| APPR-1 | Partial (2026-11-21) | `f5753268`: `ai_tools.requires_approval` and one approval flow for `CLIENT` and `ACTION` tools and for desktop commands; a declined call runs nothing. Approval of server-side tools remains pending. |
+| CLIENT-2 | Done except releases (2026-11-22) | `f3dfc900`, `7b1e55a4`, `6f387242`, `5c6ed60a`, `f5753268`, `08134bbb`: the Tauri shell (#584), `run_command` (#585, #592), settings and allowed folders (#589), notifications, tray, deep links and launch at login (#590), system-browser sign-in and session renewal (#591, #593). Pending: signed releases and updates (#586–#588) and the checks listed under CLIENT. |
+| CLIENT-3a | Done (2026-11-22) | `ad79fe26`, `362e82a1`, `9ee0883b`: iOS and Android development builds from the same Tauri project, phone-sized chat, Android tester APKs (#595). |
 
 Validation of SRCH-1 and SRCH-3 (#550, #559): unit tests and mock-model API checks cover
 the file listing and search-hit format. Real-model `view_page`, Document Insights with supporting files, the v2
@@ -174,7 +180,7 @@ New screens are in `gendox-frontend-v2` only. Task ids match the architecture ma
 
 ### APPROVAL — ask before a tool runs (#558)
 
-- **APPR-1 Backend.** `ai_tools.requires_approval`; a pending call waiting for a yes; the answer is a `role: "tool"` message on the existing endpoint; a declined call gives the model "declined by the user". Checked in the CORE-2 class. Waits for CORE-2.
+- **APPR-1 Backend.** `ai_tools.requires_approval`; a pending call waiting for a yes; the answer is a `role: "tool"` message on the existing endpoint; a declined call gives the model "declined by the user". Checked in the CORE-2 class. Waits for CORE-2. Implemented for `CLIENT` and `ACTION` tools and desktop commands (#592): the pending call carries its execution and whether it needs approval, and the approval card is shared by the chat and the desktop app. Server-side tools remain.
 - **APPR-2 v2.** "Ask before running" switch on Agent → Tools; an approval card in chat and widget with the tool and its arguments in readable form. Waits for APPR-1, APP-1.
 - Later: "allow for this conversation".
 
@@ -216,7 +222,7 @@ Two tickets, as decided in review:
   - **Network.** One setting per agent: the box reaches the internet, or nothing. Off by default. With it on, the agent calls APIs with code it writes; this replaces the HTTP tools. At first the user gives credentials in the chat and the agent writes its own authentication code. Until VAULT-1, such credentials stay in the thread's messages and reach the model provider; the setting says so.
   - **Commands are named tasks.** Every command carries a short description in plain words, written by the agent. A command can run in the background while the turn continues, and can be stopped.
   - **v2:** the workspace lists running and finished commands, under the name "Commands", with the description, the duration and a stop button; opening one shows the command, its output and the exit code.
-- **Terminal in the desktop app — brought forward on 2026-11-19 as a `CLIENT` tool** (#585, #592). When the user chats from the desktop app (CLIENT-2), `run_command` is a client tool the app runs, after the user says yes. From the browser, mobile and the channels the same tool runs in the CODE-2 sandbox. It needs neither the runner contract nor a connection of its own. First an example custom tool (#585), then a built-in tool the server routes to where the client can run it (#592). Plan: [Desktop app](client-2-desktop-app-2026-11-19.md).
+- **Terminal in the desktop app — brought forward on 2026-11-19 as a `CLIENT` tool** (#585, #592). When the user chats from the desktop app (CLIENT-2), `run_command` is a client tool the app runs, after the user says yes. From the browser, mobile and the channels the same tool runs in the CODE-2 sandbox. It needs neither the runner contract nor a connection of its own. First an example custom tool (#585), then a built-in tool the server routes to where the client can run it (#592); both are implemented. The cloud part of #592 waits for CODE-2. See CLIENT-2.
 - **CODE-3 Desktop runner.** Later, an option. A third runner driver, "desktop", with the same six calls as Docker and AgentCore: the desktop app opens an outgoing connection to the Gendox server and registers as a runner, and the server sends the calls over it. So a chat on the phone, the web app or Slack can run commands on that computer while the app is not the one chatting. Nothing is opened on the computer or its network. Waits for CODE-2, CLIENT-2, APPR-1.
   - **Only its owner uses it.** A desktop runner serves its owner's own threads, never other members, public agents, the widget or scheduled runs. A deliberate exception to D2, because the computer is the user's own.
   - **Approval follows the owner's settings, as for any tool (APPR-1).** Commands that match a list the owner allowed run without asking; the rest ask, and the card appears on whichever device the owner is chatting from.
@@ -266,8 +272,21 @@ as the fallback for iOS and Android if Tauri's mobile support falls short on pus
 UI frameworks (Leptos, Dioxus) were looked at and left out: they would mean rewriting the v2 frontend in Rust.
 
 - **CLIENT-1 Installable web app.** The v2 app as a PWA: manifest, icons, an offline app shell, install from the browser, web push for notifications (on iOS from 16.4, once added to the home screen). No store.
-- **CLIENT-2 Desktop app (#583).** Tauri 2 for macOS, Windows and Linux. Decided on 2026-11-19, in its plan [Desktop app](client-2-desktop-app-2026-11-19.md): the v2 static export ships inside the app, with an API version check and a lowest accepted app version on the server; the server is `app.gendox.dev` by default, changed in a setting; macOS first. Sign-in inside the window first, then in the system browser with PKCE (#591). Signed builds; automatic, proposed and forced updates. Sub-issues: shell #584, terminal #585 and #592, releases per OS #586 (macOS), #587 (Windows), #588 (Linux), desktop settings and folders #589, notifications and tray #590, system-browser sign-in #591.
-- **CLIENT-3 Mobile apps (new ticket).** iOS and Android from the same Tauri code. Push through APNs and FCM: the backend keeps device tokens and RUN-3 sends to them. Share into a thread from other apps; camera and files as attachments. Store review expects native features like these from a wrapped web app. Waits for CLIENT-2, RUN-3.
+- **CLIENT-2 Desktop app (#583).** Tauri 2 for macOS, Windows and Linux, in `gendox-desktop/` (its README describes what is built). The v2 static export ships inside the app; the server comes from a list each build offers or one the user adds, read through `GET /public/client-config`, which also gives the lowest accepted app version. Sign-in in the system browser with PKCE and a loopback redirect, through the `gendox-pkce-public-client-desktop` Keycloak client.
+  - **Done:** shell #584, terminal #585 and #592, settings and allowed folders #589, notifications, tray, deep links and launch at login #590, system-browser sign-in #591, session renewal #593. Unsigned builds for every OS in `.github/workflows/desktop-build.yml`.
+  - **Still to check by hand:** the native folder picker, notification clicks, tray, deep links and the login item. Windows and Linux have not run on real systems or remote CI: on Windows, command write limits fail closed until they are supported; on Linux they need `/usr/bin/bwrap`; the Linux glib advisory needs a release decision (`gendox-desktop/ci/README.md`). Desktop end-to-end tests with `tauri-driver` on the Windows and Linux runners; a launch smoke test on macOS.
+  - **Releases (#586 macOS, #587 Windows, #588 Linux).** macOS: one universal `.dmg` (Apple Silicon and Intel), macOS 11.3 and later, Developer ID signing and notarization, not the Mac App Store (its sandbox does not allow a terminal). Windows: per-user NSIS installer for x64 and ARM64, which bootstraps WebView2; MSI later. Linux: AppImage, `.deb` and `.rpm` for x86_64 and arm64, built on the oldest supported distribution (WebKitGTK 4.1); Flatpak and Snap later. Signing and publishing run in a separate release pipeline that holds the certificates and the update key; none of them enters this repository. It builds from a tag and publishes the installers and a `latest.json` per channel (stable, beta) to a public download location.
+  - **Updates.** The Tauri updater checks a signature from the Gendox update key on every package (the key is kept in two places: losing it means no installed app can update). Modes: automatic (default; installs on the next restart), proposed (update now, later, skip), forced (the server's lowest accepted version is above the app's, or the release is critical). Self-hosted servers use the public feed. Later: an administrator policy that turns automatic updates off; Homebrew, winget, Flathub.
+- **CLIENT-3 Mobile apps.** iOS and iPadOS 16+, Android 8+, from the same Tauri project as the desktop app (`gendox-desktop/src-tauri`, identifier `dev.gendox.app`; code that only makes sense on a computer is compiled for desktop only). No terminal and no allowed folders: the app sends no desktop context, so the server offers no client tools from a phone.
+  - **Done: CLIENT-3a (#595).** Development builds, phone-sized chat, server selection, the manual Android tester APK workflow `.github/workflows/mobile-build.yml`. Sign-in uses the desktop client inside the app's web view for now.
+  - **CLIENT-3b (#596) Platform sign-in.** `ASWebAuthenticationSession` on iOS and Custom Tabs on Android, redirecting to `dev.gendox.app:/oauth/callback` (`dev.gendox.app.dev:` for test builds), received by the session itself. oidc-client-ts keeps PKCE and the code exchange, as on desktop. A `gendox-pkce-public-client-mobile` Keycloak client, its id a property like the desktop one; `/public/client-config` gains `mobileClientId` and `minMobileAppVersion`. A small plugin of our own (Swift and Kotlin), or a community one only after its code is read.
+  - **CLIENT-3c Phone width.** Safe areas, the keyboard above the chat input, Android's back gesture, external links in the in-app browser view, downloads through the share sheet, status bar colour. Task editor, Earth Observation and organization administration are view-only or hidden.
+  - **CLIENT-3d Push** (waits for RUN-3). The API keeps device tokens per user and sends through APNs and FCM HTTP v1 as one of RUN-3's channels; the payload says what to open, not the message, unless the user allows previews. Approve and Deny on a notification. Plugin chosen in a spike.
+  - **CLIENT-3e Share and camera.** An iOS Share Extension and an Android `ACTION_SEND` filter open a v2 page to pick a project and thread; the camera through the file input. A document scanner later.
+  - **CLIENT-3f App lock** with Face ID or fingerprint.
+  - **CLIENT-3g Signed builds and stores**, in the release pipeline: TestFlight and the App Store; an upload key with Play App Signing, Play testing tracks, a signed `.apk` for people without Google Play. Store review needs native features beyond the website, a demo account, account deletion in the app, no purchases in the app, and the privacy forms. Every frontend release is an app release.
+  - **CLIENT-3h CarPlay voice** (waits for VOICE-1): a native CarPlay scene with Apple's entitlement. Android Auto has no category for this yet.
+  - **Open questions:** rename `gendox-desktop` to `gendox-app`; `dev.gendox.app` cannot change after the first store release; whether Google or Microsoft sign-in is offered at submission (Apple 4.8).
 - The terminal is a `CLIENT` tool in the CLIENT-2 app (#585, #592); the CODE-3 runner is a later option.
 - No local terminal on mobile: iOS does not let an app start processes, and Android does not let current apps run binaries they downloaded. The server terminal (CODE-2) and the browser sandbox (CODE-1) work from the mobile apps as on the web, and later the phone can run commands on the owner's desktop through the CODE-3 runner.
 
@@ -286,7 +305,7 @@ Both are implemented (#550, #559, 2026-11-14); remaining validation is listed at
 - **GOV-2 Usage** (#531). **GOV-3 Visitor conversations** (#563, #555).
 - **GOV-4 Policies.** Which tool sources and connections an organization and an agent may use; enforced in the CORE-2 check.
 - **GOV-5.** Several roles per member (#484). The API keys part moved to SEC-1.
-- **SEC-1 Secrets at rest.** Every stored secret, API keys included, is encrypted two-way, with a key provider per deployment (environment, AWS KMS, others). Decided on 2026-11-13 in place of "API keys stored as a hash" (#561). Plan: [secrets-at-rest-2026-11-15.md](secrets-at-rest-2026-11-15.md). Implemented, in review. CONN-1 waits for it.
+- **SEC-1 Secrets at rest.** Every stored secret, API keys included, is encrypted two-way, with a key provider per deployment (environment, file, AWS KMS). Decided on 2026-11-13 in place of "API keys stored as a hash" (#561). Implemented; keys are listed in `GENDOX_SECRETS_KEYS`, the first one encrypts, and `secretsReencryptJob` moves stored values to it. Operator guide: `documentation/docs/05-maintenance/secrets-encryption.md`. CONN-1 can build on it.
 
 ### PACKS (#554 export, #567 import)
 
@@ -308,10 +327,10 @@ Both are implemented (#550, #559, 2026-11-14); remaining validation is listed at
 
 | Phase | Tasks |
 |---|---|
-| 0 | Done: CORE-1 … CORE-4, SRCH-1, SRCH-3. In review: SEC-1. Pending: APP-1. |
-| 1 | CORE-5, CLIENT-1, CLIENT-2 (#583, moved from phase 2 on 2026-11-19), APPR-1, APPR-2, CONN-1, MCP-1, MCP-2, CODE-1, ART-1, ART-2, CHAN-1, GOV-1, GOV-2, GOV-3, PACK-1 (export done; import and connection requirements pending) |
+| 0 | Done: CORE-1 … CORE-4, SRCH-1, SRCH-3, SEC-1. Pending: APP-1. |
+| 1 | CORE-5, CLIENT-1, CLIENT-2 (#583, moved from phase 2 on 2026-11-19; done except releases #586–#588), APPR-1 (done for client and action tools), APPR-2, CONN-1, MCP-1, MCP-2, CODE-1, ART-1, ART-2, CHAN-1, GOV-1, GOV-2, GOV-3, PACK-1 (export done; import and connection requirements pending) |
 | 2 | CONN-2, CONN-3, CONN-4, SKILL-1, SKILL-2, BOARD-1, BOARD-2, BOARD-3, RUN-1, RUN-2, RUN-3, MEM-1, CODE-2, ART-3, CHAN-2, CHAN-3, MCPS-1, PACK-2, SRCH-2 |
-| 3 | DSS-1, CHAN-4, CLIENT-3, CODE-3, VAULT-1, GOV-4, GOV-5, VOICE-1 |
+| 3 | DSS-1, CHAN-4, CLIENT-3 (3a done early, on 2026-11-22), CODE-3, VAULT-1, GOV-4, GOV-5, VOICE-1 |
 
 Where parallel branches would collide:
 
@@ -321,7 +340,7 @@ Where parallel branches would collide:
 | `Chat.js`, `ChatTurn.js` | APP-1 adds the handler and card registry in phase 0; cards are then separate files. |
 | Agent → Tools, Add tool dialog | APPR-2 first; MCP-2 adds a section after it. |
 | Organization → Connected services, `organization_connectors` | CONN-1 first; MCP-1 builds on it. |
-| `gendox-frontend-v2` build, Keycloak client | CLIENT-1 first (manifest, service worker); CLIENT-2 adds the `gendox-desktop` Keycloak client. |
+| `gendox-frontend-v2` build, Keycloak client | CLIENT-1 first (manifest, service worker); CLIENT-2 added the `gendox-pkce-public-client-desktop` Keycloak client; CLIENT-3b adds the mobile one. |
 | Flyway migrations | One per workstream, timestamped the day it merges. |
 
 ## 7. Decisions

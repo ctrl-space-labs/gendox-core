@@ -1,4 +1,4 @@
-import { ChevronRight, CircleHelp, Menu as MenuIcon, Search, Server } from 'lucide-react'
+import { ChevronRight, CircleHelp, PanelLeft, Search, Server } from 'lucide-react'
 import commonConfig from 'src/configs/common.config'
 
 // The server this page talks to, shown only when its domain differs from the page's (mainly in development)
@@ -14,8 +14,9 @@ const Topbar = ({ title, crumb, onMenuClick, onSearchClick }) => {
 
   return (
     <header className='topbar' data-tauri-drag-region='deep'>
-      <button className='btn ghost icon menu-btn' aria-label='Menu' onClick={onMenuClick}>
-        <MenuIcon className='lucide' />
+      {/* shows the sidebar: the drawer on narrow screens, the hidden sidebar on wide ones */}
+      <button className='btn ghost icon menu-btn' aria-label='Show sidebar' title='Show sidebar (⌘B)' onClick={onMenuClick}>
+        <PanelLeft className='lucide' />
       </button>
       {/* a page can put its own button here, see TopbarSlot */}
       <span id='topbar-slot' style={{ display: 'contents' }} />

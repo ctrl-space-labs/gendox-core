@@ -30,13 +30,9 @@ Two files per topic, no more: **the original, which never changes, and the curre
 
 - [Artifacts and mini apps in the chat — #523](.ai/issue-523-artifacts-2026-11-13.md) — planned, nothing implemented. The plan as first written.
 
-- [Gendox as an agentic platform — roadmap](.ai/agentic-platform-roadmap-2026-11-10.md) — the workstreams and their order; each task gets its own plan before code is written.
+- [Gendox as an agentic platform — roadmap](.ai/agentic-platform-roadmap-2026-11-10.md) — the workstreams, their order and status; each task gets its own plan before code is written. Implemented plans are removed and what remains of them lives here, including the desktop and mobile apps (CLIENT-2, CLIENT-3) and secrets at rest (SEC-1).
 
 - [Use your own AI subscription](.ai/ai-subscription-usage-2026-11-17.md) — planned, nothing implemented; comes after the agentic platform roadmap. A ChatGPT plan through OpenAI's sign-in in Gendox's own loop (workstream PLAN), then the Claude Code and Codex CLIs on the user's machine (workstream LOCAL). The plan as first written.
-
-- [Desktop app — CLIENT-2 (#583)](.ai/client-2-desktop-app-2026-11-20.md) — #584 and #585 implemented and checked locally on `feature-desktop-app`; phase-2 frontend permissions and notification work is implemented locally on `feature-desktop-app-phase-2`, with native interaction review pending. Signed releases and Windows/Linux verification remain deferred. Tauri 2 wrapping the bundled v2 static export; preset servers per build and a server page in v2; macOS first; the terminal as a `CLIENT` tool (`run_command`); updates and signing per OS. Tickets #584–#592. Self-contained: it replaces the [original 2026-11-19 plan](.ai/client-2-desktop-app-2026-11-19.md), which is kept unchanged.
-
-- [SEC-1: secrets at rest](.ai/secrets-at-rest-2026-11-15.md) — implemented, in review on `feature-agent-platform-roadmap`, not in `main`. Every stored secret encrypted two-way, with a list of keys and a key provider per key. Prerequisite of CONN-1. Self-contained: it replaces the [original 2026-11-13 plan](.ai/secrets-at-rest-2026-11-13.md), which is kept unchanged.
 
 ## Common Development Commands
 

@@ -25,10 +25,10 @@ use crate::terminal::{self, TerminalState};
 const SIGN_IN_TIMEOUT: Duration = Duration::from_secs(10 * 60);
 const CALLBACK_PATH: &str = "/callback";
 
-const DONE_PAGE: &str = "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>Gendox</title>\
-<style>:root{color-scheme:light dark;font-family:system-ui,sans-serif}body{min-height:90vh;display:grid;\
-place-content:center;text-align:center}p{opacity:.75}</style></head><body><main><h1>You can return to Gendox</h1>\
-<p>You can close this tab and continue in the app.</p></main></body></html>";
+/// Browsers let a page close its own tab only when the tab holds no other page: here, when the
+/// sign-in server redirected straight back (the user was already signed in). Otherwise the page stays,
+/// in the look of the v2 app; it loads nothing from the network.
+const DONE_PAGE: &str = include_str!("pages/signed-in.html");
 
 pub struct AuthState {
     /// The origin of the sign-in server in use: the only pages this module opens.

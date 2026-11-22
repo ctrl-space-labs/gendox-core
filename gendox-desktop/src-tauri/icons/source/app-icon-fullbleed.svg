@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<!-- Gendox app icon, iOS and Android (full bleed: the system applies its own mask). The G is 68% of the width. -->
+<defs><linearGradient id="g0" x1="59.4977" y1="55.0613" x2="21.6782" y2="30.3813" gradientUnits="userSpaceOnUse"><stop offset="0.481134" stop-color="#D9D9D9" stop-opacity="0"/><stop offset="1" stop-color="#066D67"/></linearGradient>
+<linearGradient id="g1" x1="4.10329" y1="12.2358" x2="29.5182" y2="56.2141" gradientUnits="userSpaceOnUse"><stop offset="0.316748" stop-color="#08B68D" stop-opacity="0"/><stop offset="1" stop-color="#066D67"/></linearGradient>
+</defs>
+<rect width="1024" height="1024" fill="#24263d"/>
+<g transform="translate(164.0 182.0) scale(12.0000)">
+<path d="M45.4645 55.0001L42.2844 46.9448C37.4425 35.0557 33.647 34.7498 27.3895 34.24L25.2147 34.0768V26.7761H43.7616L58.0205 54.9797H45.485L45.4645 55.0001Z" fill="#08B68D"/>
+<path d="M45.4645 54.9998L42.2844 46.9446C37.4425 35.0555 33.647 34.7496 27.3895 34.2397L25.2147 34.0766V26.7759H43.7616L58.0205 54.9794H45.485L45.4645 54.9998Z" fill="url(#g0)"/>
+<path d="M25.4404 55C7.8578 55 0 41.1531 0 27.449C0 11.2977 10.4634 0 25.4404 0H29.8309V7.38228L25.9533 7.79014C15.2437 9.9518 13.0074 19.6793 13.0074 27.449C13.0074 38.4816 17.6236 45.4968 26.0354 47.2099L29.8309 47.5973V54.9796H25.4404V55Z" fill="#08B68D"/>
+<path d="M25.4404 55C7.8578 55 0 41.1531 0 27.449C0 11.2977 10.4634 0 25.4404 0H29.8309V7.38228L25.9533 7.79014C15.2437 9.9518 13.0074 19.6793 13.0074 27.449C13.0074 38.4816 17.6236 45.4968 26.0354 47.2099L29.8309 47.5973V54.9796H25.4404V55Z" fill="url(#g1)"/>
+</g>
+</svg>

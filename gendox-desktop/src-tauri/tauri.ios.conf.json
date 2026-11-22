@@ -1,0 +1,8 @@
+{
+  "identifier": "dev.gendox.app",
+  "bundle": {
+    "iOS": {
+      "minimumSystemVersion": "16.0"
+    }
+  }
+}

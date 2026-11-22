@@ -10,6 +10,7 @@ let localStorageConstants = {
   selectedOrganizationId: 'activeOrganizationId',
   selectedProjectId: 'activeProjectId',
   userDataKey: 'userData',
+  sidebarCollapsed: 'sidebarCollapsed', // 'true' when the user hid the sidebar on a wide screen
 
 }
 

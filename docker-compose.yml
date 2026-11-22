@@ -72,6 +72,9 @@ services:
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - FILE_STORAGE_PATH=${FILE_STORAGE_PATH}
       - KEYSTORE_PASSWORD=${KEYSTORE_PASSWORD}
+      # The public API address that GET /public/client-config gives the desktop and web apps.
+      # Behind a proxy, set it to the address users reach; the default is this host's API port.
+      - GENDOX_CLIENT_API_URL=${GENDOX_CLIENT_API_URL:-http://localhost:${APIS_PORT}/gendox/api/v1/}
       # Observability. All export stays off unless the deployment sets GENDOX_OTEL_ENABLED=true
       # and starts the gendox-alloy collector (compose profile "observability"). See OBSERVABILITY.md.
       - GENDOX_ENVIRONMENT=${GENDOX_ENVIRONMENT:-local}

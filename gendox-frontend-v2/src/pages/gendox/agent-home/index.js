@@ -78,6 +78,13 @@ const LAYOUT = {
 
 const pathOf = url => url.split('?')[0]
 const newChatUrl = () => `/chat/new-${Date.now().toString(36)}`
+const linkedTab = () => {
+  try {
+    return decodeURIComponent(window.location.hash.slice(1))
+  } catch {
+    return ''
+  }
+}
 
 /**
  * The agent home: the chat-first workspace of one agent, with Tasks, Knowledge, documents and task results as windows.
@@ -88,6 +95,7 @@ const AgentHomePage = () => {
   const dispatch = useDispatch()
   const { projectId, href } = useActiveScope()
   const dockRef = useRef(null)
+  const restoredProject = useRef(null)
   const prefills = useRef(new Map())
   const [title, setTitle] = useState('Chat')
   const [focusedUrl, setFocusedUrl] = useState(null)
@@ -170,11 +178,11 @@ const AgentHomePage = () => {
   // the agent changed: its windows start again
   const storageKey = `gx-dock-agent-${projectId}`
 
-  // a link to a tab (#/chat/…, #/gendox/document-instance?…) opens it, now and while the page is open
+  // A link to a tab can also arrive while the dock is open.
   useEffect(() => {
     if (!router.isReady || !projectId) return
     const openHash = () => {
-      let linked = decodeURIComponent(window.location.hash.slice(1))
+      let linked = linkedTab()
       if (!linked) return
       // #/chat/new is a command: name the new chat in the address bar first, so handling it twice opens one tab
       if (linked === '/chat/new') {
@@ -183,7 +191,6 @@ const AgentHomePage = () => {
       }
       setTimeout(() => open(linked), 0)
     }
-    openHash()
     router.events.on('hashChangeComplete', openHash)
     window.addEventListener('hashchange', openHash)
 
@@ -194,13 +201,23 @@ const AgentHomePage = () => {
   }, [router.isReady, router.events, projectId, open])
 
   const onFocus = useCallback((url, v) => {
+    // The dock can open tabs as soon as it reports its first focus. Restore the incoming
+    // link before the default tab changes the address bar.
+    if (restoredProject.current !== projectId) {
+      restoredProject.current = projectId
+      const linked = linkedTab()
+      if (linked && linked !== url && canOpen(linked)) {
+        open(linked)
+        return
+      }
+    }
     setTitle(v?.title ?? 'Chat')
     setFocusedUrl(url)
     const next = `${window.location.pathname}${window.location.search}#${url}`
     if (`${window.location.pathname}${window.location.search}${window.location.hash}` !== next) {
       window.history.replaceState(window.history.state, '', next)
     }
-  }, [])
+  }, [projectId, canOpen, open])
 
   if (!router.isReady || !projectId) return null
 

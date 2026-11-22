@@ -1,7 +1,7 @@
 # Gendox Desktop
 
 The Gendox app for macOS, Windows and Linux: [Tauri 2](https://tauri.app) around the static export of
-`gendox-frontend-v2`. The current plan is `.ai/client-2-desktop-app-2026-11-20.md`.
+`gendox-frontend-v2`. What remains to do is in the CLIENT workstream of `.ai/agentic-platform-roadmap-2026-11-10.md`.
 
 ## Build and run
 
@@ -16,6 +16,83 @@ npm test                 # Rust tests
 
 On macOS the `.app` and `.dmg` land in `src-tauri/target/release/bundle/`, unsigned.
 
+## Mobile apps (iOS and Android)
+
+The same project builds the iOS and Android apps (`dev.gendox.app`); desktop-only code is behind
+`cfg(desktop)`; the remaining mobile work is in the same CLIENT workstream. No terminal and no allowed
+folders on mobile. Until the platform sign-in session lands, sign-in happens inside the app window.
+
+Once per computer:
+
+- **iOS:** Xcode from the App Store, opened once to install the iOS platform and a simulator, then
+  `sudo xcode-select -s /Applications/Xcode.app` and `brew install cocoapods`.
+- **Android:** Android Studio; in its SDK Manager the API 37 SDK Platform, Platform-Tools, Build-Tools,
+  Command-line Tools and NDK (Side by side); a virtual device in the Device Manager. Then, in the
+  shell profile:
+
+```bash
+export ANDROID_HOME="$HOME/Library/Android/sdk"
+export NDK_HOME="$ANDROID_HOME/ndk/$(ls -1 "$ANDROID_HOME/ndk" | sort -V | tail -1)"
+```
+
+  Gradle runs on the JDK bundled with Android Studio. Set it for the Android commands only, so the
+  backend keeps its own Java:
+  `JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" npm run tauri android dev`.
+
+- **Rust targets:**
+
+```bash
+rustup target add aarch64-apple-ios aarch64-apple-ios-sim aarch64-linux-android x86_64-linux-android
+```
+
+Generate the native project with `npm run tauri ios init` or `npm run tauri android init` if it is
+missing. Build the frontend before starting a mobile debug run. The apps load the bundled export,
+including the startup and offline pages:
+
+```bash
+npm run build:frontend
+npm run tauri ios dev -- --no-dev-server --features tauri/custom-protocol
+npm run tauri android dev -- --no-dev-server --features tauri/custom-protocol
+```
+
+To build and run from Xcode, start Tauri from this checkout's `gendox-desktop` directory.
+
+```bash
+npm run build:frontend
+npm run tauri ios dev -- --open --no-dev-server --no-watch --features tauri/custom-protocol
+```
+
+Keep the terminal running while you select the iPhone and click Run in Xcode. The Tauri CLI provides
+the Rust build options to Xcode. For a physical iPhone, sign in under Xcode → Settings → Apple Accounts
+and set your Apple Developer team ID in the ignored `src-tauri/gen/apple/Signing.local.xcconfig`.
+
+```xcconfig
+DEVELOPMENT_TEAM = YOUR_TEAM_ID
+```
+
+The mobile launcher assets use the Gendox mark from `gendox-frontend-v2/public/images/logo.svg`.
+The iOS icon and Android adaptive foreground have separate margins for their launcher masks.
+
+To build a local Android APK for an ARM64 emulator or device, run
+`npm run tauri android build -- --apk --debug --target aarch64`. The APK is in
+`src-tauri/gen/android/app/build/outputs/apk/universal/debug/`.
+
+A debug APK is for your own emulator or phone only: it is debuggable and allows plain http. To give
+others an APK, build a release one. The `Mobile test builds` workflow (started by hand) makes one, signed
+with a key it creates and then deletes. Locally, `src-tauri/gen/android/keystore.properties` (ignored by
+git) names a key of your own with `storeFile`, `keyAlias` and `password`, then
+`npm run tauri android build -- --apk --target aarch64`; the APK is in `.../apk/universal/release/`.
+A fresh install opens the first server in `presets.json`. Android release builds require HTTPS for
+the server, API and sign-in addresses. Choose another server from the sign-in page, the offline page
+or the account menu. If the sign-in provider stops on an error page, close and reopen the app to
+return to Gendox's sign-in page. Workflow APKs use a new signing key per run, so uninstall the old
+test build before installing a newer one.
+
+For a local test server, run this worktree's ephemeral stack. The iOS simulator reaches it on
+`localhost`. On the Android emulator, reverse both the API and Keycloak ports with
+`adb reverse tcp:<port> tcp:<port>` so the addresses advertised by the stack stay reachable.
+Choose the API address in Gendox's server picker and close and reopen the app to apply the choice.
+
 ## Server
 
 The app opens `app.gendox.dev`. Before the UI loads it sets `window.__GENDOX_ENV__`, which
@@ -27,6 +104,21 @@ The `gendox-pkce-public-client-desktop` Keycloak client uses authorization code 
 `offline_access` scope. Keycloak users need the `offline_access` realm role to receive an offline
 refresh token. The app uses that token to renew your session when it reopens after access-token
 expiry. Signing out revokes the token and ends the browser session.
+
+Mobile currently uses the same public OIDC client ID advertised as `desktopClientId` in
+`/gendox/api/v1/public/client-config`. Configure `GENDOX_CLIENT_DESKTOP_CLIENT_ID` if the realm uses a
+different ID. Enable Standard flow and PKCE S256 with Client authentication off. Add these entries:
+
+| Keycloak setting | iOS | Android |
+| --- | --- | --- |
+| Valid redirect URI | `tauri://localhost/oidc-callback/` | `http://tauri.localhost/oidc-callback/` |
+| Silent renewal redirect URI | `tauri://localhost/silent-renew` | `http://tauri.localhost/silent-renew` |
+| Valid post logout redirect URI | `tauri://localhost/login` | `http://tauri.localhost/login` |
+| Web origin | `tauri://localhost` | `http://tauri.localhost` |
+
+Add both callback and silent renewal URIs under Valid redirect URIs. Keep
+`http://127.0.0.1/callback` under both redirect lists for desktop. Include `web-origins` as a default
+client scope and `offline_access` as an optional client scope.
 
 ## Downloads and diagnostics
 

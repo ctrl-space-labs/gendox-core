@@ -7,6 +7,7 @@ import {
   Library,
   ListChecks,
   MessagesSquare,
+  PanelLeft,
   Plus,
   Settings,
   SquarePen
@@ -112,7 +113,7 @@ const RecentChats = ({ focusedTab }) => {
   )
 }
 
-const Sidebar = ({ page, focusedTab }) => {
+const Sidebar = ({ page, focusedTab, onToggle }) => {
   const { href } = useActiveScope()
 
   return (
@@ -120,6 +121,10 @@ const Sidebar = ({ page, focusedTab }) => {
       <div className='side-head'>
         {/* in the desktop app, this row is the title bar: it moves the window */}
         <div className='side-titlebar' data-tauri-drag-region='deep'>
+          {/* the same spot as the top bar's button when the sidebar is hidden, so it does not move */}
+          <button className='btn ghost icon side-toggle' aria-label='Hide sidebar' title='Hide sidebar (⌘B)' onClick={onToggle}>
+            <PanelLeft className='lucide' />
+          </button>
           <Link className='brand' href={href('/gendox/agent-home')}>
             <span className='mark'>G</span>
             Gendox

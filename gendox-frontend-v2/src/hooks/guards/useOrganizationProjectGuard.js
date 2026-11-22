@@ -13,12 +13,13 @@ const useOrganizationProjectGuard = (authProviderOption, pageConfig) => {
   const { organizationId: urlOrgId, projectId: urlProjId } = router.query
 
   const redirectPath = router.pathname
+  const { isReady } = router
   useEffect(() => {
     // Only run if the auth provider is the one for which guard is applicable.
     if (authProviderOption === 'IFrameAuthProvider') return
 
     // Only run if a user is present.
-    if (!user) return
+    if (!user || !isReady) return
 
     // Only run the guard if pageConfig.runGuard is explicitly set to true.
     if (!pageConfig?.applyEffectiveOrgAndProjectIds) return
@@ -66,7 +67,7 @@ const useOrganizationProjectGuard = (authProviderOption, pageConfig) => {
     // The new url runs this guard again, which loads them then; loading them now as well loaded both twice.
     if (urlOrgId !== effectiveOrg.id || urlProjId !== effectiveProj.id) {
       const slash = redirectPath.endsWith('/') ? '' : '/'
-      const newUrl = `${redirectPath}${slash}?organizationId=${effectiveOrg.id}&projectId=${effectiveProj.id}`
+      const newUrl = `${redirectPath}${slash}?organizationId=${effectiveOrg.id}&projectId=${effectiveProj.id}${window.location.hash}`
       router.push(newUrl)
       return
     }
@@ -84,7 +85,7 @@ const useOrganizationProjectGuard = (authProviderOption, pageConfig) => {
         token
       })
     )
-  }, [urlOrgId, urlProjId, user, dispatch, redirectPath])
+  }, [urlOrgId, urlProjId, user, dispatch, redirectPath, isReady])
 }
 
 export default useOrganizationProjectGuard

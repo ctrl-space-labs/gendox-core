@@ -1,0 +1,16 @@
+{
+  "$schema": "../gen/schemas/mobile-schema.json",
+  "identifier": "mobile",
+  "description": "The bundled main UI on iOS and Android: server selection only. Remote pages get nothing.",
+  "platforms": [
+    "iOS",
+    "android"
+  ],
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "allow-set-server",
+    "allow-remove-server"
+  ]
+}

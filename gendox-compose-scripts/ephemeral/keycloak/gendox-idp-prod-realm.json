@@ -34,8 +34,15 @@
       "enabled": true,
       "publicClient": true,
       "protocol": "openid-connect",
-      "redirectUris": ["tauri://localhost/*", "http://tauri.localhost/*", "http://127.0.0.1/callback"],
+      "redirectUris": [
+        "http://127.0.0.1/callback",
+        "tauri://localhost/oidc-callback/",
+        "http://tauri.localhost/oidc-callback/",
+        "tauri://localhost/silent-renew",
+        "http://tauri.localhost/silent-renew"
+      ],
       "webOrigins": ["tauri://localhost", "http://tauri.localhost"],
+      "defaultClientScopes": ["web-origins", "acr", "roles", "profile", "basic", "email"],
       "optionalClientScopes": ["offline_access"],
       "alwaysDisplayInConsole": true,
       "frontchannelLogout": true,

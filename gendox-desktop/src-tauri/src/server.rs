@@ -5,9 +5,11 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use url::Url;
 
-/// The origin the bundled UI is served from: Tauri's asset protocol.
+pub const REQUIRE_HTTPS: bool = cfg!(all(target_os = "android", not(debug_assertions)));
+
+/// The origin the bundled UI is served from: Tauri's asset protocol (http on Windows and Android).
 pub fn app_origin() -> &'static str {
-    if cfg!(windows) {
+    if cfg!(any(windows, target_os = "android")) {
         "http://tauri.localhost"
     } else {
         "tauri://localhost"
@@ -78,18 +80,24 @@ impl Saved {
     }
 }
 
-/// `https://host[:port][/path]` without a trailing slash. Plain http only for this machine:
-/// tokens never cross a network unencrypted.
+/// Trim whitespace and any trailing slash from a server address.
 pub fn normalize_address(address: &str) -> String {
     address.trim().trim_end_matches('/').to_string()
 }
 
 pub fn validate_address(address: &str) -> Result<Url, String> {
+    validate_address_with_policy(address, REQUIRE_HTTPS)
+}
+
+fn validate_address_with_policy(address: &str, require_https: bool) -> Result<Url, String> {
     let url = Url::parse(&normalize_address(address)).map_err(|_| "Not a valid address".to_string())?;
     let local = matches!(url.host_str(), Some("localhost") | Some("127.0.0.1") | Some("[::1]"))
-        || url.host_str().is_some_and(|h| h.ends_with(".localhost"));
+        || url.host_str().is_some_and(|h| h.ends_with(".localhost"))
+        // The Android emulator reaches the developer's computer as 10.0.2.2. Debug builds only.
+        || (cfg!(all(target_os = "android", debug_assertions)) && url.host_str() == Some("10.0.2.2"));
     match url.scheme() {
         "https" => Ok(url),
+        "http" if require_https => Err("Use https for the server address".into()),
         "http" if local => Ok(url),
         "http" => Err("Use https; plain http is allowed only for this computer".into()),
         _ => Err("The address must start with https://".into()),
@@ -134,6 +142,7 @@ pub fn runtime_env(current: &Server, presets: &[Server], saved: &Saved, origin: 
         // The desktop client keeps the user signed in for days with a refresh token (offline_access, #593)
         "NEXT_PUBLIC_OIDC_SCOPE": "openid profile email offline_access",
         "GENDOX_DESKTOP": {
+            "mobile": cfg!(mobile),
             "version": env!("CARGO_PKG_VERSION"),
             "current": { "name": current.name, "address": current.address },
             "servers": servers,
@@ -255,6 +264,14 @@ mod tests {
         assert!(validate_address("http://gendox.example.com").is_err());
         assert!(validate_address("file:///etc").is_err());
         assert!(validate_address("not a url").is_err());
+    }
+
+    #[test]
+    fn android_release_requires_https_even_for_local_addresses() {
+        for address in ["http://localhost:8107", "http://10.0.2.2:8107", "http://gendox.example.com"] {
+            assert!(validate_address_with_policy(address, true).is_err());
+        }
+        assert!(validate_address_with_policy("https://gendox.example.com", true).is_ok());
     }
 
     #[test]

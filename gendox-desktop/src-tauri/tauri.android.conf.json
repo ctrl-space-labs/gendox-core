@@ -1,0 +1,8 @@
+{
+  "identifier": "dev.gendox.app",
+  "bundle": {
+    "android": {
+      "minSdkVersion": 26
+    }
+  }
+}

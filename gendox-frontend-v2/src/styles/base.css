@@ -37,11 +37,23 @@ h1 { font-size: 28px; } h2 { font-size: 19px; } h3 { font-size: 14px; letter-spa
 .frameless .side-titlebar { display: flex; align-items: center; height: 56px; margin: 0 -12px 8px; padding: 0 12px; }
 .frameless .side-titlebar .brand { padding: 6px 8px; }
 /* macOS: the system's window buttons sit over the top-left corner */
-.titlebar-overlay .side-titlebar { padding-left: 76px; }
+.titlebar-overlay .side-titlebar { padding-left: 88px; } /* the buttons end at about 84 px; the logo starts about 20 px after them */
 /* Windows and Linux: the app draws the window buttons in the top-right corner (gendox-desktop window-controls.js) */
 .titlebar-controls .topbar { padding-right: 150px; }
 
 .brand { display: flex; align-items: center; gap: 10px; padding: 6px 8px 14px; font: 600 15px var(--font-display); letter-spacing: -.02em; }
+/* Hide and show the sidebar (⌘B). The sidebar's button sits before the logo; the top bar's .menu-btn, the same icon in the
+   same spot, shows it again: the drawer below 900 px, the hidden sidebar above. */
+.side-titlebar { display: flex; align-items: center; gap: 2px; margin-bottom: 8px; }
+.side-titlebar .brand { padding: 6px 8px; }
+.side-toggle, .menu-btn { flex: none; color: var(--text-3); }
+@media (min-width: 901px) {
+  .app.side-collapsed { grid-template-columns: minmax(0, 1fr); }
+  .app.side-collapsed .sidebar { display: none; }
+  .app.side-collapsed .menu-btn { display: inline-flex !important; }
+  .app.side-collapsed .topbar { padding-left: 12px; }
+  .titlebar-overlay .app.side-collapsed .topbar { padding-left: 88px; }
+}
 .mark { width: 24px; height: 24px; flex: none; display: inline-block; background: url(logo.svg) center / contain no-repeat; font-size: 0 !important; color: transparent; border-radius: 0 !important; } /* the real Gendox mark (assets/logo.svg, from the WordPress plugin's brand assets) */
 .mark.white { background-image: url(logo-white.svg); }
 .org { display: flex; align-items: center; gap: 10px; width: 100%; padding: 7px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); text-align: left; cursor: pointer; }
@@ -324,7 +336,7 @@ a.item:hover { background: var(--surface-2); }
   .sidebar { position: fixed; z-index: 40; left: 0; width: 264px; transform: translateX(-100%); transition: transform .2s; box-shadow: 20px 0 40px -20px #000; }
   .app.nav-open .sidebar { transform: none; }
   .frameless .sidebar { z-index: 40; }
-  .titlebar-overlay .topbar { padding-left: 84px; }
+  .titlebar-overlay .topbar { padding-left: 96px; }
   .menu-btn { display: inline-flex !important; }
   .topbar { padding: 0 16px; }
   .topbar .search, .hide-sm { display: none !important; }

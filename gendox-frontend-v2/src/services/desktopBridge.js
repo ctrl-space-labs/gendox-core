@@ -14,6 +14,9 @@ let listening = false
 export const isDesktopApp = () =>
   typeof window !== 'undefined' && window.top === window && Boolean(window.__GENDOX_CLIENT_TOOL_HOST__)
 
+export const isMobileApp = () =>
+  typeof window !== 'undefined' && window.top === window && window.__GENDOX_ENV__?.GENDOX_DESKTOP?.mobile === true
+
 const ownOrigin = () => `${location.protocol}//${location.host}`
 
 function listen() {

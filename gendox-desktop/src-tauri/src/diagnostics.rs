@@ -8,9 +8,13 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use tauri::{menu::{Menu, MenuItem, HELP_SUBMENU_ID}, AppHandle, Manager};
+use tauri::{AppHandle, Manager};
+#[cfg(desktop)]
+use tauri::menu::{Menu, MenuItem, HELP_SUBMENU_ID};
+#[cfg(desktop)]
 use tauri_plugin_clipboard_manager::ClipboardExt;
 
+#[cfg(desktop)]
 pub const COPY_MENU_ID: &str = "copy-diagnostics";
 const MAX_LOG_BYTES: u64 = 256 * 1024;
 const REPORT_LOG_BYTES: u64 = 16 * 1024;
@@ -87,6 +91,7 @@ impl LogFiles {
         file.write_all(line.as_bytes())
     }
 
+    #[cfg_attr(mobile, allow(dead_code))]
     fn recent(&self) -> io::Result<String> {
         let mut file = match File::open(&self.current) {
             Ok(file) => file,
@@ -128,11 +133,14 @@ pub fn record(app: &AppHandle, event: Event) {
     let _ = files.append(event, timestamp);
 }
 
+#[cfg(desktop)]
 fn header() -> String {
     format!("Gendox Desktop {}\nSystem: {} {}\n\nRecent events (Unix seconds):\n", env!("CARGO_PKG_VERSION"), std::env::consts::OS, std::env::consts::ARCH)
 }
 
 /// Requires tauri_plugin_clipboard_manager::init() on the native builder; no JS permissions.
+/// Desktop only for now: the Help menu offers it. Mobile gets it in the app's settings later.
+#[cfg(desktop)]
 pub fn copy(app: &AppHandle) -> Result<(), &'static str> {
     let recent = app.try_state::<Diagnostics>()
         .and_then(|state| state.0.lock().ok().and_then(|files| files.recent().ok()))
@@ -147,6 +155,7 @@ pub fn copy(app: &AppHandle) -> Result<(), &'static str> {
 }
 
 /// Adds the item to Tauri's standard Help menu. Call from the existing menu builder.
+#[cfg(desktop)]
 pub fn add_menu_item(app: &AppHandle, menu: &Menu<tauri::Wry>) -> tauri::Result<()> {
     if let Some(help) = menu.get(HELP_SUBMENU_ID).and_then(|item| item.as_submenu().cloned()) {
         help.append(&MenuItem::with_id(app, COPY_MENU_ID, "Copy diagnostics", true, None::<&str>)?)?;

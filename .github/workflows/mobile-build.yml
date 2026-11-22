@@ -1,0 +1,104 @@
+name: Mobile test builds
+run-name: Mobile build · ${{ github.ref_name }}
+
+# Started by hand for the branch to build (Actions > Mobile test builds > Run workflow,
+# or `gh workflow run mobile-build.yml --ref <branch>`).
+#
+# Android: a release APK (not debuggable, no plain http), signed with a key made in the job and
+# thrown away after it. Anyone can install it from a file; a newer build replaces an older one
+# only after uninstalling it, since every run's key differs. Store signing is not done here.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    name: Android APK
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+        working-directory: gendox-desktop
+    env:
+      CI: 'true'
+      NEXT_TELEMETRY_DISABLED: '1'
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      # The committed gradle-wrapper.jar must be one Gradle published.
+      # gradle/actions v6.4.1, pinned to its commit.
+      - uses: gradle/actions/wrapper-validation@8da46b539cd8fe6ab27ca75128919a18d757604c
+
+      # actions/setup-java v6.3.0, pinned to its commit.
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: gendox-desktop/package-lock.json
+
+      - name: Install Yarn and the Tauri CLI
+        run: |
+          npm install --global yarn@1.22.22
+          npm ci
+
+      - name: Find the Yarn cache folder
+        id: yarn-cache
+        run: echo "dir=$(yarn cache dir)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v6
+        with:
+          path: ${{ steps.yarn-cache.outputs.dir }}
+          key: yarn-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('gendox-frontend-v2/yarn.lock') }}
+          restore-keys: yarn-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Install Rust Android targets
+        run: rustup target add aarch64-linux-android x86_64-linux-android
+
+      # Swatinem/rust-cache v2.9.3, pinned to its commit.
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0
+        with:
+          workspaces: gendox-desktop/src-tauri -> target
+          key: android
+
+      - name: Make a throwaway signing key
+        run: |
+          password="$(openssl rand -hex 24)"
+          echo "::add-mask::$password"
+          keytool -genkeypair -noprompt -keystore "$RUNNER_TEMP/test-build.jks" -alias gendox-test \
+            -keyalg RSA -keysize 4096 -validity 90 -dname "CN=Gendox test build" \
+            -storepass "$password" -keypass "$password"
+          printf 'storeFile=%s\nkeyAlias=gendox-test\npassword=%s\n' "$RUNNER_TEMP/test-build.jks" "$password" \
+            > src-tauri/gen/android/keystore.properties
+
+      # arm64 for phones and Apple Silicon emulators, x86_64 for emulators on Intel hosts.
+      # The runner image ships the Android SDK and NDK.
+      - name: Build the APK
+        run: NDK_HOME="$ANDROID_NDK_LATEST_HOME" npm run tauri android build -- --apk --target aarch64 --target x86_64
+
+      - name: Remove the signing key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/test-build.jks" src-tauri/gen/android/keystore.properties
+
+      - name: Retain the APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: gendox-android-test-apk
+          retention-days: 5
+          if-no-files-found: error
+          compression-level: 0
+          path: gendox-desktop/src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk

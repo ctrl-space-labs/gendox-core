@@ -1,0 +1,532 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		04F2F0DA0FC2697B65F2BDEA /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4319E80086986032F10BAD89 /* Assets.xcassets */; };
+		27AC1D4E0D619946DDA06F12 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 338FA1924586A0FECD595ED7 /* QuartzCore.framework */; };
+		33396219453416B7F5340BBE /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = B7EF30D095AA5BE480088B96 /* LaunchScreen.storyboard */; };
+		77A70BF3B3533C99D7E20D97 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 77D6B43FAFDC785518EE232E /* Security.framework */; };
+		8381DBCBD3B4310F68562805 /* libapp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 34930EBAFA25661C8B8F9E6D /* libapp.a */; };
+		A4CD711AED63F8BF96A61392 /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = 0261B6E39E00FB7A18AD2124 /* main.mm */; };
+		A5E2DD81F98C064070642930 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 372BFAE25411749E609B7396 /* Metal.framework */; };
+		B4A35A7D8F10209D03F733D7 /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 254C3150CB0AAD284262AB9A /* WebKit.framework */; };
+		B6206BE54864288355DC9C2B /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 726FFD76353F0FEB0BC00481 /* MetalKit.framework */; };
+		C60F9187B621D8E75AC33EA8 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B0BA07FF18CAD992481FFB96 /* CoreGraphics.framework */; };
+		E252EDAED7CE60491A6CC460 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 85EB06EF9474FEF5BAEFD48C /* UIKit.framework */; };
+		E6F1336AEB4111443A6F83A7 /* assets in Resources */ = {isa = PBXBuildFile; fileRef = 8BC97F7BE820202AE7A925DB /* assets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A13A111CC05A062F16587BAB /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Signing.xcconfig; sourceTree = "<group>"; };
+		0261B6E39E00FB7A18AD2124 /* main.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = main.mm; sourceTree = "<group>"; };
+		0EFC97EA479BDECC85740384 /* folders.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = folders.rs; sourceTree = "<group>"; };
+		254C3150CB0AAD284262AB9A /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
+		338FA1924586A0FECD595ED7 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
+		347D31C026857B87DB3EFAD5 /* windows.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = windows.rs; sourceTree = "<group>"; };
+		34930EBAFA25661C8B8F9E6D /* libapp.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libapp.a; sourceTree = "<group>"; };
+		372BFAE25411749E609B7396 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
+		395F681AEE49C5FE7780BE88 /* diagnostics.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = diagnostics.rs; sourceTree = "<group>"; };
+		4319E80086986032F10BAD89 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		53E81000395816FAB72C193E /* client-tool-host.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "client-tool-host.js"; sourceTree = "<group>"; };
+		6C811BAE3A504F6A96E7A9A0 /* main.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = main.rs; sourceTree = "<group>"; };
+		726FFD76353F0FEB0BC00481 /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
+		77D6B43FAFDC785518EE232E /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
+		78DF99E040D378C94AAFB08E /* desktop.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = desktop.rs; sourceTree = "<group>"; };
+		80E13D02B86CCF6E085EDB88 /* auth.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = auth.rs; sourceTree = "<group>"; };
+		85EB06EF9474FEF5BAEFD48C /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		8BC97F7BE820202AE7A925DB /* assets */ = {isa = PBXFileReference; lastKnownFileType = folder; path = assets; sourceTree = SOURCE_ROOT; };
+		8C6705199881BEEBECA32CD2 /* offline.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = offline.html; sourceTree = "<group>"; };
+		8D9568EC18CB9D68BE993F01 /* Gendox.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Gendox.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		90500BFD8D1A3FA792ABB4FB /* client-tool-bootstrap.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "client-tool-bootstrap.js"; sourceTree = "<group>"; };
+		A1D8176526D2DD45A229D5EA /* window-controls.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "window-controls.js"; sourceTree = "<group>"; };
+		A244CACC4F4E23FD3DED6735 /* gendox-desktop_iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "gendox-desktop_iOS.entitlements"; sourceTree = "<group>"; };
+		A92797B400B3337C262D9B1B /* lib.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = lib.rs; sourceTree = "<group>"; };
+		AE3879659706FEC1DBCE021A /* bindings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = bindings.h; sourceTree = "<group>"; };
+		B0BA07FF18CAD992481FFB96 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
+		B7EF30D095AA5BE480088B96 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
+		BB1FCBEDED2698C1ED7215B3 /* downloads.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = downloads.rs; sourceTree = "<group>"; };
+		BE3297067A76756E98428A6B /* unix.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = unix.rs; sourceTree = "<group>"; };
+		C0162D81927001EBB2F8AD74 /* mod.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = mod.rs; sourceTree = "<group>"; };
+		D0F1E15AA2DAC00DA0EF19D0 /* server.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = server.rs; sourceTree = "<group>"; };
+		E215A578692C235E0A37E54D /* runtime-config.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "runtime-config.js"; sourceTree = "<group>"; };
+		F560F3E34EF885C4776FB8D6 /* offline.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = offline.rs; sourceTree = "<group>"; };
+		F9DB5F2CB828A887F58D0B83 /* links.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = links.rs; sourceTree = "<group>"; };
+		FE6F99C971D6883EE5FF1DF1 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		FEB9B943D2BDE7FCAE88CB7D /* connecting.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = connecting.html; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		02AF431CFD16D28DF8B9602A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8381DBCBD3B4310F68562805 /* libapp.a in Frameworks */,
+				C60F9187B621D8E75AC33EA8 /* CoreGraphics.framework in Frameworks */,
+				A5E2DD81F98C064070642930 /* Metal.framework in Frameworks */,
+				B6206BE54864288355DC9C2B /* MetalKit.framework in Frameworks */,
+				27AC1D4E0D619946DDA06F12 /* QuartzCore.framework in Frameworks */,
+				77A70BF3B3533C99D7E20D97 /* Security.framework in Frameworks */,
+				E252EDAED7CE60491A6CC460 /* UIKit.framework in Frameworks */,
+				B4A35A7D8F10209D03F733D7 /* WebKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		3589C3C4FA0FB4590FA9C3B9 /* Externals */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Externals;
+			sourceTree = "<group>";
+		};
+		3607131A483B2D4EB938FDE6 = {
+			isa = PBXGroup;
+			children = (
+				A13A111CC05A062F16587BAB /* Signing.xcconfig */,
+				8BC97F7BE820202AE7A925DB /* assets */,
+				4319E80086986032F10BAD89 /* Assets.xcassets */,
+				B7EF30D095AA5BE480088B96 /* LaunchScreen.storyboard */,
+				3589C3C4FA0FB4590FA9C3B9 /* Externals */,
+				EA564987062E9E18A5734857 /* gendox-desktop_iOS */,
+				921D55463325AC63A4BAE0C1 /* Sources */,
+				FF920A20E4DD0BFE2F95A128 /* src */,
+				52959514C0962881F1C92C44 /* Frameworks */,
+				FA546D27AF0B9DDD80F2D2E9 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		52959514C0962881F1C92C44 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				B0BA07FF18CAD992481FFB96 /* CoreGraphics.framework */,
+				34930EBAFA25661C8B8F9E6D /* libapp.a */,
+				372BFAE25411749E609B7396 /* Metal.framework */,
+				726FFD76353F0FEB0BC00481 /* MetalKit.framework */,
+				338FA1924586A0FECD595ED7 /* QuartzCore.framework */,
+				77D6B43FAFDC785518EE232E /* Security.framework */,
+				85EB06EF9474FEF5BAEFD48C /* UIKit.framework */,
+				254C3150CB0AAD284262AB9A /* WebKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		921D55463325AC63A4BAE0C1 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				CAFB155408EFCE27ABD0BC6F /* gendox-desktop */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		A9A048A68903C6DC0DA292AB /* pages */ = {
+			isa = PBXGroup;
+			children = (
+				FEB9B943D2BDE7FCAE88CB7D /* connecting.html */,
+				8C6705199881BEEBECA32CD2 /* offline.html */,
+			);
+			path = pages;
+			sourceTree = "<group>";
+		};
+		C67B9BB9E572E54F56058523 /* bindings */ = {
+			isa = PBXGroup;
+			children = (
+				AE3879659706FEC1DBCE021A /* bindings.h */,
+			);
+			path = bindings;
+			sourceTree = "<group>";
+		};
+		CAFB155408EFCE27ABD0BC6F /* gendox-desktop */ = {
+			isa = PBXGroup;
+			children = (
+				0261B6E39E00FB7A18AD2124 /* main.mm */,
+				C67B9BB9E572E54F56058523 /* bindings */,
+			);
+			path = "gendox-desktop";
+			sourceTree = "<group>";
+		};
+		EA564987062E9E18A5734857 /* gendox-desktop_iOS */ = {
+			isa = PBXGroup;
+			children = (
+				A244CACC4F4E23FD3DED6735 /* gendox-desktop_iOS.entitlements */,
+				FE6F99C971D6883EE5FF1DF1 /* Info.plist */,
+			);
+			path = "gendox-desktop_iOS";
+			sourceTree = "<group>";
+		};
+		F22AE9315088B720B22CBEC1 /* terminal */ = {
+			isa = PBXGroup;
+			children = (
+				C0162D81927001EBB2F8AD74 /* mod.rs */,
+				BE3297067A76756E98428A6B /* unix.rs */,
+				347D31C026857B87DB3EFAD5 /* windows.rs */,
+			);
+			path = terminal;
+			sourceTree = "<group>";
+		};
+		FA546D27AF0B9DDD80F2D2E9 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				8D9568EC18CB9D68BE993F01 /* Gendox.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		FF920A20E4DD0BFE2F95A128 /* src */ = {
+			isa = PBXGroup;
+			children = (
+				80E13D02B86CCF6E085EDB88 /* auth.rs */,
+				90500BFD8D1A3FA792ABB4FB /* client-tool-bootstrap.js */,
+				53E81000395816FAB72C193E /* client-tool-host.js */,
+				78DF99E040D378C94AAFB08E /* desktop.rs */,
+				395F681AEE49C5FE7780BE88 /* diagnostics.rs */,
+				BB1FCBEDED2698C1ED7215B3 /* downloads.rs */,
+				0EFC97EA479BDECC85740384 /* folders.rs */,
+				A92797B400B3337C262D9B1B /* lib.rs */,
+				F9DB5F2CB828A887F58D0B83 /* links.rs */,
+				6C811BAE3A504F6A96E7A9A0 /* main.rs */,
+				F560F3E34EF885C4776FB8D6 /* offline.rs */,
+				E215A578692C235E0A37E54D /* runtime-config.js */,
+				D0F1E15AA2DAC00DA0EF19D0 /* server.rs */,
+				A1D8176526D2DD45A229D5EA /* window-controls.js */,
+				A9A048A68903C6DC0DA292AB /* pages */,
+				F22AE9315088B720B22CBEC1 /* terminal */,
+			);
+			name = src;
+			path = ../../src;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		C54E24E6B00E7997981E4016 /* gendox-desktop_iOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 19C15EC83C9308CB84DDC5E5 /* Build configuration list for PBXNativeTarget "gendox-desktop_iOS" */;
+			buildPhases = (
+				BAD57B26BE5122BABED26459 /* Build Rust Code */,
+				FB9AE369D83CD85D623C67ED /* Sources */,
+				EABB01337F8473460E0CB1B4 /* Resources */,
+				02AF431CFD16D28DF8B9602A /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "gendox-desktop_iOS";
+			packageProductDependencies = (
+			);
+			productName = "gendox-desktop_iOS";
+			productReference = 8D9568EC18CB9D68BE993F01 /* Gendox.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		C6BC8CCAC6ED8952B8424BAE /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1600;
+			};
+			buildConfigurationList = 8CD6794575FEA020429A7BEF /* Build configuration list for PBXProject "gendox-desktop" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 3607131A483B2D4EB938FDE6;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = FA546D27AF0B9DDD80F2D2E9 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				C54E24E6B00E7997981E4016 /* gendox-desktop_iOS */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		EABB01337F8473460E0CB1B4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				04F2F0DA0FC2697B65F2BDEA /* Assets.xcassets in Resources */,
+				33396219453416B7F5340BBE /* LaunchScreen.storyboard in Resources */,
+				E6F1336AEB4111443A6F83A7 /* assets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		BAD57B26BE5122BABED26459 /* Build Rust Code */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Build Rust Code";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(SRCROOT)/Externals/x86_64/${CONFIGURATION}/libapp.a",
+				"$(SRCROOT)/Externals/arm64/${CONFIGURATION}/libapp.a",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "export PATH=\"${PATH}:/opt/homebrew/bin:/usr/local/bin:${CARGO_HOME:-$HOME/.cargo}/bin\"\nnpm run -- tauri ios xcode-script -v --platform \"${PLATFORM_DISPLAY_NAME:?}\" --sdk-root \"${SDKROOT:?}\" --framework-search-paths \"${FRAMEWORK_SEARCH_PATHS:?}\" --header-search-paths \"${HEADER_SEARCH_PATHS:?}\" --gcc-preprocessor-definitions \"${GCC_PREPROCESSOR_DEFINITIONS:-}\" --configuration \"${CONFIGURATION:?}\" ${FORCE_COLOR} ${ARCHS:?}\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		FB9AE369D83CD85D623C67ED /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A4CD711AED63F8BF96A61392 /* main.mm in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		2C40032EF72F32A027AEBD4B /* release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = release;
+		};
+		5D0DF3177A1EDBF82FE35AD3 /* release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A13A111CC05A062F16587BAB /* Signing.xcconfig */;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				ARCHS = arm64;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = "gendox-desktop_iOS/gendox-desktop_iOS.entitlements";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				ENABLE_BITCODE = NO;
+				"EXCLUDED_ARCHS[sdk=iphoneos*]" = x86_64;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\".\"",
+				);
+				INFOPLIST_FILE = "gendox-desktop_iOS/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				"LIBRARY_SEARCH_PATHS[arch=arm64]" = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION)",
+					"$(SDKROOT)/usr/lib/swift",
+					"$(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME)",
+					"$(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)",
+				);
+				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION)",
+					"$(SDKROOT)/usr/lib/swift",
+					"$(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME)",
+					"$(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.gendox.app;
+				PRODUCT_NAME = "Gendox";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALID_ARCHS = arm64;
+			};
+			name = release;
+		};
+		7AF4193535B9ADF4752B641F /* debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A13A111CC05A062F16587BAB /* Signing.xcconfig */;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				ARCHS = arm64;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = "gendox-desktop_iOS/gendox-desktop_iOS.entitlements";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				ENABLE_BITCODE = NO;
+				"EXCLUDED_ARCHS[sdk=iphoneos*]" = x86_64;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\".\"",
+				);
+				INFOPLIST_FILE = "gendox-desktop_iOS/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				"LIBRARY_SEARCH_PATHS[arch=arm64]" = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION)",
+					"$(SDKROOT)/usr/lib/swift",
+					"$(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME)",
+					"$(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)",
+				);
+				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION)",
+					"$(SDKROOT)/usr/lib/swift",
+					"$(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME)",
+					"$(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.gendox.app;
+				PRODUCT_NAME = "Gendox";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALID_ARCHS = arm64;
+			};
+			name = debug;
+		};
+		E7871A4EBA905DBF5063C6F6 /* debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		19C15EC83C9308CB84DDC5E5 /* Build configuration list for PBXNativeTarget "gendox-desktop_iOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7AF4193535B9ADF4752B641F /* debug */,
+				5D0DF3177A1EDBF82FE35AD3 /* release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = debug;
+		};
+		8CD6794575FEA020429A7BEF /* Build configuration list for PBXProject "gendox-desktop" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E7871A4EBA905DBF5063C6F6 /* debug */,
+				2C40032EF72F32A027AEBD4B /* release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = C6BC8CCAC6ED8952B8424BAE /* Project object */;
+}

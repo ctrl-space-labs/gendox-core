@@ -35,6 +35,30 @@
 .lightbox img { max-width: 100%; max-height: 100%; border-radius: var(--radius); }
 .gc-loading { flex: 1; display: grid; place-items: center; }
 
+/* Keep the viewport at its current scale when the phone's text fields take focus. */
+@media (pointer: coarse) {
+  .gc-composer textarea, .native-server-picker .input { font-size: 16px; }
+}
+@media (max-width: 900px) {
+  .app:not(.nav-open) .sidebar { box-shadow: none; }
+  html:has(.chat-workspace), body:has(.chat-workspace) { overflow: hidden; overscroll-behavior: none; }
+  .app.chat-workspace {
+    position: fixed;
+    inset-inline: 0;
+    top: var(--chat-viewport-top, 0px);
+    height: var(--chat-viewport-height, 100dvh);
+    min-height: 0;
+    grid-template-rows: minmax(0, 1fr);
+    overflow: clip;
+  }
+  .chat-workspace > .main { min-height: 0; }
+  .chat-workspace .topbar { flex: none; }
+  .chat-workspace .sidebar { height: var(--chat-viewport-height, 100dvh); }
+  .chat-workspace .dock { flex: 1; height: auto; }
+  .chat-workspace .group-b:has(.gc) { overflow: clip; }
+  .chat-workspace .gc-composer textarea::placeholder { white-space: nowrap; text-overflow: ellipsis; }
+}
+
 /* the chat page: the user's conversations beside the chat */
 .chatpage { display: grid; grid-template-columns: 280px minmax(0, 1fr); height: calc(100dvh - 56px); }
 .chatpage > section { min-width: 0; min-height: 0; }

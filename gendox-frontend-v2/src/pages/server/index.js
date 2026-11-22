@@ -4,11 +4,8 @@ import { routeTypes } from 'src/authentication/components/RouteHandler'
 import { localStorageConstants } from 'src/utils/generalConstants'
 import { apiBaseOf, clientConfig, isAllowed, STORAGE_KEY } from 'src/utils/server/serverChoice'
 
-// The server picker. The desktop app injects its list in window.__GENDOX_ENV__.GENDOX_DESKTOP and switches
-// through its own command, which checks the server and restarts the app on it. In a browser the list is
-// GENDOX_WEB (set in _document.js from this browser's choice) and switching reloads the page; a site
-// allows it only for the servers its own API lists in allowedServers, mainly for development.
-const desktop = () => (typeof window !== 'undefined' && window.__GENDOX_ENV__?.GENDOX_DESKTOP) || null
+// Installed apps validate and save the choice in the native shell. Browsers use the site's allowlist.
+const nativeServerInfo = () => (typeof window !== 'undefined' && window.__GENDOX_ENV__?.GENDOX_DESKTOP) || null
 const web = () => (typeof window !== 'undefined' && window.__GENDOX_ENV__?.GENDOX_WEB) || null
 
 const invoke = (command, args) => window.__TAURI__.core.invoke(command, args)
@@ -44,20 +41,21 @@ async function setWebServer(info, { name, address }) {
 }
 
 const ServerPage = () => {
-  const native = desktop()
+  const native = nativeServerInfo()
   const browser = !native && web()
   const info = native || (browser && webServers(browser))
   const [name, setName] = useState('')
   const [address, setAddress] = useState('')
   const [busy, setBusy] = useState(null)
   const [error, setError] = useState('')
+  const [saved, setSaved] = useState(false)
 
   if (!info || (native && !window.__TAURI__)) {
     return (
       <main className='center'>
         <div className='modal s' style={{ padding: 28, gap: 12, animation: 'none' }}>
           <h2 style={{ fontSize: 18 }}>Choosing a server</h2>
-          <p className='muted sm'>Only the Gendox desktop app connects to other servers.</p>
+          <p className='muted sm'>Open this page in an installed Gendox app to choose a server.</p>
         </div>
       </main>
     )
@@ -68,6 +66,10 @@ const ServerPage = () => {
     setError('')
     try {
       await action() // the app restarts, or the page reloads, on success
+      if (native?.mobile) {
+        setSaved(true)
+        setBusy(null)
+      }
     } catch (e) {
       setError(e?.message || String(e))
       setBusy(null)
@@ -96,15 +98,19 @@ const ServerPage = () => {
 
   return (
     <main className='center'>
-      <div className='modal s' style={{ padding: 28, gap: 16, animation: 'none', width: 'min(460px, 100%)' }}>
+      <div className='modal s native-server-picker' style={{ padding: 28, gap: 16, animation: 'none', width: 'min(460px, 100%)' }}>
         <div className='stack' style={{ gap: 4 }}>
           <h2 style={{ fontSize: 18 }}>Server</h2>
           <p className='muted sm'>
             {native
-              ? 'The Gendox server this app signs in to. Switching restarts the app.'
+              ? 'Choose the Gendox server this app signs in to.'
               : 'The Gendox server this page talks to, in this browser only. After switching you sign in to it.'}
           </p>
         </div>
+
+        {saved && info.mobile && (
+          <p className='sm' role='status'>Server saved. Close and reopen Gendox to apply the change.</p>
+        )}
 
         <div className='stack' style={{ gap: 6 }}>
           {info.servers.map(server => {
@@ -114,7 +120,7 @@ const ServerPage = () => {
                 <button
                   className={current ? 'btn' : 'btn ghost'}
                   style={{ flex: 1, justifyContent: 'flex-start' }}
-                  disabled={current || busy !== null}
+                  disabled={current || saved || busy !== null}
                   onClick={() => choose(server)}
                 >
                   {current ? <Check className='lucide' /> : <Server className='lucide' />}
@@ -128,7 +134,7 @@ const ServerPage = () => {
                     className='btn ghost icon danger'
                     title={`Remove ${server.name}`}
                     aria-label={`Remove ${server.name}`}
-                    disabled={busy !== null}
+                    disabled={saved || busy !== null}
                     onClick={() => remove(server)}
                   >
                     <Trash2 className='lucide' />
@@ -144,9 +150,12 @@ const ServerPage = () => {
             <label htmlFor='server-address'>Add a server</label>
             <input
               id='server-address'
-              className='input mono'
+              className={native?.mobile ? 'input' : 'input mono'}
+              inputMode='url'
               placeholder='https://gendox.example.com'
+              autoCapitalize='none'
               autoComplete='off'
+              spellCheck={false}
               value={address}
               onChange={e => setAddress(e.target.value)}
             />
@@ -166,11 +175,12 @@ const ServerPage = () => {
               {error}
             </p>
           )}
-          <button className='btn primary' type='submit' disabled={!address.trim() || busy !== null}>
+          <button className='btn primary' type='submit' disabled={!address.trim() || saved || busy !== null}>
             <Plus className='lucide' />
             {busy === 'add' ? 'Connecting…' : 'Add and switch'}
           </button>
         </form>
+        {native?.mobile && !saved && <a href='/'>Back to Gendox</a>}
       </div>
     </main>
   )

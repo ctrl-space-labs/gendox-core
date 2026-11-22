@@ -1,17 +1,27 @@
+// One project for the desktop and mobile apps. `desktop` and `mobile` are set by tauri-build;
+// what only makes sense on a computer (menus, tray, terminal, folders, loopback sign-in) is desktop only.
+#[cfg(desktop)]
 mod auth;
 mod diagnostics;
+#[cfg(desktop)]
 mod downloads;
 mod links;
 mod offline;
 mod server;
+#[cfg(desktop)]
 mod terminal;
+#[cfg(desktop)]
 mod folders;
+#[cfg(desktop)]
 mod desktop;
 
-use std::{borrow::Cow, collections::HashMap, fs, path::PathBuf, sync::Mutex, time::Duration};
+use std::{borrow::Cow, collections::HashMap, fs, path::PathBuf, time::Duration};
+#[cfg(desktop)]
+use std::sync::Mutex;
 
 use diagnostics::Event;
 use server::{Saved, Server, ServerConfig};
+#[cfg(desktop)]
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu, WINDOW_SUBMENU_ID};
 use tauri::utils::config::{Csp, CspDirectiveSources};
 use tauri::webview::{NewWindowResponse, PageLoadEvent};
@@ -23,14 +33,17 @@ use tauri_plugin_opener::OpenerExt;
 const TITLE_BAR_OVERLAY_SCRIPT: &str = "document.documentElement.classList.add('frameless', 'titlebar-overlay');";
 
 /// Windows and Linux: the window buttons the page shows in place of the title bar.
-#[cfg(not(target_os = "macos"))]
+#[cfg(all(desktop, not(target_os = "macos")))]
 const WINDOW_CONTROLS_SCRIPT: &str = include_str!("window-controls.js");
 use url::Url;
 
+#[cfg(desktop)]
 const SERVER_PAGE: &str = "/server/";
 
+#[cfg(desktop)]
 struct ViewControls(Mutex<u16>);
 
+#[cfg(desktop)]
 impl Default for ViewControls {
     fn default() -> Self { Self(Mutex::new(100)) }
 }
@@ -76,6 +89,7 @@ async fn fetch_config(address: &str) -> Result<ServerConfig, String> {
     let url = server::client_config_url(address)?;
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(15))
+        .https_only(server::REQUIRE_HTTPS)
         .build()
         .map_err(|e| e.to_string())?;
     let response = client
@@ -85,7 +99,7 @@ async fn fetch_config(address: &str) -> Result<ServerConfig, String> {
         .map_err(|_| "The server cannot be reached".to_string())?;
     if !response.status().is_success() {
         return Err(format!(
-            "This does not look like a Gendox server, or it is too old for the desktop app ({})",
+            "This does not look like a Gendox server, or it is too old for this app ({})",
             response.status()
         ));
     }
@@ -98,7 +112,7 @@ async fn fetch_config(address: &str) -> Result<ServerConfig, String> {
     let app_version = env!("CARGO_PKG_VERSION");
     if !server::version_accepted(app_version, config.min_desktop_app_version.as_deref()) {
         return Err(format!(
-            "This server needs Gendox Desktop {} or newer",
+            "This server needs version {} or newer of the Gendox app",
             config.min_desktop_app_version.unwrap_or_default()
         ));
     }
@@ -123,7 +137,7 @@ async fn set_server(app: AppHandle, name: Option<String>, address: String) -> Re
     saved.choose(Server { name, address, config: Some(config) }, &server::presets());
     store_saved(&app, &saved)?;
     diagnostics::record(&app, Event::ServerSelected);
-    app.restart()
+    restart(&app)
 }
 
 /// Forgets a server the user added; the app restarts with the updated list.
@@ -132,7 +146,18 @@ fn remove_server(app: AppHandle, address: String) -> Result<(), String> {
     let mut saved = load_saved(&app);
     saved.remove(&address);
     store_saved(&app, &saved)?;
+    restart(&app)
+}
+
+#[cfg(desktop)]
+fn restart(app: &AppHandle) -> Result<(), String> {
     app.restart()
+}
+
+/// A phone app cannot start itself again: the saved choice applies the next time the app opens.
+#[cfg(mobile)]
+fn restart(_app: &AppHandle) -> Result<(), String> {
+    Ok(())
 }
 
 fn open_in_system_browser(app: &AppHandle, url: &Url) {
@@ -142,6 +167,7 @@ fn open_in_system_browser(app: &AppHandle, url: &Url) {
 }
 
 /// The platform's default menu, with "Server…" first in the app menu (macOS) or File menu.
+#[cfg(desktop)]
 fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
     let menu = Menu::default(app)?;
     let item = MenuItem::with_id(app, "server", "Server…", true, None::<&str>)?;
@@ -184,6 +210,7 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
     Ok(menu)
 }
 
+#[cfg(desktop)]
 fn change_zoom(app: &AppHandle, action: &str) {
     let Some(window) = app.get_webview_window("main") else { return; };
     let state = app.state::<ViewControls>();
@@ -196,7 +223,23 @@ fn change_zoom(app: &AppHandle, action: &str) {
     if window.set_zoom(f64::from(next) / 100.0).is_ok() { *percent = next; }
 }
 
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    #[cfg(desktop)]
+    let builder = desktop_builder();
+    #[cfg(mobile)]
+    let builder = tauri::Builder::default()
+        .plugin(tauri_plugin_opener::init())
+        .invoke_handler(tauri::generate_handler![set_server, remove_server]);
+    builder
+        .setup(setup)
+        .run(tauri::generate_context!())
+        .expect("error while running Gendox");
+}
+
+/// Plugins, commands and menus of the desktop app.
+#[cfg(desktop)]
+fn desktop_builder() -> tauri::Builder<tauri::Wry> {
     tauri::Builder::default()
         // First plugin: a second launch focuses the running app and exits.
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
@@ -250,104 +293,117 @@ pub fn run() {
                 }
             }
         })
-        .setup(|app| {
-            let _ = diagnostics::initialize(app.handle());
-            desktop::setup(app.handle())?;
-            let presets = server::presets();
-            let saved = load_saved(app.handle());
-            let current = saved.current_or(&presets);
-            let origin = server::app_origin();
-            let runtime_env = server::runtime_env(&current, &presets, &saved, origin);
-            let script = server::init_script(&runtime_env);
-            let tool_script = terminal::init_script(app.state::<terminal::TerminalState>().session_token());
-            let config = current.config.as_ref().expect("the server in use has a configuration");
-            // Sign-in happens in the system browser (auth.rs): the window never shows the sign-in pages.
-            let allowed = vec![origin.to_string()];
+}
 
-            let on_navigation = app.handle().clone();
-            let on_new_window = app.handle().clone();
-            let address = current.address.clone();
-            let api_origin = links::origin_of(&config.api_url).expect("valid API origin");
-            let oidc_origin = links::origin_of(&config.oidc_authority).expect("valid OIDC origin");
-            app.manage(auth::AuthState::new(oidc_origin.clone()));
-            let window = WebviewWindowBuilder::new(app, "main", WebviewUrl::App(offline::CONNECTING.trim_start_matches('/').into()))
-                .title(format!("Gendox — {}", current.name))
-                .inner_size(1280.0, 832.0)
-                .min_inner_size(800.0, 600.0);
-            // No title bar: the page's top bar takes its place. macOS keeps its window buttons, over the page.
-            #[cfg(target_os = "macos")]
-            let window = window
-                .title_bar_style(tauri::TitleBarStyle::Overlay)
-                .hidden_title(true)
-                .traffic_light_position(tauri::LogicalPosition::new(18.0, 26.0))
-                .initialization_script(TITLE_BAR_OVERLAY_SCRIPT);
-            // Windows and Linux: no title bar at all; the page draws the window buttons.
-            #[cfg(not(target_os = "macos"))]
-            let window = window.decorations(false).initialization_script(WINDOW_CONTROLS_SCRIPT);
-            window
-                .initialization_script(script)
-                .initialization_script(tool_script)
-                .on_web_resource_request(move |request, response| {
-                    if let Some(script) = server::bundled_config_script(&request.uri().to_string(), &runtime_env) {
-                        *response.body_mut() = Cow::Owned(script.into_bytes());
-                        response.headers_mut().insert("Content-Type", "application/javascript; charset=utf-8".parse().unwrap());
-                        response.headers_mut().insert("Cache-Control", "no-store".parse().unwrap());
-                    } else if let Some(page) = offline::page(request.uri().path()) {
-                        *response.body_mut() = Cow::Borrowed(page);
-                        response.headers_mut().insert("Content-Type", "text/html; charset=utf-8".parse().unwrap());
-                        response.headers_mut().insert("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'".parse().unwrap());
-                    } else if let Some(header) = response.headers_mut().get_mut("Content-Security-Policy") {
-                        // The selected self-hosted server is only known at runtime.
-                        if let Ok(policy) = header.to_str() {
-                            let mut directives: HashMap<String, CspDirectiveSources> = Csp::Policy(policy.to_string()).into();
-                            let connect = directives.entry("connect-src".into()).or_default();
-                            connect.push(&api_origin);
-                            connect.push(&oidc_origin);
-                            *header = Csp::from(directives).to_string().parse().unwrap();
+/// The main window, on the server in use. Shared by the desktop and mobile apps.
+fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    let _ = diagnostics::initialize(app.handle());
+    #[cfg(desktop)]
+    desktop::setup(app.handle())?;
+    let presets = server::presets();
+    let saved = load_saved(app.handle());
+    let current = saved.current_or(&presets);
+    let origin = server::app_origin();
+    let runtime_env = server::runtime_env(&current, &presets, &saved, origin);
+    let script = server::init_script(&runtime_env);
+    let config = current.config.as_ref().expect("the server in use has a configuration");
+    let secure_saved_config = !server::REQUIRE_HTTPS
+        || (server::validate_address(&config.api_url).is_ok()
+            && server::validate_address(&config.oidc_authority).is_ok());
+
+    let on_navigation = app.handle().clone();
+    let on_new_window = app.handle().clone();
+    let address = current.address.clone();
+    let api_origin = links::origin_of(&config.api_url).expect("valid API origin");
+    let oidc_origin = links::origin_of(&config.oidc_authority).expect("valid OIDC origin");
+    // Desktop: sign-in happens in the system browser (auth.rs); the window never shows the sign-in pages.
+    #[cfg(desktop)]
+    let allowed = vec![origin.to_string()];
+    #[cfg(desktop)]
+    app.manage(auth::AuthState::new(oidc_origin.clone()));
+    // Mobile, until the platform's sign-in session replaces it (CLIENT-3b): sign-in inside the window,
+    // as the web app does, returning to the app's own origin.
+    #[cfg(mobile)]
+    let allowed = vec![origin.to_string(), oidc_origin.clone()];
+    let window = WebviewWindowBuilder::new(app, "main", WebviewUrl::App(offline::CONNECTING.trim_start_matches('/').into()))
+        .title(format!("Gendox — {}", current.name));
+    #[cfg(desktop)]
+    let window = window.inner_size(1280.0, 832.0).min_inner_size(800.0, 600.0);
+    // No title bar: the page's top bar takes its place. macOS keeps its window buttons, over the page.
+    #[cfg(target_os = "macos")]
+    let window = window
+        .title_bar_style(tauri::TitleBarStyle::Overlay)
+        .hidden_title(true)
+        // Buttons centred on the 56 px top bar of the page (their centre sits about 1 pt above this y)
+        .traffic_light_position(tauri::LogicalPosition::new(18.0, 29.0))
+        .initialization_script(TITLE_BAR_OVERLAY_SCRIPT);
+    // Windows and Linux: no title bar at all; the page draws the window buttons.
+    #[cfg(all(desktop, not(target_os = "macos")))]
+    let window = window.decorations(false).initialization_script(WINDOW_CONTROLS_SCRIPT);
+    let window = window.initialization_script(script);
+    // The client-tool host: the terminal, folders and the browser sign-in. Desktop only.
+    #[cfg(desktop)]
+    let window = window
+        .initialization_script(terminal::init_script(app.state::<terminal::TerminalState>().session_token()))
+        .on_download(downloads::handle);
+    window
+        .on_web_resource_request(move |request, response| {
+            if let Some(script) = server::bundled_config_script(&request.uri().to_string(), &runtime_env) {
+                *response.body_mut() = Cow::Owned(script.into_bytes());
+                response.headers_mut().insert("Content-Type", "application/javascript; charset=utf-8".parse().unwrap());
+                response.headers_mut().insert("Cache-Control", "no-store".parse().unwrap());
+            } else if let Some(page) = offline::page(request.uri().path()) {
+                *response.body_mut() = Cow::Borrowed(page);
+                response.headers_mut().insert("Content-Type", "text/html; charset=utf-8".parse().unwrap());
+                response.headers_mut().insert("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'".parse().unwrap());
+            } else if let Some(header) = response.headers_mut().get_mut("Content-Security-Policy") {
+                // The selected self-hosted server is only known at runtime.
+                if let Ok(policy) = header.to_str() {
+                    let mut directives: HashMap<String, CspDirectiveSources> = Csp::Policy(policy.to_string()).into();
+                    let connect = directives.entry("connect-src".into()).or_default();
+                    connect.push(&api_origin);
+                    connect.push(&oidc_origin);
+                    *header = Csp::from(directives).to_string().parse().unwrap();
+                }
+            }
+        })
+        .on_page_load(move |window, payload| {
+            if payload.event() == PageLoadEvent::Finished {
+                diagnostics::record(window.app_handle(), Event::PageLoaded);
+            }
+            if payload.event() == PageLoadEvent::Finished && payload.url().path() == offline::CONNECTING {
+                let address = address.clone();
+                tauri::async_runtime::spawn(async move {
+                    let path = if secure_saved_config && fetch_config(&address).await.is_ok() {
+                        diagnostics::record(window.app_handle(), Event::ServerConnected);
+                        "/"
+                    } else {
+                        diagnostics::record(window.app_handle(), Event::ServerUnreachable);
+                        offline::OFFLINE
+                    };
+                    // Do not interrupt a server choice made while the check was running.
+                    if window.url().is_ok_and(|u| u.path() == offline::CONNECTING) {
+                        if let Ok(url) = Url::parse(&format!("{}{path}", server::app_origin())) {
+                            let _ = window.navigate(url);
                         }
                     }
-                })
-                .on_page_load(move |window, payload| {
-                    if payload.event() == PageLoadEvent::Finished {
-                        diagnostics::record(window.app_handle(), Event::PageLoaded);
-                    }
-                    if payload.event() == PageLoadEvent::Finished && payload.url().path() == offline::CONNECTING {
-                        let address = address.clone();
-                        tauri::async_runtime::spawn(async move {
-                            let path = if fetch_config(&address).await.is_ok() {
-                                diagnostics::record(window.app_handle(), Event::ServerConnected);
-                                "/"
-                            } else {
-                                diagnostics::record(window.app_handle(), Event::ServerUnreachable);
-                                offline::OFFLINE
-                            };
-                            // Do not interrupt a server choice made while the check was running.
-                            if window.url().is_ok_and(|u| u.path() == offline::CONNECTING) {
-                                if let Ok(url) = Url::parse(&format!("{}{path}", server::app_origin())) {
-                                    let _ = window.navigate(url);
-                                }
-                            }
-                        });
-                    }
-                })
-                .on_navigation(move |url| {
-                    let stays = links::stays_in_app(url, &allowed);
-                    if !stays {
-                        open_in_system_browser(&on_navigation, url);
-                    }
-                    stays
-                })
-                // target="_blank" and window.open: the system browser, never a second window.
-                .on_new_window(move |url, _features| {
-                    open_in_system_browser(&on_new_window, &url);
-                    NewWindowResponse::Deny
-                })
-                .on_download(downloads::handle)
-                .build()?;
-            Ok(())
+                });
+            }
         })
-        .run(tauri::generate_context!())
-        .expect("error while running Gendox");
+        .on_navigation(move |url| {
+            let stays = links::stays_in_app(url, &allowed);
+            if !stays {
+                open_in_system_browser(&on_navigation, url);
+            }
+            stays
+        })
+        // target="_blank" and window.open: the system browser, never a second window.
+        .on_new_window(move |url, _features| {
+            open_in_system_browser(&on_new_window, &url);
+            NewWindowResponse::Deny
+        })
+        .build()?;
+    Ok(())
 }
 
 #[cfg(test)]

@@ -10,7 +10,7 @@ import {themes as prismThemes} from 'prism-react-renderer';
 const config = {
   title: 'Gendox',
   tagline: 'AI Agents & Document Intelligence Harness',
-  favicon: 'img/gendoxLogo.svg',
+  favicon: 'img/app-icon.svg',
 
   // The production url of the site
   url: 'https://docs.gendox.dev',

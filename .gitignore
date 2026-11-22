@@ -51,6 +51,7 @@ cmake-build-*/
 
 # IntelliJ
 out/
+/gendox-core.iml
 
 # mpeltonen/sbt-idea plugin
 .idea_modules/

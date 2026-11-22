@@ -108,10 +108,10 @@ EOF
   fi
 }
 
-# Function to create the desktop app's PKCE client: its UI is served from the app's own origin,
-# tauri://localhost on macOS and Linux, http://tauri.localhost on Windows. Sign-in and sign-out happen in
-# the system browser, which returns to a loopback address the app listens on: http://127.0.0.1:<port>/callback.
+# Create the installed apps' PKCE client. Desktop sign-in and sign-out use the system browser, which
+# returns to a loopback address the app listens on: http://127.0.0.1:<port>/callback.
 # The port changes every time; Keycloak matches a loopback redirect on any port (RFC 8252, section 7.3).
+# Mobile signs in to the app's webview origin on iOS or Android.
 # offline_access, one of the realm's optional scopes, gives the app a refresh token that keeps it signed in.
 create_desktop_client() {
   CLIENT_ID=$1
@@ -129,11 +129,19 @@ create_desktop_client() {
   "enabled": true,
   "publicClient": true,
   "protocol": "openid-connect",
-  "redirectUris": ["tauri://localhost/*", "http://tauri.localhost/*", "http://127.0.0.1/callback"],
+  "redirectUris": [
+    "http://127.0.0.1/callback",
+    "tauri://localhost/oidc-callback/",
+    "http://tauri.localhost/oidc-callback/",
+    "tauri://localhost/silent-renew",
+    "http://tauri.localhost/silent-renew"
+  ],
   "webOrigins": ["tauri://localhost", "http://tauri.localhost"],
+  "defaultClientScopes": ["web-origins", "acr", "roles", "profile", "basic", "email"],
   "alwaysDisplayInConsole": true,
   "frontchannelLogout": true,
   "standardFlowEnabled": true,
+  "directAccessGrantsEnabled": false,
   "attributes": {
     "pkce.code.challenge.method": "S256",
     "post.logout.redirect.uris": "tauri://localhost/login##http://tauri.localhost/login##http://127.0.0.1/callback"

@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { useAuth } from 'src/authentication/useAuth'
+import { isMobileApp } from 'src/services/desktopBridge'
 import {localStorageConstants} from "src/utils/generalConstants";
 
 
@@ -36,6 +37,8 @@ function PrivateRoute({ children, pageLoader }) {
       // When the app is in an iframe the path is / , show the login page
       if (_inIframe() && router.asPath === '/') {
         router.push('/login-prompt')
+      } else if (isMobileApp()) {
+        router.replace({ pathname: '/login/', query: { returnUrl: router.asPath } })
       } else {
         // This directly redirect the user to the login page
         // and keep the previous url for after the login

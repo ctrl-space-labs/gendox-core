@@ -1,9 +1,11 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import userManager from 'src/services/authService'
 import { routeTypes } from 'src/authentication/components/RouteHandler'
 import GendoxPageLoader from 'src/authentication/components/GendoxPageLoader'
 
 const OidcCallbackPage = () => {
+  const [failed, setFailed] = useState(false)
+
   useEffect(() => {
     // Handle the OIDC callback when the component mounts
     userManager
@@ -13,8 +15,21 @@ const OidcCallbackPage = () => {
       })
       .catch(error => {
         console.error('Error handling OIDC redirect callback:', error)
+        setFailed(true)
       })
   }, [])
+
+  if (failed) {
+    return (
+      <main className='center'>
+        <div className='stack' style={{ alignItems: 'center' }}>
+          <p role='alert'>Gendox could not finish signing you in.</p>
+          <a className='btn primary' href='/login/'>Try again</a>
+          {window.__GENDOX_ENV__?.GENDOX_DESKTOP?.mobile && <a href='/server/'>Choose a server</a>}
+        </div>
+      </main>
+    )
+  }
 
   return <GendoxPageLoader text='Signing you in…' />
 }

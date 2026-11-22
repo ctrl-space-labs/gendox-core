@@ -2,6 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "The bundled main UI: server selection, confirmed commands, the window buttons and moving the window by its top bar. Remote pages get nothing.",
+  "platforms": ["macOS", "windows", "linux"],
   "windows": [
     "main"
   ],

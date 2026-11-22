@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Gendox</title>
+<style>
+/* The same styles in signed-in.html, connecting.html and offline.html (the pages allow inline styles only).
+   The v2 theme tokens (gendox-frontend-v2/src/styles/themes.css), dark by default and light when the system is light */
+:root{color-scheme:dark;--bg:#1f2136;--surface:#282a42;--surface-2:#30324d;--warn:#f3b546;--warn-soft:rgba(243,181,70,.15);--border-2:rgba(234,234,255,.16);--text:#f8f8ff;--text-2:rgba(244,244,255,.82);
+--accent-soft:rgba(8,182,141,.15);--accent-text:#3dd6ae;--pop-shadow:0 12px 32px -10px rgba(5,6,18,.8)}
+@media (prefers-color-scheme:light){:root{color-scheme:light;--bg:#f7f7f9;--surface:#fff;--surface-2:#f3f3f8;--warn:#b26b00;--warn-soft:rgba(178,107,0,.11);--border-2:#d5d7e3;--text:#282a42;--text-2:#4d4e64;
+--accent-soft:rgba(8,182,141,.11);--accent-text:#008b6d;--pop-shadow:0 12px 32px -12px rgba(40,42,66,.35)}}
+*{box-sizing:border-box;margin:0}
+body{min-height:100vh;display:grid;place-items:center;padding:32px 16px;background:var(--bg);color:var(--text);
+font:14px/1.5 'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+main{width:100%;max-width:420px;display:flex;flex-direction:column;align-items:center;gap:12px;padding:32px 28px;text-align:center;
+border:1px solid var(--border-2);border-radius:14px;background:var(--surface);box-shadow:var(--pop-shadow)}
+.brand{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px;letter-spacing:-.02em}
+.brand svg{width:24px;height:24px}
+.icon{width:44px;height:44px;margin-top:12px;display:grid;place-items:center;border-radius:50%;background:var(--accent-soft);color:var(--accent-text)}
+.icon svg{width:22px;height:22px}
+h1{font-size:19px;font-weight:650;letter-spacing:-.03em;line-height:1.2}
+p{color:var(--text-2)}
+.icon.warn{background:var(--warn-soft);color:var(--warn)}
+.spin{width:22px;height:22px;border-radius:50%;border:2.25px solid var(--accent-soft);border-top-color:var(--accent-text);animation:spin .9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation-duration:3s}}
+nav{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:8px}
+.btn{display:inline-flex;align-items:center;height:34px;padding:0 14px;border-radius:7px;border:1px solid var(--border-2);background:var(--surface-2);color:var(--text);font-size:13.5px;font-weight:500;text-decoration:none}
+.btn:hover{filter:brightness(1.08)}
+.btn.primary{background:#08b68d;color:#1b1d31;border-color:transparent}
+.drag{position:fixed;inset:0 0 auto;height:40px}
+</style></head>
+<body><main>
+<div class="brand"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 268.544 256.142" aria-hidden="true"><defs><linearGradient id="d" x1="108.742" y1="173.614" x2="258.439" y2="199.375" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#707183"/><stop offset=".111" stop-color="#518585"/><stop offset=".237" stop-color="#369688"/><stop offset=".375" stop-color="#22a48a"/><stop offset=".529" stop-color="#13ae8b"/><stop offset=".712" stop-color="#0ab48c"/><stop offset="1" stop-color="#08b68d"/></linearGradient><linearGradient id="e" x1="171.845" y1="160.306" x2="-23.088" y2="60.378" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#707183"/><stop offset=".021" stop-color="#687683"/><stop offset=".116" stop-color="#4a8986"/><stop offset=".221" stop-color="#329988"/><stop offset=".34" stop-color="#1fa68a"/><stop offset=".478" stop-color="#12af8c"/><stop offset=".654" stop-color="#0ab48c"/><stop offset="1" stop-color="#08b68d"/></linearGradient></defs><path d="M210.485,256.142l-14.758-37.541c-22.448-55.332-39.962-56.761-68.968-59.145l-10.111-.742v-33.988h85.841l66.055,131.415h-58.059Z" fill="url(#d)"/><path d="M117.807,256.142C36.427,256.142,0,191.719,0,127.872,0,52.586,48.449,0,117.807,0h13.583v34.405l-11.209,1.892c-49.572,10.111-59.896,55.379-59.896,91.574,0,51.418,21.409,84.088,60.276,92.001l10.828,1.846v34.424h-13.583Z" fill="url(#e)"/></svg>Gendox</div>
+<div class="icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></div>
+<h1>You can return to Gendox</h1>
+<p>You can close this tab and continue in the app.</p>
+</main><script>window.close()</script></body></html>
