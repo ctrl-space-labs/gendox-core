@@ -7,7 +7,8 @@
   "scripts": {
     "tauri": "tauri",
     "build:frontend": "cd ../gendox-frontend-v2 && yarn install --frozen-lockfile && yarn build",
-    "test": "cargo test --manifest-path src-tauri/Cargo.toml"
+    "test": "cargo test --manifest-path src-tauri/Cargo.toml",
+    "dev": "tauri dev"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2"

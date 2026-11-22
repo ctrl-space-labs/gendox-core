@@ -358,7 +358,7 @@ mod tests {
     fn reads_a_running_servers_client_configuration() {
         let address = std::env::var("GENDOX_TEST_SERVER").expect("GENDOX_TEST_SERVER");
         let config = tauri::async_runtime::block_on(super::fetch_config(&address)).unwrap();
-        assert_eq!(config.desktop_client_id, "gendox-desktop");
+        assert_eq!(config.desktop_client_id, "gendox-pkce-public-client-desktop");
         assert!(config.api_url.ends_with("/gendox/api/v1/"));
         let refused = tauri::async_runtime::block_on(super::fetch_config("http://localhost:1"));
         assert_eq!(refused.unwrap_err(), "The server cannot be reached");

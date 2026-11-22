@@ -184,7 +184,7 @@ mod tests {
             config: Some(ServerConfig {
                 api_url: format!("{address}/gendox/api/v1/"),
                 oidc_authority: format!("{address}/idp/realms/r"),
-                desktop_client_id: "gendox-desktop".into(),
+                desktop_client_id: "gendox-pkce-public-client-desktop".into(),
                 min_desktop_app_version: None,
             }),
         }
@@ -194,13 +194,13 @@ mod tests {
     fn bundled_frames_receive_only_public_frontend_configuration() {
         let env = json!({
             "NEXT_PUBLIC_GENDOX_URL": "https://api.example/gendox/api/v1/",
-            "NEXT_PUBLIC_OIDC_CLIENT_ID": "gendox-desktop",
+            "NEXT_PUBLIC_OIDC_CLIENT_ID": "gendox-pkce-public-client-desktop",
             "GENDOX_DESKTOP": { "servers": [{ "name": "Custom server" }] },
             "UNRELATED_SETTING": "not frontend configuration",
         });
         let script = bundled_config_script("tauri://localhost/env-config.js", &env).unwrap();
         assert!(script.contains("https://api.example/gendox/api/v1/"));
-        assert!(script.contains("gendox-desktop"));
+        assert!(script.contains("gendox-pkce-public-client-desktop"));
         assert!(!script.contains("Custom server"));
         assert!(!script.contains("UNRELATED_SETTING"));
         assert!(!script.contains("__GENDOX_RUNTIME_"));

@@ -85,7 +85,7 @@ http.createServer(async (req, res) => {
   }
   if (url.pathname.startsWith('/gendox/api/v1/')) {
     const api = url.pathname.slice('/gendox/api/v1/'.length)
-    if (api === 'public/client-config' && upstream) return json(res, { apiUrl: base + '/gendox/api/v1/', oidcAuthority: authority, desktopClientId: 'gendox-desktop' })
+    if (api === 'public/client-config' && upstream) return json(res, { apiUrl: base + '/gendox/api/v1/', oidcAuthority: authority, desktopClientId: 'gendox-pkce-public-client-desktop' })
     if (api.endsWith('messages/completions') && req.method === 'POST') {
       let text = ''; for await (const chunk of req) text += chunk
       return completion(req, res, JSON.parse(text)).catch(error => { console.error(error); res.destroy() })

@@ -102,7 +102,7 @@ alone; the configuration code stays as it is. The window lets only the bundled U
 pages load; switching restarts the app, so that list is always the current server's.
 
 **Sign-in.** At first inside the app window, as the web app does today, returning to the app's own origin: no v2
-change. A new public Keycloak client, `gendox-desktop`, with the app's redirect URIs and web origins, added to the realm
+change. A new public Keycloak client, `gendox-pkce-public-client-desktop`, with the app's redirect URIs and web origins, added to the realm
 files of every compose environment. The API's CORS allows the app's origins (`tauri://localhost` on macOS and Linux,
 `http://tauri.localhost` on Windows). Sign-in in the system browser (CLIENT-2h) follows, before Google or Microsoft
 sign-in is offered: those providers refuse sign-in inside embedded web views.

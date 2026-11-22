@@ -5,7 +5,7 @@
     "config": {
       "apiUrl": "https://app.gendox.dev/gendox/api/v1/",
       "oidcAuthority": "https://auth.gendox.dev/idp/realms/gendox-idp-prod",
-      "desktopClientId": "gendox-desktop"
+      "desktopClientId": "gendox-pkce-public-client-desktop"
     }
   }
 ]

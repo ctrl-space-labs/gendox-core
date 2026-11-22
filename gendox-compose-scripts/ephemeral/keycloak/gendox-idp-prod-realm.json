@@ -29,7 +29,7 @@
       }
     },
     {
-      "clientId": "gendox-desktop",
+      "clientId": "gendox-pkce-public-client-desktop",
       "name": "Gendox Desktop",
       "enabled": true,
       "publicClient": true,

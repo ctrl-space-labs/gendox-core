@@ -23,7 +23,7 @@ The app opens `app.gendox.dev`. Before the UI loads it sets `window.__GENDOX_ENV
 frames through `/env-config.js`; the Server page and native integration belong to the main frame.
 
 Sign-in uses the system browser and returns to Gendox through a one-time loopback address.
-The `gendox-desktop` Keycloak client uses authorization code with PKCE and requests the
+The `gendox-pkce-public-client-desktop` Keycloak client uses authorization code with PKCE and requests the
 `offline_access` scope. Keycloak users need the `offline_access` realm role to receive an offline
 refresh token. The app uses that token to renew your session when it reopens after access-token
 expiry. Signing out revokes the token and ends the browser session.

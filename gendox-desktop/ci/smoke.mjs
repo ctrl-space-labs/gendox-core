@@ -39,7 +39,7 @@ export async function startFixture() {
     return {
       apiUrl: `${base}/gendox/api/v1/`,
       oidcAuthority: `${base}/idp/realms/ci`,
-      desktopClientId: 'gendox-desktop',
+      desktopClientId: 'gendox-pkce-public-client-desktop',
       serverVersion: '0.1.0',
       apiVersion: 'v1',
       minDesktopAppVersion: '0.1.0'

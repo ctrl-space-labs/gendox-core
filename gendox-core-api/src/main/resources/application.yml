@@ -129,7 +129,8 @@ gendox:
     # Public addresses, as users reach them; set them where the API sits behind a proxy.
     api-url: ${GENDOX_CLIENT_API_URL:${gendox.domain.base-url}${server.servlet.context-path}/}
     oidc-authority: ${GENDOX_CLIENT_OIDC_AUTHORITY:${spring.security.oauth2.resourceserver.jwt.issuer-uri}}
-    desktop-client-id: gendox-desktop
+    # The desktop app's public OIDC client.
+    desktop-client-id: ${GENDOX_CLIENT_DESKTOP_CLIENT_ID:gendox-pkce-public-client-desktop}
     # The web app's public OIDC client. Blank: the web app keeps the client it was configured with.
     web-client-id: ${GENDOX_CLIENT_WEB_CLIENT_ID:}
     # Comma-separated origins the web app served beside this API may switch to, for development

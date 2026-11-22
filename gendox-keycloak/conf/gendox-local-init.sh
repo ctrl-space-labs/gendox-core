@@ -19,7 +19,7 @@ PROVEN_BASE_URL="http://localhost:3001"
 # Client names
 GENDOX_PKCE_CLIENT="gendox-pkce-public-client-local"
 PROVEN_PKCE_CLIENT="proven-pkce-public-client-local"
-DESKTOP_PKCE_CLIENT="gendox-desktop"
+DESKTOP_PKCE_CLIENT="gendox-pkce-public-client-desktop"
 GENDOX_PRIVATE_CLIENT="gendox-private-client"
 PROVEN_PRIVATE_CLIENT="proven-ai-private-client"
 
