@@ -411,6 +411,7 @@ const Chat = ({
 
   const groupedThreads = useMemo(() => groupThreadsByDate(threads || []), [threads])
   const lastTurnIndex = turns.length - 1
+  const turnActive = isBusy || ACTIVE_COMPLETION_STATUSES.includes(completionStatus)
 
   // the agent's chat settings (#527): welcome message, suggested questions and disclaimer everywhere,
   // the theme and colours in the widget, and the "Powered by" line where the chat shows one
@@ -536,7 +537,8 @@ const Chat = ({
                 onSources={sources ? openSources : null}
                 onAskAgain={isBusy ? null : text => send(text, [])}
                 onFeedback={handleFeedback}
-                unfinished={index === lastTurnIndex && !isBusy && !ACTIVE_COMPLETION_STATUSES.includes(completionStatus)}
+                active={index === lastTurnIndex && turnActive}
+                unfinished={index === lastTurnIndex && !turnActive}
               >
                 {index === lastTurnIndex ? progress : null}
               </ChatTurn>

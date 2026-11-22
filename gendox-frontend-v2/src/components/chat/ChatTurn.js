@@ -1,21 +1,95 @@
-import { useState } from 'react'
-import { BookMarked, Check, ChevronRight, CircleAlert, Copy, Lightbulb, RefreshCw, ThumbsDown, ThumbsUp, Wrench } from 'lucide-react'
+import { Fragment, useState } from 'react'
+import {
+  BookMarked,
+  Check,
+  ChevronRight,
+  CircleAlert,
+  Copy,
+  Lightbulb,
+  RefreshCw,
+  SquareTerminal,
+  ThumbsDown,
+  ThumbsUp,
+  Wrench
+} from 'lucide-react'
 import { copyToClipboard } from 'src/utils/copyToClipboard'
 import Avatar from 'src/components/ui/Avatar'
 import Markdown from 'src/components/chat/Markdown'
 import { MentionText } from 'src/components/chat/mentions'
 import ChatAttachments from 'src/components/chat/ChatAttachments'
+import ToolCallDetails, { parseToolValue } from 'src/components/tools/ToolCallDetails'
 
-const Trace = ({ icon: Icon, label, children }) => {
-  return (
-    <details className='gc-trace'>
-      <summary>
-        <Icon className='lucide' />
+const Trace = ({ icon: Icon, label, preview, open, className = '', children }) => (
+  <details className={`gc-trace ${className}`} open={open}>
+    <summary>
+      <Icon className='lucide' aria-hidden='true' />
+      <span className='trunc' title={label}>
         {label}
-        <ChevronRight className='lucide' />
-      </summary>
-      <div>{children}</div>
-    </details>
+      </span>
+      {preview && (
+        <span className='trunc' title={preview}>
+          · {preview}
+        </span>
+      )}
+      <ChevronRight className='lucide' aria-hidden='true' />
+    </summary>
+    <div>{children}</div>
+  </details>
+)
+
+const toolLabel = name => {
+  const label = name?.replace(/[_-]+/g, ' ').trim() || 'tool'
+
+  return label.charAt(0).toUpperCase() + label.slice(1)
+}
+
+const ToolCalls = ({ batches, live }) => {
+  const calls = batches.flatMap(batch => batch.calls)
+  const examples = [...new Set(calls.map(({ call }) => toolLabel(call.function?.name)))].slice(0, 3)
+
+  return (
+    <Trace
+      icon={Wrench}
+      label={`${calls.length} tool ${calls.length === 1 ? 'call' : 'calls'}`}
+      preview={examples.join(', ')}
+      open={live}
+      className='gc-tool-activity'
+    >
+      {batches.map(({ header, calls }, index) => (
+        <Fragment key={header.messageId || index}>
+          {header.reasoningContent && !header.message?.trim() && (
+            <Trace icon={Lightbulb} label='Show thinking'>
+              <Markdown text={header.reasoningContent} className='gc-md muted' />
+            </Trace>
+          )}
+          {calls.map(({ call, responses }) => {
+            const { name, arguments: input } = call.function || {}
+            const value = parseToolValue(input)
+            let label = toolLabel(name)
+            let icon = Wrench
+            if (name === 'run_command') {
+              icon = SquareTerminal
+              if (typeof value?.description === 'string' && value.description.trim()) label = value.description.trim()
+            }
+            if (name === 'read_skill') {
+              icon = BookMarked
+              if (typeof value?.name === 'string' && value.name.trim()) label = `Read skill · ${value.name.trim()}`
+            }
+
+            return (
+              <Trace
+                key={call.id}
+                icon={icon}
+                label={label}
+                preview={!responses.length && (live ? 'Awaiting result' : 'No result recorded')}
+              >
+                <ToolCallDetails name={name} input={value} responses={responses} />
+              </Trace>
+            )
+          })}
+        </Fragment>
+      ))}
+    </Trace>
   )
 }
 
@@ -29,7 +103,8 @@ const FAILURES = {
 }
 
 const Failure = ({ failed, onAskAgain }) => {
-  const [title, text] = FAILURES[failed.code] ||
+  const [title, text] =
+    FAILURES[failed.code] ||
     (failed.message
       ? ['Something went wrong', failed.message]
       : ['The answer didn’t finish', 'The agent stopped before it answered. Try again in a moment.'])
@@ -52,67 +127,6 @@ const Failure = ({ failed, onAskAgain }) => {
         {failed.code && <span className='faint sm mono'>{failed.code}</span>}
       </div>
     </div>
-  )
-}
-
-const skillNameOf = call => {
-  try {
-    const args =
-      typeof call.function?.arguments === 'string' ? JSON.parse(call.function.arguments) : call.function?.arguments
-
-    return args?.name || ''
-  } catch (_) {
-    return ''
-  }
-}
-
-// The tools one assistant message called, with their arguments and what each returned.
-// Reading a skill shows as its own line: the skill's instructions are not worth showing as a tool result.
-const ToolCalls = ({ header, responses }) => {
-  const allCalls = header.toolCalls || []
-  const skillCalls = allCalls.filter(call => call.function?.name === 'read_skill')
-  const calls = allCalls.filter(call => call.function?.name !== 'read_skill')
-
-  return (
-    <>
-      {header.reasoningContent && (
-        <Trace icon={Lightbulb} label='Show thinking'>
-          <Markdown text={header.reasoningContent} className='gc-md muted' />
-        </Trace>
-      )}
-      {skillCalls.map(call => (
-        <Trace key={call.id} icon={BookMarked} label={`Read skill: ${skillNameOf(call)}`}>
-          <p className='muted'>
-            The question matched the skill’s description, so the agent read its instructions before answering.
-          </p>
-        </Trace>
-      ))}
-      {calls.length > 0 && (
-        <Trace icon={Wrench} label={`Used ${calls.map(call => call.function?.name).join(', ')}`}>
-          {calls.map(call => (
-            <div key={call.id}>
-              <div className='mono sm' style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
-                <span className='faint'>↳ args</span>{' '}
-                {typeof call.function?.arguments === 'string'
-                  ? call.function.arguments
-                  : JSON.stringify(call.function?.arguments, null, 2)}
-              </div>
-              {responses
-                .filter(response => response.toolCallId === call.id)
-                .map(response => (
-                  <div
-                    key={response.messageId}
-                    className='mono sm'
-                    style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}
-                  >
-                    <span className='faint'>↳ result</span> {response.message}
-                  </div>
-                ))}
-            </div>
-          ))}
-        </Trace>
-      )}
-    </>
   )
 }
 
@@ -239,6 +253,7 @@ const ChatTurn = ({
   onSources,
   onAskAgain,
   onFeedback,
+  active = false,
   unfinished = false,
   children
 }) => {
@@ -247,6 +262,9 @@ const ChatTurn = ({
   // A turn that ended without an answer: it failed now, or it stopped before (seen after a reload)
   const hasAnswer = items.some(item => item.type === 'answer' && !item.beforeTools)
   const failed = !hasAnswer && !children && question ? question.failed || (unfinished && {}) : null
+  const lastMessage = items[items.length - 1]?.message
+  const streamingThought = lastMessage?.isStreaming && !lastMessage.message?.trim()
+  const liveIndex = items.length - (streamingThought ? 2 : 1)
 
   return (
     <div className='gc-turn'>
@@ -268,7 +286,11 @@ const ChatTurn = ({
           </div>
           {items.map((item, index) =>
             item.type === 'tools' ? (
-              <ToolCalls key={item.header.messageId || index} header={item.header} responses={item.responses} />
+              <ToolCalls
+                key={item.batches[0].header.messageId || index}
+                batches={item.batches}
+                live={active && index === liveIndex}
+              />
             ) : (
               <Answer
                 key={item.message.messageId || index}

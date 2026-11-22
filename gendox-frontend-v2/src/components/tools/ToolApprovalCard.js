@@ -1,4 +1,5 @@
 import { ShieldCheck } from 'lucide-react'
+import ToolCodeBlock from 'src/components/tools/ToolCodeBlock'
 
 // One approval presentation for client tools; backend approval events can use the same component.
 export default function ToolApprovalCard({
@@ -19,7 +20,7 @@ export default function ToolApprovalCard({
         <ShieldCheck className='lucide' /> {title}
       </h3>
       <p className='muted'>{description}</p>
-      {command && <pre className='client-command'>{command}</pre>}
+      {command && <ToolCodeBlock>{command}</ToolCodeBlock>}
       {directory && (
         <p className='sm'>
           Requested folder: <code>{directory}</code>

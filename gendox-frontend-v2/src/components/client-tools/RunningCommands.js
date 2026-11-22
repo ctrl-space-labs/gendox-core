@@ -4,6 +4,7 @@ import { SquareTerminal } from 'lucide-react'
 import toast from 'react-hot-toast'
 import desktopBridge from 'src/services/desktopBridge'
 import { getErrorMessage } from 'src/utils/errorHandler'
+import ToolCodeBlock from 'src/components/tools/ToolCodeBlock'
 
 const elapsed = milliseconds => {
   const seconds = Math.floor(milliseconds / 1000)
@@ -45,11 +46,11 @@ const RunningCommand = ({ command }) => {
       <h3>
         <SquareTerminal className='lucide' /> Running on this computer · {elapsed(now - command.startedAt)}
       </h3>
-      <pre className='client-command'>{command.command}</pre>
+      <ToolCodeBlock>{command.command}</ToolCodeBlock>
       {command.output && (
-        <pre className='client-command client-output' ref={outputRef} aria-live='off'>
+        <ToolCodeBlock output ref={outputRef} aria-live='off'>
           {command.output}
-        </pre>
+        </ToolCodeBlock>
       )}
       <div className='row'>
         <button className='btn' disabled={stopping} aria-busy={stopping} onClick={stop}>

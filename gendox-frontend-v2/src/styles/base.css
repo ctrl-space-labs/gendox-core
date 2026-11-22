@@ -558,13 +558,26 @@ pre.code .k { color: var(--accent-text); } pre.code .s { color: var(--warn); }
 .gc-acts .srcbtn { margin-right: 6px; }
 .gc-acts [data-fb].on { color: var(--accent-text); }
 .gc-trace { border-left: 2px solid var(--border-2); padding-left: 12px; }
-.gc-trace summary { display: inline-flex; align-items: center; gap: 6px; list-style: none; cursor: pointer; color: var(--text-3); font-size: 12.5px; font-weight: 500; }
-.gc-trace summary::-webkit-details-marker { display: none; }
-.gc-trace summary .lucide { width: 13px; height: 13px; }
-.gc-trace summary .lucide:last-child { transition: transform .15s; }
-.gc-trace[open] summary .lucide:last-child { transform: rotate(90deg); }
-.gc-trace summary:hover { color: var(--text-2); }
+.gc-trace > summary { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; list-style: none; cursor: pointer; color: var(--text-3); font-size: 12.5px; font-weight: 500; }
+.gc-trace > summary::-webkit-details-marker { display: none; }
+.gc-trace > summary .lucide { width: 13px; height: 13px; }
+.gc-trace > summary .lucide:last-child { transition: transform .15s; }
+.gc-trace[open] > summary .lucide:last-child { transform: rotate(90deg); }
+.gc-trace > summary:hover { color: var(--text-2); }
 .gc-trace > div { padding: 8px 0 2px; font-size: 13px; line-height: 1.6; display: flex; flex-direction: column; gap: 6px; }
+.gc-tool-activity { border: 0; padding: 0; }
+.gc-tool-activity > summary { min-height: 26px; }
+.gc-tool-activity > summary > span:first-of-type { flex: none; }
+.gc-tool-activity > summary > span:nth-of-type(2) { font-weight: 400; }
+.gc-tool-activity > div { gap: 0; padding: 0; margin-top: 4px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.gc-tool-activity > div > details { border-left: 0; padding: 0; }
+.gc-tool-activity > div > details + details { border-top: 1px solid var(--border); }
+.gc-tool-activity > div > details > summary { display: flex; min-height: 32px; padding: 4px var(--space-2); }
+.gc-tool-activity > div > details > div { padding: 0 var(--space-2) var(--space-2); overflow-wrap: anywhere; }
+.gc-tool-fields .kv { grid-template-columns: minmax(0, 1fr) minmax(0, 3fr); gap: 4px var(--space-2); font-size: inherit; }
+@media (max-width: 480px) {
+  .gc-tool-fields .kv { grid-template-columns: minmax(0, 1fr); }
+}
 .gc-deep { display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
 .gc-deep b .lucide { color: var(--accent-text); vertical-align: -3px; margin-right: 6px; }
 .gc-steps { display: flex; flex-direction: column; gap: 8px; }

@@ -18,7 +18,7 @@ const hasContent = message => {
  * a question, then everything the agent did to answer it.
  *
  *  • `{ type: 'answer', message }` — an assistant message with text or reasoning
- *  • `{ type: 'tools', header, responses }` — an assistant message that called tools, with the tools' replies
+ *  • `{ type: 'tools', batches: [{ header, calls }] }` — consecutive tool calls and their replies
  *
  * The order of the messages is preserved.
  *
@@ -28,40 +28,43 @@ const hasContent = message => {
  */
 export const buildTurns = (messages = [], userId) => {
   const turns = []
-  let openTools = null
+  const toolResponses = new Map()
 
   const currentTurn = () => {
     if (turns.length === 0) turns.push({ key: 'turn-0', question: null, items: [] })
 
     return turns[turns.length - 1]
   }
-  const closeTools = () => {
-    if (!openTools) return
-    currentTurn().items.push(openTools)
-    openTools = null
-  }
-
   messages.forEach((message, index) => {
-    const callsTools =
-      message.role === 'assistant' && Array.isArray(message.toolCalls) && message.toolCalls.length > 0
+    const callsTools = message.role === 'assistant' && Array.isArray(message.toolCalls) && message.toolCalls.length > 0
 
     if (callsTools) {
-      closeTools()
-      if (message.message && message.message.trim() !== '') {
-        currentTurn().items.push({ type: 'answer', message, beforeTools: true })
+      const { items } = currentTurn()
+      if (message.message?.trim()) items.push({ type: 'answer', message, beforeTools: true })
+
+      let activity = items.at(-1)
+      if (activity?.type !== 'tools') {
+        activity = { type: 'tools', batches: [] }
+        items.push(activity)
       }
-      openTools = { type: 'tools', header: message, responses: [] }
+      const calls = message.toolCalls.map(call => {
+        const responses = []
+        if (call.id) toolResponses.set(call.id, responses)
+
+        return { call, responses }
+      })
+      activity.batches.push({ header: message, calls })
 
       return
     }
 
-    if (message.role === 'tool' && openTools) {
-      openTools.responses.push(message)
+    // A resumed stream can deliver a saved result after the assistant's next message.
+    if (message.role === 'tool' && toolResponses.has(message.toolCallId)) {
+      toolResponses.get(message.toolCallId).push(message)
 
       return
     }
 
-    closeTools()
     if (!hasContent(message)) return
 
     if (isOwnMessage(message, userId)) {
@@ -70,7 +73,6 @@ export const buildTurns = (messages = [], userId) => {
       currentTurn().items.push({ type: 'answer', message })
     }
   })
-  closeTools()
 
   return turns
 }
