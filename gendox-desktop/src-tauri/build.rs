@@ -11,6 +11,7 @@ fn main() {
 
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(
         tauri_build::AppManifest::new().commands(&[
+            "check_server",
             "set_server",
             "remove_server",
             "run_command",

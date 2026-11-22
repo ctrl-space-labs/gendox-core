@@ -119,6 +119,12 @@ async fn fetch_config(address: &str) -> Result<ServerConfig, String> {
     Ok(config)
 }
 
+/// Checks a server while the user types its address, without saving it: the picker shows a tick or the reason.
+#[tauri::command]
+async fn check_server(address: String) -> Result<(), String> {
+    fetch_config(&server::normalize_address(&address)).await.map(|_| ())
+}
+
 /// Switches to a server, preset or new, after reading its configuration; the app restarts on it.
 #[tauri::command]
 async fn set_server(app: AppHandle, name: Option<String>, address: String) -> Result<(), String> {
@@ -230,7 +236,7 @@ pub fn run() {
     #[cfg(mobile)]
     let builder = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![set_server, remove_server]);
+        .invoke_handler(tauri::generate_handler![check_server, set_server, remove_server]);
     builder
         .setup(setup)
         .run(tauri::generate_context!())
@@ -263,7 +269,7 @@ fn desktop_builder() -> tauri::Builder<tauri::Wry> {
         .manage(desktop::DesktopState::default())
         .manage(ViewControls::default())
         .manage(terminal::TerminalState::new().expect("cannot initialize the terminal session"))
-        .invoke_handler(tauri::generate_handler![set_server, remove_server, terminal::run_command, terminal::stop_command, terminal::command_status, folders::get_folders, folders::choose_folder, folders::remove_folder, folders::set_working_directory, desktop::notification_permission, desktop::request_notification_permission, desktop::notify, desktop::badge, desktop::activity, desktop::autostart_enabled, desktop::set_autostart, desktop::deep_links, auth::prepare_sign_in, auth::open_sign_in, auth::cancel_sign_in])
+        .invoke_handler(tauri::generate_handler![check_server, set_server, remove_server, terminal::run_command, terminal::stop_command, terminal::command_status, folders::get_folders, folders::choose_folder, folders::remove_folder, folders::set_working_directory, desktop::notification_permission, desktop::request_notification_permission, desktop::notify, desktop::badge, desktop::activity, desktop::autostart_enabled, desktop::set_autostart, desktop::deep_links, auth::prepare_sign_in, auth::open_sign_in, auth::cancel_sign_in])
         .menu(build_menu)
         .on_menu_event(|app, event| {
             match event.id().0.as_str() {

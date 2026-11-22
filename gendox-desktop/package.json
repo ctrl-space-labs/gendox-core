@@ -1,7 +1,7 @@
 {
   "name": "gendox-desktop",
   "description": "Gendox desktop app (Tauri 2)",
-  "version": "0.1.0",
+  "version": "0.12.0",
   "private": true,
   "license": "AGPL-3.0",
   "scripts": {

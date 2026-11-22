@@ -1,6 +1,6 @@
 [package]
 name = "gendox-desktop"
-version = "0.1.0"
+version = "0.12.0"
 description = "Gendox desktop app"
 license = "AGPL-3.0"
 edition = "2021"

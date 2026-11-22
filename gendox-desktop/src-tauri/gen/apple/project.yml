@@ -59,8 +59,8 @@ targets:
           - UIInterfaceOrientationPortraitUpsideDown
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
-        CFBundleShortVersionString: 0.1.0
-        CFBundleVersion: "0.1.0"
+        CFBundleShortVersionString: 0.12.0
+        CFBundleVersion: "0.12.0"
     entitlements:
       path: gendox-desktop_iOS/gendox-desktop_iOS.entitlements
     scheme:

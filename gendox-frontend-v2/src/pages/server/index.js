@@ -24,7 +24,8 @@ const saveWeb = (custom, current) => {
   window.location.assign('/')
 }
 
-async function setWebServer(info, { name, address }) {
+// Reads a server's configuration and checks it against the site's allowlist, without saving it
+async function webServer(info, { name, address }) {
   const { allowedServers = [] } = await clientConfig(info.site)
   if (!allowedServers.length) throw new Error('This site does not allow other servers.')
   const allowed = url => new URL(url).origin === window.location.origin || isAllowed(new URL(url).origin, allowedServers)
@@ -32,13 +33,20 @@ async function setWebServer(info, { name, address }) {
   if (!allowed(apiBase)) throw new Error(`This site does not allow ${new URL(apiBase).origin}.`)
   const config = await clientConfig(apiBase)
   if (!allowed(config.apiUrl)) throw new Error(`That server's API, ${config.apiUrl}, is not allowed on this site.`)
-  const server = {
+
+  return {
     name: name || new URL(apiBase).host,
     address,
     config: { apiUrl: config.apiUrl, oidcAuthority: config.oidcAuthority, clientId: config.webClientId || null }
   }
-  saveWeb([...info.custom.filter(s => s.address !== address), server], address)
 }
+
+async function setWebServer(info, server) {
+  const checked = await webServer(info, server)
+  saveWeb([...info.custom.filter(s => s.address !== checked.address), checked], checked.address)
+}
+
+const truncate = { minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }
 
 const ServerPage = () => {
   const native = nativeServerInfo()
@@ -49,6 +57,8 @@ const ServerPage = () => {
   const [busy, setBusy] = useState(null)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
+  const [check, setCheck] = useState(null) // { address, checking, ok, message } of the address typed
+  const typed = address.trim()
 
   if (!info || (native && !window.__TAURI__)) {
     return (
@@ -90,6 +100,20 @@ const ServerPage = () => {
         ? invoke('remove_server', { address: server.address })
         : saveWeb(browser.custom.filter(s => s.address !== server.address), browser.current === server.address ? null : browser.current)
     )
+  // Checks the address when the field loses focus, so it shows whether the app can connect
+  const checkAddress = async () => {
+    if (!typed || saved || check?.address === typed) return
+    setCheck({ address: typed, checking: true })
+    let result
+    try {
+      await (native ? invoke('check_server', { address: typed }) : webServer(browser, { address: typed }))
+      result = { address: typed, ok: true }
+    } catch (e) {
+      result = { address: typed, ok: false, message: e?.message || String(e) }
+    }
+    setCheck(latest => (latest?.address === typed ? result : latest)) // unless the address changed meanwhile
+  }
+
   const add = e => {
     e.preventDefault()
     const server = { name: name.trim() || null, address: address.trim() }
@@ -116,20 +140,21 @@ const ServerPage = () => {
           {info.servers.map(server => {
             const current = server.address === info.current.address
             return (
-              <div key={server.address} className='row' style={{ gap: 8 }}>
+              <div key={server.address} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 34px', gap: 8 }}>
                 <button
                   className={current ? 'btn' : 'btn ghost'}
-                  style={{ flex: 1, justifyContent: 'flex-start' }}
+                  style={{ minWidth: 0, justifyContent: 'flex-start' }}
+                  title={`${server.name} · ${server.address}`}
                   disabled={current || saved || busy !== null}
                   onClick={() => choose(server)}
                 >
                   {current ? <Check className='lucide' /> : <Server className='lucide' />}
-                  <span>{server.name}</span>
-                  <span className='faint sm mono' style={{ marginLeft: 'auto' }}>
+                  <span style={{ ...truncate, flexShrink: 0, maxWidth: '55%' }}>{server.name}</span>
+                  <span className='faint sm mono' style={{ ...truncate, marginLeft: 'auto' }}>
                     {busy === server.address ? 'Connecting…' : server.address}
                   </span>
                 </button>
-                {server.custom && (
+                {server.custom ? (
                   <button
                     className='btn ghost icon danger'
                     title={`Remove ${server.name}`}
@@ -139,6 +164,8 @@ const ServerPage = () => {
                   >
                     <Trash2 className='lucide' />
                   </button>
+                ) : (
+                  <span />
                 )}
               </div>
             )
@@ -157,8 +184,34 @@ const ServerPage = () => {
               autoComplete='off'
               spellCheck={false}
               value={address}
-              onChange={e => setAddress(e.target.value)}
+              onChange={e => {
+                setAddress(e.target.value)
+                setError('')
+                setCheck(null)
+              }}
+              onBlur={checkAddress}
             />
+            {!error && check?.address === typed && (
+              <p
+                className='sm row'
+                role='status'
+                style={{ gap: 6, color: check.checking ? 'var(--text-3)' : check.ok ? 'var(--ok)' : 'var(--err)' }}
+              >
+                {check.checking ? (
+                  <>
+                    <span className='spin' style={{ width: 13, height: 13 }} aria-hidden='true' />
+                    Checking the server…
+                  </>
+                ) : check.ok ? (
+                  <>
+                    <Check className='lucide' />
+                    Gendox server found
+                  </>
+                ) : (
+                  check.message
+                )}
+              </p>
+            )}
           </div>
           <div className='field'>
             <label htmlFor='server-name'>Name (optional)</label>

@@ -92,11 +92,6 @@ const DesktopSignInPage = () => {
             <ExternalLink className='lucide' />
           </button>
         )}
-        {!waiting && (
-          <a className='muted sm' href='/server/'>
-            Choose another server
-          </a>
-        )}
       </div>
     </main>
   )
