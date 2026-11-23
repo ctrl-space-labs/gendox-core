@@ -42,7 +42,8 @@ class ArtifactControllerTest {
         controller = new ArtifactController(artifactService, new ArtifactConverter(), securityUtils);
 
         Artifact artifact = Artifact.builder().id(UUID.randomUUID()).threadId(threadId).projectId(projectId)
-                .title("Returns policy").artifactType(Type.builder().name("HTML").build()).latestVersion(2).build();
+                .title("Returns policy").artifactType(Type.builder().name("HTML").build()).latestVersion(2)
+                .ownerId(me).build();
         when(artifactService.getAll(any(), any())).thenReturn(new PageImpl<>(List.of(artifact)));
         when(artifactService.threadNamesOf(any())).thenReturn(Map.of(threadId, "Returns policy card"));
     }
@@ -51,14 +52,14 @@ class ArtifactControllerTest {
     void theListIsAlwaysTheSignedInUsersInThePathsProject() throws GendoxException {
         // a request that tries to read someone else's artifacts in another project
         ArtifactCriteria fromRequest = ArtifactCriteria.builder()
-                .projectId(UUID.randomUUID()).memberId(UUID.randomUUID()).search("policy").build();
+                .projectId(UUID.randomUUID()).userId(UUID.randomUUID()).search("policy").build();
 
         controller.getAllByProject(UUID.randomUUID(), projectId, fromRequest, PageRequest.of(0, 20));
 
         ArgumentCaptor<ArtifactCriteria> used = ArgumentCaptor.forClass(ArtifactCriteria.class);
         verify(artifactService).getAll(used.capture(), any());
         assertEquals(projectId, used.getValue().getProjectId());
-        assertEquals(me, used.getValue().getMemberId());
+        assertEquals(me, used.getValue().getUserId());
         assertEquals("policy", used.getValue().getSearch());
     }
 
@@ -70,6 +71,24 @@ class ArtifactControllerTest {
         assertEquals("Returns policy", row.getTitle());
         assertEquals("Returns policy card", row.getThreadName());
         assertEquals("HTML", row.getArtifactType().getName());
+    }
+
+    @Test
+    void aRowSharedByAnotherHidesTheirConversation() throws GendoxException {
+        UUID owner = UUID.randomUUID();
+        Artifact theirs = Artifact.builder().id(UUID.randomUUID()).threadId(UUID.randomUUID()).projectId(projectId)
+                .title("Their page").artifactType(Type.builder().name("HTML").build()).latestVersion(1)
+                .ownerId(owner).build();
+        when(artifactService.getAll(any(), any())).thenReturn(new PageImpl<>(List.of(theirs)));
+        when(artifactService.ownerNamesOf(any())).thenReturn(Map.of(owner, "Maria"));
+
+        Page<ArtifactSummaryDTO> page = controller.getAllByProject(UUID.randomUUID(), projectId,
+                ArtifactCriteria.builder().sharedWithMe(true).build(), PageRequest.of(0, 20));
+
+        ArtifactSummaryDTO row = page.getContent().getFirst();
+        assertNull(row.getThreadId());
+        assertNull(row.getThreadName());
+        assertEquals("Maria", row.getOwnerName());
     }
 
     @Test

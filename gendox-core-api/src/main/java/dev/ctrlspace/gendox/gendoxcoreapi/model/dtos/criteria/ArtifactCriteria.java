@@ -18,8 +18,10 @@ import java.util.UUID;
 @Builder(toBuilder = true)
 public class ArtifactCriteria {
     private UUID projectId;
-    // the user whose conversations the artifacts come from
-    private UUID memberId;
+    // the signed-in user, always set by the controller
+    private UUID userId;
+    // false or null: the user's own artifacts; true: the others' artifacts the user has a role on
+    private Boolean sharedWithMe;
     // free text over the title
     private String search;
     // a name of category ARTIFACT_TYPE, in any case: HTML, SVG, MARKDOWN, CODE

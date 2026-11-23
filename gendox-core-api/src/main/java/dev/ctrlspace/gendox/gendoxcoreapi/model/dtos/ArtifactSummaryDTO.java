@@ -9,7 +9,9 @@ import lombok.NoArgsConstructor;
 import java.time.Instant;
 import java.util.UUID;
 
-/** An artifact in the list of a thread: no content and no versions. */
+/**
+ * An artifact in the list of a thread: no content and no versions.
+ */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -17,7 +19,9 @@ import java.util.UUID;
 public class ArtifactSummaryDTO {
     private UUID id;
     private UUID threadId;
-    /** The conversation's name, in a list across conversations; null in a thread's own list, which knows it. */
+    /**
+     * The conversation's name, in a list across conversations; null in a thread's own list, which knows it.
+     */
     private String threadName;
     private String title;
     private Type artifactType;
@@ -27,4 +31,14 @@ public class ArtifactSummaryDTO {
     private Instant updatedAt;
     private UUID createdBy;
     private UUID updatedBy;
+
+    /**
+     * The one person who made it.
+     */
+    private UUID ownerId;
+    /**
+     * The owner's name, in a list across owners; read for the whole page at once.
+     */
+    private String ownerName;
+
 }

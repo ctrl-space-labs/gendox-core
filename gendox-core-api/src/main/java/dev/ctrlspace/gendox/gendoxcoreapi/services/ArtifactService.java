@@ -1,17 +1,22 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Artifact;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.ArtifactVersion;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.ChatThread;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ArtifactEditDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ArtifactVersionSummaryDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ArtifactCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ArtifactRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ArtifactVersionRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ChatThreadRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.MessageRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.ArtifactPredicates;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.ArtifactAccessService.Role;
+
+import java.util.*;
+import java.util.function.Function;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -21,10 +26,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import org.springframework.data.domain.Pageable;
 
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -40,6 +41,9 @@ public class ArtifactService {
     private final ArtifactVersionRepository artifactVersionRepository;
     private final TypeService typeService;
     private final ChatThreadRepository chatThreadRepository;
+    private final MessageRepository messageRepository;
+    private final UserRepository userRepository;
+    private final ArtifactAccessService artifactAccessService;
 
     /**
      * Characters one version may hold.
@@ -50,11 +54,17 @@ public class ArtifactService {
     public ArtifactService(ArtifactRepository artifactRepository,
                            ArtifactVersionRepository artifactVersionRepository,
                            TypeService typeService,
-                           ChatThreadRepository chatThreadRepository) {
+                           ChatThreadRepository chatThreadRepository,
+                           MessageRepository messageRepository,
+                           UserRepository userRepository,
+                           ArtifactAccessService artifactAccessService) {
         this.artifactRepository = artifactRepository;
         this.artifactVersionRepository = artifactVersionRepository;
         this.typeService = typeService;
         this.chatThreadRepository = chatThreadRepository;
+        this.messageRepository = messageRepository;
+        this.userRepository = userRepository;
+        this.artifactAccessService = artifactAccessService;
     }
 
     /**
@@ -72,6 +82,7 @@ public class ArtifactService {
         validateContent(content);
 
         boolean isCode = CODE_TYPE.equals(artifactType.getName());
+        UUID author = authorOfTurn(threadId);
         Artifact artifact = artifactRepository.save(Artifact.builder()
                 .threadId(threadId)
                 .projectId(projectId)
@@ -79,9 +90,11 @@ public class ArtifactService {
                 .artifactType(artifactType)
                 .codeLanguage(isCode && codeLanguage != null && !codeLanguage.isBlank() ? codeLanguage.trim() : null)
                 .latestVersion(1)
+                .ownerId(author)
                 .build());
-        saveVersion(artifact, content, messageId);
+        saveVersion(artifact, content, messageId, author);
         return artifact;
+
     }
 
     /**
@@ -113,7 +126,7 @@ public class ArtifactService {
             String next = hasContent ? content : applyEdits(getVersion(artifact, null).getContent(), edits);
             validateContent(next);
             artifact.setLatestVersion(artifact.getLatestVersion() + 1);
-            saveVersion(artifact, next, messageId);
+            saveVersion(artifact, next, messageId, authorOfTurn(threadId));
         }
         return artifactRepository.save(artifact);
     }
@@ -142,9 +155,39 @@ public class ArtifactService {
                 .collect(Collectors.toMap(ChatThread::getId, ChatThread::getName));
     }
 
+    /**
+     * The names of the artifacts' owners, in one query: { ownerId: name }.
+     */
+    public Map<UUID, String> ownerNamesOf(List<Artifact> artifacts) {
+        List<UUID> ownerIds = artifacts.stream().map(Artifact::getOwnerId).filter(Objects::nonNull).distinct().toList();
+        if (ownerIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<UUID, String> names = new HashMap<>();
+        userRepository.findAllById(ownerIds).forEach(user -> names.put(user.getId(), nameOf(user)));
+        return names;
+    }
+
     public Artifact getByIdInThread(UUID threadId, UUID artifactId) throws GendoxException {
         return artifactRepository.findByIdAndThreadId(artifactId, threadId)
                 .orElseThrow(() -> notInThread(artifactId, threadId));
+    }
+
+    /**
+     * An artifact opened by its own id, with the user's role on it.
+     */
+    public record Opened(Artifact artifact, Role role) {
+    }
+
+    /**
+     * Opens an artifact by its id, for anyone with a role on it, from any conversation or none; anyone else is told
+     * it does not exist, as for an id that was never there.
+     */
+    public Opened open(UUID artifactId, @Nullable UUID userId) throws GendoxException {
+        Artifact artifact = artifactRepository.findById(artifactId)
+                .orElseThrow(() -> new GendoxException("ARTIFACT_NOT_FOUND",
+                        "No artifact " + artifactId + " that you can open", HttpStatus.NOT_FOUND));
+        return new Opened(artifact, artifactAccessService.require(artifact, userId, Role.VIEW));
     }
 
     /**
@@ -158,8 +201,39 @@ public class ArtifactService {
                                 + ". Its versions are 1 to " + artifact.getLatestVersion(), HttpStatus.NOT_FOUND));
     }
 
+    /**
+     * The versions without content, oldest first, each with who made it, named for all of them in one query.
+     */
     public List<ArtifactVersionSummaryDTO> getVersionSummaries(UUID artifactId) {
-        return artifactVersionRepository.findSummariesByArtifactId(artifactId);
+        List<ArtifactVersionSummaryDTO> versions = artifactVersionRepository.findSummariesByArtifactId(artifactId);
+        List<UUID> authorIds = versions.stream()
+                .map(ArtifactVersionSummaryDTO::getCreatedBy)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (authorIds.isEmpty()) {
+            return versions;
+        }
+        Map<UUID, User> authors = userRepository.findAllById(authorIds).stream()
+                .collect(Collectors.toMap(User::getId, Function.identity()));
+        return versions.stream()
+                .map(version -> {
+                    User author = authors.get(version.getCreatedBy());
+                    return author == null ? version : version.toBuilder().createdByName(nameOf(author)).build();
+                })
+                .toList();
+    }
+
+    /**
+     * The name, else the first and last name, else the email.
+     */
+    public static String nameOf(User user) {
+        if (user.getName() != null && !user.getName().isBlank()) {
+            return user.getName();
+        }
+        String fullName = ((user.getFirstName() == null ? "" : user.getFirstName()) + " "
+                + (user.getLastName() == null ? "" : user.getLastName())).trim();
+        return fullName.isEmpty() ? user.getEmail() : fullName;
     }
 
     /**
@@ -210,13 +284,25 @@ public class ArtifactService {
                         HttpStatus.BAD_REQUEST));
     }
 
-    private void saveVersion(Artifact artifact, String content, @Nullable UUID messageId) {
+    private void saveVersion(Artifact artifact, String content, @Nullable UUID messageId, @Nullable UUID author) {
         artifactVersionRepository.save(ArtifactVersion.builder()
                 .artifactId(artifact.getId())
                 .version(artifact.getLatestVersion())
                 .content(content)
                 .messageId(messageId)
+                .createdBy(author)
                 .build());
+    }
+
+    /**
+     * The person the agent is answering: the author of the conversation's last user message. Set by hand, since the
+     * tools run outside the request and auditing finds no one there; null when the message has no author.
+     */
+    @Nullable
+    private UUID authorOfTurn(UUID threadId) {
+        return messageRepository.findFirstByThreadIdAndRoleOrderByCreatedAtDesc(threadId, "user")
+                .map(Message::getCreatedBy)
+                .orElse(null);
     }
 
     private void validateContent(@Nullable String content) throws GendoxException {

@@ -7,6 +7,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.ArtifactVersion;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ArtifactDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ArtifactSummaryDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ArtifactCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.ArtifactAccessService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ArtifactService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
@@ -46,9 +47,9 @@ public class ArtifactController {
     @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')")
     @GetMapping("organizations/{organizationId}/projects/{projectId}/artifacts")
     @Operation(summary = "Get the user's artifacts with an agent",
-            description = "Retrieve the artifacts of the conversations the signed-in user is a member of, in this project, " +
-                    "without their content, last changed first. Filter with search (title) and artifactType (HTML, SVG, " +
-                    "MARKDOWN, CODE). Pagination is supported, up to 100 per page.")
+            description = "Retrieve the signed-in user's own artifacts in this project, or with sharedWithMe=true the " +
+                    "others' artifacts they have a role on, without their content, last changed first. Filter with search " +
+                    "(title) and artifactType (HTML, SVG, MARKDOWN, CODE). Pagination is supported, up to 100 per page.")
     public Page<ArtifactSummaryDTO> getAllByProject(@PathVariable UUID organizationId,
                                                     @PathVariable UUID projectId,
                                                     ArtifactCriteria criteria,
@@ -63,14 +64,25 @@ public class ArtifactController {
             pageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(Sort.Direction.DESC, "updatedAt"));
         }
         // the project and the user come from the path and the sign-in, never from the request
+        UUID userId = securityUtils.getUserId();
         criteria.setProjectId(projectId);
-        criteria.setMemberId(securityUtils.getUserId());
+        criteria.setUserId(userId);
 
         Page<Artifact> artifacts = artifactService.getAll(criteria, pageable);
-        Map<UUID, String> threadNames = artifactService.threadNamesOf(artifacts.getContent());
-        return artifacts.map(artifact -> artifactConverter.toDTO(artifact).toBuilder()
-                .threadName(threadNames.get(artifact.getThreadId()))
-                .build());
+        // the conversation it was made in is its owner's: named for the owner only, and hidden from the others
+        List<Artifact> own = artifacts.getContent().stream()
+                .filter(artifact -> userId != null && userId.equals(artifact.getOwnerId()))
+                .toList();
+        Map<UUID, String> threadNames = artifactService.threadNamesOf(own);
+        Map<UUID, String> ownerNames = artifactService.ownerNamesOf(artifacts.getContent());
+        return artifacts.map(artifact -> {
+            boolean isOwn = own.contains(artifact);
+            return artifactConverter.toDTO(artifact).toBuilder()
+                    .threadId(isOwn ? artifact.getThreadId() : null)
+                    .threadName(isOwn ? threadNames.get(artifact.getThreadId()) : null)
+                    .ownerName(ownerNames.get(artifact.getOwnerId()))
+                    .build();
+        });
     }
 
     @PreAuthorize("(@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable') && @securityUtils.hasThreadMemberAccess(#threadId)) " +
@@ -104,6 +116,36 @@ public class ArtifactController {
     public ArtifactDTO getVersion(@PathVariable UUID threadId, @PathVariable UUID artifactId,
                                   @PathVariable Integer version) throws GendoxException {
         return toDTO(threadId, artifactId, version);
+    }
+
+    @PreAuthorize("@securityUtils.isSignedInPerson()")
+    @GetMapping("artifacts/{artifactId}")
+    @Operation(summary = "Get an artifact by its id",
+            description = "Retrieve an artifact with the list of its versions and the content of the latest one, with " +
+                    "the signed-in user's role on it. For anyone with a role on the artifact, from any conversation or none.")
+    public ArtifactDTO open(@PathVariable UUID artifactId) throws GendoxException {
+        return openedDTO(artifactId, null);
+    }
+
+    @PreAuthorize("@securityUtils.isSignedInPerson()")
+    @GetMapping("artifacts/{artifactId}/versions/{version}")
+    @Operation(summary = "Get a version of an artifact by its id",
+            description = "Retrieve an artifact with the list of its versions and the content of the given one, with " +
+                    "the signed-in user's role on it. For anyone with a role on the artifact.")
+    public ArtifactDTO openVersion(@PathVariable UUID artifactId, @PathVariable Integer version) throws GendoxException {
+        return openedDTO(artifactId, version);
+    }
+
+
+    private ArtifactDTO openedDTO(UUID artifactId, Integer version) throws GendoxException {
+        ArtifactService.Opened opened = artifactService.open(artifactId, securityUtils.getUserId());
+        Artifact artifact = opened.artifact();
+        ArtifactVersion shown = artifactService.getVersion(artifact, version);
+        return artifactConverter.toDTO(artifact, artifactService.getVersionSummaries(artifactId), shown).toBuilder()
+                .yourRole(opened.role().name())
+                // the conversation it was made in is its owner's; nobody else may open it
+                .threadId(opened.role() == ArtifactAccessService.Role.OWNER ? artifact.getThreadId() : null)
+                .build();
     }
 
     private ArtifactDTO toDTO(UUID threadId, UUID artifactId, Integer version) throws GendoxException {

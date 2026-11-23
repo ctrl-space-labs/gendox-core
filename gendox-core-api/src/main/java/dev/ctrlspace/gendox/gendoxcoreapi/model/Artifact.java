@@ -37,18 +37,51 @@ public class Artifact {
     @Column(name = "title", nullable = false)
     private String title;
 
-    /** Category ARTIFACT_TYPE: HTML, SVG, MARKDOWN, CODE. */
+    /**
+     * Category ARTIFACT_TYPE: HTML, SVG, MARKDOWN, CODE.
+     */
     @ManyToOne
     @JoinColumn(name = "artifact_type_id", referencedColumnName = "id", nullable = false)
     private Type artifactType;
 
-    /** For type CODE only. */
+    /**
+     * For type CODE only.
+     */
     @Column(name = "code_language")
     private String codeLanguage;
 
-    /** The number of the latest version; raised only by ArtifactService, with the version it adds. */
+    /**
+     * The number of the latest version; raised only by ArtifactService, with the version it adds.
+     */
     @Column(name = "latest_version", nullable = false)
     private Integer latestVersion;
+
+    /**
+     * The one person who made it: only they share it, make it public and delete it.
+     */
+    @Column(name = "owner_id")
+    private UUID ownerId;
+
+    /**
+     * General access, category ARTIFACT_ROLE: the role every member of the agent has (VIEW, INTERACT, EDIT);
+     * null for only the owner and the people invited.
+     */
+    @ManyToOne
+    @JoinColumn(name = "general_access_role_id", referencedColumnName = "id")
+    private Type generalAccessRole;
+
+    /**
+     * The id in its public link, view only for anyone, with its shared data; null while it is not public. A new one each time.
+     */
+    @Column(name = "public_id")
+    private UUID publicId;
+
+    @Column(name = "public_at")
+    private Instant publicAt;
+
+    @Column(name = "public_by")
+    private UUID publicBy;
+
 
     @CreatedDate
     @Column(name = "created_at")

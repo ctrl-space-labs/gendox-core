@@ -1,7 +1,7 @@
 -- Sharing artifacts, as Claude's artifacts do. An artifact has one owner, who made it. The owner gives a role to
 -- every member of the agent (general access) and to members one by one; a user's role is the higher of the two.
 -- VIEW sees it, INTERACT also writes its data, EDIT also changes its code from a conversation of their own.
--- A public link, view only, opens it to anyone, signed in or not.
+-- A public link opens it to anyone, signed in or not, with its shared data, read only.
 
 INSERT INTO gendox_core.types (type_category, name, description)
 SELECT 'ARTIFACT_ROLE', 'VIEW', 'Sees the artifact and its versions'
@@ -26,21 +26,18 @@ SELECT 'ARTIFACT_ROLE', 'EDIT', 'Also changes its code, from a conversation of t
 
 
 ALTER TABLE IF EXISTS gendox_core.artifacts
-    ADD COLUMN IF NOT EXISTS owner_id          UUID,
-    ADD COLUMN IF NOT EXISTS agent_role_id     BIGINT REFERENCES gendox_core.types (id),
-    ADD COLUMN IF NOT EXISTS public_id         UUID,
-    ADD COLUMN IF NOT EXISTS public_at         TIMESTAMP,
-    ADD COLUMN IF NOT EXISTS public_by         UUID,
-    ADD COLUMN IF NOT EXISTS public_shows_data BOOLEAN NOT NULL DEFAULT false;
+    ADD COLUMN IF NOT EXISTS owner_id               UUID,
+    ADD COLUMN IF NOT EXISTS general_access_role_id BIGINT REFERENCES gendox_core.types (id),
+    ADD COLUMN IF NOT EXISTS public_id              UUID,
+    ADD COLUMN IF NOT EXISTS public_at              TIMESTAMP,
+    ADD COLUMN IF NOT EXISTS public_by              UUID;
 
 COMMENT ON COLUMN gendox_core.artifacts.owner_id
     IS 'The one person who made it: only they share it, make it public and delete it. A plain id, with no foreign key.';
-COMMENT ON COLUMN gendox_core.artifacts.agent_role_id
+COMMENT ON COLUMN gendox_core.artifacts.general_access_role_id
     IS 'General access: a type of category ARTIFACT_ROLE that every member of the agent has; NULL for only the owner and the people invited.';
 COMMENT ON COLUMN gendox_core.artifacts.public_id
-    IS 'The id in its public link, view only for anyone; NULL while it is not public. A new one each time it is made public, so an old link never opens again.';
-COMMENT ON COLUMN gendox_core.artifacts.public_shows_data
-    IS 'Whether a public reader also reads its shared data, read only. Private data is never shown.';
+    IS 'The id in its public link, view only for anyone, with its shared data; NULL while it is not public. A new one each time it is made public, so an old link never opens again.';
 
 -- the owner of the artifacts made so far: the member of the conversation they were made in
 UPDATE gendox_core.artifacts a
@@ -53,8 +50,8 @@ WHERE a.owner_id IS NULL;
 
 CREATE INDEX IF NOT EXISTS ix_artifacts_owner_id ON gendox_core.artifacts (owner_id);
 -- the artifacts shared with the whole agent, the last changed first
-CREATE INDEX IF NOT EXISTS ix_artifacts_project_agent_role
-    ON gendox_core.artifacts (project_id, updated_at DESC) WHERE agent_role_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS ix_artifacts_project_general_access
+    ON gendox_core.artifacts (project_id, updated_at DESC) WHERE general_access_role_id IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS uq_artifacts_public_id
     ON gendox_core.artifacts (public_id) WHERE public_id IS NOT NULL;
 

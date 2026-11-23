@@ -25,11 +25,14 @@ public class ArtifactConverter implements GendoxConverter<Artifact, ArtifactSumm
         artifactSummaryDTO.setUpdatedAt(artifact.getUpdatedAt());
         artifactSummaryDTO.setCreatedBy(artifact.getCreatedBy());
         artifactSummaryDTO.setUpdatedBy(artifact.getUpdatedBy());
+        artifactSummaryDTO.setOwnerId(artifact.getOwnerId());
 
         return artifactSummaryDTO;
     }
 
-    /** An artifact with its versions and the content of the one shown. */
+    /**
+     * An artifact with its versions and the content of the one shown.
+     */
     public ArtifactDTO toDTO(Artifact artifact, List<ArtifactVersionSummaryDTO> versions, ArtifactVersion shown) {
         ArtifactDTO artifactDTO = new ArtifactDTO();
         artifactDTO.setId(artifact.getId());
@@ -42,6 +45,7 @@ public class ArtifactConverter implements GendoxConverter<Artifact, ArtifactSumm
         artifactDTO.setUpdatedAt(artifact.getUpdatedAt());
         artifactDTO.setCreatedBy(artifact.getCreatedBy());
         artifactDTO.setUpdatedBy(artifact.getUpdatedBy());
+        artifactDTO.setOwnerId(artifact.getOwnerId());
         artifactDTO.setVersions(versions);
         artifactDTO.setVersion(shown.getVersion());
         artifactDTO.setContent(shown.getContent());

@@ -3,10 +3,12 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Artifact;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ArtifactVersion;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ArtifactEditDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ArtifactRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ArtifactVersionRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.MessageRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -41,6 +43,9 @@ class ArtifactServiceTest {
 
     @Mock
     private TypeService typeService;
+
+    @Mock
+    private MessageRepository messageRepository;
 
     private final UUID threadId = UUID.randomUUID();
     private final UUID projectId = UUID.randomUUID();
@@ -240,5 +245,36 @@ class ArtifactServiceTest {
         assertEquals("ARTIFACT_NOT_FOUND", e.getErrorCode());
         assertTrue(e.getMessage().contains(here.getId() + " (Dashboard)"));
         verify(artifactVersionRepository, never()).save(any());
+    }
+
+    @Test
+    void create_theAuthorOfTheTurnOwnsItAndWroteVersionOne() throws GendoxException {
+        UUID author = UUID.randomUUID();
+        when(messageRepository.findFirstByThreadIdAndRoleOrderByCreatedAtDesc(threadId, "user"))
+                .thenReturn(Optional.of(Message.builder().createdBy(author).build()));
+
+        Artifact artifact = artifactService.create(threadId, projectId, messageId, "Report", "html", null, "<h1>Hi</h1>");
+
+        assertEquals(author, artifact.getOwnerId());
+        ArgumentCaptor<ArtifactVersion> saved = ArgumentCaptor.forClass(ArtifactVersion.class);
+        verify(artifactVersionRepository).save(saved.capture());
+        assertEquals(author, saved.getValue().getCreatedBy());
+    }
+
+    @Test
+    void update_theAuthorOfTheTurnWroteTheVersionAndTheOwnerStays() throws GendoxException {
+        UUID owner = UUID.randomUUID();
+        UUID author = UUID.randomUUID();
+        Artifact artifact = existing(1, "<h1>Old</h1>");
+        artifact.setOwnerId(owner);
+        when(messageRepository.findFirstByThreadIdAndRoleOrderByCreatedAtDesc(threadId, "user"))
+                .thenReturn(Optional.of(Message.builder().createdBy(author).build()));
+
+        artifactService.update(threadId, artifact.getId(), messageId, null, null, List.of(edit("Old", "New")));
+
+        assertEquals(owner, artifact.getOwnerId());
+        ArgumentCaptor<ArtifactVersion> saved = ArgumentCaptor.forClass(ArtifactVersion.class);
+        verify(artifactVersionRepository).save(saved.capture());
+        assertEquals(author, saved.getValue().getCreatedBy());
     }
 }
