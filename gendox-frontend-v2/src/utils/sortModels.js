@@ -2,6 +2,10 @@ export const sortModels = (models) => {
     // Create a shallow copy of the array to avoid mutation of the original
     const modelsCopy = [...models];
     return modelsCopy.sort((a, b) => {
+      // the organization's own models first
+      if (Boolean(a.organizationId) !== Boolean(b.organizationId)) {
+        return a.organizationId ? -1 : 1;
+      }
       const providerA = a.aiModelProvider?.name || '';
       const providerB = b.aiModelProvider?.name || '';
       if (providerA === providerB) {

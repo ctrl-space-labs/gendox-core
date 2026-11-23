@@ -22,6 +22,13 @@ public class AiModelProvider {
     @Basic
     @Column(name = "description", nullable = true, length = -1)
     private String description;
+    // set on an organization's own provider: the organization, and the base URL its models are called at
+    @Basic
+    @Column(name = "organization_id", nullable = true)
+    private UUID organizationId;
+    @Basic
+    @Column(name = "base_url", nullable = true, length = -1)
+    private String baseUrl;
 
     @Basic
     @Column(name = "created_at", nullable = false)
@@ -62,6 +69,22 @@ public class AiModelProvider {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public UUID getOrganizationId() {
+        return organizationId;
+    }
+
+    public void setOrganizationId(UUID organizationId) {
+        this.organizationId = organizationId;
+    }
+
+    public String getBaseUrl() {
+        return baseUrl;
+    }
+
+    public void setBaseUrl(String baseUrl) {
+        this.baseUrl = baseUrl;
     }
 
     public Instant getCreatedAt() {

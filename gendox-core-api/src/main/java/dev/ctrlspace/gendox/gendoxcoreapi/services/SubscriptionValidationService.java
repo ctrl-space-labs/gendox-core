@@ -150,7 +150,8 @@ public class SubscriptionValidationService {
         OrganizationPlan activePlan = organizationPlanService.getActiveOrganizationPlan(organizationId);
         int maxMessages = effectiveLimit(activePlan.getSubscriptionPlan().getUserMessageMonthlyLimitCount(), activePlan.getNumberOfSeats());
         // a model used with the API key provided by Gendox gets only a share of the allowance
-        if (organizationModelKeyService.getKeyForModel(organizationId, completionModel) == null) {
+        // (an organization's own model never runs on Gendox's key)
+        if (completionModel.getOrganizationId() == null && organizationModelKeyService.getKeyForModel(organizationId, completionModel) == null) {
             maxMessages = (int) Math.ceil(maxMessages * providedKeyAllowanceRatio);
         }
         TimePeriodDTO billingPeriod = BillingWindowUtils.currentBillingPeriod(activePlan.getStartDate(), Clock.systemUTC());

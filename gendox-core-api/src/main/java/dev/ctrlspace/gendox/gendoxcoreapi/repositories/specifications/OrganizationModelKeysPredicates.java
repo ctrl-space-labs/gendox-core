@@ -15,8 +15,16 @@ public class OrganizationModelKeysPredicates {
     public static Predicate build(OrganizationModelKeyCriteria criteria) {
         return ExpressionUtils.allOf(
                 organizationId(criteria.getOrganizationId()),
-                aiModelProviderName(criteria.getAiModelProviderName())
+                aiModelProviderName(criteria.getAiModelProviderName()),
+                aiModelProviderId(criteria.getAiModelProviderId())
         );
+    }
+
+    public static Predicate aiModelProviderId(UUID aiModelProviderId) {
+        if (aiModelProviderId == null) {
+            return null;
+        }
+        return qOrganizationModelProviderKey.aiModelProvider.id.eq(aiModelProviderId);
     }
 
     public static Predicate organizationId(UUID organizationId) {

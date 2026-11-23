@@ -21,6 +21,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.tools.ToolFunctionCall;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.AiModelUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.CryptographyUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.ModelEndpointValidator;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.tools.AiToolUtils;
 import dev.ctrlspace.gendox.provenAi.utils.ProvenAiService;
 import io.micrometer.observation.annotation.Observed;
@@ -63,6 +64,7 @@ public class EmbeddingService {
     private CryptographyUtils cryptographyUtils;
     private EncodingRegistry encodingRegistry;
     private GCloudAuthenticationService gCloudAuthenticationService;
+    private ModelEndpointValidator modelEndpointValidator;
 
     private RerankService rerankService;
 
@@ -91,7 +93,8 @@ public class EmbeddingService {
             CryptographyUtils cryptographyUtils,
             RerankService rerankService,
             EncodingRegistry encodingRegistry,
-            GCloudAuthenticationService gCloudAuthenticationService) {
+            GCloudAuthenticationService gCloudAuthenticationService,
+            ModelEndpointValidator modelEndpointValidator) {
         this.embeddingRepository = embeddingRepository;
         this.auditLogsRepository = auditLogsRepository;
         this.embeddingGroupRepository = embeddingGroupRepository;
@@ -110,6 +113,7 @@ public class EmbeddingService {
         this.rerankService = rerankService;
         this.encodingRegistry = encodingRegistry;
         this.gCloudAuthenticationService = gCloudAuthenticationService;
+        this.modelEndpointValidator = modelEndpointValidator;
     }
 
     public Embedding createEmbedding(Embedding embedding) throws GendoxException {
@@ -218,6 +222,16 @@ public class EmbeddingService {
      * Use this when the model is not the agent's default for the type (e.g. completion model overridden at runtime).
      */
     public String getApiKey(UUID organizationId, AiModel model) throws GendoxException {
+        // An organization's own model: only that organization's key, only to an endpoint that passes the check
+        // now (its address may have changed since it was saved), and an empty one if it has none.
+        if (model.getOrganizationId() != null) {
+            if (!model.getOrganizationId().equals(organizationId)) {
+                throw new GendoxException("AI_MODEL_NOT_FOUND", "AI Model not found", HttpStatus.NOT_FOUND);
+            }
+            modelEndpointValidator.validate(model.getUrl());
+            OrganizationModelProviderKey ownKey = organizationModelKeyService.getKeyForModel(organizationId, model);
+            return ownKey != null ? ownKey.getKey() : "";
+        }
         OrganizationModelProviderKey organizationModelProviderKey = organizationModelKeyService.getKeyForModel(organizationId, model);
         String rawKey;
         if (organizationModelProviderKey != null) {

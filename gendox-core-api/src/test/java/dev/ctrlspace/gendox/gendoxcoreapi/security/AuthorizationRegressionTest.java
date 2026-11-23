@@ -222,7 +222,7 @@ class AuthorizationRegressionTest {
         TaskService service = mock(TaskService.class, CALLS_REAL_METHODS);
         ReflectionTestUtils.setField(service, "logger", LoggerFactory.getLogger(TaskService.class));
         ReflectionTestUtils.setField(service, "taskRepository", repository);
-        ReflectionTestUtils.setField(service, "taskConverter", new TaskConverter(types, mock(AiModelService.class)));
+        ReflectionTestUtils.setField(service, "taskConverter", new TaskConverter(types));
         ReflectionTestUtils.setField(service, "maxQuestionsPerBucket", 5);
         ReflectionTestUtils.setField(service, "maxQuestionTokensPerBucket", 100);
         ReflectionTestUtils.setField(service, "maxSectionsChunkTokens", 100);
@@ -322,7 +322,7 @@ class AuthorizationRegressionTest {
         when(types.getTaskTypeByName("DOCUMENT_INSIGHTS")).thenReturn(type);
         TaskService service = new TaskService(repository, mock(TaskNodeRepository.class), types,
                 mock(TaskEdgeService.class), mock(EOScriptService.class), mock(EOTaskGeometryService.class),
-                new TaskConverter(types, mock(AiModelService.class)), mock(AiModelService.class), mock(TaskNodeService.class),
+                new TaskConverter(types), mock(AiModelService.class), mock(TaskNodeService.class),
                 mock(ProjectService.class), mock(SubscriptionAiModelTierService.class), 5, 100, 100);
         assertThrows(GendoxException.class, () -> taskController(service).duplicateTask(org, project, TaskDuplicateDTO.builder().taskId(victim.getId()).build()));
         verify(repository, never()).save(any());

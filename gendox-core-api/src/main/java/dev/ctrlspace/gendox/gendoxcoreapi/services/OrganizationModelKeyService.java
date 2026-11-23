@@ -66,7 +66,7 @@ public class OrganizationModelKeyService {
     }
 
     public OrganizationModelProviderKey createModelKey(OrganizationModelProviderKey organizationModelProviderKey) throws GendoxException {
-        AiModelProvider modelProvider = aiModelService.getProviderByName(organizationModelProviderKey.getAiModelProvider().getName()); // Check if AI model exists
+        AiModelProvider modelProvider = aiModelService.getProviderByName(organizationModelProviderKey.getAiModelProvider().getName(), organizationModelProviderKey.getOrganizationId()); // Check if AI model exists
 
         // TODO validate that a key with the same provider and organization does not exist
         organizationModelProviderKey.setAiModelProvider(modelProvider);
@@ -78,7 +78,7 @@ public class OrganizationModelKeyService {
         OrganizationModelProviderKey existingModelKey = getByIdAndOrganizationId(organizationModelProviderKey.getId(), organizationModelProviderKey.getOrganizationId());
 
         // TODO validate that a key with the same provider and organization does not exist
-        AiModelProvider modelProvider = aiModelService.getProviderByName(organizationModelProviderKey.getAiModelProvider().getName()); // Check if AI model provider exists
+        AiModelProvider modelProvider = aiModelService.getProviderByName(organizationModelProviderKey.getAiModelProvider().getName(), organizationModelProviderKey.getOrganizationId()); // Check if AI model provider exists
 
         existingModelKey.setAiModelProvider(modelProvider);
         existingModelKey.setKey(organizationModelProviderKey.getKey());
@@ -147,6 +147,10 @@ public class OrganizationModelKeyService {
      * @throws GendoxException if model tier does not allow default key
      */
     public String getDefaultKeyForModel(UUID organizationId, AiModel model) throws GendoxException {
+        // an organization's own model runs only on the organization's key (EmbeddingService#getApiKey)
+        if (model.getOrganizationId() != null) {
+            throw new GendoxException("AI_MODEL_NOT_SUPPORTED", "An organization's own model cannot be used here", HttpStatus.BAD_REQUEST);
+        }
         // validate that the default key is used only for free and standard model tiers
         var modelTierNames = List.of("FREE_MODEL");
         if (!modelTierNames.contains(model.getModelTierType().getName())) {

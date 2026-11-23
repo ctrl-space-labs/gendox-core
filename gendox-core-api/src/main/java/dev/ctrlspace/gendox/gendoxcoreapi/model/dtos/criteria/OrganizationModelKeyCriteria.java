@@ -15,4 +15,5 @@ public class OrganizationModelKeyCriteria {
 
         private UUID organizationId;
         private String aiModelProviderName;
+        private UUID aiModelProviderId;
 }
