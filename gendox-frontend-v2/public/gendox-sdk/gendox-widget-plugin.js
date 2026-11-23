@@ -198,7 +198,7 @@
       window.gendox.widget.state.isOpen = isOpen
     }
 
-    function sendToggleRequest(action) {
+    function sendToggleRequest(action, prefill) {
       if (!iframe?.contentWindow) {
         console.warn('Could not send toggle request because the embedded chat iframe is not available.')
         return false
@@ -206,7 +206,7 @@
       iframe.contentWindow.postMessage(
         {
           type: CHAT_TOGGLE_REQUEST_EVENT,
-          data: { action }
+          data: { action, prefill }
         },
         gendoxSrc
       )
@@ -216,8 +216,9 @@
     window.gendox.widget.state = {
       isOpen: chatContainer.classList.contains('gendox-chat-open')
     }
-    window.gendox.widget.open = function () {
-      return sendToggleRequest('open')
+    // open(text) also puts the text in the message box
+    window.gendox.widget.open = function (prefill) {
+      return sendToggleRequest('open', prefill)
     }
     window.gendox.widget.close = function () {
       return sendToggleRequest('close')

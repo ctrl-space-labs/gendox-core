@@ -13,7 +13,8 @@ import WordPressIcon from 'src/components/ui/WordPressIcon'
 
 // where the new agent's first knowledge comes from
 const FIRST_KNOWLEDGE = [
-  { id: 'upload', icon: Upload, title: 'Upload files', text: 'PDF, Word, Excel, CSV, text or Markdown.', path: '/gendox/knowledge', hash: '#upload' },
+  // the agent home's new chat, with the Knowledge window's upload open over it
+  { id: 'upload', icon: Upload, title: 'Upload files', text: 'PDF, Word, Excel, CSV, text or Markdown.', path: '/gendox/agent-home', query: { upload: 1 } },
   { id: 'website', icon: Globe, title: 'Read a website', text: 'Gendox finds the pages; you pick which to read.', path: '/gendox/integrations', hash: '#add-website' },
   { id: 'wordpress', icon: WordPressIcon, title: 'Connect WordPress', text: 'Your posts and pages stay in sync.', path: '/gendox/wordpress' },
   { id: 'write', icon: FilePenLine, title: 'Write it', text: 'Type or paste a document in Gendox.', path: '/gendox/create-document' }
@@ -171,7 +172,7 @@ const CreateProjectPage = () => {
               <span className='sp' />
               <button
                 className='btn primary'
-                onClick={() => router.push(href(next.path, { projectId: created.id }) + (next.hash || ''))}
+                onClick={() => router.push(href(next.path, { projectId: created.id, ...next.query }) + (next.hash || ''))}
               >
                 Continue
                 <ArrowRight className='lucide' />

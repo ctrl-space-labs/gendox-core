@@ -379,6 +379,13 @@ const IntegrationPage = () => {
         </div>
       </div>
 
+      {integration.lastRunError && (
+        <div className='alert' style={{ '--c': 'var(--err)', marginTop: 16 }}>
+          <b>The last run failed</b>
+          <span className='muted'>{integration.lastRunError}</span>
+        </div>
+      )}
+
       {row.type === 'WEB_SCRAPE_INTEGRATION' && (
         <WebPagesPicker
           key={integration.id}

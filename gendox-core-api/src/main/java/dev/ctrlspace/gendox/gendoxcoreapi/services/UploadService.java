@@ -72,6 +72,15 @@ public class UploadService {
     public DocumentInstance uploadFile(MultipartFile file, UUID organizationId, UUID projectId, Boolean messageAttachment,
                                        @Nullable UUID userId,
                                        @Nullable UUID threadId) throws IOException, GendoxException {
+        return uploadFile(file, organizationId, projectId, messageAttachment, userId, threadId, null);
+    }
+
+    // as above, for content that came from an address of its own, e.g. a scraped web page
+    @Transactional(rollbackOn = Exception.class)
+    public DocumentInstance uploadFile(MultipartFile file, UUID organizationId, UUID projectId, Boolean messageAttachment,
+                                       @Nullable UUID userId,
+                                       @Nullable UUID threadId,
+                                       @Nullable String externalUrl) throws IOException, GendoxException {
         String fileName = file.getOriginalFilename();
         String cleanFileName = documentUtils.cleanFileName(fileName);
         String prefix = null;
@@ -81,6 +90,7 @@ public class UploadService {
         String fullFilePath = documentUtils.saveFile(file, organizationId, projectId, prefix);
 
         DocumentInstanceDTO instanceDTO = createDocumentInstanceDTO(file, organizationId, cleanFileName, fullFilePath);
+        instanceDTO.setExternalUrl(externalUrl);
 
         return upsertDocumentInstance(projectId, instanceDTO, messageAttachment, threadId);
     }

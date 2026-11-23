@@ -61,7 +61,18 @@ h1 { font-size: 28px; } h2 { font-size: 19px; } h3 { font-size: 14px; letter-spa
 .account > .lucide { color: var(--text-3); }
 
 /* menus */
-.pop { position: fixed; z-index: 60; padding: 6px; border: 1px solid var(--border-2); border-radius: var(--radius); background: var(--surface); box-shadow: var(--pop-shadow); max-height: 80vh; overflow-y: auto; animation: pop .12s ease-out; }
+.pop { position: fixed; z-index: 60; display: flex; flex-direction: column; padding: 6px; border: 1px solid var(--border-2); border-radius: var(--radius); background: var(--surface); box-shadow: var(--pop-shadow); max-height: 80vh; overflow-y: auto; animation: pop .12s ease-out; }
+.pop > * { flex: none; }
+/* organizations or agents: the list scrolls, and in a menu it is what gives up height, so the other items stay in view */
+.menu-list { max-height: 240px; overflow-y: auto; }
+.pop > .menu-list { flex: 0 1 auto; }
+.menu-empty { padding: 6px 10px; }
+.menu-search { width: 100%; height: 30px; margin-bottom: 6px; padding: 0 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: transparent; color: var(--text); font-size: 13px; }
+.menu-search:focus, .menu-search:focus-visible { border-color: var(--border-2); outline: 0; }
+.menu-search::placeholder { color: var(--text-3); }
+/* the same list in a page's card, e.g. the profile's organizations */
+.card > .menu-search { width: calc(100% - 40px); margin: 14px 20px 6px; }
+.card > .menu-list { max-height: 480px; }
 @keyframes pop { from { opacity: 0; transform: translateY(4px); } }
 .pop .mi { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; height: 34px; padding: 0 10px; border: 0; border-radius: var(--radius-sm); background: none; font-size: 13.5px; cursor: pointer; }
 .pop .mi:hover { background: var(--surface-2); }
@@ -650,7 +661,9 @@ pre.code .n { color: var(--info); }
 .doc-h { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
 .doc-t { font-size: 22px; } .in-dock .doc-t { font-size: 17px; }
 .docpage { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 32px; align-items: start; }
-.docpage.asking { grid-template-columns: 200px minmax(0, 1fr) 400px; }
+/* no section titles, no outline: one readable column, starting under the header's icon (after the 28px back arrow and the 14px gap) */
+.docpage:where(:not(:has(> .outline))) { grid-template-columns: minmax(0, 820px); padding-left: 42px; }
+.in-dock .docpage:where(:not(:has(> .outline))) { padding-left: 0; }
 .outline { position: sticky; top: 76px; display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
 .in-dock .outline { top: 0; }
 .outline a { padding: 5px 10px; border-left: 2px solid var(--border); color: var(--text-3); }
@@ -659,8 +672,6 @@ pre.code .n { color: var(--info); }
 .sec:first-child { border-top: 0; padding-top: 4px; }
 .sec h2 { font-size: 17px; margin-bottom: 10px; } .sec h3 { font-size: 15px; margin-bottom: 8px; }
 .sec.cited { margin-inline: -16px; padding-inline: 16px; border-radius: var(--radius); background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); transition: background 1.5s; }
-.askpanel { position: sticky; top: 76px; height: calc(100dvh - 100px); overflow: hidden; display: none; }
-.docpage.asking .askpanel { display: block; }
 .edit-sec { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
 .edit-sec .h { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 6px; border-bottom: 1px solid var(--border); }
 .edit-sec .grip { cursor: grab; color: var(--text-3); padding: 4px; }
@@ -671,7 +682,7 @@ pre.code .n { color: var(--info); }
 .edit-sec.min textarea, .edit-sec.min .prev { display: none; }
 .edit-sec.min .h { border-bottom: 0; }
 /* a narrow view has no outline, and the chat sits above the document (a fixed panel can't escape a container) */
-@container vw (max-width: 1000px) { .docpage, .docpage.asking { grid-template-columns: minmax(0, 1fr); } .outline { display: none; } .askpanel { position: static; height: 70dvh; order: -1; } }
+@container vw (max-width: 1000px) { .docpage { grid-template-columns: minmax(0, 1fr); } .outline { display: none; } }
 
 /* document insights: the table, and the inspector beside it */
 .ins { height: 100%; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr); }
@@ -800,6 +811,7 @@ pre.code .n { color: var(--info); }
 .pg-empty { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 28px; border: 1px dashed var(--border-2); border-radius: var(--radius); color: var(--text-3); }
 .pg-stream .more { display: flex; margin: 16px auto 20px; }
 @container insp (max-width: 560px) { .rd-b { grid-template-columns: minmax(0, 1fr); } .pg-rail { display: none; } .pg-stream { padding: 0 16px 40px; } }
+.prose hr, .gc-md hr { border: 0; border-top: 1px solid var(--border); margin: 1.1em 0; }
 .prose blockquote, .gc-md blockquote { padding: 2px 0 2px 14px; border-left: 3px solid var(--border-2); color: var(--text-2); }
 
 .opt-row { display: grid; grid-template-columns: 18px minmax(0, 1fr) minmax(90px, 150px) auto; gap: 8px; align-items: center; }
@@ -825,3 +837,17 @@ button.dk-row { width: 100%; border: 0; background: none; font: inherit; font-si
 /* a document's name in a list opens it, while the rest of its row selects it */
 .doc-link { color: inherit; }
 .doc-link:hover, .doc-link:focus-visible { color: var(--accent-text); text-decoration: underline; text-underline-offset: 2px; }
+
+/* the knowledge preview's first sections: Markdown as in the document, sections apart by a hairline */
+.peek { border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+.peek-sec { position: relative; max-height: 240px; overflow: hidden; padding: 10px 12px; font-size: 13px; cursor: pointer; transition: background .15s; }
+.peek-sec + .peek-sec { border-top: 1px solid var(--border); }
+.peek-sec:hover { background: var(--surface-2); }
+.peek-sec:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.peek-sec.cut { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 48px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 48px), transparent); }
+.peek-sec h4 { font-size: 13.5px; font-weight: 600; margin-bottom: 4px; }
+.peek-sec .prose { line-height: 1.6; color: var(--text-2); }
+.peek-sec .prose h1, .peek-sec .prose h2, .peek-sec .prose h3 { font-size: 13.5px; margin-top: .8em; color: var(--text); }
+.peek-sec .prose h4, .peek-sec .prose h5, .peek-sec .prose h6 { font-size: 13px; color: var(--text); }
+.peek-sec .prose img { max-width: 100%; }
+.peek-sec .prose pre { font-size: 12px; overflow: hidden; }
