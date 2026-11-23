@@ -25,7 +25,6 @@ const OidcCallbackPage = () => {
         <div className='stack' style={{ alignItems: 'center' }}>
           <p role='alert'>Gendox could not finish signing you in.</p>
           <a className='btn primary' href='/login/'>Try again</a>
-          {window.__GENDOX_ENV__?.GENDOX_DESKTOP?.mobile && <a href='/server/'>Choose a server</a>}
         </div>
       </main>
     )

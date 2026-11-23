@@ -1,6 +1,18 @@
 use std::{env, fs, path::PathBuf};
 
 fn main() {
+    if env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("ios") {
+        println!("cargo:rerun-if-changed=src/ios-webview.m");
+        println!("cargo:rerun-if-changed=src/ios-server-shortcut.m");
+        cc::Build::new()
+            .file("src/ios-webview.m")
+            .file("src/ios-server-shortcut.m")
+            .flag("-fobjc-arc")
+            .compile("gendox_ios_webview");
+        println!("cargo:rustc-link-lib=framework=WebKit");
+        println!("cargo:rustc-link-lib=framework=UIKit");
+    }
+
     // The servers a build offers. GENDOX_DESKTOP_PRESETS names another file, so builds for
     // other environments differ by this file only, as the web builds differ by their variables.
     println!("cargo:rerun-if-env-changed=GENDOX_DESKTOP_PRESETS");

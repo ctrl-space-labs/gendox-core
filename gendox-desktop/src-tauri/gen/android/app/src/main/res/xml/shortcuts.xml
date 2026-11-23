@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut android:shortcutId="server" android:shortcutShortLabel="@string/server_shortcut">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="gendox://server"
+            android:targetPackage="dev.gendox.app"
+            android:targetClass="dev.gendox.app.MainActivity" />
+    </shortcut>
+</shortcuts>

@@ -122,11 +122,11 @@ const UserProfilePage = () => {
   const [theme, setTheme] = useThemePreference()
   const [deleteOpen, setDeleteOpen] = useState(false)
 
-  // In a browser, "Choose server" shows only where the site allows other servers (allowedServers)
+  // Installed apps always show "Choose server"; a browser only where the site allows other servers
   const [chooseServer, setChooseServer] = useState(false)
   useEffect(() => {
     const web = window.__GENDOX_ENV__?.GENDOX_WEB
-    if (web?.current) setChooseServer(true)
+    if (web?.current || window.__GENDOX_ENV__?.GENDOX_DESKTOP) setChooseServer(true)
     else if (web) clientConfig(web.site).then(config => setChooseServer(Boolean(config.allowedServers?.length)), () => {})
   }, [])
 
@@ -254,7 +254,7 @@ const UserProfilePage = () => {
           <section className='sect'>
             <header>
               <h2>Server</h2>
-              <p>The Gendox server this page talks to, in this browser only. For development and testing.</p>
+              <p>The Gendox server this app talks to.</p>
             </header>
             <div className='card card-b'>
               <Link className='btn' href='/server/' style={{ alignSelf: 'flex-start' }}>

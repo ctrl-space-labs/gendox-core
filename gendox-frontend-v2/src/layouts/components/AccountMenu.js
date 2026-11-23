@@ -10,7 +10,6 @@ import {
   Monitor,
   Moon,
   Plus,
-  Server,
   Sparkles,
   Sun,
   User,
@@ -47,7 +46,6 @@ const AccountMenu = () => {
   const { user, logout } = useAuth()
   const { organizations, organization, href } = useActiveScope()
   const [theme, setTheme] = useThemePreference()
-  const mobileApp = typeof window !== 'undefined' && window.__GENDOX_ENV__?.GENDOX_DESKTOP?.mobile
 
   const sortedOrganizations = sortByField([...organizations], 'name', organization?.id)
 
@@ -124,12 +122,6 @@ const AccountMenu = () => {
         <User className='lucide' />
         Profile
       </Link>
-      {mobileApp && (
-        <Link className='mi' href='/server/'>
-          <Server className='lucide' />
-          Server
-        </Link>
-      )}
       <a className='mi' href={commonConfig.gendoxDocsUrl} target='_blank' rel='noreferrer'>
         <BookOpen className='lucide' />
         Documentation

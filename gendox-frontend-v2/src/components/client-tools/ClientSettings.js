@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import Link from 'next/link'
 import { MODES } from 'src/utils/clientTools/preferences'
 import {
   chooseFolder,
@@ -149,9 +148,6 @@ const ClientSettings = () => {
               Launch Gendox at login
             </label>
 
-            <Link className='btn' href='/server/'>
-              Choose server
-            </Link>
             <p className='help'>Updates are not configured in this build.</p>
           </div>
         </section>

@@ -48,6 +48,9 @@ targets:
       path: gendox-desktop_iOS/Info.plist
       properties:
         LSRequiresIPhoneOS: true
+        UIApplicationShortcutItems:
+          - UIApplicationShortcutItemType: dev.gendox.app.server
+            UIApplicationShortcutItemTitle: Server
         UILaunchStoryboardName: LaunchScreen
         UIRequiredDeviceCapabilities: [arm64, metal]
         UISupportedInterfaceOrientations:
@@ -61,14 +64,13 @@ targets:
           - UIInterfaceOrientationLandscapeRight
         CFBundleShortVersionString: 0.12.0
         CFBundleVersion: "0.12.0"
-    entitlements:
-      path: gendox-desktop_iOS/gendox-desktop_iOS.entitlements
     scheme:
       environmentVariables:
         RUST_BACKTRACE: full
         RUST_LOG: info
     settings:
       base:
+        CODE_SIGN_ENTITLEMENTS: $(GENDOX_IOS_ENTITLEMENTS)
         ENABLE_BITCODE: false
         ARCHS: [arm64]
         VALID_ARCHS: arm64

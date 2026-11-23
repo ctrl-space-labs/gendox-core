@@ -16,6 +16,7 @@ mod folders;
 mod desktop;
 
 use std::{borrow::Cow, collections::HashMap, fs, path::PathBuf, time::Duration};
+use std::sync::atomic::{AtomicBool, Ordering};
 #[cfg(desktop)]
 use std::sync::Mutex;
 
@@ -37,8 +38,18 @@ const TITLE_BAR_OVERLAY_SCRIPT: &str = "document.documentElement.classList.add('
 const WINDOW_CONTROLS_SCRIPT: &str = include_str!("window-controls.js");
 use url::Url;
 
-#[cfg(desktop)]
 const SERVER_PAGE: &str = "/server/";
+#[cfg(mobile)]
+const SERVER_SHORTCUT_URL: &str = "gendox://server";
+
+/// The server picker, asked for from the menu or the app shortcut.
+#[derive(Default)]
+struct ServerPage {
+    /// Until the next page finishes loading: the startup check must not replace the picker.
+    requested: AtomicBool,
+    /// A navigation before the first page has loaded can be replaced by it (Android launch).
+    first_page_loaded: AtomicBool,
+}
 
 #[cfg(desktop)]
 struct ViewControls(Mutex<u16>);
@@ -172,6 +183,21 @@ fn open_in_system_browser(app: &AppHandle, url: &Url) {
     }
 }
 
+fn server_page_url() -> Url {
+    Url::parse(&format!("{}{SERVER_PAGE}", server::app_origin())).expect("valid server picker URL")
+}
+
+fn open_server_page(app: &AppHandle) {
+    let state = app.state::<ServerPage>();
+    state.requested.store(true, Ordering::Relaxed);
+    if !state.first_page_loaded.load(Ordering::Relaxed) {
+        return; // on_page_load opens it
+    }
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.navigate(server_page_url());
+    }
+}
+
 /// The platform's default menu, with "Server…" first in the app menu (macOS) or File menu.
 #[cfg(desktop)]
 fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
@@ -237,10 +263,27 @@ pub fn run() {
     let builder = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![check_server, set_server, remove_server]);
-    builder
+    let app = builder
+        .manage(ServerPage::default())
         .setup(setup)
-        .run(tauri::generate_context!())
-        .expect("error while running Gendox");
+        .build(tauri::generate_context!())
+        .expect("error while building Gendox");
+    #[cfg(target_os = "ios")]
+    {
+        extern "C" {
+            fn register_gendox_server_shortcut();
+        }
+        // Tauri has registered its scene delegate class, but UIKit has yet to connect a scene.
+        unsafe { register_gendox_server_shortcut() };
+    }
+    app.run(|_app, _event| {
+        #[cfg(mobile)]
+        if let tauri::RunEvent::Opened { urls } = _event {
+            if urls.iter().any(|url| url.as_str() == SERVER_SHORTCUT_URL) {
+                open_server_page(_app);
+            }
+        }
+    });
 }
 
 /// Plugins, commands and menus of the desktop app.
@@ -292,11 +335,7 @@ fn desktop_builder() -> tauri::Builder<tauri::Wry> {
                 _ => {}
             }
             if event.id() == "server" {
-                if let Some(window) = app.get_webview_window("main") {
-                    if let Ok(url) = Url::parse(&format!("{}{SERVER_PAGE}", server::app_origin())) {
-                        let _ = window.navigate(url);
-                    }
-                }
+                open_server_page(app);
             }
         })
 }
@@ -352,7 +391,7 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let window = window
         .initialization_script(terminal::init_script(app.state::<terminal::TerminalState>().session_token()))
         .on_download(downloads::handle);
-    window
+    let window = window
         .on_web_resource_request(move |request, response| {
             if let Some(script) = server::bundled_config_script(&request.uri().to_string(), &runtime_env) {
                 *response.body_mut() = Cow::Owned(script.into_bytes());
@@ -374,10 +413,17 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
             }
         })
         .on_page_load(move |window, payload| {
-            if payload.event() == PageLoadEvent::Finished {
-                diagnostics::record(window.app_handle(), Event::PageLoaded);
+            if payload.event() != PageLoadEvent::Finished {
+                return;
             }
-            if payload.event() == PageLoadEvent::Finished && payload.url().path() == offline::CONNECTING {
+            diagnostics::record(window.app_handle(), Event::PageLoaded);
+            let server_page = window.state::<ServerPage>();
+            server_page.first_page_loaded.store(true, Ordering::Relaxed);
+            if server_page.requested.swap(false, Ordering::Relaxed) && payload.url().path() != SERVER_PAGE {
+                let _ = window.navigate(server_page_url());
+                return;
+            }
+            if payload.url().path() == offline::CONNECTING {
                 let address = address.clone();
                 tauri::async_runtime::spawn(async move {
                     let path = if secure_saved_config && fetch_config(&address).await.is_ok() {
@@ -387,12 +433,16 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
                         diagnostics::record(window.app_handle(), Event::ServerUnreachable);
                         offline::OFFLINE
                     };
-                    // Do not interrupt a server choice made while the check was running.
-                    if window.url().is_ok_and(|u| u.path() == offline::CONNECTING) {
-                        if let Ok(url) = Url::parse(&format!("{}{path}", server::app_origin())) {
-                            let _ = window.navigate(url);
+                    // On the main thread, in order with the shortcut and menu: never replace a picker asked for.
+                    let target = window.clone();
+                    let _ = window.run_on_main_thread(move || {
+                        if !target.state::<ServerPage>().requested.load(Ordering::Relaxed)
+                            && target.url().is_ok_and(|u| u.path() == offline::CONNECTING)
+                        {
+                            let url = Url::parse(&format!("{}{path}", server::app_origin())).expect("valid startup URL");
+                            let _ = target.navigate(url);
                         }
-                    }
+                    });
                 });
             }
         })
@@ -409,6 +459,16 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
             NewWindowResponse::Deny
         })
         .build()?;
+    #[cfg(target_os = "ios")]
+    window.with_webview(|webview| {
+        extern "C" {
+            fn configure_gendox_webview(webview: *mut std::ffi::c_void);
+        }
+        // Tauri supplies a live WKWebView on the main thread for this callback.
+        unsafe { configure_gendox_webview(webview.inner()) };
+    })?;
+    #[cfg(not(target_os = "ios"))]
+    let _ = window;
     Ok(())
 }
 

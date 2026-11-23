@@ -32,11 +32,10 @@ const LoginPage = () => {
       <main className='center'>
         <div className='modal s' style={{ padding: 28, gap: 12, animation: 'none' }}>
           <h2>Sign in to Gendox</h2>
-          {failed && <p role='alert'>Could not open the sign-in page. Try again or choose another server.</p>}
+          {failed && <p role='alert'>Could not open the sign-in page. Try again.</p>}
           <button className='btn primary' onClick={signIn} disabled={pending || !router.isReady}>
             {pending ? 'Opening sign-in…' : 'Sign in'}
           </button>
-          <a href='/server/'>Choose a server</a>
         </div>
       </main>
     )

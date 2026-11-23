@@ -70,6 +70,26 @@ and set your Apple Developer team ID in the ignored `src-tauri/gen/apple/Signing
 DEVELOPMENT_TEAM = YOUR_TEAM_ID
 ```
 
+For direct iOS Password AutoFill suggestions on the hosted sign-in page, enable Associated Domains
+for the `dev.gendox.app` App ID and use a provisioning profile that supports the capability. Add
+this to `Signing.local.xcconfig`:
+
+```xcconfig
+GENDOX_IOS_ENTITLEMENTS = PasswordAutoFill.entitlements
+```
+
+The auth host must serve `https://auth.gendox.dev/.well-known/apple-app-site-association` as
+JSON over HTTPS without a redirect. Use the full `application-identifier` from the signed app
+in place of `APP_ID_PREFIX.dev.gendox.app`:
+
+```json
+{"webcredentials":{"apps":["APP_ID_PREFIX.dev.gendox.app"]}}
+```
+
+For a self-hosted identity provider, use an entitlement file that lists its sign-in host and
+serve the matching association file from that host. Builds signed with a Personal Team can use
+the keyboard's Passwords picker.
+
 The mobile launcher assets use the Gendox mark from `gendox-frontend-v2/public/images/logo.svg`.
 The iOS icon and Android adaptive foreground have separate margins for their launcher masks.
 
@@ -83,10 +103,10 @@ with a key it creates and then deletes. Locally, `src-tauri/gen/android/keystore
 git) names a key of your own with `storeFile`, `keyAlias` and `password`, then
 `npm run tauri android build -- --apk --target aarch64`; the APK is in `.../apk/universal/release/`.
 A fresh install opens the first server in `presets.json`. Android release builds require HTTPS for
-the server, API and sign-in addresses. Choose another server from the sign-in page, the offline page
-or the account menu. If the sign-in provider stops on an error page, close and reopen the app to
-return to Gendox's sign-in page. Workflow APKs use a new signing key per run, so uninstall the old
-test build before installing a newer one.
+the server, API and sign-in addresses. To change servers before signing in, touch and hold the Gendox
+app icon and select **Server**. After signing in, use **Profile → Server**. On desktop, the **Server…**
+menu item is available before sign-in. Workflow APKs use a new signing key per run, so uninstall the
+old test build before installing a newer one.
 
 For a local test server, run this worktree's ephemeral stack. The iOS simulator reaches it on
 `localhost`. On the Android emulator, reverse both the API and Keycloak ports with
