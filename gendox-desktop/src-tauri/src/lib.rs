@@ -352,7 +352,7 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let window = window
         .initialization_script(terminal::init_script(app.state::<terminal::TerminalState>().session_token()))
         .on_download(downloads::handle);
-    window
+    let window = window
         .on_web_resource_request(move |request, response| {
             if let Some(script) = server::bundled_config_script(&request.uri().to_string(), &runtime_env) {
                 *response.body_mut() = Cow::Owned(script.into_bytes());
@@ -409,6 +409,16 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
             NewWindowResponse::Deny
         })
         .build()?;
+    #[cfg(target_os = "ios")]
+    window.with_webview(|webview| {
+        extern "C" {
+            fn configure_gendox_webview(webview: *mut std::ffi::c_void);
+        }
+        // Tauri supplies a live WKWebView on the main thread for this callback.
+        unsafe { configure_gendox_webview(webview.inner()) };
+    })?;
+    #[cfg(not(target_os = "ios"))]
+    let _ = window;
     Ok(())
 }
 

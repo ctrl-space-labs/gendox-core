@@ -1489,6 +1489,7 @@ dependencies = [
 name = "gendox-desktop"
 version = "0.12.0"
 dependencies = [
+ "cc",
  "getrandom 0.3.4",
  "process-wrap",
  "reqwest 0.12.28",

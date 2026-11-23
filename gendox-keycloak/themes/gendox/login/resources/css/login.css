@@ -1,26 +1,29 @@
-/* Patternfly CSS places a "bg-login.jpg" as the background on this ".login-pf" class.
-   This clashes with the "keycloak-bg.png' background defined on the body below.
-   Therefore the Patternfly background must be set to none. */
 .login-pf {
-    background: none !important; /* This removes the existing background */
+    background: #222539 !important; /* Replaces PatternFly's background image. */
+    overscroll-behavior-y: none;
 }
 
 .login-pf body {
+    box-sizing: border-box;
     font-family: 'Inter', sans-serif;
     font-size: 15px;
-    background: url("../img/gendox-back-dark.webp") no-repeat center center fixed;
-    background-size: cover;
-    min-height: 100vh; /* ensure full viewport height but allow expansion */
-    overflow-y: auto;  /* allow vertical scrolling */
-    height: 100%;
+    background: #222539 url("../img/gendox-back-dark.webp") no-repeat center / cover;
+    min-height: 100vh;
+    min-height: 100dvh;
+    height: auto;
     display: flex;
-    align-items: center;
-    justify-content: center;
+    flex-direction: column;
     color: #EAEAFF;
     margin: 0;
-    padding: 0 15px;
+    padding: 24px 15px;
 }
 
+/* Center when there is spare room, and start at the top when the form needs to scroll. */
+.login-pf .login-pf-page {
+    flex: none;
+    margin: auto 0;
+    padding: 0;
+}
 
 h1#kc-page-title {
     margin-top: 10px;
@@ -318,6 +321,10 @@ h1#kc-page-title {
 
 /* Mobile Responsiveness */
 @media (max-width: 767px) {
+    .login-pf body {
+        padding-block: 16px;
+    }
+
     .card-pf {
         max-width: 90%;
         padding: 20px;
@@ -325,22 +332,6 @@ h1#kc-page-title {
 
     .logo-container img {
         max-width: 120px;
-    }
-
-    .login-pf body {
-        display: block;
-        padding-top: 20px; /* add extra spacing at the top */
-    }
-}
-
-@media (max-height: 500px) {
-    .login-pf body{
-        /* align-items: flex-start; Start the card at the top instead of centering */
-        padding-top: 20px; /* Ensure there's some top padding */
-        display: block;
-    }
-    .card-pf {
-        margin-top: 20px; /* Optional: add extra space so the card isn't flush against the top */
     }
 }
 

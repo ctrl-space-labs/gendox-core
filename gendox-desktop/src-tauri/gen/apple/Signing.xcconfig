@@ -1,2 +1,3 @@
 CODE_SIGN_STYLE = Automatic
+GENDOX_IOS_ENTITLEMENTS = gendox-desktop_iOS/gendox-desktop_iOS.entitlements
 #include? "Signing.local.xcconfig"

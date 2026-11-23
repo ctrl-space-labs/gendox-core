@@ -70,6 +70,26 @@ and set your Apple Developer team ID in the ignored `src-tauri/gen/apple/Signing
 DEVELOPMENT_TEAM = YOUR_TEAM_ID
 ```
 
+For direct iOS Password AutoFill suggestions on the hosted sign-in page, enable Associated Domains
+for the `dev.gendox.app` App ID and use a provisioning profile that supports the capability. Add
+this to `Signing.local.xcconfig`:
+
+```xcconfig
+GENDOX_IOS_ENTITLEMENTS = PasswordAutoFill.entitlements
+```
+
+The auth host must serve `https://auth.gendox.dev/.well-known/apple-app-site-association` as
+JSON over HTTPS without a redirect. Use the full `application-identifier` from the signed app
+in place of `APP_ID_PREFIX.dev.gendox.app`:
+
+```json
+{"webcredentials":{"apps":["APP_ID_PREFIX.dev.gendox.app"]}}
+```
+
+For a self-hosted identity provider, use an entitlement file that lists its sign-in host and
+serve the matching association file from that host. Builds signed with a Personal Team can use
+the keyboard's Passwords picker.
+
 The mobile launcher assets use the Gendox mark from `gendox-frontend-v2/public/images/logo.svg`.
 The iOS icon and Android adaptive foreground have separate margins for their launcher masks.
 

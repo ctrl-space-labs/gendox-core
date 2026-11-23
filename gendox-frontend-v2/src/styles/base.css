@@ -125,12 +125,15 @@ body.docked { overflow: hidden; }
 .group { position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: clip; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--card-shadow); }
 .group.focus { border-color: color-mix(in srgb, var(--accent) 38%, var(--border)); }
 .group-h { flex: none; display: flex; align-items: center; gap: 4px; height: 40px; padding: 0 4px 0 6px; border-bottom: 1px solid var(--border); }
-.group-h .strip { display: flex; align-items: center; gap: 2px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.group-h .strip { position: relative; display: flex; align-items: center; gap: 2px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.group-h.flat .strip { flex: 1; }
 .group-h .add { flex: none; width: 26px; height: 26px; display: grid; place-items: center; border: 0; border-radius: 6px; background: none; color: var(--text-3); cursor: pointer; }
+.group-h.flat .add { width: 40px; height: 100%; }
 .group-h .add:hover { background: var(--surface-2); color: var(--text); }
 .group-h .add .lucide { width: 15px; height: 15px; }
 .tab .tt { max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
-.tab { display: flex; align-items: center; gap: 7px; height: 28px; padding: 0 8px 0 10px; border-radius: var(--radius-sm); color: var(--text-2); font-size: 13px; font-weight: 500; white-space: nowrap; cursor: grab; user-select: none; touch-action: none; }
+.tab { display: flex; align-items: center; gap: 7px; height: 28px; padding: 0 8px 0 10px; border-radius: var(--radius-sm); color: var(--text-2); font-size: 13px; font-weight: 500; white-space: nowrap; cursor: grab; user-select: none; }
+.group-h.flat .tab { cursor: pointer; }
 .tab:hover { background: var(--surface-2); color: var(--text); }
 .tab.on { background: var(--surface-3); color: var(--text); }
 .tab.on > .lucide { color: var(--accent-text); }

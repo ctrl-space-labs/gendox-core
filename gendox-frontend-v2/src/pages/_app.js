@@ -16,12 +16,15 @@ import Toasts from 'src/components/ui/Toasts'
 import RouteProgress from 'src/components/ui/RouteProgress'
 import OptionalAnalyticsTracking from 'src/components/analytics/OptionalAnalyticsTracking'
 import ClientToolsProvider from 'src/components/client-tools/ClientToolsProvider'
+import useAppTheme from 'src/hooks/useAppTheme'
 
 // Register the global 401 -> '/' redirect interceptor once for the whole app
 registerAxiosInterceptors()
 
 const App = props => {
   const { Component, pageProps } = props
+  const theme = useAppTheme()
+  const themeColor = theme && getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()
 
   const getLayout = Component.getLayout ?? (page => page)
   const pageConfig = Component.pageConfig ?? undefined
@@ -34,6 +37,7 @@ const App = props => {
       <Head>
         <title>Gendox</title>
         <meta name='viewport' content='initial-scale=1, width=device-width' />
+        {themeColor && <meta name='theme-color' content={themeColor} />}
       </Head>
 
       <IFrameMessageManagerProvider>

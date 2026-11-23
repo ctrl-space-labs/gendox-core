@@ -94,6 +94,7 @@ const Dock = forwardRef(({ storageKey, layout, route, newTabs = [], blankUrl, on
 
   const [root, setRoot] = useState(null)
   const rootRef = useRef(null)
+  const tabDragged = useRef(false)
   rootRef.current = root
 
   // the saved layout, unless a tab in it can't be shown any more
@@ -282,7 +283,7 @@ const Dock = forwardRef(({ storageKey, layout, route, newTabs = [], blankUrl, on
       else if (tab.offsetLeft + tab.offsetWidth > strip.scrollLeft + strip.clientWidth)
         strip.scrollLeft = tab.offsetLeft + tab.offsetWidth - strip.clientWidth + 4
     })
-  })
+  }, [root, activeUrl, mobile])
 
   // ---------- drag a tab ----------
   const zoneAt = (x, y) => {
@@ -331,6 +332,8 @@ const Dock = forwardRef(({ storageKey, layout, route, newTabs = [], blankUrl, on
 
   const tabDown = (e, url, group) => {
     if (e.button !== 0 || e.target.closest('.x')) return
+    tabDragged.current = false
+    if (mobile || e.pointerType === 'touch') return
     const sx = e.clientX
     const sy = e.clientY
     let drag = false
@@ -338,9 +341,10 @@ const Dock = forwardRef(({ storageKey, layout, route, newTabs = [], blankUrl, on
     let hint
     let target
     const move = ev => {
-      if (mobile || (!drag && Math.hypot(ev.clientX - sx, ev.clientY - sy) < 6)) return
+      if (!drag && Math.hypot(ev.clientX - sx, ev.clientY - sy) < 6) return
       if (!drag) {
         drag = true
+        tabDragged.current = true
         ghost = Object.assign(window.document.createElement('div'), { className: 'drag-ghost' })
         ghost.textContent = meta[url]?.title ?? view(url)?.title ?? url
         hint = Object.assign(window.document.createElement('div'), { className: 'drop-hint' })
@@ -359,31 +363,19 @@ const Dock = forwardRef(({ storageKey, layout, route, newTabs = [], blankUrl, on
         })
       }
     }
-    const up = () => {
+    const finish = ev => {
       window.removeEventListener('pointermove', move)
-      window.removeEventListener('pointerup', up)
-      if (!drag) {
-        if (group.id === 'm') setMobileActive(url)
-        else {
-          update(h => {
-            const g = groupIn(h.root, group.id)
-            if (g) {
-              g.active = url
-              g.min = false
-            }
-          })
-          setFocusId(group.id)
-        }
-
-        return
-      }
+      window.removeEventListener('pointerup', finish)
+      window.removeEventListener('pointercancel', finish)
+      if (!drag) return
       ghost.remove()
       hint.remove()
       hostRef.current?.classList.remove('dragging')
-      if (target) moveTo(url, group.id, target.node.id, target.zone)
+      if (ev.type === 'pointerup' && target) moveTo(url, group.id, target.node.id, target.zone)
     }
     window.addEventListener('pointermove', move)
-    window.addEventListener('pointerup', up)
+    window.addEventListener('pointerup', finish)
+    window.addEventListener('pointercancel', finish)
   }
 
   // ---------- resize ----------
@@ -445,6 +437,45 @@ const Dock = forwardRef(({ storageKey, layout, route, newTabs = [], blankUrl, on
     const isMax = maxId === n.id
     const fixed = n.tabs.some(u => view(u)?.closable === false)
     const page = fullHref?.(n.active)
+    const addTab = newTabs.length > 0 && (
+      <Menu
+        align={flat ? 'right' : 'left'}
+        width={220}
+        trigger={({ onClick }) => (
+          <button className='add' title='New tab' onClick={onClick}>
+            <Plus className='lucide' />
+          </button>
+        )}
+      >
+        <div className='h'>Open in this window</div>
+        {newTabs.map(({ label, icon: Icon, url }) => (
+          <button
+            key={label}
+            className='mi'
+            data-close-menu
+            onClick={() => {
+              const target = typeof url === 'function' ? url() : url
+              if (!view(target)) return
+              update(h => {
+                const g = groupIn(h.root, flat ? focusedIn(h.root).id : n.id)
+                const already = groupWith(h.root, target)
+                if (already) {
+                  already.active = target
+                  return
+                }
+                g.tabs.push(target)
+                g.active = target
+                g.min = false
+              })
+              setMobileActive(target)
+            }}
+          >
+            <Icon className='lucide' />
+            {label}
+          </button>
+        ))}
+      </Menu>
+    )
 
     return (
       <div
@@ -455,7 +486,7 @@ const Dock = forwardRef(({ storageKey, layout, route, newTabs = [], blankUrl, on
         onPointerDown={() => !flat && focusId !== n.id && setFocusId(n.id)}
       >
         <div
-          className='group-h'
+          className={`group-h${flat ? ' flat' : ''}`}
           onDoubleClick={e => {
             if (flat || e.target.closest('button, a')) return
             setMaxId(isMax ? null : n.id)
@@ -471,7 +502,23 @@ const Dock = forwardRef(({ storageKey, layout, route, newTabs = [], blankUrl, on
               const count = meta[url]?.count ?? v.count
 
               return (
-                <div key={url} className={`tab ${url === n.active ? 'on' : ''}`} title={title} onPointerDown={e => tabDown(e, url, n)}>
+                <div
+                  key={url}
+                  className={`tab ${url === n.active ? 'on' : ''}`}
+                  title={title}
+                  onPointerDown={e => tabDown(e, url, n)}
+                  onClick={e => {
+                    if (tabDragged.current || e.target.closest('.x')) return
+                    if (flat) setMobileActive(url)
+                    else {
+                      setGroup(n.id, g => {
+                        g.active = url
+                        g.min = false
+                      })
+                      setFocusId(n.id)
+                    }
+                  }}
+                >
                   {Icon && <Icon className='lucide' />}
                   <span className='tt'>{title}</span>
                   {count ? <span className='n'>{count}</span> : null}
@@ -483,45 +530,9 @@ const Dock = forwardRef(({ storageKey, layout, route, newTabs = [], blankUrl, on
                 </div>
               )
             })}
-            {newTabs.length > 0 && (
-              <Menu
-                width={220}
-                trigger={({ onClick }) => (
-                  <button className='add' title='New tab' onClick={onClick}>
-                    <Plus className='lucide' />
-                  </button>
-                )}
-              >
-                <div className='h'>Open in this window</div>
-                {newTabs.map(({ label, icon: Icon, url }) => (
-                  <button
-                    key={label}
-                    className='mi'
-                    data-close-menu
-                    onClick={() => {
-                      const target = typeof url === 'function' ? url() : url
-                      if (!view(target)) return
-                      update(h => {
-                        const g = groupIn(h.root, n.id === 'm' ? focusedIn(h.root).id : n.id)
-                        const already = groupWith(h.root, target)
-                        if (already) {
-                          already.active = target
-                          return
-                        }
-                        g.tabs.push(target)
-                        g.active = target
-                        g.min = false
-                      })
-                      setMobileActive(target)
-                    }}
-                  >
-                    <Icon className='lucide' />
-                    {label}
-                  </button>
-                ))}
-              </Menu>
-            )}
+            {!flat && addTab}
           </div>
+          {flat && addTab}
           {!flat && (
             <div className='acts'>
               {page && (

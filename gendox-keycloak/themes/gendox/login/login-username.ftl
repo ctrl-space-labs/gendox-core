@@ -79,6 +79,8 @@
                                        name="username"
                                        value="${(login.username!'')}"
                                        type="text" autofocus autocomplete="username"
+                                       autocapitalize="none" spellcheck="false" enterkeyhint="next"
+                                       <#if realm.loginWithEmailAllowed && realm.registrationEmailAsUsername>inputmode="email"</#if>
                                        <#if usernameHidden??>readonly="readonly" tabindex="-1"</#if>
                                        style="background-color: transparent; color: #fff; border: 1px solid #444;
                                               <#if usernameHidden??>opacity: 0.7; padding-right: 110px; pointer-events: none;</#if>" />
