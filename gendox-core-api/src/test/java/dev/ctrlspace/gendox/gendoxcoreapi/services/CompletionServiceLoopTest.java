@@ -50,7 +50,7 @@ class CompletionServiceLoopTest extends CompletionServiceFixture {
 
     /** Everything a caller without a project has to give. */
     private CompletionRuntimeOverridesDTO.CompletionRuntimeOverridesDTOBuilder withoutProject() throws Exception {
-        when(aiModelService.getByName("other-model")).thenReturn(otherModel);
+        when(aiModelService.getByName(org.mockito.ArgumentMatchers.eq("other-model"), org.mockito.ArgumentMatchers.any())).thenReturn(otherModel);
         return CompletionRuntimeOverridesDTO.builder()
                 .systemPrompt("You are someone else.")
                 .completionModelName("other-model")

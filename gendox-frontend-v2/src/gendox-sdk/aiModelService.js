@@ -80,7 +80,41 @@ const deleteAiModelKey = async (organizationId, modelProviderKeyId, token) => {
   })
 }
 
+const authorized = token => ({ headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token } })
+
+// @param provider - { id?, name, baseUrl } of one of the organization's own providers
+const saveOrganizationAiModelProvider = async (organizationId, token, provider) =>
+  provider.id
+    ? axios.put(`${apiRequests.getAiModelProviders(organizationId)}/${provider.id}`, provider, authorized(token))
+    : axios.post(apiRequests.getAiModelProviders(organizationId), provider, authorized(token))
+
+const deleteOrganizationAiModelProvider = async (organizationId, providerId, token) =>
+  axios.delete(`${apiRequests.getAiModelProviders(organizationId)}/${providerId}`, authorized(token))
+
+// The organization's own models (active and inactive), on its own providers
+const getOrganizationAiModels = async (organizationId, token) =>
+  axios.get(apiRequests.organizationAiModels(organizationId), authorized(token))
+
+// @param model - { id?, name, model, aiModelProvider: { id }, aiModelType: { name }, apiType: { name }, isActive }
+const saveOrganizationAiModel = async (organizationId, token, model) =>
+  model.id
+    ? axios.put(apiRequests.organizationAiModels(organizationId, model.id), model, authorized(token))
+    : axios.post(apiRequests.organizationAiModels(organizationId), model, authorized(token))
+
+// Tests a model before it is saved: one small request to it; returns { ok, message, millis }
+const testOrganizationAiModel = async (organizationId, token, model) =>
+  axios.post(apiRequests.organizationAiModelTests(organizationId), model, authorized(token))
+
+const deleteOrganizationAiModel = async (organizationId, modelId, token) =>
+  axios.delete(apiRequests.organizationAiModels(organizationId, modelId), authorized(token))
+
 export default {
+  saveOrganizationAiModelProvider,
+  deleteOrganizationAiModelProvider,
+  getOrganizationAiModels,
+  saveOrganizationAiModel,
+  testOrganizationAiModel,
+  deleteOrganizationAiModel,
   getAllAiModelProviders,
   getModelKeysByOrganizationId,
   createAiModelKey,

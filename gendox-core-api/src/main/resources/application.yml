@@ -202,6 +202,10 @@ gendox:
       key: ${XAI_KEY:default-token}
     typesafe_ai:
       key: ${TYPESAFE_AI_KEY:default-token}
+  custom-models:
+    # An organization's own model endpoints may be on private addresses and plain http. Only for an installation
+    # whose network has nothing an organization should reach, e.g. a self-hosted one with a local model server.
+    allow-private-endpoints: ${GENDOX_CUSTOM_MODELS_ALLOW_PRIVATE_ENDPOINTS:false}
   domain:
     base-url: http://localhost:${server.port}
     document-sections:

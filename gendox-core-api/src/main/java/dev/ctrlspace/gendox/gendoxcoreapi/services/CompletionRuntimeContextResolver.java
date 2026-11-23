@@ -76,13 +76,13 @@ public class CompletionRuntimeContextResolver {
 
         String question = resolveQuestion(message, nearestSections, agent);
         String agentRole = appendInstructions(appendSkillsHeader(resolveSystemPrompt(agent, overrides), agentSkills), overrides);
-        AiModel completionModel = resolveCompletionModel(agent, overrides);
-        String completionApiKey = resolveCompletionApiKey(agent, overrides);
+        UUID organizationId = resolveOrganizationId(project, overrides);
+        AiModel completionModel = resolveCompletionModel(agent, overrides, organizationId);
+        String completionApiKey = resolveCompletionApiKey(agent, overrides, completionModel, organizationId);
         Long maxTokens = resolveMaxTokens(agent, overrides);
         Double temperature = resolveTemperature(agent, overrides);
         Double topP = resolveTopP(agent, overrides);
         UUID projectId = resolveProjectId(project, overrides);
-        UUID organizationId = resolveOrganizationId(project, overrides);
         UUID createdByAgentUserId = resolveCreatedByAgentUserId(agent, overrides);
         List<AiTools> availableTools = resolveAvailableTools(agent, overrides, agentSkills, clientToolNames(message, overrides));
 
@@ -306,9 +306,10 @@ public class CompletionRuntimeContextResolver {
     }
 
     private AiModel resolveCompletionModel(@Nullable ProjectAgent agent,
-                                           @Nullable CompletionRuntimeOverridesDTO overrides) throws GendoxException {
+                                           @Nullable CompletionRuntimeOverridesDTO overrides,
+                                           UUID organizationId) throws GendoxException {
         if (overrides != null && overrides.getCompletionModelName() != null && !overrides.getCompletionModelName().isBlank()) {
-            return aiModelService.getByName(overrides.getCompletionModelName());
+            return aiModelService.getByName(overrides.getCompletionModelName(), organizationId);
         }
         if (agent != null && agent.getCompletionModel() != null) {
             return agent.getCompletionModel();
@@ -317,13 +318,12 @@ public class CompletionRuntimeContextResolver {
     }
 
     private String resolveCompletionApiKey(@Nullable ProjectAgent agent,
-                                           @Nullable CompletionRuntimeOverridesDTO overrides) throws GendoxException {
+                                           @Nullable CompletionRuntimeOverridesDTO overrides,
+                                           AiModel completionModel,
+                                           UUID organizationId) throws GendoxException {
         if (overrides != null && overrides.getCompletionApiKey() != null && !overrides.getCompletionApiKey().isBlank()) {
             return overrides.getCompletionApiKey();
         }
-        AiModel completionModel = resolveCompletionModel(agent, overrides);
-        UUID organizationId = resolveOrganizationId(
-                agent != null ? agent.getProject() : null, overrides);
         return embeddingService.getApiKey(organizationId, completionModel);
     }
 

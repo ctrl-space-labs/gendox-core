@@ -139,6 +139,11 @@ export default {
 
   getAiModelProviders: organizationId => `${url}organizations/${organizationId}/ai-models/providers`,
 
+  organizationAiModels: (organizationId, modelId) =>
+    `${url}organizations/${organizationId}/ai-models${modelId ? `/${modelId}` : ''}`,
+
+  organizationAiModelTests: organizationId => `${url}organizations/${organizationId}/ai-model-tests`,
+
   aiModelKeys: organizationId => `${url}organizations/${organizationId}/model-keys`,
 
   updateAiModelKey: (organizationId, modelProviderKeyId) =>

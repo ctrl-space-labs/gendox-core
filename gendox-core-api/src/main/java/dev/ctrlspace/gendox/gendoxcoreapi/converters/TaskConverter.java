@@ -3,26 +3,20 @@ package dev.ctrlspace.gendox.gendoxcoreapi.converters;
 
 import tools.jackson.core.JacksonException;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Task;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.AiModelService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TypeService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 @Component
 public class TaskConverter implements GendoxConverter <Task, TaskDTO> {
 
     private TypeService typeService;
-    private AiModelService aiModelService;
 
     @Autowired
-    public TaskConverter(TypeService typeService,
-                         AiModelService aiModelService) {
+    public TaskConverter(TypeService typeService) {
         this.typeService = typeService;
-        this.aiModelService = aiModelService;
     }
 
 
@@ -63,23 +57,7 @@ public class TaskConverter implements GendoxConverter <Task, TaskDTO> {
         if (taskDTO.getDescription() != null) {
             task.setDescription(taskDTO.getDescription());
         }
-        if (taskDTO.getCompletionModel() != null) {
-            String modelName = taskDTO.getCompletionModel().getName();
-
-            if (modelName != null && !modelName.isBlank()) {
-                AiModel completionModel = aiModelService.getByName(modelName);
-
-                if (!completionModel.getIsActive()) {
-                    throw new GendoxException(
-                            "INACTIVE_COMPLETION_MODEL",
-                            "The selected completion model is inactive",
-                            HttpStatus.FORBIDDEN
-                    );
-                }
-
-                task.setCompletionModel(completionModel);
-            }
-        }
+        // the completion model is resolved by TaskService, which knows the organization
         if (taskDTO.getTaskPrompt() != null) {
             task.setTaskPrompt(taskDTO.getTaskPrompt());
         }

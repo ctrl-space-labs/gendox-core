@@ -256,13 +256,15 @@ public class ProjectAgentService {
     public ProjectAgent updateProjectAgent(ProjectAgent projectAgent) throws GendoxException {
         UUID projectAgentId = projectAgent.getId();
         ProjectAgent existingProjectAgent = projectAgentRepository.getById(projectAgentId);
+        // Gendox's models and the organization's own
+        UUID organizationId = existingProjectAgent.getProject().getOrganizationId();
 
         // Update the properties
-        AiModel completionModel = aiModelService.getByName(projectAgent.getCompletionModel().getName());
-        AiModel decisionModel = aiModelService.getByName(projectAgent.getDecisionModel().getName());
-        AiModel semanticSearchModel = aiModelService.getByName(projectAgent.getSemanticSearchModel().getName());
-        AiModel moderationModel = aiModelService.getByName(projectAgent.getModerationModel().getName());
-        AiModel rerankModel = aiModelService.getByName(projectAgent.getRerankModel().getName());
+        AiModel completionModel = aiModelService.getByName(projectAgent.getCompletionModel().getName(), organizationId);
+        AiModel decisionModel = aiModelService.getByName(projectAgent.getDecisionModel().getName(), organizationId);
+        AiModel semanticSearchModel = aiModelService.getByName(projectAgent.getSemanticSearchModel().getName(), organizationId);
+        AiModel moderationModel = aiModelService.getByName(projectAgent.getModerationModel().getName(), organizationId);
+        AiModel rerankModel = aiModelService.getByName(projectAgent.getRerankModel().getName(), organizationId);
 
         UUID subscriptionPlanId = organizationPlanService
                 .getActiveOrganizationPlan(existingProjectAgent.getProject().getOrganizationId())
@@ -338,11 +340,11 @@ public class ProjectAgentService {
         existingProjectAgent.setMaxCompletionLimit(projectAgent.getMaxCompletionLimit());
         existingProjectAgent.setModerationCheck(projectAgent.getModerationCheck());
         if (projectAgent.getModerationModel() != null && projectAgent.getModerationCheck()) {
-            existingProjectAgent.setModerationModel(aiModelService.getByName(projectAgent.getModerationModel().getName()));
+            existingProjectAgent.setModerationModel(aiModelService.getByName(projectAgent.getModerationModel().getName(), organizationId));
         }
         existingProjectAgent.setRerankEnable(projectAgent.getRerankEnable());
         if (projectAgent.getRerankModel() != null && projectAgent.getRerankEnable()) {
-            existingProjectAgent.setRerankModel(aiModelService.getByName(projectAgent.getRerankModel().getName()));
+            existingProjectAgent.setRerankModel(aiModelService.getByName(projectAgent.getRerankModel().getName(), organizationId));
         }
         if (projectAgent.getAdvancedSearchMode() != null) {
             validateAdvancedSearchMode(projectAgent.getAdvancedSearchMode());

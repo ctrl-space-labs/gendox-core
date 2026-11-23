@@ -77,6 +77,11 @@ public class TaskService {
 
     public Task createTask(UUID projectId, TaskDTO taskDTO) throws GendoxException {
         Task task = taskConverter.toEntity(taskDTO);
+        if (taskDTO.getCompletionModel() != null && taskDTO.getCompletionModel().getName() != null
+                && !taskDTO.getCompletionModel().getName().isBlank()) {
+            UUID organizationId = projectService.getProjectById(projectId).getOrganizationId();
+            task.setCompletionModel(getActiveCompletionModel(taskDTO.getCompletionModel().getName(), organizationId));
+        }
         // defaults
         if (task.getMaxQuestionsPerBucket() == null) {
             task.setMaxQuestionsPerBucket(this.maxQuestionsPerBucket);
@@ -99,6 +104,19 @@ public class TaskService {
         validateDigitizationContentFields(task);
         logger.debug("Creating new task: {}", task);
         return taskRepository.save(task);
+    }
+
+    // Gendox's model or the organization's own
+    private AiModel getActiveCompletionModel(String modelName, UUID organizationId) throws GendoxException {
+        AiModel completionModel = aiModelService.getByName(modelName, organizationId);
+        if (!completionModel.getIsActive()) {
+            throw new GendoxException(
+                    "INACTIVE_COMPLETION_MODEL",
+                    "The selected completion model is inactive",
+                    HttpStatus.FORBIDDEN
+            );
+        }
+        return completionModel;
     }
 
     public Task duplicateTask(UUID projectId, TaskDuplicateDTO taskDuplicateDTO) throws GendoxException {
@@ -233,18 +251,10 @@ public class TaskService {
             String modelName = taskDTO.getCompletionModel().getName();
 
             if (modelName != null && !modelName.isBlank()) {
-                AiModel completionModel = aiModelService.getByName(modelName);
-
-                if (!completionModel.getIsActive()) {
-                    throw new GendoxException(
-                            "INACTIVE_COMPLETION_MODEL",
-                            "The selected completion model is inactive",
-                            HttpStatus.FORBIDDEN
-                    );
-                }
+                UUID organizationId = projectService.getProjectById(existingTask.getProjectId()).getOrganizationId();
+                AiModel completionModel = getActiveCompletionModel(modelName, organizationId);
 
                 // the model tier has to be allowed by the plan, same as when it is selected on the project agent
-                UUID organizationId = projectService.getProjectById(existingTask.getProjectId()).getOrganizationId();
                 if (!subscriptionAiModelTierService.hasAccessToModel(organizationId, completionModel)) {
                     throw new GendoxException(
                             "NO_ACCESS_TO_COMPLETION_MODEL",

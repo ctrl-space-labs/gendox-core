@@ -159,6 +159,8 @@ services:
       XAI_KEY: ${XAI_KEY:-}
       FIRECRAWL_KEY: ${FIRECRAWL_KEY:-}
       GENDOX_SECRETS_KEYS: ${GENDOX_SECRETS_KEYS:-}
+      # true lets an organization's own model endpoints be on this machine (host.docker.internal), for tests
+      GENDOX_CUSTOM_MODELS_ALLOW_PRIVATE_ENDPOINTS: ${GENDOX_CUSTOM_MODELS_ALLOW_PRIVATE_ENDPOINTS:-false}
       GCLOUD_CLIENT_SECRET: ${GCLOUD_CLIENT_SECRET:-}
       DISCORD_TOKEN: ""
       AWS_ACCESS_KEY: ""

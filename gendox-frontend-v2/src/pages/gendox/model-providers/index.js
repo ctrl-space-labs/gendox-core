@@ -10,6 +10,7 @@ import { getToken } from 'src/components/agent/useAgent'
 import { KEYLESS_PROVIDERS, needsKey, providerLabel } from 'src/components/agent/ModelPicker'
 import { formatDate } from 'src/components/knowledge/documentUtils'
 import OrgScope from 'src/components/organization/OrgScope'
+import CustomModels from 'src/components/organization/CustomModels'
 import AppLayout from 'src/layouts/AppLayout'
 import Avatar from 'src/components/ui/Avatar'
 import ConfirmDialog from 'src/components/ui/ConfirmDialog'
@@ -89,6 +90,7 @@ const ModelProvidersPage = () => {
   const canEdit = useHasOrgRole({ organizationId, roles: ['OP_EDIT_ORGANIZATION_MODEL_KEYS'] })
   const [providers, setProviders] = useState(null) // null while loading
   const [keys, setKeys] = useState(null)
+  const [ownModels, setOwnModels] = useState([]) // the organization's own models, on its own providers
   const [query, setQuery] = useState('')
   const [editing, setEditing] = useState(null) // { provider, key }
   const [removing, setRemoving] = useState(null)
@@ -132,6 +134,10 @@ const ModelProvidersPage = () => {
       .getModelKeysByOrganizationId(organizationId, token)
       .then(r => setKeys(r.data?.content ?? r.data ?? []))
       .catch(() => setKeys([]))
+    aiModelService
+      .getOrganizationAiModels(organizationId, token)
+      .then(r => setOwnModels(r.data ?? []))
+      .catch(() => setOwnModels([]))
   }, [organizationId])
 
   useEffect(() => {
@@ -140,7 +146,9 @@ const ModelProvidersPage = () => {
 
   const loaded = providers !== null && keys !== null
   const keyOf = provider => (keys ?? []).find(k => k.aiModelProvider?.id === provider.id)
-  const usable = (providers ?? []).filter(p => !KEYLESS_PROVIDERS.includes(p.name))
+  // Gendox's providers; the organization's own have their own card
+  const usable = (providers ?? []).filter(p => !p.organizationId && !KEYLESS_PROVIDERS.includes(p.name))
+  const ownProviders = (providers ?? []).filter(p => p.organizationId)
 
   const { mine, rest } = useMemo(() => {
     const value = query.trim().toLowerCase()
@@ -235,6 +243,18 @@ const ModelProvidersPage = () => {
             )
           })}
         </div>
+      )}
+
+      {loaded && (
+        <CustomModels
+          organizationId={organizationId}
+          providers={ownProviders}
+          models={ownModels}
+          keyOf={keyOf}
+          canEdit={canEdit}
+          onEditKey={provider => setEditing({ provider, key: keyOf(provider) ?? null })}
+          onChange={load}
+        />
       )}
 
       <div className='card'>

@@ -33,6 +33,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 @Service
@@ -110,8 +111,12 @@ public class CohereAiServiceAdapter implements AiModelApiAdapterService {
                 rerankApiUrl,
                 new HttpEntity<>(rerankRequestHttpEntity, buildHeader(apiKey)),
                 CohereRerankResponse.class);
+        // Cohere-compatible servers (vLLM, Jina, LiteLLM) may send no billing meta
         logger.info("Received Rerank Response from '{}'. Tokens billed: {}", rerankApiUrl,
-                responseEntity.getBody().getMeta().getBilled_units().getSearch_units());
+                Optional.ofNullable(responseEntity.getBody().getMeta())
+                        .map(CohereRerankResponse.Meta::getBilled_units)
+                        .map(CohereRerankResponse.BilledUnits::getSearch_units)
+                        .orElse(null));
 
         return responseEntity.getBody();
     }

@@ -2,7 +2,8 @@ import { Check, ChevronsUpDown, KeyRound, TriangleAlert } from 'lucide-react'
 import Link from 'next/link'
 import Menu from 'src/components/ui/Menu'
 
-// display names of the seeded providers; one we don't know is prettified (OPEN_AI → Open Ai)
+// display names of the seeded providers; one we don't know is prettified (OPEN_AI → Open Ai), and an
+// organization's own provider, named by people, is shown as named
 const PROVIDERS = {
   OPEN_AI: 'OpenAI',
   ANTHROPIC_AI: 'Anthropic',
@@ -22,12 +23,14 @@ export const KEYLESS_PROVIDERS = ['PRIVATE_OLLAMA', 'MOCK_GEMINI']
 
 export const providerLabel = name =>
   PROVIDERS[name] ??
-  (name || '')
-    .toLowerCase()
-    .split('_')
-    .filter(Boolean)
-    .map(word => word[0].toUpperCase() + word.slice(1))
-    .join(' ')
+  (!/^[A-Z0-9_]*$/.test(name || '')
+    ? name
+    : (name || '')
+        .toLowerCase()
+        .split('_')
+        .filter(Boolean)
+        .map(word => word[0].toUpperCase() + word.slice(1))
+        .join(' '))
 
 /**
  * Only FREE_MODEL models run on Gendox's own key (OrganizationModelKeyService); any other tier needs
@@ -54,7 +57,7 @@ const ModelTag = ({ model, keys }) => {
       <span className='faint sm row' style={{ gap: 6 }}>
         {providerLabel(model.aiModelProvider?.name)}
         {model.hostingRegion && ` · ${model.hostingRegion}`}
-        {TIERS[model.modelTierType?.name] && ` · ${TIERS[model.modelTierType.name]}`}
+        {!model.organizationId && TIERS[model.modelTierType?.name] && ` · ${TIERS[model.modelTierType.name]}`}
         {needsKey(model, keys) && (
           <span className='row' style={{ gap: 4, color: 'var(--warn)' }}>
             · <KeyRound className='lucide' style={{ width: 12, height: 12 }} />
