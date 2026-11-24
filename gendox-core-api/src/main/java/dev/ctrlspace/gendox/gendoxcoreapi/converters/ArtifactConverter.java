@@ -5,6 +5,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.ArtifactVersion;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.ArtifactDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.ArtifactSummaryDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.ArtifactVersionSummaryDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.PublicArtifactDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ArtifactAccessService;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
@@ -57,6 +58,22 @@ public class ArtifactConverter implements GendoxConverter<Artifact, ArtifactSumm
         artifactDTO.setYourRole(yourRole == null ? null : yourRole.name());
 
         return artifactDTO;
+    }
+
+    /**
+     * An artifact as its public link shows it: the version shown and the agent that made it, nothing more.
+     */
+    public PublicArtifactDTO toPublicDTO(Artifact artifact, ArtifactVersion shown, String agentName) {
+        PublicArtifactDTO publicArtifactDTO = new PublicArtifactDTO();
+        publicArtifactDTO.setPublicId(artifact.getPublicId());
+        publicArtifactDTO.setTitle(artifact.getTitle());
+        publicArtifactDTO.setArtifactType(artifact.getArtifactType());
+        publicArtifactDTO.setCodeLanguage(artifact.getCodeLanguage());
+        publicArtifactDTO.setVersion(shown.getVersion());
+        publicArtifactDTO.setContent(shown.getContent());
+        publicArtifactDTO.setAgentName(agentName);
+
+        return publicArtifactDTO;
     }
 
     @Override

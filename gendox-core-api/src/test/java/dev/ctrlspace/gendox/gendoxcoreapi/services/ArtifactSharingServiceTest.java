@@ -4,6 +4,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Artifact;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ArtifactMember;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ArtifactThread;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.ArtifactVersion;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ChatThread;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
@@ -63,6 +64,9 @@ class ArtifactSharingServiceTest {
 
     @Mock
     private ProjectService projectService;
+
+    @Mock
+    private ArtifactService artifactService;
 
     private final UUID projectId = UUID.randomUUID();
     private final UUID ownerId = UUID.randomUUID();
@@ -282,5 +286,52 @@ class ArtifactSharingServiceTest {
         assertEquals("ARTIFACT_ROLE_TOO_LOW", e.getErrorCode());
         verifyNoInteractions(messageService);
         verify(artifactThreadRepository, never()).save(any());
+    }
+
+    private Project projectWithAgent(String agentName) {
+        Project project = new Project();
+        project.setId(projectId);
+        project.setName("Sales");
+        ProjectAgent agent = new ProjectAgent();
+        agent.setAgentName(agentName);
+        project.setProjectAgent(agent);
+        return project;
+    }
+
+    @Test
+    void aPublicLinkShowsTheLatestVersionAndTheAgentsName() throws GendoxException {
+        UUID publicId = UUID.randomUUID();
+        artifact.setPublicId(publicId);
+        ArtifactVersion latest = ArtifactVersion.builder().version(3).content("<p>v3</p>").build();
+        when(artifactRepository.findByPublicId(publicId)).thenReturn(Optional.of(artifact));
+        when(artifactService.getVersion(artifact, null)).thenReturn(latest);
+        when(projectService.getProjectById(projectId)).thenReturn(projectWithAgent("Sales assistant"));
+
+        ArtifactSharingService.PublicArtifact found = artifactSharingService.getPublic(publicId, null);
+
+        assertSame(latest, found.shown());
+        assertEquals("Sales assistant", found.agentName());
+        verifyNoInteractions(artifactAccessService);
+    }
+
+    @Test
+    void anAgentWithoutANameIsNamedByItsProject() throws GendoxException {
+        UUID publicId = UUID.randomUUID();
+        when(artifactRepository.findByPublicId(publicId)).thenReturn(Optional.of(artifact));
+        when(artifactService.getVersion(artifact, 1)).thenReturn(ArtifactVersion.builder().version(1).build());
+        when(projectService.getProjectById(projectId)).thenReturn(projectWithAgent(" "));
+
+        assertEquals("Sales", artifactSharingService.getPublic(publicId, 1).agentName());
+    }
+
+    @Test
+    void aLinkThatIsNotPublicIsNotFound() {
+        UUID publicId = UUID.randomUUID();
+        when(artifactRepository.findByPublicId(publicId)).thenReturn(Optional.empty());
+
+        GendoxException e = assertThrows(GendoxException.class, () -> artifactSharingService.getPublic(publicId, null));
+
+        assertEquals("ARTIFACT_NOT_FOUND", e.getErrorCode());
+        assertEquals(HttpStatus.NOT_FOUND, e.getHttpStatus());
     }
 }

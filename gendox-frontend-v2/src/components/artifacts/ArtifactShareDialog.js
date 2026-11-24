@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
-import { Lock, Users } from 'lucide-react'
+import { Check, Globe, Link2, Lock, Users } from 'lucide-react'
 import artifactService from 'src/gendox-sdk/artifactService'
 import projectService from 'src/gendox-sdk/projectService'
 import { getToken } from 'src/components/agent/useAgent'
@@ -9,7 +9,9 @@ import { getErrorMessage } from 'src/utils/errorHandler'
 import Dialog from 'src/components/ui/Dialog'
 import Avatar from 'src/components/ui/Avatar'
 import Spinner from 'src/components/ui/Spinner'
-import { ROLES, SHARED_ROLES } from 'src/components/artifacts/artifactUtils'
+import Switch from 'src/components/ui/Switch'
+import { copyToClipboard } from 'src/utils/copyToClipboard'
+import { publicArtifactLink, ROLES, SHARED_ROLES } from 'src/components/artifacts/artifactUtils'
 
 const nameOf = user =>
   user?.name || [user?.firstName, user?.lastName].filter(Boolean).join(' ') || user?.userName || user?.email || 'Someone'
@@ -141,6 +143,16 @@ const ArtifactShareDialog = ({ open, onClose, artifactId, title, organizationId,
     }
   }
 
+  const setPublic = on =>
+    save('public', () => (on ? artifactService.makePublic(artifactId, getToken()) : artifactService.makePrivate(artifactId, getToken())))
+
+  const [copied, setCopied] = useState(false)
+  const copyPublicLink = () => {
+    copyToClipboard(publicArtifactLink(sharing.publicId))
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
   const agent = agentName || 'this agent'
   const general = sharing?.generalAccessRole ?? ''
 
@@ -258,6 +270,39 @@ const ArtifactShareDialog = ({ open, onClose, artifactId, title, organizationId,
             </div>
           </div>
 
+
+          {isOwner && (
+            <div className='field'>
+              <span className='lab'>Public link</span>
+              <div className='art-share-row'>
+                <span className='ftype'>
+                  <Globe className='lucide' />
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 500 }}>{sharing.publicId ? 'Anyone with the link' : 'Not public'}</div>
+                  <div className='faint sm trunc'>
+                    {sharing.publicId
+                      ? publicArtifactLink(sharing.publicId)
+                      : 'Anyone with its link could see it, without an account. Never its conversation.'}
+                  </div>
+                </div>
+                {sharing.publicId && (
+                  <button className='btn ghost s icon' title='Copy the public link' onClick={copyPublicLink}>
+                    {copied ? <Check className='lucide' /> : <Link2 className='lucide' />}
+                  </button>
+                )}
+                <Switch
+                  label='Anyone with the link can see it'
+                  checked={Boolean(sharing.publicId)}
+                  busy={busy === 'public'}
+                  onChange={setPublic}
+                />
+              </div>
+              {sharing.publicId && (
+                <span className='help'>Making it private ends the link at once; making it public again gives a new one.</span>
+              )}
+            </div>
+          )}
         </div>
       )}
     </Dialog>

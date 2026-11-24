@@ -22,4 +22,7 @@ public interface ArtifactRepository extends JpaRepository<Artifact, UUID>, Query
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select a from Artifact a where a.id = :id")
     Optional<Artifact> lockById(@Param("id") UUID id);
+
+    /** The artifact with this public link, while it is public: making it private ends the link at once. */
+    Optional<Artifact> findByPublicId(UUID publicId);
 }

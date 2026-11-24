@@ -1,8 +1,10 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.ArtifactConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.ArtifactSharingConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.ArtifactSharingDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.PublicArtifactDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ArtifactSharingService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.ArtifactChatResponseDTO;
@@ -25,13 +27,16 @@ public class ArtifactSharingController {
 
     private final ArtifactSharingService artifactSharingService;
     private final ArtifactSharingConverter artifactSharingConverter;
+    private final ArtifactConverter artifactConverter;
     private final SecurityUtils securityUtils;
 
     public ArtifactSharingController(ArtifactSharingService artifactSharingService,
                                      ArtifactSharingConverter artifactSharingConverter,
+                                     ArtifactConverter artifactConverter,
                                      SecurityUtils securityUtils) {
         this.artifactSharingService = artifactSharingService;
         this.artifactSharingConverter = artifactSharingConverter;
+        this.artifactConverter = artifactConverter;
         this.securityUtils = securityUtils;
     }
 
@@ -116,5 +121,26 @@ public class ArtifactSharingController {
         return ArtifactChatResponseDTO.builder()
                 .threadId(artifactSharingService.openInNewChat(artifactId, securityUtils.getUserId()).getId())
                 .build();
+    }
+
+    @GetMapping("public/artifacts/{publicId}")
+    @Operation(summary = "Get a public artifact",
+            description = "An artifact by its public link, for anyone, signed in or not: its latest version and the " +
+                    "agent that made it. Never its conversation, its organization or who made it.")
+    public PublicArtifactDTO getPublic(@PathVariable UUID publicId) throws GendoxException {
+        return publicDTO(publicId, null);
+    }
+
+    @GetMapping("public/artifacts/{publicId}/versions/{version}")
+    @Operation(summary = "Get a version of a public artifact",
+            description = "As Get a public artifact, with the version the link names.")
+    public PublicArtifactDTO getPublicVersion(@PathVariable UUID publicId, @PathVariable Integer version)
+            throws GendoxException {
+        return publicDTO(publicId, version);
+    }
+
+    private PublicArtifactDTO publicDTO(UUID publicId, Integer version) throws GendoxException {
+        ArtifactSharingService.PublicArtifact found = artifactSharingService.getPublic(publicId, version);
+        return artifactConverter.toPublicDTO(found.artifact(), found.shown(), found.agentName());
     }
 }

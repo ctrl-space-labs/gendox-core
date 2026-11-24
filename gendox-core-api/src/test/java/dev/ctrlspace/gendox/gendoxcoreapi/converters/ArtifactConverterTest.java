@@ -58,4 +58,19 @@ class ArtifactConverterTest {
 
         assertEquals("INLINE", back.getDisplay().getName());
     }
+
+    @Test
+    void aPublicReaderGetsTheArtifactAndTheAgentNothingMore() {
+        Artifact artifact = artifact().toBuilder().publicId(UUID.randomUUID()).build();
+        ArtifactVersion shown = ArtifactVersion.builder().version(2).content("<p>x</p>").createdBy(UUID.randomUUID()).build();
+
+        var dto = converter.toPublicDTO(artifact, shown, "Sales assistant");
+
+        assertEquals(artifact.getPublicId(), dto.getPublicId());
+        assertEquals("EUR to USD", dto.getTitle());
+        assertEquals("HTML", dto.getArtifactType().getName());
+        assertEquals(2, dto.getVersion());
+        assertEquals("<p>x</p>", dto.getContent());
+        assertEquals("Sales assistant", dto.getAgentName());
+    }
 }

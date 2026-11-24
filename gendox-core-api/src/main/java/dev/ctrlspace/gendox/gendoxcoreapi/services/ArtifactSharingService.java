@@ -35,6 +35,7 @@ public class ArtifactSharingService {
     private final ArtifactThreadRepository artifactThreadRepository;
     private final MessageService messageService;
     private final ProjectService projectService;
+    private final ArtifactService artifactService;
 
     public ArtifactSharingService(ArtifactRepository artifactRepository,
                                   ArtifactMemberRepository artifactMemberRepository,
@@ -43,7 +44,8 @@ public class ArtifactSharingService {
                                   TypeService typeService,
                                   ArtifactThreadRepository artifactThreadRepository,
                                   MessageService messageService,
-                                  ProjectService projectService) {
+                                  ProjectService projectService,
+                                  ArtifactService artifactService) {
         this.artifactRepository = artifactRepository;
         this.artifactMemberRepository = artifactMemberRepository;
         this.projectMemberRepository = projectMemberRepository;
@@ -52,6 +54,7 @@ public class ArtifactSharingService {
         this.artifactThreadRepository = artifactThreadRepository;
         this.messageService = messageService;
         this.projectService = projectService;
+        this.artifactService = artifactService;
     }
 
     /**
@@ -59,6 +62,31 @@ public class ArtifactSharingService {
      * first invited first (the owner is not among them).
      */
     public record Sharing(Artifact artifact, Role role, List<ArtifactMember> members) {
+    }
+
+    /**
+     * An artifact as its public link shows it: the version, and the name of the agent that made it.
+     */
+    public record PublicArtifact(Artifact artifact, ArtifactVersion shown, String agentName) {
+    }
+
+    /**
+     * An artifact by its public link, for anyone, signed in or not: the latest version, or the one the link names.
+     * A link of an artifact that was made private, or never was public, is not found, the same as one that never
+     * existed.
+     *
+     * @param version null for the latest
+     */
+    public PublicArtifact getPublic(UUID publicId, @Nullable Integer version) throws GendoxException {
+        Artifact artifact = artifactRepository.findByPublicId(publicId)
+                .orElseThrow(() -> new GendoxException("ARTIFACT_NOT_FOUND",
+                        "No public artifact at this link", HttpStatus.NOT_FOUND));
+        ArtifactVersion shown = artifactService.getVersion(artifact, version);
+        Project project = projectService.getProjectById(artifact.getProjectId());
+        ProjectAgent agent = project.getProjectAgent();
+        String agentName = agent != null && agent.getAgentName() != null && !agent.getAgentName().isBlank()
+                ? agent.getAgentName() : project.getName();
+        return new PublicArtifact(artifact, shown, agentName);
     }
 
     /**

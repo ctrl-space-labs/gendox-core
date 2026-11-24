@@ -201,6 +201,9 @@ const RANK = { VIEW: 1, INTERACT: 2, EDIT: 3, OWNER: 4 }
 /** Whether a role is at least the one needed */
 export const roleAtLeast = (role, needed) => (RANK[role] || 0) >= RANK[needed]
 
+/** The link anyone can open, signed in or not (gendox-core#570); outside /gendox/, so no app around it */
+export const publicArtifactLink = publicId => `${window.location.origin}/a/?id=${publicId}`
+
 // a person changed how an artifact shows (gendox-core#570): every chat on the page shows it the new way at once
 export const ARTIFACT_DISPLAY_CHANGED = 'gendox:artifact-display-changed'
 

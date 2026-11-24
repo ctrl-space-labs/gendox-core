@@ -113,6 +113,26 @@ const restoreVersion = async (artifactId, version, token) => {
   return axios.post(apiRequests.artifactRestore(artifactId, version), null, { headers: headers(token) })
 }
 
+/** Make it public: anyone with its link sees it, signed in or not; a new link each time. Owner only. @returns the sharing */
+const makePublic = async (artifactId, token) => {
+  return axios.post(apiRequests.artifactPublic(artifactId), null, { headers: headers(token) })
+}
+
+/** Make it private: its link stops working at once. Owner only. @returns the sharing */
+const makePrivate = async (artifactId, token) => {
+  return axios.delete(apiRequests.artifactPublic(artifactId), { headers: headers(token) })
+}
+
+/**
+ * An artifact by its public link, for anyone: no token is sent. Only the artifact and the agent that made it.
+ * @param version - the one the link names; the latest when absent
+ */
+const getPublicArtifact = async (publicId, version) => {
+  const path = version ? apiRequests.publicArtifactVersion(publicId, version) : apiRequests.publicArtifact(publicId)
+
+  return axios.get(path, { headers: headers(null) })
+}
+
 export default {
   getArtifacts,
   getProjectArtifacts,
@@ -126,5 +146,8 @@ export default {
   removeMember,
   openInNewChat,
   setDisplay,
-  restoreVersion
+  restoreVersion,
+  makePublic,
+  makePrivate,
+  getPublicArtifact
 }
