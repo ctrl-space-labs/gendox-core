@@ -13,6 +13,9 @@ public interface ArtifactThreadRepository extends JpaRepository<ArtifactThread, 
     /** The artifacts a conversation was opened on, besides its own: what the agent is told about on each turn. */
     List<ArtifactThread> findAllByThreadId(UUID threadId);
 
+    /** Whether the conversation was opened on an artifact: it then gets the artifacts skill. */
+    boolean existsByThreadId(UUID threadId);
+
     /** Whether a conversation was opened on this artifact: the tools reach it only then. */
     boolean existsByArtifactIdAndThreadId(UUID artifactId, UUID threadId);
 }

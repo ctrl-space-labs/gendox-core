@@ -1,6 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
+import org.springframework.lang.Nullable;
 import org.apache.commons.text.StringSubstitutor;
 
 
@@ -20,21 +21,27 @@ public class ChatTemplateAuthor {
             DateTimeFormatter.ofPattern("EEEE, yyyy-MM-dd", Locale.ENGLISH).withZone(ZoneOffset.UTC);
 
 
-    public String chatTemplate(Message message, String sectionValues, String templateText) {
+    public String chatTemplate(Message message, String sectionValues, String templateText, @Nullable String openedArtifacts) {
         String chatGptTemplate = templateText;
-        String question = processTemplate(chatGptTemplate, toChatValues(message, sectionValues));
+        String question = processTemplate(chatGptTemplate, toChatValues(message, sectionValues, openedArtifacts));
         return question;
     }
 
-    public Map<String, String> toChatValues(Message message, String sectionValues){
+    /**
+     * @param openedArtifacts the listing of the artifacts the conversation was opened on, or null when it was opened
+     *                        on none. The agent gets their listing, never their content: it reads them with tools.
+     */
+    public Map<String, String> toChatValues(Message message, String sectionValues, @Nullable String openedArtifacts) {
         Map<String, String> questionTemplateValues = new HashMap<>();
         questionTemplateValues.put("context", escapePlaceholders(sectionValues));
         questionTemplateValues.put(
                 "localContexts",
-                Stream.concat(
+                Stream.of(
                                 Stream.of(sessionItem("USER_CONTEXT", userContext(message))),
                                 message.getLocalContexts().stream()
-                                        .map(c -> sessionItem(c.getContextTypeName(), c.getValue())))
+                                        .map(c -> sessionItem(c.getContextTypeName(), c.getValue())),
+                                openedArtifacts == null ? Stream.<String>empty() : Stream.of(sessionItem("OPENED_ARTIFACTS", openedArtifacts)))
+                        .flatMap(items -> items)
                         .collect(Collectors.joining("\n"))
         );
         questionTemplateValues.put("question", (message.getValue()));

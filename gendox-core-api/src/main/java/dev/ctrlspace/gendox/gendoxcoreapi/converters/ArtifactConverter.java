@@ -2,9 +2,9 @@ package dev.ctrlspace.gendox.gendoxcoreapi.converters;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Artifact;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ArtifactVersion;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ArtifactDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ArtifactSummaryDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ArtifactVersionSummaryDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.ArtifactDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.ArtifactSummaryDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.ArtifactVersionSummaryDTO;
 import org.springframework.stereotype.Component;
 
 import java.util.List;

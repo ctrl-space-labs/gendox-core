@@ -2,8 +2,8 @@ package dev.ctrlspace.gendox.gendoxcoreapi.converters;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ArtifactMember;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ArtifactSharingDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ArtifactSharingDTO.Person;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.ArtifactSharingDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.ArtifactSharingDTO.Person;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ArtifactService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ArtifactSharingService.Sharing;

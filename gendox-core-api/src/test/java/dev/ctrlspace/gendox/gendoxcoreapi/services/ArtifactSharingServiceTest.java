@@ -3,9 +3,14 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Artifact;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ArtifactMember;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.ArtifactThread;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.ChatThread;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ArtifactMemberRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ArtifactRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ArtifactThreadRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectMemberRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ArtifactAccessService.Role;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,6 +24,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.http.HttpStatus;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -48,6 +54,15 @@ class ArtifactSharingServiceTest {
 
     @Mock
     private TypeService typeService;
+
+    @Mock
+    private ArtifactThreadRepository artifactThreadRepository;
+
+    @Mock
+    private MessageService messageService;
+
+    @Mock
+    private ProjectService projectService;
 
     private final UUID projectId = UUID.randomUUID();
     private final UUID ownerId = UUID.randomUUID();
@@ -212,5 +227,60 @@ class ArtifactSharingServiceTest {
         assertThrows(GendoxException.class, () -> artifactSharingService.delete(artifact.getId(), editorId));
 
         verify(artifactRepository, never()).delete(any());
+    }
+
+    // Change it in a chat
+
+    private ChatThread newThreadFor(UUID agentUserId) throws GendoxException {
+        ProjectAgent agent = new ProjectAgent();
+        agent.setUserId(agentUserId);
+        Project project = new Project();
+        project.setProjectAgent(agent);
+        when(projectService.getProjectById(projectId)).thenReturn(project);
+        ChatThread thread = new ChatThread();
+        thread.setId(UUID.randomUUID());
+        when(messageService.createThreadForMessage(any(), eq(projectId), any())).thenReturn(thread);
+        return thread;
+    }
+
+    @Test
+    void openInNewChat_startsTheUsersOwnConversationWithTheAgentOpenedOnIt() throws GendoxException {
+        UUID agentUserId = UUID.randomUUID();
+        artifact.setTitle("Order counter");
+        ChatThread thread = newThreadFor(agentUserId);
+
+        ChatThread opened = artifactSharingService.openInNewChat(artifact.getId(), editorId);
+
+        assertSame(thread, opened);
+        verify(messageService).createThreadForMessage(List.of(editorId, agentUserId), projectId, "Order counter");
+        ArgumentCaptor<ArtifactThread> link = ArgumentCaptor.forClass(ArtifactThread.class);
+        verify(artifactThreadRepository).save(link.capture());
+        assertEquals(artifact.getId(), link.getValue().getArtifactId());
+        assertEquals(thread.getId(), link.getValue().getThreadId());
+        assertEquals(editorId, link.getValue().getCreatedBy());
+        assertNotNull(link.getValue().getCreatedAt());
+    }
+
+    @Test
+    void openInNewChat_withAnAgentWithoutAUser_hasTheUserAloneAndIsNotPublic() throws GendoxException {
+        newThreadFor(null);
+
+        artifactSharingService.openInNewChat(artifact.getId(), editorId);
+
+        verify(messageService).createThreadForMessage(eq(List.of(editorId)), eq(projectId), any());
+    }
+
+    @Test
+    void openInNewChat_needsTheEditRole() throws GendoxException {
+        UUID viewerId = UUID.randomUUID();
+        when(artifactAccessService.require(artifact, viewerId, Role.EDIT)).thenThrow(
+                new GendoxException("ARTIFACT_ROLE_TOO_LOW", "needs EDIT", HttpStatus.FORBIDDEN));
+
+        GendoxException e = assertThrows(GendoxException.class,
+                () -> artifactSharingService.openInNewChat(artifact.getId(), viewerId));
+
+        assertEquals("ARTIFACT_ROLE_TOO_LOW", e.getErrorCode());
+        verifyNoInteractions(messageService);
+        verify(artifactThreadRepository, never()).save(any());
     }
 }

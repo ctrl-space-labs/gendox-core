@@ -2,21 +2,18 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ArtifactEditDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ArtifactVersionSummaryDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.ArtifactEditDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.ArtifactVersionSummaryDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ArtifactCriteria;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ArtifactRepository;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ArtifactVersionRepository;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ChatThreadRepository;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.MessageRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.ArtifactPredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ArtifactAccessService.Role;
 
 import java.util.*;
 import java.util.function.Function;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.FileListing;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -27,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Pageable;
 
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Artifacts of a chat thread. Every read and write names the thread: an artifact of another thread
@@ -44,6 +42,7 @@ public class ArtifactService {
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
     private final ArtifactAccessService artifactAccessService;
+    private final ArtifactThreadRepository artifactThreadRepository;
 
     /**
      * Characters one version may hold.
@@ -57,7 +56,8 @@ public class ArtifactService {
                            ChatThreadRepository chatThreadRepository,
                            MessageRepository messageRepository,
                            UserRepository userRepository,
-                           ArtifactAccessService artifactAccessService) {
+                           ArtifactAccessService artifactAccessService,
+                           ArtifactThreadRepository artifactThreadRepository) {
         this.artifactRepository = artifactRepository;
         this.artifactVersionRepository = artifactVersionRepository;
         this.typeService = typeService;
@@ -65,6 +65,7 @@ public class ArtifactService {
         this.messageRepository = messageRepository;
         this.userRepository = userRepository;
         this.artifactAccessService = artifactAccessService;
+        this.artifactThreadRepository = artifactThreadRepository;
     }
 
     /**
@@ -117,8 +118,9 @@ public class ArtifactService {
         }
 
         // locked until the transaction ends, so a second update of the same artifact waits and numbers after this one
-        Artifact artifact = artifactRepository.lockByIdAndThreadId(artifactId, threadId)
+        Artifact artifact = artifactRepository.lockById(artifactId)
                 .orElseThrow(() -> notInThread(artifactId, threadId));
+        checkReach(artifact, threadId, Role.EDIT);
         if (hasTitle) {
             artifact.setTitle(title.trim());
         }
@@ -168,9 +170,73 @@ public class ArtifactService {
         return names;
     }
 
+    /**
+     * An artifact the conversation reaches: one made in it, or one it was opened on (see {@link #checkReach}).
+     */
     public Artifact getByIdInThread(UUID threadId, UUID artifactId) throws GendoxException {
-        return artifactRepository.findByIdAndThreadId(artifactId, threadId)
+        Artifact artifact = artifactRepository.findById(artifactId)
                 .orElseThrow(() -> notInThread(artifactId, threadId));
+        checkReach(artifact, threadId, Role.VIEW);
+        return artifact;
+    }
+
+    /**
+     * A conversation reaches the artifacts made in it, and those it was opened on while its user keeps the role
+     * needed: VIEW to read, EDIT to change. Anything else is not found, as an artifact that does not exist; an
+     * artifact the user sees but may not change says so, for the agent to tell the user.
+     */
+    private void checkReach(Artifact artifact, UUID threadId, Role needed) throws GendoxException {
+        if (threadId.equals(artifact.getThreadId())) {
+            return;
+        }
+        if (!artifactThreadRepository.existsByArtifactIdAndThreadId(artifact.getId(), threadId)) {
+            throw notInThread(artifact.getId(), threadId);
+        }
+        Role role = artifactAccessService.roleOf(artifact, authorOfTurn(threadId))
+                .orElseThrow(() -> notInThread(artifact.getId(), threadId));
+        if (!role.atLeast(needed)) {
+            throw new GendoxException("ARTIFACT_READ_ONLY",
+                    "The user may only " + (role == Role.VIEW ? "view" : "use") + " artifact " + artifact.getId()
+                            + ", not change it: its owner gave them the " + role + " role. Nothing was changed. "
+                            + "Tell the user, and that the owner can give them the EDIT role.",
+                    HttpStatus.FORBIDDEN);
+        }
+    }
+
+    /**
+     * The directory the artifacts a conversation was opened on show under, in the agent's session context.
+     */
+    public static final String OPENED_ARTIFACTS = "./artifacts";
+
+    /**
+     * What the agent is told on each turn about the artifacts this conversation was opened on, listed as FileListing
+     * lists files: they were made in another conversation, so neither they nor their content are in this one's
+     * history. The artifacts skill explains the listing. One line for each artifact the user still has a role on;
+     * null when there is none.
+     */
+    @Nullable
+    public String openedArtifactsListing(UUID threadId) {
+        List<ArtifactThread> links = artifactThreadRepository.findAllByThreadId(threadId);
+        if (links.isEmpty()) {
+            return null;
+        }
+        UUID user = authorOfTurn(threadId);
+        List<String> lines = new ArrayList<>();
+        for (ArtifactThread link : links) {
+            artifactRepository.findById(link.getArtifactId())
+                    .flatMap(artifact -> artifactAccessService.roleOf(artifact, user)
+                            .map(role -> FileListing.line(OPENED_ARTIFACTS,
+                                    // a title on one line, so it cannot start a line of its own
+                                    artifact.getTitle().replaceAll("\\s+", " "),
+                                    "kind", artifact.getArtifactType().getName().toLowerCase(Locale.ROOT),
+                                    "version", artifact.getLatestVersion(),
+                                    "role", role,
+                                    "modified", FileListing.modified(artifact.getUpdatedAt()),
+                                    "UUID", artifact.getId())))
+                    .ifPresent(lines::add);
+        }
+        return lines.isEmpty() ? null : Stream.concat(Stream.of(OPENED_ARTIFACTS), lines.stream())
+                .collect(Collectors.joining("\n"));
     }
 
     /**

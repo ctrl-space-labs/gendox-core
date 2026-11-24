@@ -46,6 +46,8 @@ public class CompletionRuntimeContextResolver {
     private final AiToolRegistry aiToolRegistry;
     private final SkillService skillService;
     private final SubscriptionValidationService subscriptionValidationService;
+    private final ArtifactService artifactService;
+
     static final Set<String> ARTIFACT_WRITING_TOOLS = Set.of(CreateArtifactTool.NAME, UpdateArtifactTool.NAME);
     static final Set<String> ARTIFACT_TOOLS = Set.of(CreateArtifactTool.NAME, UpdateArtifactTool.NAME, ReadArtifactTool.NAME);
 
@@ -63,12 +65,14 @@ public class CompletionRuntimeContextResolver {
                                             AiModelService aiModelService,
                                             AiToolRegistry aiToolRegistry,
                                             SkillService skillService,
-                                            SubscriptionValidationService subscriptionValidationService) {
+                                            SubscriptionValidationService subscriptionValidationService,
+                                            ArtifactService artifactService) {
         this.templateRepository = templateRepository;
         this.typeService = typeService;
         this.embeddingService = embeddingService;
         this.documentUtils = documentUtils;
         this.objectMapper = objectMapper;
+        this.artifactService = artifactService;
         this.subscriptionValidationService = subscriptionValidationService;
         this.aiModelService = aiModelService;
         this.aiToolRegistry = aiToolRegistry;
@@ -413,8 +417,9 @@ public class CompletionRuntimeContextResolver {
         // run chatTemplate
         ChatTemplateAuthor chatTemplateAuthor = new ChatTemplateAuthor();
 
-        String question = chatTemplateAuthor.chatTemplate(message, sectionValues, agentChatTemplate.getText());
-
+        // the artifacts the conversation was opened on, listed; a conversation not stored yet was opened on none
+        String question = chatTemplateAuthor.chatTemplate(message, sectionValues, agentChatTemplate.getText(),
+                message.getThreadId() == null ? null : artifactService.openedArtifactsListing(message.getThreadId()));
 
         return question;
 

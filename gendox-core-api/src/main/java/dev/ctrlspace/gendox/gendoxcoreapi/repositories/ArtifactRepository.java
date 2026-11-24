@@ -16,10 +16,10 @@ public interface ArtifactRepository extends JpaRepository<Artifact, UUID>, Query
 
     List<Artifact> findAllByThreadIdOrderByCreatedAtAsc(UUID threadId);
 
-    Optional<Artifact> findByIdAndThreadId(UUID id, UUID threadId);
-
-    /** Locks the row until the transaction ends, so two updates of one artifact number their versions one after the other. */
+    /**
+     * Locks the row until the transaction ends, so two updates of one artifact number their versions one after the other.
+     */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select a from Artifact a where a.id = :id and a.threadId = :threadId")
-    Optional<Artifact> lockByIdAndThreadId(@Param("id") UUID id, @Param("threadId") UUID threadId);
+    @Query("select a from Artifact a where a.id = :id")
+    Optional<Artifact> lockById(@Param("id") UUID id);
 }

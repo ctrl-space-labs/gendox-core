@@ -2,9 +2,11 @@ package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.ArtifactSharingConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ArtifactSharingDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.ArtifactSharingDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ArtifactSharingService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.ArtifactChatResponseDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.ArtifactRoleRequestDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -20,9 +22,6 @@ import java.util.UUID;
 @RestController
 public class ArtifactSharingController {
 
-    /** The body of a role change: VIEW, INTERACT or EDIT, in any case; null for general access means only you. */
-    public record RoleRequest(String role) {
-    }
 
     private final ArtifactSharingService artifactSharingService;
     private final ArtifactSharingConverter artifactSharingConverter;
@@ -51,8 +50,8 @@ public class ArtifactSharingController {
             description = "The role every member of the agent has: VIEW, INTERACT or EDIT; a null role leaves it to the " +
                     "owner and the people invited. The owner only.")
     public ArtifactSharingDTO setGeneralAccess(@PathVariable UUID artifactId,
-                                               @RequestBody RoleRequest request) throws GendoxException {
-        artifactSharingService.setGeneralAccess(artifactId, securityUtils.getUserId(), request.role());
+                                               @RequestBody ArtifactRoleRequestDTO request) throws GendoxException {
+        artifactSharingService.setGeneralAccess(artifactId, securityUtils.getUserId(), request.getRole());
         return sharingOf(artifactId);
     }
 
@@ -61,8 +60,8 @@ public class ArtifactSharingController {
     @Operation(summary = "Invite a member of the agent to an artifact, or change their role",
             description = "VIEW, INTERACT or EDIT. Only members of the artifact's agent, and not the owner. The owner only.")
     public ArtifactSharingDTO setMemberRole(@PathVariable UUID artifactId, @PathVariable UUID userId,
-                                            @RequestBody RoleRequest request) throws GendoxException {
-        artifactSharingService.setMemberRole(artifactId, securityUtils.getUserId(), userId, request.role());
+                                            @RequestBody ArtifactRoleRequestDTO request) throws GendoxException {
+        artifactSharingService.setMemberRole(artifactId, securityUtils.getUserId(), userId, request.getRole());
         return sharingOf(artifactId);
     }
 
@@ -106,5 +105,16 @@ public class ArtifactSharingController {
 
     private ArtifactSharingDTO sharingOf(UUID artifactId) throws GendoxException {
         return artifactSharingConverter.toDTO(artifactSharingService.getSharing(artifactId, securityUtils.getUserId()));
+    }
+
+    @PreAuthorize("@securityUtils.isSignedInPerson()")
+    @PostMapping("artifacts/{artifactId}/chats")
+    @Operation(summary = "Change an artifact in a chat",
+            description = "Starts a new conversation of the signed-in user's own with the artifact's agent, opened on " +
+                    "the artifact, so the agent can read and change it. For anyone with the EDIT role.")
+    public ArtifactChatResponseDTO openInNewChat(@PathVariable UUID artifactId) throws GendoxException {
+        return ArtifactChatResponseDTO.builder()
+                .threadId(artifactSharingService.openInNewChat(artifactId, securityUtils.getUserId()).getId())
+                .build();
     }
 }

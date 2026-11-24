@@ -1,4 +1,4 @@
-package dev.ctrlspace.gendox.gendoxcoreapi.model.dtos;
+package dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;

@@ -5,10 +5,12 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.Artifact;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ArtifactVersion;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ArtifactEditDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.ArtifactEditDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ArtifactRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ArtifactThreadRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ArtifactVersionRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.MessageRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.ArtifactAccessService.Role;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -47,6 +49,12 @@ class ArtifactServiceTest {
     @Mock
     private MessageRepository messageRepository;
 
+    @Mock
+    private ArtifactThreadRepository artifactThreadRepository;
+
+    @Mock
+    private ArtifactAccessService artifactAccessService;
+
     private final UUID threadId = UUID.randomUUID();
     private final UUID projectId = UUID.randomUUID();
     private final UUID messageId = UUID.randomUUID();
@@ -59,10 +67,25 @@ class ArtifactServiceTest {
         return new ArtifactEditDTO(oldText, newText);
     }
 
+    /**
+     * An artifact made in another conversation, which this one was opened on; its user has the given role, or none.
+     */
+    private Artifact openedOn(Role role) {
+        Artifact artifact = existing(1, "<h1>Old</h1>");
+        artifact.setThreadId(UUID.randomUUID());
+        UUID user = UUID.randomUUID();
+        when(messageRepository.findFirstByThreadIdAndRoleOrderByCreatedAtDesc(threadId, "user"))
+                .thenReturn(Optional.of(Message.builder().createdBy(user).build()));
+        when(artifactThreadRepository.existsByArtifactIdAndThreadId(artifact.getId(), threadId)).thenReturn(true);
+        when(artifactAccessService.roleOf(artifact, user)).thenReturn(Optional.ofNullable(role));
+        return artifact;
+    }
+
     private Artifact existing(int latestVersion, String latestContent) {
         Artifact artifact = Artifact.builder().id(UUID.randomUUID()).threadId(threadId).projectId(projectId)
                 .title("Report").artifactType(type("HTML")).latestVersion(latestVersion).build();
-        when(artifactRepository.lockByIdAndThreadId(artifact.getId(), threadId)).thenReturn(Optional.of(artifact));
+        when(artifactRepository.lockById(artifact.getId())).thenReturn(Optional.of(artifact));
+        when(artifactRepository.findById(artifact.getId())).thenReturn(Optional.of(artifact));
         when(artifactVersionRepository.findByArtifactIdAndVersion(artifact.getId(), latestVersion))
                 .thenReturn(Optional.of(ArtifactVersion.builder().artifactId(artifact.getId())
                         .version(latestVersion).content(latestContent).build()));
@@ -236,7 +259,8 @@ class ArtifactServiceTest {
     void update_artifactOfAnotherThread_isNotFoundAndNamesThisThreadsArtifacts() {
         UUID otherThreadsArtifact = UUID.randomUUID();
         Artifact here = Artifact.builder().id(UUID.randomUUID()).threadId(threadId).title("Dashboard").build();
-        when(artifactRepository.lockByIdAndThreadId(otherThreadsArtifact, threadId)).thenReturn(Optional.empty());
+        when(artifactRepository.lockById(otherThreadsArtifact)).thenReturn(Optional.of(Artifact.builder()
+                .id(otherThreadsArtifact).threadId(UUID.randomUUID()).title("Elsewhere").latestVersion(1).build()));
         when(artifactRepository.findAllByThreadIdOrderByCreatedAtAsc(threadId)).thenReturn(List.of(here));
 
         GendoxException e = assertThrows(GendoxException.class, () -> artifactService.update(threadId, otherThreadsArtifact,
@@ -276,5 +300,69 @@ class ArtifactServiceTest {
         ArgumentCaptor<ArtifactVersion> saved = ArgumentCaptor.forClass(ArtifactVersion.class);
         verify(artifactVersionRepository).save(saved.capture());
         assertEquals(author, saved.getValue().getCreatedBy());
+    }
+
+    // a conversation opened on an artifact made elsewhere
+
+    @Test
+    void update_onAnArtifactTheConversationWasOpenedOn_withEdit_savesTheNextVersion() throws GendoxException {
+        Artifact artifact = openedOn(Role.EDIT);
+
+        artifactService.update(threadId, artifact.getId(), messageId, null, null, List.of(edit("Old", "New")));
+
+        ArgumentCaptor<ArtifactVersion> saved = ArgumentCaptor.forClass(ArtifactVersion.class);
+        verify(artifactVersionRepository).save(saved.capture());
+        assertEquals(2, saved.getValue().getVersion());
+        assertEquals("<h1>New</h1>", saved.getValue().getContent());
+    }
+
+    @Test
+    void update_onAnArtifactTheUserMayOnlyUse_isReadOnlyAndChangesNothing() {
+        Artifact artifact = openedOn(Role.INTERACT);
+
+        GendoxException e = assertThrows(GendoxException.class, () -> artifactService.update(threadId, artifact.getId(),
+                messageId, "New title", null, null));
+
+        assertEquals("ARTIFACT_READ_ONLY", e.getErrorCode());
+        assertTrue(e.getErrorMessage().contains("EDIT"), e.getErrorMessage());
+        assertEquals("Report", artifact.getTitle());
+        verify(artifactVersionRepository, never()).save(any());
+        verify(artifactRepository, never()).save(any());
+    }
+
+    @Test
+    void read_anArtifactTheConversationWasOpenedOn_withView_isAllowed() throws GendoxException {
+        Artifact artifact = openedOn(Role.VIEW);
+
+        assertSame(artifact, artifactService.getByIdInThread(threadId, artifact.getId()));
+    }
+
+    @Test
+    void read_anArtifactWhoseRoleWasTakenBack_isNotFound() {
+        Artifact artifact = openedOn(null);
+
+        GendoxException e = assertThrows(GendoxException.class,
+                () -> artifactService.getByIdInThread(threadId, artifact.getId()));
+
+        assertEquals("ARTIFACT_NOT_FOUND", e.getErrorCode());
+    }
+
+    @Test
+    void read_anArtifactOfAnotherConversationNotOpenedHere_isNotFoundWhateverTheRole() {
+        Artifact artifact = openedOn(Role.EDIT);
+        when(artifactThreadRepository.existsByArtifactIdAndThreadId(artifact.getId(), threadId)).thenReturn(false);
+
+        GendoxException e = assertThrows(GendoxException.class,
+                () -> artifactService.getByIdInThread(threadId, artifact.getId()));
+
+        assertEquals("ARTIFACT_NOT_FOUND", e.getErrorCode());
+    }
+
+    @Test
+    void read_theConversationsOwnArtifact_needsNoRole() throws GendoxException {
+        Artifact artifact = existing(1, "<h1>Old</h1>");
+
+        assertSame(artifact, artifactService.getByIdInThread(threadId, artifact.getId()));
+        verifyNoInteractions(artifactAccessService);
     }
 }

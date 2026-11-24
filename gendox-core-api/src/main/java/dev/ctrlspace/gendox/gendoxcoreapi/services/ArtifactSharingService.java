@@ -1,11 +1,10 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Artifact;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.ArtifactMember;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ArtifactMemberRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ArtifactRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ArtifactThreadRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectMemberRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ArtifactAccessService.Role;
 import org.springframework.http.HttpStatus;
@@ -33,17 +32,26 @@ public class ArtifactSharingService {
     private final ProjectMemberRepository projectMemberRepository;
     private final ArtifactAccessService artifactAccessService;
     private final TypeService typeService;
+    private final ArtifactThreadRepository artifactThreadRepository;
+    private final MessageService messageService;
+    private final ProjectService projectService;
 
     public ArtifactSharingService(ArtifactRepository artifactRepository,
                                   ArtifactMemberRepository artifactMemberRepository,
                                   ProjectMemberRepository projectMemberRepository,
                                   ArtifactAccessService artifactAccessService,
-                                  TypeService typeService) {
+                                  TypeService typeService,
+                                  ArtifactThreadRepository artifactThreadRepository,
+                                  MessageService messageService,
+                                  ProjectService projectService) {
         this.artifactRepository = artifactRepository;
         this.artifactMemberRepository = artifactMemberRepository;
         this.projectMemberRepository = projectMemberRepository;
         this.artifactAccessService = artifactAccessService;
         this.typeService = typeService;
+        this.artifactThreadRepository = artifactThreadRepository;
+        this.messageService = messageService;
+        this.projectService = projectService;
     }
 
     /**
@@ -145,6 +153,30 @@ public class ArtifactSharingService {
     @Transactional
     public void delete(UUID artifactId, UUID userId) throws GendoxException {
         artifactRepository.delete(findAsOwner(artifactId, userId));
+    }
+
+    /**
+     * Change it in a chat: starts a conversation of the user's own with the artifact's agent, opened on it, so its
+     * tools reach it while the user keeps the EDIT role. Nobody else sees the conversation. Each call starts a new one.
+     */
+    @Transactional
+    public ChatThread openInNewChat(UUID artifactId, UUID userId) throws GendoxException {
+        Artifact artifact = find(artifactId);
+        artifactAccessService.require(artifact, userId, Role.EDIT);
+
+        Project project = projectService.getProjectById(artifact.getProjectId());
+        UUID agentUserId = project.getProjectAgent() == null ? null : project.getProjectAgent().getUserId();
+        // the user and the agent, as a conversation started from New chat
+        List<UUID> members = agentUserId == null ? List.of(userId) : List.of(userId, agentUserId);
+        ChatThread thread = messageService.createThreadForMessage(members, artifact.getProjectId(), artifact.getTitle());
+
+        artifactThreadRepository.save(ArtifactThread.builder()
+                .artifactId(artifactId)
+                .threadId(thread.getId())
+                .createdAt(Instant.now())
+                .createdBy(userId)
+                .build());
+        return thread;
     }
 
     private Artifact find(UUID artifactId) throws GendoxException {

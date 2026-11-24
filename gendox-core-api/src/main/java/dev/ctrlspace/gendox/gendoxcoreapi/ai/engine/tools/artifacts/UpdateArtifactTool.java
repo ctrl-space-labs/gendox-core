@@ -6,7 +6,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.ToolExecutionCo
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Artifact;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ArtifactEditDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.ArtifactEditDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ArtifactService;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;

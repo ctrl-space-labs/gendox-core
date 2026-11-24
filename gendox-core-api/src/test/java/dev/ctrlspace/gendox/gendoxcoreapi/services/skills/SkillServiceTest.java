@@ -10,6 +10,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.MessageLocalContext;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Skill;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AgentSkillRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ArtifactThreadRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.SkillRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -47,6 +48,9 @@ class SkillServiceTest {
 
     @Mock
     private TypeService typeService;
+
+    @Mock
+    private ArtifactThreadRepository artifactThreadRepository;
 
     private static String md(String name, String description, String body) {
         return "---\nname: " + name + "\ndescription: " + description + "\n---\n" + body;
@@ -162,6 +166,58 @@ class SkillServiceTest {
 
         assertEquals(List.of(linked), skillService.getCompletionSkills(agentId, fromPage));
         verify(skillRepository, never()).findByNameAndLatestTrue(any());
+    }
+
+    @Test
+    void aChatOpenedOnAnArtifactGetsTheArtifactsSkillFromTheLibrary() {
+        UUID agentId = UUID.randomUUID();
+        Skill artifacts = version("artifacts", 1, true, md("artifacts", "d", ""));
+        AgentSkill own = AgentSkill.builder().name("info-card").content("mine").build();
+        when(agentSkillRepository.findAllByAgentIdOrderByNameAsc(agentId)).thenReturn(List.of(own));
+        when(skillRepository.findByNameAndLatestTrue("artifacts")).thenReturn(Optional.of(artifacts));
+        Message openedOnOne = new Message();
+        openedOnOne.setThreadId(UUID.randomUUID());
+        when(artifactThreadRepository.existsByThreadId(openedOnOne.getThreadId())).thenReturn(true);
+        Message elsewhere = new Message();
+        elsewhere.setThreadId(UUID.randomUUID());
+
+        List<AgentSkill> skills = skillService.getCompletionSkills(agentId, openedOnOne);
+
+        assertEquals(List.of("info-card", "artifacts"), skills.stream().map(AgentSkill::getName).toList());
+        assertEquals(artifacts.getId(), skills.get(1).getSkillId());
+        assertEquals(List.of(own), skillService.getCompletionSkills(agentId, elsewhere));
+    }
+
+    @Test
+    void anAgentThatHasTheArtifactsSkillDoesNotGetItTwice() {
+        UUID agentId = UUID.randomUUID();
+        AgentSkill linked = AgentSkill.builder().name("artifacts").content("linked").build();
+        when(agentSkillRepository.findAllByAgentIdOrderByNameAsc(agentId)).thenReturn(List.of(linked));
+        Message openedOnOne = new Message();
+        openedOnOne.setThreadId(UUID.randomUUID());
+        when(artifactThreadRepository.existsByThreadId(openedOnOne.getThreadId())).thenReturn(true);
+
+        assertEquals(List.of(linked), skillService.getCompletionSkills(agentId, openedOnOne));
+        verify(skillRepository, never()).findByNameAndLatestTrue(any());
+    }
+
+    @Test
+    void aChatFromAGendoxPageOpenedOnAnArtifactGetsBoth() {
+        UUID agentId = UUID.randomUUID();
+        when(agentSkillRepository.findAllByAgentIdOrderByNameAsc(agentId)).thenReturn(List.of());
+        when(skillRepository.findByNameAndLatestTrue("gendox-assistant"))
+                .thenReturn(Optional.of(version("gendox-assistant", 1, true, md("gendox-assistant", "d", ""))));
+        when(skillRepository.findByNameAndLatestTrue("artifacts"))
+                .thenReturn(Optional.of(version("artifacts", 1, true, md("artifacts", "d", ""))));
+        Message prompt = new Message();
+        prompt.setThreadId(UUID.randomUUID());
+        MessageLocalContext page = new MessageLocalContext();
+        page.setContextTypeName("GENDOX_PAGE");
+        prompt.getLocalContexts().add(page);
+        when(artifactThreadRepository.existsByThreadId(prompt.getThreadId())).thenReturn(true);
+
+        assertEquals(List.of("gendox-assistant", "artifacts"),
+                skillService.getCompletionSkills(agentId, prompt).stream().map(AgentSkill::getName).toList());
     }
 
     @Test

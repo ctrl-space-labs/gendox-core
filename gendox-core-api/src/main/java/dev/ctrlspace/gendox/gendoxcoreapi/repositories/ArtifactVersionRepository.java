@@ -1,7 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.repositories;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ArtifactVersion;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ArtifactVersionSummaryDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.ArtifactVersionSummaryDTO;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -17,7 +17,6 @@ public interface ArtifactVersionRepository extends JpaRepository<ArtifactVersion
     /**
      * The versions of an artifact, oldest first, without their content.
      */
-    @Query("select new dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ArtifactVersionSummaryDTO(v.version, v.messageId, v.createdAt, v.createdBy) " +
-            "from ArtifactVersion v where v.artifactId = :artifactId order by v.version asc")
+    @Query("select new dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.ArtifactVersionSummaryDTO(v.version, v.messageId, v.createdAt, v.createdBy) " + "from ArtifactVersion v where v.artifactId = :artifactId order by v.version asc")
     List<ArtifactVersionSummaryDTO> findSummariesByArtifactId(@Param("artifactId") UUID artifactId);
 }

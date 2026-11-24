@@ -57,7 +57,8 @@ class CompletionRuntimeContextResolverTest {
     @BeforeEach
     void setUp() {
         resolver = new CompletionRuntimeContextResolver(null, typeService, null, null, JsonMapper.shared(), null, aiToolRegistry,
-                new SkillService(null, agentSkillRepository, aiToolRegistry, null, typeService), subscriptionValidationService);
+                new SkillService(null, agentSkillRepository, aiToolRegistry, null, typeService, null), subscriptionValidationService,
+                mock(ArtifactService.class));
         agent.setId(UUID.randomUUID());
         agent.setAiTools(new ArrayList<>(List.of(tool("advanced_search"))));
         lenient().when(aiToolRegistry.getDefinition(anyString()))

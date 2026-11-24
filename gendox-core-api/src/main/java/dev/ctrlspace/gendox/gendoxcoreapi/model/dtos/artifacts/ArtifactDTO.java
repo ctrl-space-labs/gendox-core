@@ -1,4 +1,4 @@
-package dev.ctrlspace.gendox.gendoxcoreapi.model.dtos;
+package dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
 import lombok.AllArgsConstructor;

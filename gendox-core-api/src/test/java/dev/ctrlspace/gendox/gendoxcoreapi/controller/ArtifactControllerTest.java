@@ -4,7 +4,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.converters.ArtifactConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Artifact;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ArtifactSummaryDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.ArtifactSummaryDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ArtifactCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ArtifactService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;

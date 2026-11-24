@@ -67,7 +67,7 @@ class CompletionServiceToolLimitTest {
     @BeforeEach
     void setUp() throws Exception {
         CompletionRuntimeContextResolver contextResolver = new CompletionRuntimeContextResolver(null, typeService, null, null,
-                objectMapper, aiModelService, aiToolRegistry, new SkillService(null, null, null, null, null), null);
+                objectMapper, aiModelService, aiToolRegistry, new SkillService(null, null, null, null, null, null), null, mock(ArtifactService.class));
         completionService = new CompletionService(null, null, messageAiMessageConverter, null, typeService,
                 aiModelUtils, null, null, null, messageService, auditLogsService, objectMapper,
                 aiToolRegistry, contextResolver, new ToolExecutionService(aiToolRegistry, objectMapper, new ToolsHandlerAdvice()));
