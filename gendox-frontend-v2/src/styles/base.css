@@ -572,7 +572,7 @@ pre.code .k { color: var(--accent-text); } pre.code .s { color: var(--warn); }
 .gc-art-b iframe { display: block; width: 100%; height: 250px; border: 0; }
 .art-view { display: flex; flex-direction: column; gap: 10px; height: 100%; min-height: 0; flex: 1; }
 .art-bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.art-b { flex: 1; min-height: 320px; display: flex; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+.art-b { flex: 1; min-height: 320px; display: flex; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: auto; }
 .art-b iframe { flex: 1; border: 0; width: 100%; min-height: 320px; }
 .art-b pre.code { flex: 1; border: 0; border-radius: 0; overflow: auto; white-space: pre-wrap; }
 .modal.art-modal { height: calc(100dvh - 48px); } .art-modal .lock { flex: 1; min-height: 0; display: flex; flex-direction: column; } .art-modal .modal-b { flex: 1; display: flex; padding-top: 8px; }
@@ -583,6 +583,11 @@ pre.code .k { color: var(--accent-text); } pre.code .s { color: var(--warn); }
 /* markdown and code are not framed: a card shows their start, the panel scrolls them */
 .gc-art-b.clip { max-height: 250px; overflow: hidden; padding: 10px 12px; -webkit-mask-image: linear-gradient(to bottom, #000 75%, transparent); mask-image: linear-gradient(to bottom, #000 75%, transparent); }
 .gc-art .alert, .gc-ai > .alert { margin: 0; }
+/* an inline artifact is part of the answer: no border, no header; a small Open under it (a frame takes the pointer's
+   hover, so it can't wait for one) */
+.gc-art.inline { border: 0; border-radius: 0; background: transparent; overflow: visible; }
+.gc-art.inline iframe { display: block; width: 100%; border: 0; }
+.gc-art-foot { display: flex; justify-content: flex-end; align-items: center; gap: 6px; margin-top: 2px; }
 .gc-art > .art-err { border-width: 1px 0 0; border-radius: 0; }
 .art-b > .gc-md { flex: 1; min-width: 0; overflow: auto; padding: 14px; }
 .art-b > .gc-md pre { margin: 0; }

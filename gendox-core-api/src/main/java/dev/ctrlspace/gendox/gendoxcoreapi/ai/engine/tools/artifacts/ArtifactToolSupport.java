@@ -2,8 +2,11 @@ package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.artifacts;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.ToolExecutionContext;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Artifact;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
 import org.springframework.http.HttpStatus;
+
+import java.util.Locale;
 
 /** What the artifact tools read from a call the same way. */
 final class ArtifactToolSupport {
@@ -22,5 +25,10 @@ final class ArtifactToolSupport {
                     "Artifacts belong to a conversation, and there is none here", HttpStatus.BAD_REQUEST);
         }
         return message;
+    }
+
+    /** How an artifact shows, as the tools speak of it: "card" or "inline"; an artifact with none shows as a card. */
+    static String displayOf(Artifact artifact) {
+        return artifact.getDisplay() == null ? "card" : artifact.getDisplay().getName().toLowerCase(Locale.ROOT);
     }
 }

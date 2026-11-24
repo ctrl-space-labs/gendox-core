@@ -26,19 +26,13 @@ public class ArtifactSummaryDTO {
     private String title;
     private Type artifactType;
     private String codeLanguage;
+    private Type display;
     private Integer latestVersion;
     private Instant createdAt;
     private Instant updatedAt;
     private UUID createdBy;
     private UUID updatedBy;
-
-    /**
-     * The one person who made it.
-     */
     private UUID ownerId;
-    /**
-     * The owner's name, in a list across owners; read for the whole page at once.
-     */
     private String ownerName;
 
 }

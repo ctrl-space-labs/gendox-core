@@ -47,10 +47,15 @@ const openLink = url => {
  * The frame is sent the artifact, the theme and nothing else; it can only report its height, report an error it did
  * not handle, and ask for a link, which opens after the user agrees.
  *
- * @param fit - grow with the content up to maxHeight (the card); otherwise fill the parent (the panel)
+ * Nothing is cut without a way to reach it (gendox-core#570): in a card it grows with its content up to about the
+ * window's height and scrolls inside beyond it; in a panel or a tab it fills the space and, when its content is taller,
+ * takes the content's height, so the space around it scrolls.
+ *
+ * @param fit - grow with the content up to maxHeight (the card); otherwise fill the parent and grow past it (the panel)
+ * @param maxHeight - the card's limit; about the window's height when absent
  * @param onError({ message, line }) - the artifact's first unhandled error; null again when other content is shown
  */
-const ArtifactFrame = ({ kind, content, title = 'Artifact', fit = false, minHeight = 120, maxHeight = 250, onError }) => {
+const ArtifactFrame = ({ kind, content, title = 'Artifact', fit = false, minHeight = 120, maxHeight, onError }) => {
   const frameRef = useRef(null)
   const ready = useRef(false)
   const input = useRef({ kind, content })
@@ -58,8 +63,13 @@ const ArtifactFrame = ({ kind, content, title = 'Artifact', fit = false, minHeig
   // read by the listener, which is added once
   const onErrorRef = useRef(onError)
   onErrorRef.current = onError
+  const fitRef = useRef(fit)
+  fitRef.current = fit
   const failed = useRef(false)
   const [height, setHeight] = useState(null)
+  // filling a panel: how far the content last went past the frame. Content sized by the frame's own height (100vh and a
+  // margin) goes past it by the same amount however tall the frame gets; growing it again would never end
+  const excess = useRef(null)
 
   const post = message => frameRef.current?.contentWindow?.postMessage({ jsonrpc: '2.0', ...message }, '*')
   const sendInput = () => post({ method: 'ui/notifications/tool-input', params: { arguments: input.current } })
@@ -82,7 +92,16 @@ const ArtifactFrame = ({ kind, content, title = 'Artifact', fit = false, minHeig
           break
         case 'ui/notifications/size-changed': {
           const reported = Number(message.params?.height)
-          if (Number.isFinite(reported)) setHeight(reported)
+          if (!Number.isFinite(reported)) break
+          if (fitRef.current) {
+            setHeight(reported)
+            break
+          }
+          const past = reported - frame.clientHeight
+          if (past <= 1) break
+          if (excess.current !== null && Math.abs(past - excess.current) <= 2) break
+          excess.current = past
+          setHeight(reported)
           break
         }
         // MCP's log message; only an error, and only the first one, is shown
@@ -112,6 +131,8 @@ const ArtifactFrame = ({ kind, content, title = 'Artifact', fit = false, minHeig
   // another version, or another artifact in the same place
   useEffect(() => {
     input.current = { kind, content }
+    excess.current = null
+    if (!fit) setHeight(null)
     if (failed.current) onErrorRef.current?.(null)
     failed.current = false
     if (ready.current) sendInput()
@@ -124,7 +145,12 @@ const ArtifactFrame = ({ kind, content, title = 'Artifact', fit = false, minHeig
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appTheme])
 
-  const style = fit ? { height: Math.min(Math.max(height ?? minHeight, minHeight), maxHeight) } : undefined
+  const limit = maxHeight ?? Math.max(250, Math.round((typeof window === 'undefined' ? 800 : window.innerHeight) * 0.8))
+  const style = fit
+    ? { height: Math.min(Math.max(height ?? minHeight, minHeight), limit) }
+    : height
+      ? { minHeight: height }
+      : undefined
 
   return (
     <iframe

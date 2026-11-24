@@ -124,6 +124,33 @@ export const latestVersionsOf = (messages = []) => {
 }
 
 /**
+ * How each artifact the thread's messages know of shows, from its latest create or update result — no request:
+ * { [artifactId]: 'card' | 'inline' } (gendox-core#570). A result from before displays existed is a card.
+ */
+export const latestDisplaysOf = (messages = []) => {
+  const callNames = {}
+  messages.forEach(message =>
+    (message.toolCalls || []).forEach(call => {
+      if (isArtifactCall(call)) callNames[call.id] = true
+    })
+  )
+  const displays = {}
+  const versions = {}
+  messages.forEach(message => {
+    if (message.role !== 'tool' || !callNames[message.toolCallId]) return
+    const result = parse(message.message)
+    if (!result?.artifactId) return
+    // the result of the latest version wins; a change of display alone keeps the version, so it wins on a tie
+    if ((result.version || 0) >= (versions[result.artifactId] || 0)) {
+      versions[result.artifactId] = result.version || 0
+      displays[result.artifactId] = result.display === 'inline' ? 'inline' : 'card'
+    }
+  })
+
+  return displays
+}
+
+/**
  * The artifacts a thread's messages made, from their tool calls and results — no request — the last changed first.
  * @returns {{ artifactId, title, kind, version }[]}
  */

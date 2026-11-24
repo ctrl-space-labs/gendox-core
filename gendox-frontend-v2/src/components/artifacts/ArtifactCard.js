@@ -19,8 +19,10 @@ const errorText = error =>
  * @param onOpen({ artifactId, version }) - open it in the panel or a tab; without it there is no Open button
  * @param latestVersion - the artifact's latest version the conversation knows of; Try to fix is offered only on it
  * @param onAsk(text) - put a request in the chat's composer; without it an error is only shown
+ * @param display - how the artifact shows now ('card' | 'inline', from the thread); an inline one (gendox-core#570) is
+ *   part of the answer, with no card around it and a small Open under it
  */
-const ArtifactCard = ({ call, onOpen, latestVersion, onAsk }) => {
+const ArtifactCard = ({ call, onOpen, latestVersion, onAsk, display }) => {
   const { name, args, result, error, pending } = call
   const [raised, setRaised] = useState(null) // the preview's first unhandled error
 
@@ -44,6 +46,41 @@ const ArtifactCard = ({ call, onOpen, latestVersion, onAsk }) => {
   const { label, icon: Icon } = kindInfo(kind)
   const title = result?.title || args.title || 'Artifact'
   const open = result && onOpen ? () => onOpen({ artifactId: result.artifactId, version: result.version }) : null
+  const shownInline = created && typeof args.content === 'string' && (display || result?.display || args.display) === 'inline'
+
+  if (shownInline) {
+    return (
+      <div className='gc-art inline'>
+        <ArtifactContent
+          kind={kind}
+          content={args.content}
+          codeLanguage={args.code_language}
+          title={title}
+          fit
+          minHeight={32}
+          onError={setRaised}
+        />
+        {(pending || open) && (
+          <div className='gc-art-foot'>
+            {pending && <LoaderCircle className='lucide turning' />}
+            {open && (
+              <button className='btn ghost s' onClick={open} title={`Open ${title}`}>
+                <Maximize2 className='lucide' />
+                Open
+              </button>
+            )}
+          </div>
+        )}
+        {raised && (
+          <ArtifactError
+            error={raised}
+            onFix={onAsk && result && result.version === latestVersion ? () => onAsk(fixRequestOf(title, raised)) : null}
+            hint={result && result.version !== latestVersion ? 'A later version changed it.' : null}
+          />
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className='gc-art'>

@@ -23,7 +23,7 @@ public class CreateArtifactTool extends DefinedToolHandler {
 
     public static final String NAME = "create_artifact";
 
-    // the kinds are the ARTIFACT_TYPE types, in lower case
+    // the kinds are the ARTIFACT_TYPE types, in lower case; the displays the ARTIFACT_DISPLAY ones
     static final String DEFINITION = """
             {
               "name": "create_artifact",
@@ -48,6 +48,11 @@ public class CreateArtifactTool extends DefinedToolHandler {
                   "code_language": {
                     "type": "string",
                     "description": "For kind code only: the programming language, e.g. python."
+                  },
+                  "display": {
+                    "type": "string",
+                    "enum": ["card", "inline"],
+                    "description": "card (the default): a card in the answer that opens in a panel. inline: part of the answer itself, with no card around it, for something small and interactive. Read the artifacts skill for when."
                   }
                 },
                 "additionalProperties": false
@@ -55,7 +60,8 @@ public class CreateArtifactTool extends DefinedToolHandler {
             }
             """;
 
-    record Args(String title, String kind, String content, @JsonProperty("code_language") String codeLanguage) {
+    record Args(String title, String kind, String content, @JsonProperty("code_language") String codeLanguage,
+                String display) {
     }
 
     private final ArtifactService artifactService;
@@ -73,13 +79,14 @@ public class CreateArtifactTool extends DefinedToolHandler {
         Args args = readArguments(objectMapper, arguments, Args.class);
 
         Artifact artifact = artifactService.create(callMessage.getThreadId(), callMessage.getProjectId(), callMessage.getId(),
-                args.title(), args.kind(), args.codeLanguage(), args.content());
+                args.title(), args.kind(), args.codeLanguage(), args.display(), args.content());
 
         ObjectNode result = objectMapper.createObjectNode();
         result.put("artifactId", artifact.getId().toString());
         result.put("version", artifact.getLatestVersion());
         result.put("title", artifact.getTitle());
         result.put("kind", artifact.getArtifactType().getName().toLowerCase(Locale.ROOT));
+        result.put("display", ArtifactToolSupport.displayOf(artifact));
         return result;
     }
 }

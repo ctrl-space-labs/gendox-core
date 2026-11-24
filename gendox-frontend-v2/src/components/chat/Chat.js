@@ -39,7 +39,7 @@ import ChatSources from 'src/components/chat/ChatSources'
 import ChatDeepThinking from 'src/components/chat/ChatDeepThinking'
 import ArtifactView from 'src/components/artifacts/ArtifactView'
 import ChatArtifacts from 'src/components/artifacts/ChatArtifacts'
-import { artifactsOf, latestVersionsOf } from 'src/components/artifacts/artifactUtils'
+import { artifactsOf, latestDisplaysOf, latestVersionsOf } from 'src/components/artifacts/artifactUtils'
 
 const COMPLETION_POLL_MS = 2000
 
@@ -172,6 +172,7 @@ const Chat = ({
 
   const turns = useMemo(() => buildTurns(messages, auth.user?.id), [messages, auth.user?.id])
   const artifactVersions = useMemo(() => latestVersionsOf(messages), [messages])
+  const artifactDisplays = useMemo(() => latestDisplaysOf(messages), [messages])
   const threadArtifacts = useMemo(() => artifactsOf(messages), [messages])
   const uploadedDocs = useMemo(
     () => attachments.filter(a => a.status === 'uploaded').map(a => a.uploadedDoc),
@@ -567,6 +568,7 @@ const Chat = ({
                 onSources={sources ? openSources : null}
                 onOpenArtifact={threadId ? showArtifact : null}
                 artifactVersions={artifactVersions}
+                artifactDisplays={artifactDisplays}
                 onAskArtifactFix={askForChange}
                 onAskAgain={isBusy ? null : text => send(text, [])}
                 onFeedback={handleFeedback}

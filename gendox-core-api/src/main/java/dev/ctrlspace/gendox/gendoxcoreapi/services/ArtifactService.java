@@ -71,11 +71,13 @@ public class ArtifactService {
     /**
      * @param typeName     a name of category ARTIFACT_TYPE, in any case: the model sends "html"
      * @param codeLanguage kept for type CODE only
+     * @param displayName  a name of category ARTIFACT_DISPLAY, in any case ("inline"); null is a card
      * @param messageId    the assistant message whose tool call writes it
      */
     @Transactional
     public Artifact create(UUID threadId, UUID projectId, @Nullable UUID messageId, String title,
-                           String typeName, @Nullable String codeLanguage, String content) throws GendoxException {
+                           String typeName, @Nullable String codeLanguage, @Nullable String displayName,
+                           String content) throws GendoxException {
         if (title == null || title.isBlank()) {
             throw new GendoxException("ARTIFACT_TITLE_REQUIRED", "An artifact needs a title", HttpStatus.BAD_REQUEST);
         }
@@ -90,6 +92,7 @@ public class ArtifactService {
                 .title(title.trim())
                 .artifactType(artifactType)
                 .codeLanguage(isCode && codeLanguage != null && !codeLanguage.isBlank() ? codeLanguage.trim() : null)
+                .display(displayName == null ? null : getArtifactDisplay(displayName))
                 .latestVersion(1)
                 .ownerId(author)
                 .build());
@@ -100,21 +103,23 @@ public class ArtifactService {
 
     /**
      * A new version from the whole {@code content} or from {@code edits} on the latest one, never both.
-     * A new {@code title} alone renames the artifact and adds no version.
+     * A new {@code title} or {@code displayName} alone changes the artifact and adds no version.
      */
     @Transactional
     public Artifact update(UUID threadId, UUID artifactId, @Nullable UUID messageId, @Nullable String title,
-                           @Nullable String content, @Nullable List<ArtifactEditDTO> edits) throws GendoxException {
+                           @Nullable String displayName, @Nullable String content,
+                           @Nullable List<ArtifactEditDTO> edits) throws GendoxException {
         boolean hasContent = content != null;
         boolean hasEdits = edits != null && !edits.isEmpty();
         boolean hasTitle = title != null && !title.isBlank();
+        boolean hasDisplay = displayName != null && !displayName.isBlank();
         if (hasContent && hasEdits) {
             throw new GendoxException("ARTIFACT_UPDATE_AMBIGUOUS",
                     "Give either edits or the whole content, not both", HttpStatus.BAD_REQUEST);
         }
-        if (!hasContent && !hasEdits && !hasTitle) {
+        if (!hasContent && !hasEdits && !hasTitle && !hasDisplay) {
             throw new GendoxException("ARTIFACT_UPDATE_EMPTY",
-                    "Nothing to update: give edits, the whole content, or a new title", HttpStatus.BAD_REQUEST);
+                    "Nothing to update: give edits, the whole content, a new title or a new display", HttpStatus.BAD_REQUEST);
         }
 
         // locked until the transaction ends, so a second update of the same artifact waits and numbers after this one
@@ -123,6 +128,9 @@ public class ArtifactService {
         checkReach(artifact, threadId, Role.EDIT);
         if (hasTitle) {
             artifact.setTitle(title.trim());
+        }
+        if (hasDisplay) {
+            artifact.setDisplay(getArtifactDisplay(displayName));
         }
         if (hasContent || hasEdits) {
             String next = hasContent ? content : applyEdits(getVersion(artifact, null).getContent(), edits);
@@ -345,6 +353,20 @@ public class ArtifactService {
                 .orElseThrow(() -> new GendoxException("ARTIFACT_TYPE_NOT_SUPPORTED",
                         "Kind '" + typeName + "' is not supported. Use one of: " + artifactTypes.stream()
                                 .map(type -> type.getName().toLowerCase(Locale.ROOT))
+                                .sorted()
+                                .collect(Collectors.joining(", ")),
+                        HttpStatus.BAD_REQUEST));
+    }
+
+    private Type getArtifactDisplay(String displayName) throws GendoxException {
+        List<Type> displays = typeService.getArtifactDisplays();
+        String wanted = displayName.trim().toUpperCase(Locale.ROOT);
+        return displays.stream()
+                .filter(display -> display.getName().equals(wanted))
+                .findFirst()
+                .orElseThrow(() -> new GendoxException("ARTIFACT_DISPLAY_NOT_SUPPORTED",
+                        "Display '" + displayName + "' is not supported. Use one of: " + displays.stream()
+                                .map(display -> display.getName().toLowerCase(Locale.ROOT))
                                 .sorted()
                                 .collect(Collectors.joining(", ")),
                         HttpStatus.BAD_REQUEST));

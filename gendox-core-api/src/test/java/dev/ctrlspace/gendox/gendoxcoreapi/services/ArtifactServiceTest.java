@@ -95,6 +95,7 @@ class ArtifactServiceTest {
     @BeforeEach
     void setUp() {
         when(typeService.getArtifactTypes()).thenReturn(List.of(type("HTML"), type("SVG"), type("MARKDOWN"), type("CODE")));
+        lenient().when(typeService.getArtifactDisplays()).thenReturn(List.of(type("CARD"), type("INLINE")));
         when(artifactRepository.save(any(Artifact.class))).thenAnswer(invocation -> {
             Artifact artifact = invocation.getArgument(0);
             if (artifact.getId() == null) {
@@ -157,7 +158,7 @@ class ArtifactServiceTest {
 
     @Test
     void create_savesVersionOneWithTheTypeInAnyCase() throws GendoxException {
-        Artifact artifact = artifactService.create(threadId, projectId, messageId, " Report ", "html", null, "<p>x</p>");
+        Artifact artifact = artifactService.create(threadId, projectId, messageId, " Report ", "html", null, null, "<p>x</p>");
 
         assertEquals("HTML", artifact.getArtifactType().getName());
         assertEquals("Report", artifact.getTitle());
@@ -172,8 +173,8 @@ class ArtifactServiceTest {
 
     @Test
     void create_keepsCodeLanguageForCodeOnly() throws GendoxException {
-        Artifact code = artifactService.create(threadId, projectId, messageId, "Script", "code", "python", "print(1)");
-        Artifact page = artifactService.create(threadId, projectId, messageId, "Page", "html", "python", "<p>x</p>");
+        Artifact code = artifactService.create(threadId, projectId, messageId, "Script", "code", "python", null, "print(1)");
+        Artifact page = artifactService.create(threadId, projectId, messageId, "Page", "html", "python", null, "<p>x</p>");
 
         assertEquals("python", code.getCodeLanguage());
         assertNull(page.getCodeLanguage());
@@ -182,7 +183,7 @@ class ArtifactServiceTest {
     @Test
     void create_unknownKind_namesTheKindsThereAre() {
         GendoxException e = assertThrows(GendoxException.class,
-                () -> artifactService.create(threadId, projectId, messageId, "Chart", "chart", null, "x"));
+                () -> artifactService.create(threadId, projectId, messageId, "Chart", "chart", null, null, "x"));
 
         assertEquals("ARTIFACT_TYPE_NOT_SUPPORTED", e.getErrorCode());
         assertTrue(e.getMessage().contains("code, html, markdown, svg"));
@@ -194,7 +195,7 @@ class ArtifactServiceTest {
         ReflectionTestUtils.setField(artifactService, "maxContentLength", 10);
 
         GendoxException e = assertThrows(GendoxException.class,
-                () -> artifactService.create(threadId, projectId, messageId, "Page", "html", null, "<p>too long</p>"));
+                () -> artifactService.create(threadId, projectId, messageId, "Page", "html", null, null, "<p>too long</p>"));
 
         assertEquals("ARTIFACT_CONTENT_TOO_LONG", e.getErrorCode());
         verify(artifactRepository, never()).save(any());
@@ -206,7 +207,7 @@ class ArtifactServiceTest {
     void update_withEdits_savesTheNextVersion() throws GendoxException {
         Artifact artifact = existing(3, "<h1>Old</h1>");
 
-        Artifact updated = artifactService.update(threadId, artifact.getId(), messageId, null, null,
+        Artifact updated = artifactService.update(threadId, artifact.getId(), messageId, null, null, null,
                 List.of(edit("Old", "New")));
 
         assertEquals(4, updated.getLatestVersion());
@@ -220,7 +221,7 @@ class ArtifactServiceTest {
     void update_titleOnly_renamesWithoutAVersion() throws GendoxException {
         Artifact artifact = existing(2, "<p>x</p>");
 
-        Artifact updated = artifactService.update(threadId, artifact.getId(), messageId, "Renamed", null, null);
+        Artifact updated = artifactService.update(threadId, artifact.getId(), messageId, "Renamed", null, null, null);
 
         assertEquals("Renamed", updated.getTitle());
         assertEquals(2, updated.getLatestVersion());
@@ -228,10 +229,55 @@ class ArtifactServiceTest {
     }
 
     @Test
+    void create_withoutADisplay_isACard() throws GendoxException {
+        Artifact artifact = artifactService.create(threadId, projectId, messageId, "Page", "html", null, null, "<p>x</p>");
+
+        assertNull(artifact.getDisplay());
+    }
+
+    @Test
+    void create_inline_keepsItsDisplay_inAnyCase() throws GendoxException {
+        Artifact artifact = artifactService.create(threadId, projectId, messageId, "Converter", "html", null, " Inline ", "<p>x</p>");
+
+        assertEquals("INLINE", artifact.getDisplay().getName());
+    }
+
+    @Test
+    void create_anUnknownDisplay_namesTheOnesThereAre() {
+        GendoxException e = assertThrows(GendoxException.class,
+                () -> artifactService.create(threadId, projectId, messageId, "Page", "html", null, "popup", "<p>x</p>"));
+
+        assertEquals("ARTIFACT_DISPLAY_NOT_SUPPORTED", e.getErrorCode());
+        assertTrue(e.getMessage().contains("card, inline"), e.getMessage());
+    }
+
+    @Test
+    void update_displayOnly_changesItWithoutAVersion() throws GendoxException {
+        Artifact artifact = existing(2, "<p>x</p>");
+
+        Artifact updated = artifactService.update(threadId, artifact.getId(), messageId, null, "inline", null, null);
+
+        assertEquals("INLINE", updated.getDisplay().getName());
+        assertEquals(2, updated.getLatestVersion());
+        verify(artifactVersionRepository, never()).save(any());
+    }
+
+    @Test
+    void update_withoutADisplay_keepsTheOneItHas() throws GendoxException {
+        Artifact artifact = existing(1, "<p>Old</p>");
+        artifact.setDisplay(type("INLINE"));
+
+        Artifact updated = artifactService.update(threadId, artifact.getId(), messageId, null, null, null,
+                List.of(edit("Old", "New")));
+
+        assertEquals("INLINE", updated.getDisplay().getName());
+    }
+
+    @Test
     void update_failedEdit_savesNothing() {
         Artifact artifact = existing(1, "<p>x</p>");
 
-        assertThrows(GendoxException.class, () -> artifactService.update(threadId, artifact.getId(), messageId, null, null,
+        assertThrows(GendoxException.class, () -> artifactService.update(threadId, artifact.getId(), messageId, null, null, null,
                 List.of(edit("<p>x</p>", "<p>y</p>"), edit("missing", "z"))));
 
         assertEquals(1, artifact.getLatestVersion());
@@ -242,7 +288,7 @@ class ArtifactServiceTest {
     @Test
     void update_contentAndEdits_isAmbiguous() {
         GendoxException e = assertThrows(GendoxException.class, () -> artifactService.update(threadId, UUID.randomUUID(),
-                messageId, null, "<p>all</p>", List.of(edit("a", "b"))));
+                messageId, null, null, "<p>all</p>", List.of(edit("a", "b"))));
 
         assertEquals("ARTIFACT_UPDATE_AMBIGUOUS", e.getErrorCode());
     }
@@ -250,7 +296,7 @@ class ArtifactServiceTest {
     @Test
     void update_nothingToChange_fails() {
         GendoxException e = assertThrows(GendoxException.class,
-                () -> artifactService.update(threadId, UUID.randomUUID(), messageId, " ", null, List.of()));
+                () -> artifactService.update(threadId, UUID.randomUUID(), messageId, " ", null, null, List.of()));
 
         assertEquals("ARTIFACT_UPDATE_EMPTY", e.getErrorCode());
     }
@@ -264,7 +310,7 @@ class ArtifactServiceTest {
         when(artifactRepository.findAllByThreadIdOrderByCreatedAtAsc(threadId)).thenReturn(List.of(here));
 
         GendoxException e = assertThrows(GendoxException.class, () -> artifactService.update(threadId, otherThreadsArtifact,
-                messageId, null, "<p>x</p>", null));
+                messageId, null, null, "<p>x</p>", null));
 
         assertEquals("ARTIFACT_NOT_FOUND", e.getErrorCode());
         assertTrue(e.getMessage().contains(here.getId() + " (Dashboard)"));
@@ -277,7 +323,7 @@ class ArtifactServiceTest {
         when(messageRepository.findFirstByThreadIdAndRoleOrderByCreatedAtDesc(threadId, "user"))
                 .thenReturn(Optional.of(Message.builder().createdBy(author).build()));
 
-        Artifact artifact = artifactService.create(threadId, projectId, messageId, "Report", "html", null, "<h1>Hi</h1>");
+        Artifact artifact = artifactService.create(threadId, projectId, messageId, "Report", "html", null, null, "<h1>Hi</h1>");
 
         assertEquals(author, artifact.getOwnerId());
         ArgumentCaptor<ArtifactVersion> saved = ArgumentCaptor.forClass(ArtifactVersion.class);
@@ -294,7 +340,7 @@ class ArtifactServiceTest {
         when(messageRepository.findFirstByThreadIdAndRoleOrderByCreatedAtDesc(threadId, "user"))
                 .thenReturn(Optional.of(Message.builder().createdBy(author).build()));
 
-        artifactService.update(threadId, artifact.getId(), messageId, null, null, List.of(edit("Old", "New")));
+        artifactService.update(threadId, artifact.getId(), messageId, null, null, null, List.of(edit("Old", "New")));
 
         assertEquals(owner, artifact.getOwnerId());
         ArgumentCaptor<ArtifactVersion> saved = ArgumentCaptor.forClass(ArtifactVersion.class);
@@ -308,7 +354,7 @@ class ArtifactServiceTest {
     void update_onAnArtifactTheConversationWasOpenedOn_withEdit_savesTheNextVersion() throws GendoxException {
         Artifact artifact = openedOn(Role.EDIT);
 
-        artifactService.update(threadId, artifact.getId(), messageId, null, null, List.of(edit("Old", "New")));
+        artifactService.update(threadId, artifact.getId(), messageId, null, null, null, List.of(edit("Old", "New")));
 
         ArgumentCaptor<ArtifactVersion> saved = ArgumentCaptor.forClass(ArtifactVersion.class);
         verify(artifactVersionRepository).save(saved.capture());
@@ -321,7 +367,7 @@ class ArtifactServiceTest {
         Artifact artifact = openedOn(Role.INTERACT);
 
         GendoxException e = assertThrows(GendoxException.class, () -> artifactService.update(threadId, artifact.getId(),
-                messageId, "New title", null, null));
+                messageId, "New title", null, null, null));
 
         assertEquals("ARTIFACT_READ_ONLY", e.getErrorCode());
         assertTrue(e.getErrorMessage().contains("EDIT"), e.getErrorMessage());

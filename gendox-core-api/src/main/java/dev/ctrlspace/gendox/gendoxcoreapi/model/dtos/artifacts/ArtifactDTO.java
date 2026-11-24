@@ -24,32 +24,15 @@ public class ArtifactDTO {
     private String title;
     private Type artifactType;
     private String codeLanguage;
+    private Type display;
     private Integer latestVersion;
     private Instant createdAt;
     private Instant updatedAt;
     private UUID createdBy;
     private UUID updatedBy;
-
-    /**
-     * The one person who made it.
-     */
     private UUID ownerId;
-
-    /**
-     * The signed-in user's role when it is opened by its own id: VIEW, INTERACT, EDIT or OWNER. Null when it is read
-     * through its conversation, whose member is its owner.
-     */
     private String yourRole;
-
-
-    /**
-     * Every version, oldest first, without content.
-     */
     private List<ArtifactVersionSummaryDTO> versions;
-
-    /**
-     * The version whose content is below.
-     */
     private Integer version;
     private String content;
 }

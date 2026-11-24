@@ -95,6 +95,8 @@ const Dock = forwardRef(({ storageKey, layout, route, newTabs = [], blankUrl, on
   const [root, setRoot] = useState(null)
   const rootRef = useRef(null)
   rootRef.current = root
+  // what the page asked to open before the saved layout was read; opened once it is, so a link is never lost
+  const pending = useRef([])
 
   // the saved layout, unless a tab in it can't be shown any more
   useEffect(() => {
@@ -205,7 +207,12 @@ const Dock = forwardRef(({ storageKey, layout, route, newTabs = [], blankUrl, on
       urls: () => (rootRef.current ? urlsOf(rootRef.current) : []),
       // focus a URL if open; else add it to a window holding one of the `near` prefixes, or beside the focused one
       open(url, { near = [] } = {}) {
-        if (!rootRef.current || !view(url)) return false
+        if (!view(url)) return false
+        if (!rootRef.current) {
+          pending.current.push([url, { near }])
+
+          return true
+        }
         let id
         update(h => {
           let g = groupWith(h.root, url)
@@ -265,6 +272,14 @@ const Dock = forwardRef(({ storageKey, layout, route, newTabs = [], blankUrl, on
     [view, update, layout, focusId]
   )
   useImperativeHandle(ref, () => api, [api])
+
+  // the layout is read: open what was asked for before it was
+  useEffect(() => {
+    if (!root || !pending.current.length) return
+    const asked = pending.current
+    pending.current = []
+    asked.forEach(([url, options]) => api.open(url, options))
+  }, [root, api])
 
   // the focused tab: the page shows its title and puts its URL in the address bar
   const activeUrl = root ? (mobile ? (urlsOf(root).includes(mobileActive) ? mobileActive : focusedIn(root).active) : focusedIn(root).active) : null

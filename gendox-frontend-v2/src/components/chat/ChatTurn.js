@@ -73,7 +73,7 @@ const skillNameOf = call => {
 // Making or changing an artifact shows as its card (gendox-core#523); a failed try that a later call made good
 // (`recovered`) shows with the other tools instead. An error the artifact raises offers Try to fix (onAsk), on its
 // latest version only (artifactVersions).
-const ToolCalls = ({ header, responses, recovered, onOpenArtifact, artifactVersions, onAsk }) => {
+const ToolCalls = ({ header, responses, recovered, onOpenArtifact, artifactVersions, artifactDisplays, onAsk }) => {
   const allCalls = header.toolCalls || []
   const showsAsCard = call => isArtifactCall(call) && !recovered.has(call.id)
   const skillCalls = allCalls.filter(call => call.function?.name === 'read_skill')
@@ -127,6 +127,7 @@ const ToolCalls = ({ header, responses, recovered, onOpenArtifact, artifactVersi
             call={artifactCall}
             onOpen={onOpenArtifact}
             latestVersion={artifactVersions[artifactCall.result?.artifactId]}
+            display={artifactDisplays[artifactCall.result?.artifactId]}
             onAsk={onAsk}
           />
         ))}
@@ -257,6 +258,7 @@ const ChatTurn = ({
   onSources,
   onOpenArtifact,
   artifactVersions = {},
+  artifactDisplays = {},
   onAskArtifactFix,
   onAskAgain,
   onFeedback,
@@ -297,6 +299,7 @@ const ChatTurn = ({
                 recovered={recovered}
                 onOpenArtifact={onOpenArtifact}
                 artifactVersions={artifactVersions}
+                artifactDisplays={artifactDisplays}
                 onAsk={onAskArtifactFix}
               />
             ) : (

@@ -392,7 +392,7 @@ This is a separate matter from phase 5, which moves only the frame's page to its
 
 A new version arriving while the panel is open moves it to the latest, unless the user is looking at an older one on purpose.
 
-### Inline artifacts — designed 2026-11-17, not built
+### Inline artifacts — built 2026-11-24, except the user's switch
 
 **Some artifacts are part of the answer, not an attachment to it.** Asked for "a euro to dollar calculator", the answer can *be* the calculator: it renders in the flow of the text, with no card header, no frame border and no *Open* button in the way, sized to its content.
 
@@ -400,9 +400,10 @@ A new version arriving while the panel is open moves it to the latest, unless th
 - An inline artifact is still an artifact: it has versions, it is listed in the conversation and on the Artifacts page, it can be shared. Hovering it (or a small control under it on touch screens) offers *Open*, which shows it in the panel as any other.
 - The display is stored on the artifact; a later version keeps it unless the agent changes it. `ui/request-display-mode` of phase 3 lets an app ask to move between the two while it runs.
 - An inline artifact runs in the same sealed frame. Only its chrome changes.
-- **The user can switch it** — decided: *Show as a card* / *Show inline* in the artifact's menu. It changes how it is shown, not its code, so it makes no version and needs no agent. It is stored on the artifact, so everyone who sees a shared artifact sees the same.
+- **As built:** `artifacts.display_id`, an `ARTIFACT_DISPLAY` type (`CARD`, `INLINE`; null is a card), in the migration `V20261124_163000__Artifact_display_and_info_card.sql`; `display` on both tools, returned in their results and in the DTOs; the skill's *Card or inline* section. In the chat the thread's latest create or update result decides how an artifact shows, with no request; an inline one sizes to its content and has a small *Open* under it, not on hover, since a frame takes the pointer's hover.
+- **The user can switch it** — decided, **not built yet**: *Show as a card* / *Show inline* in the artifact's menu. It changes how it is shown, not its code, so it makes no version and needs no agent. It is stored on the artifact, so everyone who sees a shared artifact sees the same.
 
-### Sizes — 2026-11-17
+### Sizes — 2026-11-17, built 2026-11-24
 
 What was built is too tight: the card's preview stops at a fixed small height, and in the panel or a small dock tab an artifact that is taller than the space is cut off with no way to reach its lower part (a game whose start button sits below the fold). The rules from now on:
 
@@ -410,6 +411,7 @@ What was built is too tight: the card's preview stops at a fixed small height, a
 - **The card and inline artifacts** grow with their content (the frame already reports its height) up to a generous maximum, about the height of the window; beyond it the frame scrolls inside, and *Open* shows it whole.
 - **The panel and the dock tab** give the frame the larger of the space available and the height the content reports, inside a scrolling area; a maximized tab gets the whole window.
 - **The skill** tells the agent that an artifact may be shown small: no layout that depends on the full window height (`100vh`) for its controls, the main controls near the top, and the page allowed to scroll.
+- **As built:** `ArtifactFrame` grows a panel's frame to the height its content reports and lets the space around it scroll; content sized by the frame's own height (`100vh` and a margin) goes past it by the same amount however tall it gets, and the frame stops growing when it sees that. Verified in Chrome with a 60-row page whose button is at the bottom, and a `min-height: 100vh` page that grew once and stopped.
 
 ### Public links — designed 2026-11-17, not built
 
@@ -458,7 +460,7 @@ Built in this order, each a commit of its own: the cheaper history, the Artifact
   - `allowed-tools: create_artifact, update_artifact, read_artifact, advanced_search, read_document` — a card about one document reads all of it, not only what search returns.
   - The skill fixes the card's shape (title and what it is, four to eight key facts, a summary of at most three sentences, an optional *Watch out*, the sources) and gives a short HTML template that follows the theme variables and needs no script, so cards look alike and stay small. Only what the documents say goes on a card; a missing fact is left out. It stands on its own, so an agent can have it without the general artifacts skill.
   - Verified with Gemini on a real document.
-  - **Moved into the artifacts skill (2026-11-24).** Its shape and template are the *Info cards* section of `resources/skills/artifacts/SKILL.md`, whose description now names cards and whose `allowed-tools` gained `advanced_search` and `read_document`. The `info-card` folder is removed. The startup importer does not remove a skill that is no longer shipped, so the idempotent migration `V20261124_163000__Move_info_card_artifacts_skills.sql` gives every agent with the library's *Info card* the artifacts skill (unless it has it), takes *Info card* off them — an agent's own skill of the same name is left alone — and marks it deleted in the library. The migration copies the library's current artifacts skill; the importer then publishes the new one and moves every copy to it. Verified in the ephemeral environment with the three cases, and run twice.
+  - **Moved into the artifacts skill (2026-11-24).** Its shape and template are the *Info cards* section of `resources/skills/artifacts/SKILL.md`, whose description now names cards and whose `allowed-tools` gained `advanced_search` and `read_document`. The `info-card` folder is removed. The startup importer does not remove a skill that is no longer shipped, so the idempotent migration `V20261124_163000__Artifact_display_and_info_card.sql` (which also adds the display of *Inline artifacts*) gives every agent with the library's *Info card* the artifacts skill (unless it has it), takes *Info card* off them — an agent's own skill of the same name is left alone — and marks it deleted in the library. The migration copies the library's current artifacts skill; the importer then publishes the new one and moves every copy to it. Verified in the ephemeral environment with the three cases, and run twice.
 - **Old content leaves the replayed history.** When history is rebuilt for the model, the `content` argument of earlier `create_artifact` / `update_artifact` calls is replaced by a short fixed note naming the artifact and version — fixed, so that prompt caching still holds. The model reads the current text with `read_artifact` when it needs it.
   - **Built.** `ArtifactHistory.withoutArtifactContent` rewrites the history read for a completion, never what is stored. The note is one fixed sentence for every call: the call's own `artifact_id` and its result already name the artifact and version, so the note needs no detail and stays byte-identical across turns. Only the replayed history is rewritten; a sub-agent's history, passed in by its caller, is left as given.
   - Verified with Gemini, whose thought signatures travel unchanged beside the shortened arguments: asked to change an earlier artifact, the agent read it with `read_artifact` and updated the same artifact.
