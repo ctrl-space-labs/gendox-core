@@ -1,29 +1,56 @@
 import { useEffect, useState } from 'react'
-import { Check, CircleAlert, Copy, Download, MessageSquarePlus, Share2, ShieldCheck } from 'lucide-react'
+import { useRouter } from 'next/router'
+import toast from 'react-hot-toast'
+import { Check, CircleAlert, Copy, Download, MessageSquarePlus, MessageSquareShare, Share2, ShieldCheck } from 'lucide-react'
 import artifactService from 'src/gendox-sdk/artifactService'
 import { copyToClipboard } from 'src/utils/copyToClipboard'
+import { getErrorMessage } from 'src/utils/errorHandler'
 import Spinner from 'src/components/ui/Spinner'
 import Markdown from 'src/components/chat/Markdown'
 import ArtifactContent from 'src/components/artifacts/ArtifactContent'
 import ArtifactError from 'src/components/artifacts/ArtifactError'
 import ArtifactShareDialog from 'src/components/artifacts/ArtifactShareDialog'
 import useActiveScope from 'src/hooks/useActiveScope'
-import { downloadFile, fencedCode, fileNameOf, fixRequestOf, kindInfo, kindOf, sourceLanguageOf } from 'src/components/artifacts/artifactUtils'
+import {
+  downloadFile,
+  fencedCode,
+  fileNameOf,
+  fixRequestOf,
+  kindInfo,
+  kindOf,
+  rememberChatOnArtifact,
+  roleAtLeast,
+  sourceLanguageOf
+} from 'src/components/artifacts/artifactUtils'
 
 /**
  * One artifact in full (gendox-core#523): Preview and Code, its versions, copy, download, Share, Ask for a change, and
- * Try to fix when the latest version raises an error. It is opened from the user's own conversations, so it can be
- * shared; inside an organization only.
+ * Try to fix when the latest version raises an error.
+ * Opened in a conversation (threadId) it loads through that conversation; opened without one (the Artifacts page) it
+ * loads by its id, for anyone with a role on it (gendox-core#570). Its owner shares it, anyone else with a role sees who
+ * has access; an Editor who is not the owner changes it in a chat of their own (Change it in a chat).
  * Loads when it opens; the latest version unless one is asked for. When the chat makes a newer version it moves to
  * it, unless the user chose an older one.
  *
+ * @param threadId - the conversation it is opened in; absent, it loads by its id
  * @param knownVersion - the latest version the conversation knows of; a higher one reloads
  * @param version - the version to open with (from a card), the latest when absent
  * @param agentName - who made it, for the footer
  * @param onAsk(text) - put a request in the chat's composer; without it there is no Ask for a change or Try to fix
  * @param onTitle(title) - the artifact's title once loaded, for a header or a tab
+ * @param besideItsChat - shown beside a chat opened on it, which is where it changes: no Change it in a chat
  */
-const ArtifactView = ({ threadId, artifactId, token, version: openedVersion, knownVersion, agentName, onAsk, onTitle }) => {
+const ArtifactView = ({
+  threadId,
+  artifactId,
+  token,
+  version: openedVersion,
+  knownVersion,
+  agentName,
+  onAsk,
+  onTitle,
+  besideItsChat = false
+}) => {
   const [artifact, setArtifact] = useState(null)
   const [failed, setFailed] = useState(false)
   const [tab, setTab] = useState('preview')
@@ -31,7 +58,9 @@ const ArtifactView = ({ threadId, artifactId, token, version: openedVersion, kno
   const [copied, setCopied] = useState(false)
   const [error, setError] = useState(null) // the shown version's first unhandled error
   const [sharing, setSharing] = useState(false)
-  const { organizationId } = useActiveScope()
+  const [opening, setOpening] = useState(false) // Change it in a chat is making the conversation
+  const router = useRouter()
+  const { organizationId, projectId, href } = useActiveScope()
   // following the latest, a newer version from the chat loads it; a chosen older one stays
   const followed = chosen === null ? knownVersion : null
 
@@ -40,13 +69,16 @@ const ArtifactView = ({ threadId, artifactId, token, version: openedVersion, kno
   }, [artifactId, openedVersion])
 
   useEffect(() => {
-    if (!threadId || !artifactId) return
+    if (!artifactId) return
     let current = true
     setFailed(false)
-    const request =
-      chosen === null
+    const request = threadId
+      ? chosen === null
         ? artifactService.getArtifact(threadId, artifactId, token)
         : artifactService.getArtifactVersion(threadId, artifactId, chosen, token)
+      : chosen === null
+        ? artifactService.openArtifact(artifactId, token)
+        : artifactService.openArtifactVersion(artifactId, chosen, token)
     request
       .then(response => {
         if (!current) return
@@ -68,7 +100,7 @@ const ArtifactView = ({ threadId, artifactId, token, version: openedVersion, kno
           <CircleAlert className='lucide' />
           The artifact couldn’t be loaded
         </b>
-        <span className='muted'>It may belong to a conversation you can’t open. Try again in a moment.</span>
+        <span className='muted'>It may no longer be shared with you. Try again in a moment.</span>
       </div>
     )
   }
@@ -77,6 +109,22 @@ const ArtifactView = ({ threadId, artifactId, token, version: openedVersion, kno
   const kind = kindOf(artifact)
   const name = fileNameOf(artifact.title, kind, artifact.codeLanguage)
   const isLatest = artifact.version === artifact.latestVersion
+  const role = artifact.yourRole
+  // its owner changes it in its own conversation; an Editor in a new one of their own, unless already in one
+  const canChangeInAChat = !onAsk && !besideItsChat && role !== 'OWNER' && roleAtLeast(role, 'EDIT') && Boolean(projectId)
+
+  const changeInAChat = async () => {
+    setOpening(true)
+    try {
+      const { data } = await artifactService.openInNewChat(artifactId, token)
+      // the agent home shows the artifact beside the new chat, which starts with a request to change it
+      rememberChatOnArtifact(data.threadId, artifactId, artifact.title)
+      router.push(`${href('/gendox/agent-home')}#/chat/${data.threadId}`)
+    } catch (e) {
+      toast.error(getErrorMessage(e))
+      setOpening(false)
+    }
+  }
 
   const handleCopy = () => {
     copyToClipboard(artifact.content)
@@ -132,10 +180,16 @@ const ArtifactView = ({ threadId, artifactId, token, version: openedVersion, kno
         >
           <Download className='lucide' />
         </button>
-        {organizationId && (
+        {organizationId && role && (
           <button className='btn s' onClick={() => setSharing(true)}>
             <Share2 className='lucide' />
-            Share
+            {role === 'OWNER' ? 'Share' : 'Who has access'}
+          </button>
+        )}
+        {canChangeInAChat && (
+          <button className='btn s' disabled={opening} aria-busy={opening} onClick={changeInAChat}>
+            <MessageSquareShare className='lucide' />
+            Change it in a chat
           </button>
         )}
         {onAsk && (
@@ -179,16 +233,14 @@ const ArtifactView = ({ threadId, artifactId, token, version: openedVersion, kno
           Made by {agentName || 'the agent'}. It runs sealed: it can’t reach your account, other pages or the internet.
         </span>
       </div>
-      {organizationId && (
+      {organizationId && role && (
         <ArtifactShareDialog
           open={sharing}
           onClose={() => setSharing(false)}
-          threadId={threadId}
           artifactId={artifactId}
           title={artifact.title}
-          version={artifact.version}
-          latestVersion={artifact.latestVersion}
           organizationId={organizationId}
+          projectId={projectId}
           agentName={agentName}
         />
       )}

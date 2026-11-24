@@ -580,7 +580,6 @@ pre.code .k { color: var(--accent-text); } pre.code .s { color: var(--warn); }
 /* the Share dialog's rows: everyone in the agent, then each person */
 .art-share-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
 .art-share-row .ftype { --h: 220; }
-.art-shared .art-b, .art-shared .art-b iframe { min-height: 62vh; }
 /* markdown and code are not framed: a card shows their start, the panel scrolls them */
 .gc-art-b.clip { max-height: 250px; overflow: hidden; padding: 10px 12px; -webkit-mask-image: linear-gradient(to bottom, #000 75%, transparent); mask-image: linear-gradient(to bottom, #000 75%, transparent); }
 .gc-art .alert, .gc-ai > .alert { margin: 0; }

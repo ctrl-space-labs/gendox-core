@@ -11,10 +11,10 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * The model writes an artifact's whole content into its create_artifact or update_artifact call, and the history
- * replays tool calls. Replayed from the thread, that content is replaced by a fixed note, so a long artifact is not
- * paid for again with every later question. The note never changes, so the history stays the same from request to
- * request and prompt caching holds. The model reads the current text with read_artifact.
+ * The model writes an artifact's whole content into its create_artifact or update_artifact call, and read_artifact
+ * returns it whole; the history replays both. Replayed from the thread, that content is replaced by a fixed note, so a
+ * long artifact is not paid for again with every later question. The note never changes, so the history stays the
+ * same from request to request and prompt caching holds. The model reads the current text with read_artifact.
  */
 public final class ArtifactHistory {
 
@@ -33,6 +33,10 @@ public final class ArtifactHistory {
      */
     public static List<AiModelMessage> withoutArtifactContent(List<AiModelMessage> messages, ObjectMapper objectMapper) {
         for (AiModelMessage message : messages) {
+            if ("tool".equals(message.getRole()) && ReadArtifactTool.NAME.equals(message.getName())) {
+                message.setContent(withoutContent(message.getContent(), objectMapper));
+                continue;
+            }
             JsonNode toolCalls = message.getToolCalls();
             if (toolCalls == null || !toolCalls.isArray() || !writesArtifact(toolCalls)) {
                 continue;
@@ -47,6 +51,22 @@ public final class ArtifactHistory {
             message.setToolCalls(calls);
         }
         return messages;
+    }
+
+    // a read_artifact result is the JSON text of an object; an error result has no content and stays as it is
+    private static String withoutContent(String result, ObjectMapper objectMapper) {
+        if (result == null) {
+            return null;
+        }
+        try {
+            if (objectMapper.readTree(result) instanceof ObjectNode object && object.has("content")) {
+                object.put("content", CONTENT_NOTE);
+                return object.toString();
+            }
+        } catch (JacksonException e) {
+            // not JSON: leave it
+        }
+        return result;
     }
 
     private static boolean writesArtifact(JsonNode toolCalls) {

@@ -15,20 +15,26 @@ const getArtifacts = async (threadId, token) => {
 }
 
 /**
- * The artifacts of the user's own conversations with an agent, newest change first, without their content;
- * each names its conversation (threadName).
- * @param criteria - { search, artifactType } — a title fragment, and HTML | SVG | MARKDOWN | CODE
+ * The user's artifacts with an agent, newest change first, without their content. Their own, each naming its
+ * conversation (threadName); or, with sharedWithMe, the others' they have a role on, each naming its owner (ownerName).
+ * @param criteria - { search, artifactType, sharedWithMe } — a title fragment, and HTML | SVG | MARKDOWN | CODE
  */
 const getProjectArtifacts = async (organizationId, projectId, criteria = {}, token, page = 0, size = 50) => {
-  const { search, artifactType } = criteria
+  const { search, artifactType, sharedWithMe } = criteria
 
   return axios.get(apiRequests.projectArtifacts(organizationId, projectId), {
-    params: { page, size, ...(search ? { search } : {}), ...(artifactType ? { artifactType } : {}) },
+    params: {
+      page,
+      size,
+      ...(search ? { search } : {}),
+      ...(artifactType ? { artifactType } : {}),
+      ...(sharedWithMe ? { sharedWithMe: true } : {})
+    },
     headers: headers(token)
   })
 }
 
-/** One artifact: its fields, its versions (number, message, date) and the content of the latest. */
+/** One artifact of a thread: its fields, its versions (number, message, date) and the content of the latest. */
 const getArtifact = async (threadId, artifactId, token) => {
   return axios.get(apiRequests.artifact(threadId, artifactId), { headers: headers(token) })
 }
@@ -38,44 +44,57 @@ const getArtifactVersion = async (threadId, artifactId, version, token) => {
   return axios.get(apiRequests.artifactVersion(threadId, artifactId, version), { headers: headers(token) })
 }
 
-/** Who an artifact is shared with now (its owner only): the agent's members, and named people. */
-const getArtifactShares = async (threadId, artifactId, token) => {
-  return axios.get(apiRequests.artifactShares(threadId, artifactId), { headers: headers(token) })
+/**
+ * One artifact by its id, for anyone with a role on it, from any conversation or none: as getArtifact, with the
+ * user's role (yourRole: VIEW | INTERACT | EDIT | OWNER). Its conversation (threadId) only for its owner.
+ */
+const openArtifact = async (artifactId, token) => {
+  return axios.get(apiRequests.artifactById(artifactId), { headers: headers(token) })
+}
+
+/** The same as openArtifact, with the content of the given version. */
+const openArtifactVersion = async (artifactId, version, token) => {
+  return axios.get(apiRequests.artifactVersionById(artifactId, version), { headers: headers(token) })
 }
 
 /**
- * Share an artifact; it replaces an earlier share with the same people.
- * @param share - { audience: PROJECT | USER, sharedWithUserId (USER only), version (null: follow the latest) }
+ * Who has a role on an artifact: its owner, the agent's members (generalAccessRole, null for none), and the people
+ * invited with their roles; with the user's own role (yourRole). Anyone with a role may read it; only the owner
+ * changes it.
  */
-const shareArtifact = async (threadId, artifactId, share, token) => {
-  return axios.post(apiRequests.artifactShares(threadId, artifactId), share, { headers: headers(token) })
-}
-
-/** Stop sharing; its link stops working at once. */
-const stopSharingArtifact = async (threadId, artifactId, shareId, token) => {
-  return axios.delete(apiRequests.artifactShare(threadId, artifactId, shareId), { headers: headers(token) })
-}
-
-/** A shared artifact as its reader sees it, with its content; never its conversation. */
-const getSharedArtifact = async (shareId, token) => {
-  return axios.get(apiRequests.sharedArtifact(shareId), { headers: headers(token) })
+const getSharing = async (artifactId, token) => {
+  return axios.get(apiRequests.artifactSharing(artifactId), { headers: headers(token) })
 }
 
 /**
- * The artifacts shared with the signed-in user in an organization, newest share first, without their content.
- * @param criteria - { projectId (one agent's only; every agent's when absent), search, artifactType }
+ * The role every member of the agent has on it, or null for only the owner and the people invited.
+ * @param role - VIEW | INTERACT | EDIT | null
+ * @returns the sharing, as getSharing
  */
-const getSharedWithMe = async (organizationId, { projectId, search, artifactType } = {}, token, page = 0, size = 50) => {
-  return axios.get(apiRequests.sharedWithMe(organizationId), {
-    params: {
-      page,
-      size,
-      ...(projectId ? { projectId } : {}),
-      ...(search ? { search } : {}),
-      ...(artifactType ? { artifactType } : {})
-    },
-    headers: headers(token)
-  })
+const setGeneralAccess = async (artifactId, role, token) => {
+  return axios.put(apiRequests.artifactGeneralAccess(artifactId), { role }, { headers: headers(token) })
+}
+
+/**
+ * Invite a member of the agent with a role, or change the role of one invited.
+ * @param role - VIEW | INTERACT | EDIT
+ * @returns the sharing, as getSharing
+ */
+const setMemberRole = async (artifactId, userId, role, token) => {
+  return axios.put(apiRequests.artifactMember(artifactId, userId), { role }, { headers: headers(token) })
+}
+
+/** Take an invited person's role away. @returns the sharing, as getSharing */
+const removeMember = async (artifactId, userId, token) => {
+  return axios.delete(apiRequests.artifactMember(artifactId, userId), { headers: headers(token) })
+}
+
+/**
+ * A new conversation of the user's own on an artifact made elsewhere, where the agent can change it (EDIT and up).
+ * @returns {{ threadId }}
+ */
+const openInNewChat = async (artifactId, token) => {
+  return axios.post(apiRequests.artifactChats(artifactId), null, { headers: headers(token) })
 }
 
 export default {
@@ -83,9 +102,11 @@ export default {
   getProjectArtifacts,
   getArtifact,
   getArtifactVersion,
-  getArtifactShares,
-  shareArtifact,
-  stopSharingArtifact,
-  getSharedArtifact,
-  getSharedWithMe
+  openArtifact,
+  openArtifactVersion,
+  getSharing,
+  setGeneralAccess,
+  setMemberRole,
+  removeMember,
+  openInNewChat
 }

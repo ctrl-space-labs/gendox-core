@@ -163,10 +163,13 @@ export default {
   artifacts: threadId => `${url}threads/${threadId}/artifacts`,
   artifact: (threadId, artifactId) => `${url}threads/${threadId}/artifacts/${artifactId}`,
   artifactVersion: (threadId, artifactId, version) => `${url}threads/${threadId}/artifacts/${artifactId}/versions/${version}`,
-  artifactShares: (threadId, artifactId) => `${url}threads/${threadId}/artifacts/${artifactId}/shares`,
-  artifactShare: (threadId, artifactId, shareId) => `${url}threads/${threadId}/artifacts/${artifactId}/shares/${shareId}`,
-  sharedArtifact: shareId => `${url}artifact-shares/${shareId}`,
-  sharedWithMe: organizationId => `${url}organizations/${organizationId}/artifact-shares`,
+  // an artifact by its id, for anyone with a role on it, and its sharing (gendox-core#570)
+  artifactById: artifactId => `${url}artifacts/${artifactId}`,
+  artifactVersionById: (artifactId, version) => `${url}artifacts/${artifactId}/versions/${version}`,
+  artifactSharing: artifactId => `${url}artifacts/${artifactId}/sharing`,
+  artifactGeneralAccess: artifactId => `${url}artifacts/${artifactId}/sharing/general-access`,
+  artifactMember: (artifactId, userId) => `${url}artifacts/${artifactId}/sharing/members/${userId}`,
+  artifactChats: artifactId => `${url}artifacts/${artifactId}/chats`,
 
   deactivateUserById: userId => `${url}users/${userId}/deactivate`,
 

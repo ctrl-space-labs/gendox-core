@@ -35,13 +35,16 @@ public class ArtifactController {
     private final ArtifactService artifactService;
     private final ArtifactConverter artifactConverter;
     private final SecurityUtils securityUtils;
+    private final ArtifactAccessService artifactAccessService;
 
     public ArtifactController(ArtifactService artifactService,
                               ArtifactConverter artifactConverter,
-                              SecurityUtils securityUtils) {
+                              SecurityUtils securityUtils,
+                              ArtifactAccessService artifactAccessService) {
         this.artifactService = artifactService;
         this.artifactConverter = artifactConverter;
         this.securityUtils = securityUtils;
+        this.artifactAccessService = artifactAccessService;
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')")
@@ -141,8 +144,8 @@ public class ArtifactController {
         ArtifactService.Opened opened = artifactService.open(artifactId, securityUtils.getUserId());
         Artifact artifact = opened.artifact();
         ArtifactVersion shown = artifactService.getVersion(artifact, version);
-        return artifactConverter.toDTO(artifact, artifactService.getVersionSummaries(artifactId), shown).toBuilder()
-                .yourRole(opened.role().name())
+        return artifactConverter.toDTO(artifact, artifactService.getVersionSummaries(artifactId), shown, opened.role())
+                .toBuilder()
                 // the conversation it was made in is its owner's; nobody else may open it
                 .threadId(opened.role() == ArtifactAccessService.Role.OWNER ? artifact.getThreadId() : null)
                 .build();
@@ -151,6 +154,13 @@ public class ArtifactController {
     private ArtifactDTO toDTO(UUID threadId, UUID artifactId, Integer version) throws GendoxException {
         Artifact artifact = artifactService.getByIdInThread(threadId, artifactId);
         ArtifactVersion shown = artifactService.getVersion(artifact, version);
-        return artifactConverter.toDTO(artifact, artifactService.getVersionSummaries(artifactId), shown);
+        // the reader's role, for what the screen offers (Share for its owner); none for a reader of a public thread
+        ArtifactAccessService.Role yourRole = artifactAccessService.roleOf(artifact, securityUtils.getUserId()).orElse(null);
+        return artifactConverter.toDTO(artifact, artifactService.getVersionSummaries(artifactId), shown, yourRole)
+                .toBuilder()
+                // the conversation it was made in: the one read, or its owner's, which nobody else may open
+                .threadId(threadId.equals(artifact.getThreadId()) || yourRole == ArtifactAccessService.Role.OWNER
+                        ? artifact.getThreadId() : null)
+                .build();
     }
 }

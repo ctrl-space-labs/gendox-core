@@ -1,106 +1,119 @@
 import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
-import { Check, Link2, Users, X } from 'lucide-react'
+import { Lock, Users } from 'lucide-react'
 import artifactService from 'src/gendox-sdk/artifactService'
-import { useAuth } from 'src/authentication/useAuth'
+import projectService from 'src/gendox-sdk/projectService'
 import { getToken } from 'src/components/agent/useAgent'
-import useOrganizationUsers from 'src/hooks/useOrganizationUsers'
-import { copyToClipboard } from 'src/utils/copyToClipboard'
+import { useAuth } from 'src/authentication/useAuth'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import Dialog from 'src/components/ui/Dialog'
-import Switch from 'src/components/ui/Switch'
 import Avatar from 'src/components/ui/Avatar'
 import Spinner from 'src/components/ui/Spinner'
-import { sharedArtifactLink } from 'src/components/artifacts/artifactUtils'
+import { ROLES, SHARED_ROLES } from 'src/components/artifacts/artifactUtils'
 
 const nameOf = user =>
   user?.name || [user?.firstName, user?.lastName].filter(Boolean).join(' ') || user?.userName || user?.email || 'Someone'
 
-/** The version a share shows: the latest, or the one it was pinned to. */
-const VersionBadge = ({ version }) => <span className='badge'>{version ? `v${version}` : 'Latest'}</span>
+/** A role to choose: Viewer, Contributor or Editor, and, for an invited person, Remove */
+const RoleSelect = ({ value, onChange, disabled, removable, label }) => (
+  <select
+    className='input s'
+    style={{ width: 'auto', paddingRight: 30 }}
+    aria-label={label}
+    value={value}
+    disabled={disabled}
+    onChange={e => onChange(e.target.value)}
+  >
+    {SHARED_ROLES.map(role => (
+      <option key={role} value={role}>
+        {ROLES[role].label}
+      </option>
+    ))}
+    {removable && <option value='REMOVE'>Remove access</option>}
+  </select>
+)
 
-const CopyLink = ({ link }) => {
-  const [copied, setCopied] = useState(false)
-
-  return (
-    <button
-      className='btn ghost s icon'
-      title='Copy the link'
-      onClick={() => {
-        copyToClipboard(link)
-        setCopied(true)
-        setTimeout(() => setCopied(false), 2000)
-      }}
-    >
-      {copied ? <Check className='lucide' /> : <Link2 className='lucide' />}
-    </button>
-  )
-}
+/** One person with access: avatar, name and email, and their role, or the control that changes it */
+const PersonRow = ({ person, you, children }) => (
+  <div className='art-share-row'>
+    <Avatar name={person.name || person.email} seed={person.userId} round />
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <div className='trunc' style={{ fontWeight: 500 }}>
+        {person.name || person.email || 'Someone'}
+        {you && <span className='faint'> (you)</span>}
+      </div>
+      {person.email && <div className='faint sm trunc'>{person.email}</div>}
+    </div>
+    {children ?? <span className='badge'>{ROLES[person.role]?.label ?? person.role}</span>}
+  </div>
+)
 
 /**
- * Share an artifact (gendox-core#523): with everyone in its agent, or with chosen members of the organization. Each
- * share follows the latest version or stays at the one on screen, and has its own link. Only the artifact's owner can
- * open it; a reader sees the artifact, never its conversation.
+ * Who has a role on an artifact (gendox-core#570), as Claude's artifacts share: its owner; every member of the agent,
+ * with one role, or none; and members of the agent invited by name, each with a role. A Viewer sees it, a Contributor
+ * also uses it, an Editor also changes it with the agent in a chat of their own. Nobody sees the conversation it was
+ * made in. Anyone with a role sees who has access; only the owner changes it.
  *
- * @param version - the version on screen, offered as "This version"
- * @param latestVersion - the artifact's newest version
- * @param organizationId - whose members can be chosen
+ * @param agentName - the agent whose members it can be shared with
  */
-const ArtifactShareDialog = ({ open, onClose, threadId, artifactId, title, version, latestVersion, organizationId, agentName }) => {
+const ArtifactShareDialog = ({ open, onClose, artifactId, title, organizationId, projectId, agentName }) => {
   const { user } = useAuth()
-  const members = useOrganizationUsers(organizationId)
-  const [shares, setShares] = useState(null) // null while they load
+  const [sharing, setSharing] = useState(null) // null while it loads
   const [failed, setFailed] = useState(false)
-  const [busy, setBusy] = useState(null) // what is being saved: 'project', a share id, or 'add'
-  const [pinned, setPinned] = useState(false) // new shares stay at the version on screen
+  const [members, setMembers] = useState([]) // the agent's members, who can be invited
+  const [busy, setBusy] = useState(null) // what is being saved: 'general', 'add', or a user id
   const [person, setPerson] = useState('')
+  const [personRole, setPersonRole] = useState('VIEW')
+
+  const isOwner = sharing?.yourRole === 'OWNER'
 
   useEffect(() => {
     if (!open) return
     let current = true
-    setShares(null)
+    setSharing(null)
     setFailed(false)
     setPerson('')
-    setPinned(version !== latestVersion)
+    setPersonRole('VIEW')
     artifactService
-      .getArtifactShares(threadId, artifactId, getToken())
-      .then(response => current && setShares(response.data ?? []))
+      .getSharing(artifactId, getToken())
+      .then(response => current && setSharing(response.data))
       .catch(() => current && setFailed(true))
 
     return () => {
       current = false
     }
-  }, [open, threadId, artifactId, version, latestVersion])
+  }, [open, artifactId])
 
-  const projectShare = shares?.find(s => s.audience === 'PROJECT')
-  const peopleShares = shares?.filter(s => s.audience === 'USER') ?? []
+  // the people to invite are the agent's members: asked once the user turns out to be the owner
+  useEffect(() => {
+    if (!open || !isOwner || !organizationId || !projectId) return
+    let current = true
+    projectService
+      .getProjectMembers(organizationId, projectId, getToken())
+      .then(response => current && setMembers(response.data ?? []))
+      .catch(() => current && setMembers([]))
 
-  // people who can still be added: members of the organization, not agents, not the owner, not already shared with
+    return () => {
+      current = false
+    }
+  }, [open, isOwner, organizationId, projectId])
+
+  // members of the agent who can still be invited: people, not agents, not the owner, not already invited
   const candidates = useMemo(() => {
-    const taken = new Set(peopleShares.map(s => s.sharedWithUserId))
+    if (!sharing) return []
+    const taken = new Set([sharing.owner?.userId, ...(sharing.members ?? []).map(m => m.userId)])
 
-    return (members || [])
+    return members
       .map(m => m.user)
-      .filter(u => u?.id && u.email && u.userType?.name !== 'GENDOX_AGENT' && u.id !== user?.id && !taken.has(u.id))
+      .filter(u => u?.id && u.userType?.name !== 'GENDOX_AGENT' && !taken.has(u.id))
       .sort((a, b) => nameOf(a).localeCompare(nameOf(b)))
-  }, [members, peopleShares, user?.id])
+  }, [members, sharing])
 
-  const share = async (audience, sharedWithUserId, key) => {
+  // every change answers with the whole sharing, which replaces the one on screen
+  const save = async (key, request) => {
     setBusy(key)
     try {
-      const response = await artifactService.shareArtifact(
-        threadId,
-        artifactId,
-        { audience, sharedWithUserId, version: pinned ? version : null },
-        getToken()
-      )
-      const created = response.data
-      setShares(list => [
-        ...list.filter(s =>
-          audience === 'PROJECT' ? s.audience !== 'PROJECT' : s.sharedWithUserId !== created.sharedWithUserId
-        ),
-        created
-      ])
+      setSharing((await request()).data)
 
       return true
     } catch (error) {
@@ -112,26 +125,35 @@ const ArtifactShareDialog = ({ open, onClose, threadId, artifactId, title, versi
     }
   }
 
-  const stop = async (shareToStop, key) => {
-    setBusy(key)
-    try {
-      await artifactService.stopSharingArtifact(threadId, artifactId, shareToStop.id, getToken())
-      setShares(list => list.filter(s => s.id !== shareToStop.id))
-    } catch (error) {
-      toast.error(getErrorMessage(error))
-    } finally {
-      setBusy(null)
+  const setGeneralAccess = role =>
+    save('general', () => artifactService.setGeneralAccess(artifactId, role || null, getToken()))
+
+  const setRole = (userId, role) =>
+    save(userId, () =>
+      role === 'REMOVE'
+        ? artifactService.removeMember(artifactId, userId, getToken())
+        : artifactService.setMemberRole(artifactId, userId, role, getToken())
+    )
+
+  const invite = async () => {
+    if (await save('add', () => artifactService.setMemberRole(artifactId, person, personRole, getToken()))) {
+      setPerson('')
     }
   }
 
-  const link = s => sharedArtifactLink(organizationId, s.id)
+  const agent = agentName || 'this agent'
+  const general = sharing?.generalAccessRole ?? ''
 
   return (
     <Dialog
       open={open}
       onClose={onClose}
-      title={`Share “${title}”`}
-      subtitle='People you share it with see the artifact, not your conversation.'
+      title={isOwner || !sharing ? `Share “${title}”` : `Who has access to “${title}”`}
+      subtitle={
+        isOwner || !sharing
+          ? 'People you share it with see the artifact, never your conversation.'
+          : 'Only its owner can change who has access.'
+      }
       footer={
         <button className='btn' onClick={onClose}>
           Done
@@ -140,98 +162,102 @@ const ArtifactShareDialog = ({ open, onClose, threadId, artifactId, title, versi
     >
       {failed ? (
         <div className='alert' style={{ '--c': 'var(--warn)' }}>
-          <b>Who it is shared with couldn’t be loaded</b>
+          <b>Who has access couldn’t be loaded</b>
           <span className='muted'>Try again in a moment.</span>
         </div>
-      ) : shares === null ? (
+      ) : sharing === null ? (
         <Spinner />
       ) : (
         <div className='form art-share'>
-          <div className='field'>
-            <label htmlFor='art-share-version'>New shares show</label>
-            <select
-              id='art-share-version'
-              className='input'
-              value={pinned ? 'this' : 'latest'}
-              onChange={e => setPinned(e.target.value === 'this')}
-            >
-              <option value='latest'>The latest version, as it changes</option>
-              <option value='this'>This version (v{version}), as it is now</option>
-            </select>
-          </div>
-
-          <div className='art-share-row'>
-            <span className='ftype'>
-              <Users className='lucide' />
-            </span>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 500 }}>Everyone in {agentName || 'this agent'}</div>
-              <div className='faint sm'>The agent’s members, now and later.</div>
-            </div>
-            {projectShare && (
-              <>
-                <VersionBadge version={projectShare.version} />
-                <CopyLink link={link(projectShare)} />
-              </>
-            )}
-            <Switch
-              label={`Share with everyone in ${agentName || 'this agent'}`}
-              checked={Boolean(projectShare)}
-              busy={busy === 'project'}
-              onChange={on => (on ? share('PROJECT', null, 'project') : stop(projectShare, 'project'))}
-            />
-          </div>
-
-          <div className='field'>
-            <label htmlFor='art-share-person'>People in the organization</label>
-            <div className='row' style={{ gap: 8 }}>
-              <select
-                id='art-share-person'
-                className='input'
-                style={{ flex: 1, minWidth: 0 }}
-                value={person}
-                onChange={e => setPerson(e.target.value)}
-              >
-                <option value=''>{candidates.length ? 'Choose someone' : 'No one else to add'}</option>
-                {candidates.map(u => (
-                  <option key={u.id} value={u.id}>
-                    {nameOf(u)} · {u.email}
-                  </option>
-                ))}
-              </select>
-              <button
-                className='btn primary'
-                disabled={!person || busy === 'add'}
-                aria-busy={busy === 'add'}
-                onClick={async () => (await share('USER', person, 'add')) && setPerson('')}
-              >
-                Share
-              </button>
-            </div>
-            <span className='help'>They can see it whether or not they are members of the agent.</span>
-          </div>
-
-          {peopleShares.map(s => (
-            <div key={s.id} className='art-share-row'>
-              <Avatar name={s.sharedWithName || s.sharedWithEmail} seed={s.sharedWithUserId} round />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div className='trunc' style={{ fontWeight: 500 }}>
-                  {s.sharedWithName || s.sharedWithEmail || 'Someone'}
-                </div>
-                {s.sharedWithEmail && <div className='faint sm trunc'>{s.sharedWithEmail}</div>}
+          {isOwner && (
+            <div className='field'>
+              <label htmlFor='art-share-person'>Add people from {agent}</label>
+              <div className='row' style={{ gap: 8 }}>
+                <select
+                  id='art-share-person'
+                  className='input'
+                  style={{ flex: 1, minWidth: 0 }}
+                  value={person}
+                  onChange={e => setPerson(e.target.value)}
+                >
+                  <option value=''>{candidates.length ? 'Choose someone' : 'No one else to add'}</option>
+                  {candidates.map(u => (
+                    <option key={u.id} value={u.id}>
+                      {nameOf(u)}
+                      {u.email ? ` · ${u.email}` : ''}
+                    </option>
+                  ))}
+                </select>
+                <RoleSelect value={personRole} onChange={setPersonRole} label='Their role' />
+                <button
+                  className='btn primary'
+                  disabled={!person || busy === 'add'}
+                  aria-busy={busy === 'add'}
+                  onClick={invite}
+                >
+                  Invite
+                </button>
               </div>
-              <VersionBadge version={s.version} />
-              <CopyLink link={link(s)} />
-              <button
-                className='btn ghost s icon'
-                title='Stop sharing with them'
-                disabled={busy === s.id}
-                onClick={() => stop(s, s.id)}
-              >
-                <X className='lucide' />
-              </button>
             </div>
-          ))}
+          )}
+
+          <div className='field'>
+            <span className='lab'>People with access</span>
+            {sharing.owner && <PersonRow person={{ ...sharing.owner, role: 'OWNER' }} you={isOwner} />}
+            {(sharing.members ?? []).map(member => (
+              <PersonRow key={member.userId} person={member} you={member.userId === user?.id}>
+                {isOwner ? (
+                  <RoleSelect
+                    value={member.role}
+                    removable
+                    disabled={busy === member.userId}
+                    label={`Role of ${member.name || member.email || 'this person'}`}
+                    onChange={role => setRole(member.userId, role)}
+                  />
+                ) : undefined}
+              </PersonRow>
+            ))}
+          </div>
+
+          <div className='field'>
+            <span className='lab'>General access</span>
+            <div className='art-share-row'>
+              <span className='ftype'>{general ? <Users className='lucide' /> : <Lock className='lucide' />}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                {isOwner ? (
+                  <select
+                    className='input s'
+                    aria-label='Who in the agent has access'
+                    value={general ? 'AGENT' : ''}
+                    disabled={busy === 'general'}
+                    onChange={e => setGeneralAccess(e.target.value ? 'VIEW' : null)}
+                  >
+                    <option value=''>Only people with access</option>
+                    <option value='AGENT'>Everyone in {agent}</option>
+                  </select>
+                ) : (
+                  <div style={{ fontWeight: 500 }}>{general ? `Everyone in ${agent}` : 'Only people with access'}</div>
+                )}
+                <div className='faint sm'>
+                  {general
+                    ? `Every member of ${agent}, now and later, ${ROLES[general]?.text ?? 'can view'}.`
+                    : 'Only the people above can open it.'}
+                </div>
+              </div>
+              {general &&
+                (isOwner ? (
+                  <RoleSelect
+                    value={general}
+                    disabled={busy === 'general'}
+                    label={`Role of everyone in ${agent}`}
+                    onChange={setGeneralAccess}
+                  />
+                ) : (
+                  <span className='badge'>{ROLES[general]?.label ?? general}</span>
+                ))}
+            </div>
+          </div>
+
         </div>
       )}
     </Dialog>

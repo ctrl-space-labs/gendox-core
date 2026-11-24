@@ -3,9 +3,13 @@ package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.ArtifactConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Artifact;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.ArtifactVersion;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.ArtifactDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.ArtifactSummaryDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ArtifactCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.ArtifactAccessService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.ArtifactAccessService.Role;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ArtifactService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,6 +23,7 @@ import org.springframework.data.domain.Sort;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -32,6 +37,8 @@ class ArtifactControllerTest {
     private final UUID threadId = UUID.randomUUID();
 
     private ArtifactService artifactService;
+    private ArtifactAccessService artifactAccessService;
+    private Artifact artifact;
     private ArtifactController controller;
 
     @BeforeEach
@@ -39,9 +46,10 @@ class ArtifactControllerTest {
         artifactService = mock(ArtifactService.class);
         SecurityUtils securityUtils = mock(SecurityUtils.class);
         when(securityUtils.getUserId()).thenReturn(me);
-        controller = new ArtifactController(artifactService, new ArtifactConverter(), securityUtils);
+        artifactAccessService = mock(ArtifactAccessService.class);
+        controller = new ArtifactController(artifactService, new ArtifactConverter(), securityUtils, artifactAccessService);
 
-        Artifact artifact = Artifact.builder().id(UUID.randomUUID()).threadId(threadId).projectId(projectId)
+        artifact = Artifact.builder().id(UUID.randomUUID()).threadId(threadId).projectId(projectId)
                 .title("Returns policy").artifactType(Type.builder().name("HTML").build()).latestVersion(2)
                 .ownerId(me).build();
         when(artifactService.getAll(any(), any())).thenReturn(new PageImpl<>(List.of(artifact)));
@@ -107,5 +115,59 @@ class ArtifactControllerTest {
 
         assertEquals("MAX_PAGE_SIZE_EXCEED", e.getErrorCode());
         verify(artifactService, never()).getAll(any(), any());
+    }
+
+    private void opens(Role role) throws GendoxException {
+        ArtifactVersion latest = ArtifactVersion.builder().version(2).content("<h1>Hi</h1>").build();
+        when(artifactService.getByIdInThread(threadId, artifact.getId())).thenReturn(artifact);
+        when(artifactService.open(artifact.getId(), me)).thenReturn(new ArtifactService.Opened(artifact, role));
+        when(artifactService.getVersion(any(), any())).thenReturn(latest);
+        when(artifactService.getVersionSummaries(artifact.getId())).thenReturn(List.of());
+        when(artifactAccessService.roleOf(artifact, me)).thenReturn(Optional.ofNullable(role));
+    }
+
+    @Test
+    void anArtifactReadInItsConversationCarriesTheReadersRole() throws GendoxException {
+        opens(Role.OWNER);
+
+        ArtifactDTO read = controller.getById(threadId, artifact.getId());
+
+        assertEquals("OWNER", read.getYourRole());
+        assertEquals("<h1>Hi</h1>", read.getContent());
+    }
+
+    @Test
+    void aReaderOfAPublicConversationWithoutARoleGetsNone() throws GendoxException {
+        opens(null);
+
+        assertNull(controller.getById(threadId, artifact.getId()).getYourRole());
+    }
+
+    @Test
+    void anArtifactOpenedByItsIdCarriesTheRoleAndItsConversationOnlyForItsOwner() throws GendoxException {
+        opens(Role.EDIT);
+
+        ArtifactDTO opened = controller.open(artifact.getId());
+
+        assertEquals("EDIT", opened.getYourRole());
+        assertNull(opened.getThreadId());
+
+        opens(Role.OWNER);
+        assertEquals(threadId, controller.open(artifact.getId()).getThreadId());
+    }
+
+    @Test
+    void readInAnotherConversationItHidesTheOwnersConversationFromAnyoneButTheOwner() throws GendoxException {
+        UUID openedOnIt = UUID.randomUUID();
+        opens(Role.EDIT);
+        when(artifactService.getByIdInThread(openedOnIt, artifact.getId())).thenReturn(artifact);
+
+        assertNull(controller.getById(openedOnIt, artifact.getId()).getThreadId());
+        // in the conversation it was made in, that conversation is the one being read
+        assertEquals(threadId, controller.getById(threadId, artifact.getId()).getThreadId());
+
+        opens(Role.OWNER);
+        when(artifactService.getByIdInThread(openedOnIt, artifact.getId())).thenReturn(artifact);
+        assertEquals(threadId, controller.getById(openedOnIt, artifact.getId()).getThreadId());
     }
 }

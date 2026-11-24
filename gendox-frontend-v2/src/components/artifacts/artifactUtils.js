@@ -157,11 +157,51 @@ export const fixRequestOf = (title, error) =>
   `Fix “${title || 'the artifact'}”: it shows an error${error.line ? ` at line ${error.line}` : ''}: ${error.message}`
 
 /**
- * The link that opens a shared artifact for its reader; the organization lets the page open in it.
- * The reader's own access is checked when it opens.
+ * The roles a user can have on an artifact (gendox-core#570), lowest first, as Claude's artifacts have them: Viewer
+ * sees it, Contributor also uses it (what they do inside it is kept), Editor also changes it with the agent. The owner
+ * is its maker, and alone shares it.
  */
-export const sharedArtifactLink = (organizationId, shareId) =>
-  `${window.location.origin}/gendox/shared-artifact/?organizationId=${organizationId}&shareId=${shareId}`
+export const ROLES = {
+  VIEW: { label: 'Viewer', text: 'can view' },
+  INTERACT: { label: 'Contributor', text: 'can use' },
+  EDIT: { label: 'Editor', text: 'can edit' },
+  OWNER: { label: 'Owner', text: 'owns it' }
+}
+export const SHARED_ROLES = ['VIEW', 'INTERACT', 'EDIT']
+
+const RANK = { VIEW: 1, INTERACT: 2, EDIT: 3, OWNER: 4 }
+
+/** Whether a role is at least the one needed */
+export const roleAtLeast = (role, needed) => (RANK[role] || 0) >= RANK[needed]
+
+// what Change it in a chat leaves for the agent home: the artifact to show beside the new chat, and the request it
+// starts with; read once, by the agent home that opens the chat
+const CHAT_ON_ARTIFACT = 'gx-chat-on-artifact'
+
+/** Remember that the chat about to open was opened on an artifact (Change it in a chat, gendox-core#570) */
+export const rememberChatOnArtifact = (threadId, artifactId, title) => {
+  try {
+    sessionStorage.setItem(CHAT_ON_ARTIFACT, JSON.stringify({ threadId, artifactId, prefill: `Change “${title}”: ` }))
+  } catch (_) {
+    // without storage the chat still opens, without the artifact beside it
+  }
+}
+
+/**
+ * The artifact a chat was just opened on, and the request it starts with, once: null for any other chat.
+ * @returns {{ artifactId, prefill } | null}
+ */
+export const takeChatOnArtifact = threadId => {
+  try {
+    const remembered = JSON.parse(sessionStorage.getItem(CHAT_ON_ARTIFACT) || 'null')
+    if (remembered?.threadId !== threadId) return null
+    sessionStorage.removeItem(CHAT_ON_ARTIFACT)
+
+    return remembered
+  } catch (_) {
+    return null
+  }
+}
 
 /** Save an artifact's content as a file */
 export const downloadFile = (name, mime, content) => {

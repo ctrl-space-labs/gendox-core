@@ -5,6 +5,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.ArtifactVersion;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.ArtifactDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.ArtifactSummaryDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.ArtifactVersionSummaryDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.ArtifactAccessService;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -31,9 +33,10 @@ public class ArtifactConverter implements GendoxConverter<Artifact, ArtifactSumm
     }
 
     /**
-     * An artifact with its versions and the content of the one shown.
+     * An artifact with its versions, the content of the one shown, and the reader's role on it (null for none).
      */
-    public ArtifactDTO toDTO(Artifact artifact, List<ArtifactVersionSummaryDTO> versions, ArtifactVersion shown) {
+    public ArtifactDTO toDTO(Artifact artifact, List<ArtifactVersionSummaryDTO> versions, ArtifactVersion shown,
+                             @Nullable ArtifactAccessService.Role yourRole) {
         ArtifactDTO artifactDTO = new ArtifactDTO();
         artifactDTO.setId(artifact.getId());
         artifactDTO.setThreadId(artifact.getThreadId());
@@ -49,6 +52,7 @@ public class ArtifactConverter implements GendoxConverter<Artifact, ArtifactSumm
         artifactDTO.setVersions(versions);
         artifactDTO.setVersion(shown.getVersion());
         artifactDTO.setContent(shown.getContent());
+        artifactDTO.setYourRole(yourRole == null ? null : yourRole.name());
 
         return artifactDTO;
     }

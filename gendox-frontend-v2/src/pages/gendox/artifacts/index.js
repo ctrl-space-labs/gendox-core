@@ -7,7 +7,6 @@ import { getToken } from 'src/components/agent/useAgent'
 import { formatDateTime, timeAgo } from 'src/components/knowledge/documentUtils'
 import { KINDS, kindInfo, kindOf } from 'src/components/artifacts/artifactUtils'
 import useProjectArtifacts from 'src/components/artifacts/useProjectArtifacts'
-import useSharedWithMe from 'src/components/artifacts/useSharedWithMe'
 import ArtifactView from 'src/components/artifacts/ArtifactView'
 import AppLayout from 'src/layouts/AppLayout'
 import Dialog from 'src/components/ui/Dialog'
@@ -53,8 +52,7 @@ const ArtifactName = ({ artifact, line }) => {
 
 /**
  * The artifacts of the user's own conversations with this agent (gendox-core#523), the last changed first.
- * A row opens the artifact here, where it can be shared; its conversation opens in the agent home. Never another
- * user's: a conversation is personal.
+ * A row opens the artifact here, where its owner shares it; its conversation opens in the agent home.
  */
 const YourArtifacts = ({ organizationId, projectId, project, href, query, kind }) => {
   const router = useRouter()
@@ -150,7 +148,7 @@ const YourArtifacts = ({ organizationId, projectId, project, href, query, kind }
         }
       >
         {open && (
-          <ArtifactView threadId={open.threadId} artifactId={open.id} token={getToken()} agentName={project?.name} />
+          <ArtifactView artifactId={open.id} token={getToken()} agentName={project?.name} />
         )}
       </Dialog>
     </>
@@ -158,42 +156,25 @@ const YourArtifacts = ({ organizationId, projectId, project, href, query, kind }
 }
 
 /**
- * What others shared with the user (gendox-core#523): with this agent's members, or with them by name. This agent's,
- * or every agent's in the organization, including agents the user is not a member of. A row opens it read only.
+ * The others' artifacts with this agent the user has a role on (gendox-core#570): shared with every member of the
+ * agent, or with them by name. A row opens it here, by its id; never the conversation it was made in. An Editor
+ * changes it in a chat of their own.
  */
-const SharedWithYou = ({ organizationId, projectId, projects, href, query, kind }) => {
-  const router = useRouter()
-  const [everyAgent, setEveryAgent] = useState(false)
-  const { shares, total, failed } = useSharedWithMe({
+const SharedWithYou = ({ organizationId, projectId, project, query, kind }) => {
+  const [open, setOpen] = useState(null) // the summary of the artifact on screen
+  const { artifacts, total, failed } = useProjectArtifacts({
     organizationId,
-    projectId: everyAgent ? undefined : projectId,
+    projectId,
     search: query,
-    kind
+    kind,
+    sharedWithMe: true
   })
-  const agentName = id => projects.find(p => p.id === id)?.name
 
-  // who shared it, and with whom: everyone in an agent, or the user by name (from which agent, across every agent)
-  const lineOf = share => {
-    const by = `By ${share.sharedByName || 'someone'}`
-    const agent = agentName(share.projectId)
-    if (share.audience === 'PROJECT') return `${by} · with everyone in ${agent ?? 'an agent'}`
-
-    return everyAgent && agent ? `${by} · with you · ${agent}` : `${by} · with you`
-  }
+  if (artifacts === null) return <Loading />
 
   return (
     <>
-      <div className='row' style={{ gap: 6, padding: '12px 16px 0' }}>
-        <button className={`chip ${everyAgent ? '' : 'on'}`} onClick={() => setEveryAgent(false)}>
-          This agent
-        </button>
-        <button className={`chip ${everyAgent ? 'on' : ''}`} onClick={() => setEveryAgent(true)}>
-          Every agent
-        </button>
-      </div>
-      {shares === null ? (
-        <Loading />
-      ) : shares.length === 0 ? (
+      {artifacts.length === 0 ? (
         failed ? (
           <Empty
             icon={<SearchX className='lucide' />}
@@ -206,11 +187,7 @@ const SharedWithYou = ({ organizationId, projectId, projects, href, query, kind 
           <Empty
             icon={<Share2 className='lucide' />}
             title='Nothing shared with you yet'
-            text={
-              everyAgent
-                ? 'When someone in the organization shares an artifact with you, it shows up here.'
-                : 'Nothing from this agent. Look in every agent, or wait until someone shares one with you.'
-            }
+            text={`When someone shares an artifact of ${project?.name ?? 'this agent'} with you, it shows up here.`}
           />
         )
       ) : (
@@ -220,49 +197,57 @@ const SharedWithYou = ({ organizationId, projectId, projects, href, query, kind 
               <tr>
                 <th>Artifact</th>
                 <th className='hide-sm'>Kind</th>
-                <th className='hide-sm'>Shared</th>
-                <th className='hide-sm'>Version</th>
+                <th className='hide-sm'>Changed</th>
               </tr>
             </thead>
             <tbody>
-              {shares.map(share => (
-                <tr
-                  key={share.shareId}
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => router.push(href('/gendox/shared-artifact', { shareId: share.shareId }))}
-                >
+              {artifacts.map(artifact => (
+                <tr key={artifact.id} style={{ cursor: 'pointer' }} onClick={() => setOpen(artifact)}>
                   <td>
-                    <ArtifactName artifact={share} line={lineOf(share)} />
+                    <ArtifactName
+                      artifact={artifact}
+                      line={`v${artifact.latestVersion} · by ${artifact.ownerName || 'someone'}`}
+                    />
                   </td>
                   <td className='hide-sm'>
-                    <span className='badge'>{kindInfo(kindOf(share)).label}</span>
+                    <span className='badge'>{kindInfo(kindOf(artifact)).label}</span>
                   </td>
-                  <td className='hide-sm muted sm num' title={formatDateTime(share.sharedAt)}>
-                    {timeAgo(share.sharedAt)}
+                  <td className='hide-sm muted sm num' title={formatDateTime(artifact.updatedAt)}>
+                    {timeAgo(artifact.updatedAt)}
                   </td>
-                  <td className='hide-sm muted sm'>{share.followsLatest ? 'Latest' : `v${share.version}`}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-          {total > shares.length && (
+          {total > artifacts.length && (
             <div className='faint sm' style={{ padding: '10px 16px' }}>
-              Showing the {shares.length} newest of {total}. Search to find the others.
+              Showing the {artifacts.length} last changed of {total}. Search to find the others.
             </div>
           )}
         </div>
       )}
+
+      <Dialog
+        open={!!open}
+        onClose={() => setOpen(null)}
+        size='xl'
+        className='art-modal'
+        title={open?.title}
+        subtitle={open && `By ${open.ownerName || 'someone'}`}
+      >
+        {open && <ArtifactView artifactId={open.id} token={getToken()} agentName={project?.name} />}
+      </Dialog>
     </>
   )
 }
 
 /** The artifacts of the user's conversations with this agent, and those others shared with them. */
 const ArtifactsPage = () => {
-  const { organizationId, projectId, project, projects, href } = useActiveScope()
+  const { organizationId, projectId, project, href } = useActiveScope()
   const [view, setView] = useState('yours')
   const [query, setQuery] = useState('')
   const [kind, setKind] = useState('')
-  const scope = { organizationId, projectId, project, projects, href, query, kind }
+  const scope = { organizationId, projectId, project, href, query, kind }
 
   return (
     <main className='content'>
@@ -272,7 +257,7 @@ const ArtifactsPage = () => {
           <p>
             {view === 'yours'
               ? `The pages, diagrams, documents and code ${project?.name ?? 'the agent'} made in your conversations, the last changed first.`
-              : 'The artifacts people in your organization shared with you, the newest first. You see them, not the conversations they came from.'}
+              : `What others made with ${project?.name ?? 'the agent'} and shared with you, the last changed first. You see the artifacts, not the conversations they came from.`}
           </p>
         </div>
         <div className='actions'>

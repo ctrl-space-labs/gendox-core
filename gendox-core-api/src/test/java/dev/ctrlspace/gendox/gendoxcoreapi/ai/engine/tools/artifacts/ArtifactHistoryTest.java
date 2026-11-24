@@ -100,4 +100,49 @@ class ArtifactHistoryTest {
         assertEquals("{\"title\":\"Card\",\"content\":\"<h1>lo",
                 message.getToolCalls().get(0).get("function").get("arguments").asText());
     }
+
+    private AiModelMessage toolResult(String name, String content) {
+        return AiModelMessage.builder().role("tool").name(name).toolCallId("c1").content(content).build();
+    }
+
+    @Test
+    void theContentReadArtifactReturnedIsLeftOutAndTheRestStays() {
+        AiModelMessage read = toolResult("read_artifact", """
+                {"artifactId":"a1","title":"Card","kind":"html","version":2,"latestVersion":3,"content":"<h1>long</h1>"}""");
+
+        ArtifactHistory.withoutArtifactContent(List.of(read), objectMapper);
+
+        JsonNode result = objectMapper.readTree(read.getContent());
+        assertEquals(ArtifactHistory.CONTENT_NOTE, result.get("content").asText());
+        assertEquals("a1", result.get("artifactId").asText());
+        assertEquals(2, result.get("version").asInt());
+        assertEquals(3, result.get("latestVersion").asInt());
+        assertEquals("c1", read.getToolCallId());
+    }
+
+    @Test
+    void aReadThatFailedAndOtherToolsResultsAreNotTouched() {
+        String failed = "{\"errorCode\":\"ARTIFACT_NOT_FOUND\",\"errorMessage\":\"No artifact a1\"}";
+        AiModelMessage error = toolResult("read_artifact", failed);
+        AiModelMessage notJson = toolResult("read_artifact", "not json");
+        AiModelMessage search = toolResult("advanced_search", "{\"content\":\"keep\"}");
+
+        ArtifactHistory.withoutArtifactContent(List.of(error, notJson, search), objectMapper);
+
+        assertEquals(failed, error.getContent());
+        assertEquals("not json", notJson.getContent());
+        assertEquals("{\"content\":\"keep\"}", search.getContent());
+    }
+
+    @Test
+    void aReadIsTheSameEveryTimeSoTheHistoryStaysCacheable() {
+        String result = "{\"artifactId\":\"a1\",\"version\":1,\"content\":\"<h1>long</h1>\"}";
+        AiModelMessage first = toolResult("read_artifact", result);
+        AiModelMessage second = toolResult("read_artifact", result);
+
+        ArtifactHistory.withoutArtifactContent(List.of(first), objectMapper);
+        ArtifactHistory.withoutArtifactContent(List.of(second), objectMapper);
+
+        assertEquals(first.getContent(), second.getContent());
+    }
 }

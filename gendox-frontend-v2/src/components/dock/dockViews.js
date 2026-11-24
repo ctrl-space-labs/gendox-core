@@ -145,8 +145,10 @@ export const DockChat = ({ chatKey, threadId }) => {
 
 export const sourcesUrlOf = (threadId, messageId) => `/sources?${new URLSearchParams({ threadId, messageId })}`
 
-// one tab per artifact, always at its latest version; older ones are in the tab's version list
-export const artifactUrlOf = (threadId, artifactId) => `/artifact?${new URLSearchParams({ threadId, artifactId })}`
+// one tab per artifact, always at its latest version; older ones are in the tab's version list. Without a thread it
+// loads by its id (an artifact shared with the user, gendox-core#570); besideChat names the chat opened on it
+export const artifactUrlOf = (threadId, artifactId, besideChat) =>
+  `/artifact?${new URLSearchParams(threadId ? { threadId, artifactId } : { artifactId, ...(besideChat ? { besideChat } : {}) })}`
 
 /**
  * An artifact in a tab of its own (gendox-core#523), named after it. A newer version made in an open chat
@@ -155,13 +157,19 @@ export const artifactUrlOf = (threadId, artifactId) => `/artifact?${new URLSearc
 export const DockArtifact = () => {
   const tab = useDockTab()
   const { query } = useView()
-  const { threadId, artifactId } = query
-  const session = useSelector(state =>
-    Object.values(state.gendoxChat.sessions).find(s => s.currentThread?.threadId === threadId)
-  )
+  const { threadId, artifactId, besideChat } = query
+  const sessions = useSelector(state => state.gendoxChat.sessions)
+  // its own chat; opened by its id, any open chat that changes it (a chat opened on it, gendox-core#570)
+  const session = Object.values(sessions).find(s => threadId && s.currentThread?.threadId === threadId)
   const knownVersion = useMemo(
-    () => latestVersionsOf(session?.currentThread?.messages)[artifactId],
-    [session?.currentThread?.messages, artifactId]
+    () =>
+      Math.max(
+        0,
+        ...Object.values(sessions)
+          .filter(s => !threadId || s.currentThread?.threadId === threadId)
+          .map(s => latestVersionsOf(s.currentThread?.messages)[artifactId] || 0)
+      ) || undefined,
+    [sessions, threadId, artifactId]
   )
 
   return (
@@ -174,6 +182,7 @@ export const DockArtifact = () => {
           token={getToken()}
           agentName={session?.currentThread?.agent?.fullName}
           onTitle={title => tab.setTitle(short(title))}
+          besideItsChat={Boolean(besideChat)}
         />
       </div>
     </div>

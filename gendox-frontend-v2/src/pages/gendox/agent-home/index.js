@@ -3,6 +3,7 @@ import { useRouter } from 'next/router'
 import { useDispatch } from 'react-redux'
 import { AppWindow, BookOpen, Check, FileText, Layers, Library, ListChecks, MessageSquareText, PanelsTopLeft, RotateCcw, ScanText, Table2 } from 'lucide-react'
 import useActiveScope from 'src/hooks/useActiveScope'
+import { useAuth } from 'src/authentication/useAuth'
 import { chatActions } from 'src/store/chat/gendoxChat'
 import { clearAll } from 'src/store/chatAttachments/chatAttachments'
 import AppLayout, { useFocusedTab, useTopbarTitle } from 'src/layouts/AppLayout'
@@ -17,8 +18,10 @@ import {
   DockScreen,
   DockSources,
   DockTasks,
+  artifactUrlOf,
   tabUrlOf
 } from 'src/components/dock/dockViews'
+import { takeChatOnArtifact } from 'src/components/artifacts/artifactUtils'
 import DocumentView from 'src/views/DocumentView'
 import DocumentInsightsView from 'src/views/DocumentInsightsView'
 import DigitizationView from 'src/views/DigitizationView'
@@ -95,6 +98,7 @@ const AgentHomePage = () => {
   const router = useRouter()
   const dispatch = useDispatch()
   const { projectId, href } = useActiveScope()
+  const { user } = useAuth()
   const dockRef = useRef(null)
   const prefills = useRef(new Map())
   const [title, setTitle] = useState('Chat')
@@ -175,12 +179,14 @@ const AgentHomePage = () => {
     [open, canOpen]
   )
 
-  // the agent changed: its windows start again
-  const storageKey = `gx-dock-agent-${projectId}`
+  // the agent changed: its windows start again. Each person's own: another who signs in on the same browser
+  // does not find their conversations open
+  const storageKey = `gx-dock-agent-${user?.id}-${projectId}`
 
   // a link to a tab (#/chat/…, #/gendox/document-instance?…) opens it, now and while the page is open
   useEffect(() => {
-    if (!router.isReady || !projectId) return
+    // the windows show once the user is known, whose they are
+    if (!router.isReady || !projectId || !user?.id) return
     const openHash = () => {
       let linked = decodeURIComponent(window.location.hash.slice(1))
       if (!linked) return
@@ -189,7 +195,13 @@ const AgentHomePage = () => {
         linked = newChatUrl()
         window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}#${linked}`)
       }
-      setTimeout(() => open(linked), 0)
+      // a chat just opened on an artifact (Change it in a chat): the artifact beside it, and a request to change it
+      const onArtifact = linked.startsWith('/chat/') ? takeChatOnArtifact(linked.slice('/chat/'.length)) : null
+      if (onArtifact) prefills.current.set(linked, onArtifact.prefill)
+      setTimeout(() => {
+        open(linked)
+        if (onArtifact) open(artifactUrlOf(null, onArtifact.artifactId, linked.slice('/chat/'.length)))
+      }, 0)
     }
     openHash()
     router.events.on('hashChangeComplete', openHash)
@@ -199,7 +211,7 @@ const AgentHomePage = () => {
       router.events.off('hashChangeComplete', openHash)
       window.removeEventListener('hashchange', openHash)
     }
-  }, [router.isReady, router.events, projectId, open])
+  }, [router.isReady, router.events, projectId, user?.id, open])
 
   const onFocus = useCallback((url, v) => {
     setTitle(v?.title ?? 'Chat')
@@ -210,7 +222,7 @@ const AgentHomePage = () => {
     }
   }, [])
 
-  if (!router.isReady || !projectId) return null
+  if (!router.isReady || !projectId || !user?.id) return null
 
   return (
     <DockActionsProvider value={actions}>
