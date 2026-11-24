@@ -16,23 +16,32 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.ObjectMapper;
+import org.mockito.Spy;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class ArtifactServiceTest {
+
+    // a real one: the service reads what the artifact tools returned
+    @Spy
+    private ObjectMapper objectMapper = JsonMapper.builder().build();
 
     @InjectMocks
     private ArtifactService artifactService;
@@ -271,6 +280,162 @@ class ArtifactServiceTest {
                 List.of(edit("Old", "New")));
 
         assertEquals("INLINE", updated.getDisplay().getName());
+    }
+
+    @Test
+    void setDisplay_byAnEditor_changesItWithoutAVersion() throws GendoxException {
+        Artifact artifact = existing(3, "<p>x</p>");
+        UUID editor = UUID.randomUUID();
+        when(artifactAccessService.require(artifact, editor, Role.EDIT)).thenReturn(Role.EDIT);
+
+        ArtifactService.Opened opened = artifactService.setDisplay(artifact.getId(), editor, "inline");
+
+        assertEquals("INLINE", opened.artifact().getDisplay().getName());
+        assertEquals(Role.EDIT, opened.role());
+        assertEquals(3, opened.artifact().getLatestVersion());
+        verify(artifactVersionRepository, never()).save(any());
+    }
+
+    @Test
+    void setDisplay_belowEditor_isRefusedAndChangesNothing() throws GendoxException {
+        Artifact artifact = existing(1, "<p>x</p>");
+        UUID viewer = UUID.randomUUID();
+        when(artifactAccessService.require(artifact, viewer, Role.EDIT))
+                .thenThrow(new GendoxException("ARTIFACT_ROLE_TOO_LOW", "Viewer", org.springframework.http.HttpStatus.FORBIDDEN));
+
+        GendoxException e = assertThrows(GendoxException.class,
+                () -> artifactService.setDisplay(artifact.getId(), viewer, "inline"));
+
+        assertEquals("ARTIFACT_ROLE_TOO_LOW", e.getErrorCode());
+        assertNull(artifact.getDisplay());
+        verify(artifactRepository, never()).save(artifact);
+    }
+
+    @Test
+    void setDisplay_anUnknownOne_isRefused() throws GendoxException {
+        Artifact artifact = existing(1, "<p>x</p>");
+        UUID editor = UUID.randomUUID();
+        when(artifactAccessService.require(artifact, editor, Role.EDIT)).thenReturn(Role.OWNER);
+
+        GendoxException e = assertThrows(GendoxException.class,
+                () -> artifactService.setDisplay(artifact.getId(), editor, null));
+
+        assertEquals("ARTIFACT_DISPLAY_NOT_SUPPORTED", e.getErrorCode());
+    }
+
+    @Test
+    void setDisplay_anArtifactThatIsNotThere_isNotFound() {
+        GendoxException e = assertThrows(GendoxException.class,
+                () -> artifactService.setDisplay(UUID.randomUUID(), UUID.randomUUID(), "card"));
+
+        assertEquals("ARTIFACT_NOT_FOUND", e.getErrorCode());
+    }
+
+    private void toolResultsInThread(String... results) {
+        List<Message> messages = new ArrayList<>();
+        for (String result : results) {
+            Message message = new Message();
+            message.setRole("tool");
+            message.setValue(result);
+            messages.add(message);
+        }
+        when(messageRepository.findAllByThreadIdAndRoleAndNameIn(eq(threadId), eq("tool"), any())).thenReturn(messages);
+    }
+
+    private static String resultOf(Artifact artifact, int version) {
+        return "{\"artifactId\":\"" + artifact.getId() + "\",\"version\":" + version + "}";
+    }
+
+    @Test
+    void update_wholeContent_afterTheConversationSawTheLatest_isTaken() throws GendoxException {
+        Artifact artifact = existing(3, "<p>v3</p>");
+        toolResultsInThread(resultOf(artifact, 1), resultOf(artifact, 3), "not json");
+
+        Artifact updated = artifactService.update(threadId, artifact.getId(), messageId, null, null, "<p>v4</p>", null);
+
+        assertEquals(4, updated.getLatestVersion());
+    }
+
+    @Test
+    void update_wholeContent_whenSomeoneChangedItSince_isRefusedAndSavesNothing() {
+        Artifact artifact = existing(3, "<p>v3</p>");
+        // this conversation saw version 2; another made version 3; another artifact's result does not count
+        toolResultsInThread(resultOf(artifact, 2), resultOf(Artifact.builder().id(UUID.randomUUID()).build(), 9));
+
+        GendoxException e = assertThrows(GendoxException.class,
+                () -> artifactService.update(threadId, artifact.getId(), messageId, null, null, "<p>mine</p>", null));
+
+        assertEquals("ARTIFACT_CHANGED_SINCE_READ", e.getErrorCode());
+        assertTrue(e.getMessage().contains("last saw version 2"), e.getMessage());
+        assertEquals(3, artifact.getLatestVersion());
+        verify(artifactVersionRepository, never()).save(any());
+    }
+
+    @Test
+    void update_wholeContent_ofAnArtifactNeverRead_isRefused() {
+        Artifact artifact = existing(1, "<p>x</p>");
+        toolResultsInThread();
+
+        GendoxException e = assertThrows(GendoxException.class,
+                () -> artifactService.update(threadId, artifact.getId(), messageId, null, null, "<p>y</p>", null));
+
+        assertEquals("ARTIFACT_CHANGED_SINCE_READ", e.getErrorCode());
+        assertTrue(e.getMessage().contains("has not read"), e.getMessage());
+    }
+
+    @Test
+    void update_edits_needNoReading_theyFailOnTheirOwnWhenTheTextIsGone() throws GendoxException {
+        Artifact artifact = existing(3, "<p>Old</p>");
+        toolResultsInThread(resultOf(artifact, 1));
+
+        Artifact updated = artifactService.update(threadId, artifact.getId(), messageId, null, null, null,
+                List.of(edit("Old", "New")));
+
+        assertEquals(4, updated.getLatestVersion());
+    }
+
+    @Test
+    void restoreVersion_bringsAnEarlierOneBackAsANewVersion_byThePerson() throws GendoxException {
+        Artifact artifact = existing(3, "<p>v3</p>");
+        when(artifactVersionRepository.findByArtifactIdAndVersion(artifact.getId(), 1))
+                .thenReturn(Optional.of(ArtifactVersion.builder().artifactId(artifact.getId()).version(1).content("<p>v1</p>").build()));
+        UUID editor = UUID.randomUUID();
+        when(artifactAccessService.require(artifact, editor, Role.EDIT)).thenReturn(Role.EDIT);
+
+        ArtifactService.Opened opened = artifactService.restoreVersion(artifact.getId(), editor, 1);
+
+        assertEquals(4, opened.artifact().getLatestVersion());
+        ArgumentCaptor<ArtifactVersion> saved = ArgumentCaptor.forClass(ArtifactVersion.class);
+        verify(artifactVersionRepository).save(saved.capture());
+        assertEquals(4, saved.getValue().getVersion());
+        assertEquals("<p>v1</p>", saved.getValue().getContent());
+        assertEquals(editor, saved.getValue().getCreatedBy());
+        assertNull(saved.getValue().getMessageId());
+    }
+
+    @Test
+    void restoreVersion_ofTheLatest_changesNothing() throws GendoxException {
+        Artifact artifact = existing(3, "<p>v3</p>");
+        UUID editor = UUID.randomUUID();
+        when(artifactAccessService.require(artifact, editor, Role.EDIT)).thenReturn(Role.OWNER);
+
+        artifactService.restoreVersion(artifact.getId(), editor, 3);
+
+        assertEquals(3, artifact.getLatestVersion());
+        verify(artifactVersionRepository, never()).save(any());
+    }
+
+    @Test
+    void restoreVersion_belowEditor_isRefused() throws GendoxException {
+        Artifact artifact = existing(3, "<p>v3</p>");
+        UUID viewer = UUID.randomUUID();
+        when(artifactAccessService.require(artifact, viewer, Role.EDIT))
+                .thenThrow(new GendoxException("ARTIFACT_ROLE_TOO_LOW", "Viewer", org.springframework.http.HttpStatus.FORBIDDEN));
+
+        assertThrows(GendoxException.class, () -> artifactService.restoreVersion(artifact.getId(), viewer, 1));
+
+        assertEquals(3, artifact.getLatestVersion());
+        verify(artifactVersionRepository, never()).save(any());
     }
 
     @Test

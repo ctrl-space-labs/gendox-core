@@ -1,5 +1,11 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.artifacts.CreateArtifactTool;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.artifacts.ReadArtifactTool;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.artifacts.UpdateArtifactTool;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.ArtifactEditDTO;
@@ -43,6 +49,7 @@ public class ArtifactService {
     private final UserRepository userRepository;
     private final ArtifactAccessService artifactAccessService;
     private final ArtifactThreadRepository artifactThreadRepository;
+    private final ObjectMapper objectMapper;
 
     /**
      * Characters one version may hold.
@@ -57,12 +64,14 @@ public class ArtifactService {
                            MessageRepository messageRepository,
                            UserRepository userRepository,
                            ArtifactAccessService artifactAccessService,
-                           ArtifactThreadRepository artifactThreadRepository) {
+                           ArtifactThreadRepository artifactThreadRepository,
+                           ObjectMapper objectMapper) {
         this.artifactRepository = artifactRepository;
         this.artifactVersionRepository = artifactVersionRepository;
         this.typeService = typeService;
         this.chatThreadRepository = chatThreadRepository;
         this.messageRepository = messageRepository;
+        this.objectMapper = objectMapper;
         this.userRepository = userRepository;
         this.artifactAccessService = artifactAccessService;
         this.artifactThreadRepository = artifactThreadRepository;
@@ -133,6 +142,9 @@ public class ArtifactService {
             artifact.setDisplay(getArtifactDisplay(displayName));
         }
         if (hasContent || hasEdits) {
+            if (hasContent) {
+                requireLatestSeen(artifact, threadId);
+            }
             String next = hasContent ? content : applyEdits(getVersion(artifact, null).getContent(), edits);
             validateContent(next);
             artifact.setLatestVersion(artifact.getLatestVersion() + 1);
@@ -265,6 +277,39 @@ public class ArtifactService {
     }
 
     /**
+     * How the artifact shows in the answer, chosen by a person: CARD or INLINE. It changes how it shows, not its
+     * content, so it adds no version; everyone who sees the artifact sees the change. Editor and up.
+     */
+    @Transactional
+    public Opened setDisplay(UUID artifactId, @Nullable UUID userId, String displayName) throws GendoxException {
+        Artifact artifact = artifactRepository.lockById(artifactId)
+                .orElseThrow(() -> new GendoxException("ARTIFACT_NOT_FOUND",
+                        "No artifact " + artifactId + " that you can open", HttpStatus.NOT_FOUND));
+        Role role = artifactAccessService.require(artifact, userId, Role.EDIT);
+        artifact.setDisplay(getArtifactDisplay(displayName == null ? "" : displayName));
+        return new Opened(artifactRepository.save(artifact), role);
+    }
+
+    /**
+     * Brings back an earlier version as a new one, with its content: the history stays whole, and every version keeps
+     * its number. Made by a person, so it points at no message. Editor and up; the latest version is left as it is.
+     */
+    @Transactional
+    public Opened restoreVersion(UUID artifactId, @Nullable UUID userId, Integer version) throws GendoxException {
+        Artifact artifact = artifactRepository.lockById(artifactId)
+                .orElseThrow(() -> new GendoxException("ARTIFACT_NOT_FOUND",
+                        "No artifact " + artifactId + " that you can open", HttpStatus.NOT_FOUND));
+        Role role = artifactAccessService.require(artifact, userId, Role.EDIT);
+        if (version != null && version.equals(artifact.getLatestVersion())) {
+            return new Opened(artifact, role);
+        }
+        String content = getVersion(artifact, version).getContent();
+        artifact.setLatestVersion(artifact.getLatestVersion() + 1);
+        saveVersion(artifact, content, null, userId);
+        return new Opened(artifactRepository.save(artifact), role);
+    }
+
+    /**
      * @param version null for the latest
      */
     public ArtifactVersion getVersion(Artifact artifact, @Nullable Integer version) throws GendoxException {
@@ -370,6 +415,40 @@ public class ArtifactService {
                                 .sorted()
                                 .collect(Collectors.joining(", ")),
                         HttpStatus.BAD_REQUEST));
+    }
+
+    /**
+     * A whole new content is written against what the conversation last saw of the artifact: if someone else has
+     * changed it since, it would undo their change without a word. So it is taken only when the conversation has seen
+     * the latest version, by reading it or by making it. Edits need no such check: one fails when its text is gone.
+     */
+    private void requireLatestSeen(Artifact artifact, UUID threadId) throws GendoxException {
+        int seen = latestVersionSeen(artifact.getId(), threadId);
+        if (seen < artifact.getLatestVersion()) {
+            throw new GendoxException("ARTIFACT_CHANGED_SINCE_READ",
+                    "Artifact " + artifact.getId() + " is at version " + artifact.getLatestVersion()
+                            + (seen > 0 ? ", but this conversation last saw version " + seen : ", which this conversation has not read")
+                            + ": it was changed since. Nothing was changed. Read it with read_artifact, then change it "
+                            + "with edits, or send the whole content again.",
+                    HttpStatus.CONFLICT);
+        }
+    }
+
+    // the highest version the artifact tools returned for it in this conversation: made, changed or read
+    private int latestVersionSeen(UUID artifactId, UUID threadId) {
+        int seen = 0;
+        for (Message result : messageRepository.findAllByThreadIdAndRoleAndNameIn(threadId, "tool",
+                List.of(CreateArtifactTool.NAME, UpdateArtifactTool.NAME, ReadArtifactTool.NAME))) {
+            try {
+                JsonNode value = objectMapper.readTree(result.getValue());
+                if (artifactId.toString().equals(value.path("artifactId").asText())) {
+                    seen = Math.max(seen, value.path("version").asInt(0));
+                }
+            } catch (JacksonException e) {
+                // not a result of ours: skip it
+            }
+        }
+        return seen;
     }
 
     private void saveVersion(Artifact artifact, String content, @Nullable UUID messageId, @Nullable UUID author) {

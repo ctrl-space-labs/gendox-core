@@ -1,7 +1,18 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
 import toast from 'react-hot-toast'
-import { Check, CircleAlert, Copy, Download, MessageSquarePlus, MessageSquareShare, Share2, ShieldCheck } from 'lucide-react'
+import {
+  Check,
+  CircleAlert,
+  Copy,
+  Download,
+  GalleryVertical,
+  MessageSquarePlus,
+  MessageSquareShare,
+  PanelTop,
+  Share2,
+  ShieldCheck
+} from 'lucide-react'
 import artifactService from 'src/gendox-sdk/artifactService'
 import { copyToClipboard } from 'src/utils/copyToClipboard'
 import { getErrorMessage } from 'src/utils/errorHandler'
@@ -12,6 +23,8 @@ import ArtifactError from 'src/components/artifacts/ArtifactError'
 import ArtifactShareDialog from 'src/components/artifacts/ArtifactShareDialog'
 import useActiveScope from 'src/hooks/useActiveScope'
 import {
+  ARTIFACT_DISPLAY_CHANGED,
+  displayOf,
   downloadFile,
   fencedCode,
   fileNameOf,
@@ -59,6 +72,8 @@ const ArtifactView = ({
   const [error, setError] = useState(null) // the shown version's first unhandled error
   const [sharing, setSharing] = useState(false)
   const [opening, setOpening] = useState(false) // Change it in a chat is making the conversation
+  const [switching, setSwitching] = useState(false) // its display is being changed
+  const [restoring, setRestoring] = useState(false) // an earlier version is being brought back
   const router = useRouter()
   const { organizationId, projectId, href } = useActiveScope()
   // following the latest, a newer version from the chat loads it; a chosen older one stays
@@ -113,6 +128,36 @@ const ArtifactView = ({
   // its owner changes it in its own conversation; an Editor in a new one of their own, unless already in one
   const canChangeInAChat = !onAsk && !besideItsChat && role !== 'OWNER' && roleAtLeast(role, 'EDIT') && Boolean(projectId)
 
+  // card or inline, for everyone who sees it; the chats on the page follow at once
+  const switchDisplay = async () => {
+    const next = displayOf(artifact) === 'inline' ? 'CARD' : 'INLINE'
+    setSwitching(true)
+    try {
+      const { data } = await artifactService.setDisplay(artifactId, next, token)
+      setArtifact(current => ({ ...current, display: data.display }))
+      window.dispatchEvent(new CustomEvent(ARTIFACT_DISPLAY_CHANGED, { detail: { artifactId, display: displayOf(data) } }))
+    } catch (e) {
+      toast.error(getErrorMessage(e))
+    } finally {
+      setSwitching(false)
+    }
+  }
+
+  // the version on screen comes back as a new, latest one; the history stays whole
+  const restore = async () => {
+    setRestoring(true)
+    try {
+      const { data } = await artifactService.restoreVersion(artifactId, artifact.version, token)
+      setArtifact(data)
+      setChosen(null)
+      toast.success(`v${artifact.version} is back, as v${data.latestVersion}`)
+    } catch (e) {
+      toast.error(getErrorMessage(e))
+    } finally {
+      setRestoring(false)
+    }
+  }
+
   const changeInAChat = async () => {
     setOpening(true)
     try {
@@ -166,6 +211,7 @@ const ArtifactView = ({
             <option key={v.version} value={v.version}>
               v{v.version}
               {v.version === artifact.latestVersion ? ' · latest' : ''}
+              {v.createdByName ? ` · ${v.createdByName}` : ''}
             </option>
           ))}
         </select>
@@ -184,6 +230,17 @@ const ArtifactView = ({
           <button className='btn s' onClick={() => setSharing(true)}>
             <Share2 className='lucide' />
             {role === 'OWNER' ? 'Share' : 'Who has access'}
+          </button>
+        )}
+        {roleAtLeast(role, 'EDIT') && (
+          <button
+            className='btn ghost s icon'
+            disabled={switching}
+            aria-busy={switching}
+            title={displayOf(artifact) === 'inline' ? 'Show as a card in the answer' : 'Show inline, as part of the answer'}
+            onClick={switchDisplay}
+          >
+            {displayOf(artifact) === 'inline' ? <PanelTop className='lucide' /> : <GalleryVertical className='lucide' />}
           </button>
         )}
         {canChangeInAChat && (
@@ -212,6 +269,14 @@ const ArtifactView = ({
           <button className='linkbtn' onClick={() => setChosen(null)}>
             Show the latest
           </button>
+          {roleAtLeast(role, 'EDIT') && (
+            <>
+              {' · '}
+              <button className='linkbtn' disabled={restoring} aria-busy={restoring} onClick={restore}>
+                Restore this version
+              </button>
+            </>
+          )}
         </div>
       )}
       <div className='art-b'>

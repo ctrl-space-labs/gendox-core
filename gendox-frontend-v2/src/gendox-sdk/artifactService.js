@@ -97,6 +97,22 @@ const openInNewChat = async (artifactId, token) => {
   return axios.post(apiRequests.artifactChats(artifactId), null, { headers: headers(token) })
 }
 
+/**
+ * How an artifact shows in the answer, for everyone who sees it: CARD or INLINE. Adds no version; Editor and up.
+ * @returns the artifact, as openArtifact
+ */
+const setDisplay = async (artifactId, display, token) => {
+  return axios.put(apiRequests.artifactDisplay(artifactId), { display }, { headers: headers(token) })
+}
+
+/**
+ * Bring back an earlier version as a new one, with its content; the history stays whole. Editor and up.
+ * @returns the artifact at its new latest version, as openArtifact
+ */
+const restoreVersion = async (artifactId, version, token) => {
+  return axios.post(apiRequests.artifactRestore(artifactId, version), null, { headers: headers(token) })
+}
+
 export default {
   getArtifacts,
   getProjectArtifacts,
@@ -108,5 +124,7 @@ export default {
   setGeneralAccess,
   setMemberRole,
   removeMember,
-  openInNewChat
+  openInNewChat,
+  setDisplay,
+  restoreVersion
 }

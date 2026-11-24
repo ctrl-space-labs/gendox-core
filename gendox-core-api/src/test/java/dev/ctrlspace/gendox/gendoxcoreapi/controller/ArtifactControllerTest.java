@@ -170,4 +170,26 @@ class ArtifactControllerTest {
         when(artifactService.getByIdInThread(openedOnIt, artifact.getId())).thenReturn(artifact);
         assertEquals(threadId, controller.getById(openedOnIt, artifact.getId()).getThreadId());
     }
+
+    @Test
+    void aChangedDisplayAnswersWithTheArtifactAsOpenedByItsId() throws GendoxException {
+        opens(Role.EDIT);
+
+        ArtifactDTO changed = controller.setDisplay(artifact.getId(),
+                new dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.ArtifactDisplayRequestDTO("inline"));
+
+        verify(artifactService).setDisplay(artifact.getId(), me, "inline");
+        assertEquals("EDIT", changed.getYourRole());
+        assertNull(changed.getThreadId());
+    }
+
+    @Test
+    void aRestoredVersionAnswersWithTheArtifactAtItsLatest() throws GendoxException {
+        opens(Role.EDIT);
+
+        ArtifactDTO restored = controller.restoreVersion(artifact.getId(), 1);
+
+        verify(artifactService).restoreVersion(artifact.getId(), me, 1);
+        assertEquals("EDIT", restored.getYourRole());
+    }
 }

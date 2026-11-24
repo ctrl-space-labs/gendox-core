@@ -201,6 +201,12 @@ const RANK = { VIEW: 1, INTERACT: 2, EDIT: 3, OWNER: 4 }
 /** Whether a role is at least the one needed */
 export const roleAtLeast = (role, needed) => (RANK[role] || 0) >= RANK[needed]
 
+// a person changed how an artifact shows (gendox-core#570): every chat on the page shows it the new way at once
+export const ARTIFACT_DISPLAY_CHANGED = 'gendox:artifact-display-changed'
+
+/** 'card' or 'inline', from an artifact's display type (null is a card) */
+export const displayOf = artifact => (String(artifact?.display?.name || '').toUpperCase() === 'INLINE' ? 'inline' : 'card')
+
 // what Change it in a chat leaves for the agent home: the artifact to show beside the new chat, and the request it
 // starts with; read once, by the agent home that opens the chat
 const CHAT_ON_ARTIFACT = 'gx-chat-on-artifact'

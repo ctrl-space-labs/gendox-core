@@ -130,6 +130,8 @@ Errors returned to the model, each saying what to do next:
 | `ARTIFACT_UPDATE_AMBIGUOUS` / `ARTIFACT_UPDATE_EMPTY` | both `edits` and `content`, or nothing to change |
 | `ARTIFACTS_NEED_A_THREAD` | a call with no thread to belong to |
 | `ARTIFACT_READ_ONLY` | a change to an artifact the conversation was opened on, by someone below Editor |
+| `ARTIFACT_CHANGED_SINCE_READ` | a whole new `content` when someone changed the artifact after the conversation last saw it |
+| `ARTIFACT_DISPLAY_NOT_SUPPORTED` | a `display` outside `ARTIFACT_DISPLAY` |
 
 **Identity is the server's id, not a name the model invents.** The id comes back in the tool result, which is in the history the model sees.
 
@@ -302,7 +304,9 @@ Rules for every capability beyond phase 1:
 - The title is on one line and the whole item is escaped like every session item, so a title cannot start a line or close the item.
 - The conversation gets the artifacts skill from the library (see *The skill*), which explains the listing.
 
-**Two people changing it at once** — decided: no lock. An edit already fails when its `old_text` is not in the latest text, so an edit written against an older reading cannot silently undo someone else's change. A full rewrite (`content`) could: it is to be accepted only when the conversation has read, or itself made, the latest version. **Not built yet.**
+**Two people changing it at once** — decided: no lock. An edit already fails when its `old_text` is not in the latest text, so an edit written against an older reading cannot silently undo someone else's change. A full rewrite (`content`) could: it is accepted only when the conversation has read, or itself made, the latest version — the highest version the artifact tools returned for it in the conversation — and otherwise answered with `ARTIFACT_CHANGED_SINCE_READ` (409), asking the agent to read it again. **Built 2026-11-24.** A round's tool results are stored before the next round, so a read followed by a rewrite in the same answer passes.
+
+**Restore this version — built 2026-11-24.** An Editor and up brings an earlier version back as a new one (`POST …/artifacts/{artifactId}/versions/{version}/restore`), made by them and pointing at no message; the latest is left as it is. The version list names who made each version.
 
 **The owner's conversation and the artifact.** Conversations are soft-deleted, so the artifact stays in the database with it. On the owner's Artifacts page, an artifact whose conversation was deleted shows while it is shared with anyone (general access, an invitation or public), and goes with its conversation otherwise.
 
@@ -392,7 +396,7 @@ This is a separate matter from phase 5, which moves only the frame's page to its
 
 A new version arriving while the panel is open moves it to the latest, unless the user is looking at an older one on purpose.
 
-### Inline artifacts — built 2026-11-24, except the user's switch
+### Inline artifacts — built 2026-11-24
 
 **Some artifacts are part of the answer, not an attachment to it.** Asked for "a euro to dollar calculator", the answer can *be* the calculator: it renders in the flow of the text, with no card header, no frame border and no *Open* button in the way, sized to its content.
 
@@ -401,7 +405,7 @@ A new version arriving while the panel is open moves it to the latest, unless th
 - The display is stored on the artifact; a later version keeps it unless the agent changes it. `ui/request-display-mode` of phase 3 lets an app ask to move between the two while it runs.
 - An inline artifact runs in the same sealed frame. Only its chrome changes.
 - **As built:** `artifacts.display_id`, an `ARTIFACT_DISPLAY` type (`CARD`, `INLINE`; null is a card), in the migration `V20261124_163000__Artifact_display_and_info_card.sql`; `display` on both tools, returned in their results and in the DTOs; the skill's *Card or inline* section. In the chat the thread's latest create or update result decides how an artifact shows, with no request; an inline one sizes to its content and has a small *Open* under it, not on hover, since a frame takes the pointer's hover.
-- **The user can switch it** — decided, **not built yet**: *Show as a card* / *Show inline* in the artifact's menu. It changes how it is shown, not its code, so it makes no version and needs no agent. It is stored on the artifact, so everyone who sees a shared artifact sees the same.
+- **The user can switch it** — built: a button in `ArtifactView` for an Editor and up, `PUT …/artifacts/{artifactId}/display` (`ArtifactDisplayRequestDTO`), no version. The chats on the page follow at once, and a chat reads its artifacts' saved display once per conversation (and again when the agent changes one), so a switch made elsewhere shows too. It changes how it is shown, not its code, so it makes no version and needs no agent. It is stored on the artifact, so everyone who sees a shared artifact sees the same.
 
 ### Sizes — 2026-11-17, built 2026-11-24
 
@@ -477,7 +481,7 @@ Built in this order, each a commit of its own: the cheaper history, the Artifact
 - **Shared artifacts — built** (see *Shared artifacts* in *Decisions*):
   - Backend: the migration of 2026-11-24; `ArtifactAccessService` (the role, and `require`); `ArtifactSharingService` and `ArtifactSharingController` (sharing, public, delete, *Change it in a chat*); reading by id with `yourRole` in `ArtifactController`; the lists' *Yours* and *Shared with you* in `ArtifactPredicates`; the tools' wider reach in `ArtifactService.checkReach`; the `./artifacts` listing (`ArtifactService.openedArtifactsListing`, `ChatTemplateAuthor`, `FileListing` taken as is from the agent platform work); the contextual artifacts skill in `SkillService`.
   - Frontend: the share dialog, *Shared with you*, opening by id, *Change it in a chat* with the artifact beside the new conversation, the agent home's windows per person. The read-only reader page, its link and its list are gone.
-  - **Not built yet:** the rewrite rule for two people changing it at once; *Restore this version*.
+  - Also built: the rewrite rule for two people changing it at once, *Restore this version*, and the user's switch between card and inline.
   - Verified by unit tests (the access rules, the sharing service, the predicates, the controller's role and conversation rules, the listing and its session item, the contextual skill), in the ephemeral environment through the API with four users (roles given, changed and taken away; `404` and `403`; the lists; a deleted conversation), with the mock model (what the model receives: the listing with the owner's role, a lowered role, no listing once the role is gone, none in an ordinary chat), and in the app's browser pane with two users (the dialog as owner and read only, *Shared with you*, *Change it in a chat*). The frame itself cannot render in the pane (see *Verification*).
 - **Artifact data** (after shared artifacts; see *Artifact data* in *Decisions*):
   - Backend: `artifact_data`, its service and endpoints, `capabilities` on the artifact and on the two tools, and optionally `read_artifact_data`.
