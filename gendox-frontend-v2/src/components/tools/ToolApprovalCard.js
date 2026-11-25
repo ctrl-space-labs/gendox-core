@@ -1,11 +1,17 @@
-import { ShieldCheck } from 'lucide-react'
+import { Fragment } from 'react'
+import { ShieldCheck, SquareTerminal } from 'lucide-react'
 import ToolCodeBlock from 'src/components/tools/ToolCodeBlock'
 
-// One approval presentation for client tools; backend approval events can use the same component.
+/**
+ * One approval presentation for client tools; backend approval events can use the same component.
+ * `fields`: what a tool will do, as [{ label, value }] rows. `terminal`: { command, cwd } of a command
+ * on this computer, drawn as a terminal.
+ */
 export default function ToolApprovalCard({
   title = 'Allow this action?',
   description,
-  command,
+  fields,
+  terminal,
   directory,
   retry = false,
   allowLabel = 'Allow',
@@ -14,27 +20,43 @@ export default function ToolApprovalCard({
   busy = false,
   error
 }) {
+  const Icon = terminal ? SquareTerminal : ShieldCheck
+
   return (
-    <section className='client-approval card card-b' aria-label={title}>
+    <section className='client-approval card' aria-label={title}>
       <h3>
-        <ShieldCheck className='lucide' /> {title}
+        <Icon className='lucide' aria-hidden='true' /> {title}
       </h3>
-      <p className='muted'>{description}</p>
-      {command && <ToolCodeBlock>{command}</ToolCodeBlock>}
+      {description && <p className='muted'>{description}</p>}
+      {fields?.length > 0 && (
+        <dl className='client-fields'>
+          {fields.map(({ label, value }, index) => (
+            <Fragment key={index}>
+              <dt>{label}</dt>
+              <dd>{value}</dd>
+            </Fragment>
+          ))}
+        </dl>
+      )}
+      {terminal?.command && (
+        <ToolCodeBlock directory={terminal.cwd} aria-label='Command'>
+          {terminal.command}
+        </ToolCodeBlock>
+      )}
       {directory && (
         <p className='sm'>
           Requested folder: <code>{directory}</code>
         </p>
       )}
       {retry && (
-        <p className='muted sm'>The first attempt may have completed some work. Retrying can repeat those changes.</p>
+        <p className='muted sm'>The first attempt may have completed some work. Running it again can repeat those changes.</p>
       )}
       {error && <p role='alert'>{error}</p>}
       <div className='row'>
-        <button className='btn' disabled={busy} onClick={onDecline}>
+        <button className='btn s' disabled={busy} onClick={onDecline}>
           Don’t allow
         </button>
-        <button className='btn primary' disabled={busy} aria-busy={busy} onClick={onAllow}>
+        <button className='btn s primary' disabled={busy} aria-busy={busy} onClick={onAllow}>
           {allowLabel}
         </button>
       </div>

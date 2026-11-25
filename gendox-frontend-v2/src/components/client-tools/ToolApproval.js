@@ -1,32 +1,46 @@
 import ToolApprovalCard from 'src/components/tools/ToolApprovalCard'
-
-const TEXT = {
-  command: { title: 'Run command on this computer?', allowLabel: 'Allow' },
-  folder: { title: 'Allow writing in another folder?', allowLabel: 'Choose a folder' },
-  tool: { title: 'Allow this tool to run?', allowLabel: 'Allow' }
-}
-
-const descriptionOf = request => {
-  if (request.kind === 'folder') return 'Select the folder you want this command to be allowed to write in.'
-  if (request.kind === 'tool') return `The agent wants to run ${request.toolName}.`
-
-  return request.description
-}
+import { toolTitle } from 'src/utils/clientTools/approvalAnswers'
 
 /** One waiting request from the toolApprovals slice, as an approval card. */
 const ToolApproval = ({ request, decide }) => {
-  const text = TEXT[request.kind] || TEXT.command
+  const answer = allowed => () => decide(request.id, allowed)
 
+  // A website or app tool: what it will do, in plain words
+  if (request.kind === 'tool') {
+    return (
+      <ToolApprovalCard
+        title={`${toolTitle(request.toolName)}?`}
+        fields={request.fields}
+        onAllow={answer(true)}
+        onDecline={answer(false)}
+      />
+    )
+  }
+
+  if (request.kind === 'folder') {
+    return (
+      <ToolApprovalCard
+        title='Allow writing in another folder?'
+        description='Select the folder you want this command to be allowed to write in.'
+        directory={request.directory}
+        retry={request.retry}
+        allowLabel={request.retry ? 'Choose folder and retry' : 'Choose a folder'}
+        onAllow={answer(true)}
+        onDecline={answer(false)}
+      />
+    )
+  }
+
+  // A command on this computer, shown as a terminal shows it
   return (
     <ToolApprovalCard
-      title={text.title}
-      description={descriptionOf(request)}
-      command={request.kind === 'tool' ? request.arguments : request.command}
-      directory={request.directory}
+      title='Run this command on your computer?'
+      description={request.description}
+      terminal={{ command: request.command, cwd: request.directory }}
       retry={request.retry}
-      allowLabel={request.retry ? 'Choose folder and retry' : text.allowLabel}
-      onAllow={() => decide(request.id, true)}
-      onDecline={() => decide(request.id, false)}
+      allowLabel={request.retry ? 'Run again' : 'Run'}
+      onAllow={answer(true)}
+      onDecline={answer(false)}
     />
   )
 }

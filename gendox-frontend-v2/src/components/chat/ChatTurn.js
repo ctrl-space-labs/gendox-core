@@ -13,6 +13,7 @@ import {
   Wrench
 } from 'lucide-react'
 import { copyToClipboard } from 'src/utils/copyToClipboard'
+import { toolTitle } from 'src/utils/clientTools/approvalAnswers'
 import Avatar from 'src/components/ui/Avatar'
 import Markdown from 'src/components/chat/Markdown'
 import { MentionText } from 'src/components/chat/mentions'
@@ -37,15 +38,9 @@ const Trace = ({ icon: Icon, label, preview, open, className = '', children }) =
   </details>
 )
 
-const toolLabel = name => {
-  const label = name?.replace(/[_-]+/g, ' ').trim() || 'tool'
-
-  return label.charAt(0).toUpperCase() + label.slice(1)
-}
-
 const ToolCalls = ({ batches, live }) => {
   const calls = batches.flatMap(batch => batch.calls)
-  const examples = [...new Set(calls.map(({ call }) => toolLabel(call.function?.name)))].slice(0, 3)
+  const examples = [...new Set(calls.map(({ call }) => toolTitle(call.function?.name)))].slice(0, 3)
 
   return (
     <Trace
@@ -65,7 +60,7 @@ const ToolCalls = ({ batches, live }) => {
           {calls.map(({ call, responses }) => {
             const { name, arguments: input } = call.function || {}
             const value = parseToolValue(input)
-            let label = toolLabel(name)
+            let label = toolTitle(name)
             let icon = Wrench
             if (name === 'run_command') {
               icon = SquareTerminal

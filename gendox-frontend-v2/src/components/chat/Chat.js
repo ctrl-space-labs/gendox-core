@@ -268,31 +268,35 @@ const Chat = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentThread?.threadId, currentThread?.projectId, token, dispatch, iFrameMessageManager, chatKey])
 
-  // while an answer streams in, stay at the bottom unless the reader scrolled up
+  // Follow the conversation as it grows while the reader is near the bottom.
+  const followRef = useRef(true)
+  const threadContentRef = useRef(null)
+  const onScroll = event => {
+    const scroller = event.currentTarget
+    followRef.current = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 80
+  }
+  useEffect(() => {
+    followRef.current = true
+  }, [threadId])
+
   useEffect(() => {
     const scroller = scrollRef.current
-    if (scroller && scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 240) {
-      scroller.scrollTo({ top: scroller.scrollHeight, behavior: 'auto' })
-    }
-  }, [messages])
+    const content = threadContentRef.current
+    if (!scroller || !content) return
+    const observer = new ResizeObserver(() => {
+      if (followRef.current) scroller.scrollTop = scroller.scrollHeight
+    })
+    observer.observe(scroller)
+    observer.observe(content)
 
-  // keep the newest message in view
-  useEffect(() => {
-    const scroller = scrollRef.current
-    if (!scroller || isLoadingMessages) return
-    const toBottom = () => scroller.scrollTo({ top: scroller.scrollHeight, behavior: 'auto' })
-    toBottom()
-    const frame = requestAnimationFrame(toBottom)
-    const timer = setTimeout(toBottom, 120)
-
-    return () => {
-      cancelAnimationFrame(frame)
-      clearTimeout(timer)
-    }
-  }, [messages?.length, isLoadingMessages, isSendingMessage, isDeepThinking, threadId])
+    return () => observer.disconnect()
+  }, [isLoadingMessages, threadId])
 
   const send = (text, docs) => {
     if (!agent || isBusy) return
+    followRef.current = true
+    const scroller = scrollRef.current
+    if (scroller) scroller.scrollTop = scroller.scrollHeight
     dispatch(
       sendMessage({
         user: auth.user,
@@ -504,7 +508,7 @@ const Chat = ({
           <Spinner />
         </div>
       ) : (
-        <div className='gc-scroll' ref={scrollRef}>
+        <div className='gc-scroll' ref={scrollRef} onScroll={onScroll}>
           {greeting && (
             <div className='gc-greet'>
               <Avatar name={agentName} seed={agent?.projectId} size='l' />
@@ -524,7 +528,7 @@ const Chat = ({
               </p>
             </div>
           )}
-          <div className='gc-thread'>
+          <div className='gc-thread' ref={threadContentRef}>
             {turns.map((turn, index) => (
               <ChatTurn
                 key={turn.key}
@@ -538,7 +542,7 @@ const Chat = ({
                 onAskAgain={isBusy ? null : text => send(text, [])}
                 onFeedback={handleFeedback}
                 active={index === lastTurnIndex && turnActive}
-                unfinished={index === lastTurnIndex && !turnActive}
+                unfinished={index === lastTurnIndex && Boolean(completionStatus) && !turnActive}
               >
                 {index === lastTurnIndex ? progress : null}
               </ChatTurn>

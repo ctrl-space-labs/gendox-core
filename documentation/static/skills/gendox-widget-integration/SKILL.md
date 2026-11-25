@@ -132,7 +132,7 @@ window.gendox.widget.open()
 window.gendox.widget.close()
 window.gendox.widget.toggle()
 window.gendox.widget.isOpen()        // true | false
-window.gendox.widget.updateConfig({  // runtime config push to the iframe
+window.gendox.widget.updateConfig({  // runtime change, only once the chat has loaded (use data attributes for start-up values)
   chatInitialState: 'open',
   localContextMaxResponses: 2,
   localContextMaxWaitMs: 1000

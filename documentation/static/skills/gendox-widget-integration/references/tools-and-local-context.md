@@ -205,4 +205,4 @@ window.gendox.tools.registerTool('open_web_page', myHandler)
 
 - **No timeout on Sync tools.** The chat waits until the handler returns, so wrap slow work in your own timeout and return an error result when it expires.
 - **Results are saved in the chat thread.** Return only what the agent needs.
-- **Navigation side-effect**: if `open_web_page` navigates the page, the widget script is torn down. The SDK persists remaining queued tool calls in `sessionStorage` and resumes them when the new page reloads the widget.
+- **Navigation side-effect**: if `open_web_page` navigates the page, the widget script is torn down. The SDK persists remaining queued tool calls in `sessionStorage` and resumes them when the new page reloads the widget. Calls the agent makes while the page is changing are sent again when the widget loads on the new page; the SDK remembers which calls it ran, so none runs twice.

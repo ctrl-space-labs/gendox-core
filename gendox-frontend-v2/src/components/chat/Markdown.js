@@ -34,6 +34,23 @@ const components = {
     <a {...props} target='_blank' rel='noopener'>
       {children}
     </a>
+  ),
+  // wide tables scroll inside their own box, not the whole chat
+  table: ({ node, ...props }) => (
+    <div className='gc-table' tabIndex={0}>
+      <table {...props} />
+    </div>
+  ),
+  // a cell is as wide as its text, up to a cap, so long text wraps at a readable width
+  th: ({ node, children, ...props }) => (
+    <th {...props}>
+      <div className='gc-cell'>{children}</div>
+    </th>
+  ),
+  td: ({ node, children, ...props }) => (
+    <td {...props}>
+      <div className='gc-cell'>{children}</div>
+    </td>
   )
 }
 

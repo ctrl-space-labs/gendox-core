@@ -5,14 +5,14 @@ import { generalConstants } from 'src/utils/generalConstants'
 import chatConverter from '../../converters/chat.converter'
 import chatThreadService from '../../gendox-sdk/chatThreadService'
 import completionService from '../../gendox-sdk/completionService'
-import { readCompletionSession, saveCompletionSession } from 'src/utils/chatCompletionSession'
+import { readCompletionSession, routeHostCall, saveCompletionSession } from 'src/utils/chatCompletionSession'
 import documentService from '../../gendox-sdk/documentService'
 import { updateSessionThreadId } from 'src/utils/embeddedChatSession'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import toast from 'react-hot-toast'
 import { isDesktopApp } from 'src/services/desktopBridge'
 import { desktopMessageContext } from 'src/utils/clientTools/desktopContext'
-import { isWaiting, readableArguments, waitForAnswer } from 'src/utils/clientTools/approvalAnswers'
+import { argumentFields, isWaiting, waitForAnswer } from 'src/utils/clientTools/approvalAnswers'
 import { approvalRequested, approvalSettled } from 'src/store/toolApprovals/toolApprovals'
 
 // a turn still running on the server: the chat follows it until it ends
@@ -561,6 +561,7 @@ const gendoxChatSlice = createSlice({
         else thread.messages.push(converted)
       }
       if (event === 'waiting_for_tools' || event === 'status') {
+        if (data.messages) thread.messages = data.messages
         session.completionStatus = data.status
         session.isSendingMessage = ACTIVE_COMPLETION_STATUSES.includes(data.status)
         session.isStreaming = false
@@ -573,9 +574,22 @@ const gendoxChatSlice = createSlice({
         }
         if (event === 'done') thread.messages = thread.messages.filter(m => !m.isStreaming)
       }
-      if (event === 'reconcile') {
-        session.currentThread = { ...thread, messages: data.messages }
-      }
+    },
+    // The result of a client tool, shown under its call at once: the stream sends only the agent's messages.
+    // payload: { chatKey, threadId, toolCallId, value }
+    clientToolResultSent: (state, { payload }) => {
+      const thread = state.sessions[payload.chatKey ?? MAIN_CHAT]?.currentThread
+      if (!thread || thread.threadId !== payload.threadId) return
+      const messages = thread.messages || []
+      if (messages.some(m => m.role === 'tool' && m.toolCallId === payload.toolCallId)) return
+      if (!messages.some(m => m.toolCalls?.some(call => call.id === payload.toolCallId))) return
+      messages.push({
+        role: 'tool',
+        createdBy: 'tool',
+        createdAt: new Date().toISOString(),
+        toolCallId: payload.toolCallId,
+        message: payload.value
+      })
     },
     resetChatState: state => {
       Object.values(state.sessions).forEach(session => revokeThreadPreviewUrls(session.currentThread))
@@ -921,10 +935,8 @@ const DELTA_FLUSH_MS = 50
 const completionEvent = (dispatch, chatKey, projectId, event, data) =>
   dispatch(chatActions.completionEvent({ chatKey, projectId, event, data }))
 
-// Sends the tool calls the host page runs (client tools) to it, each once per turn.
-// `replayed`: the calls come from the turn's saved state (after a reload or a restart of the app),
-// not from the answer as it streams. A call the agent's owner marked "Ask before running" goes to
-// the host only after the user allows it; a declined one runs nothing and continues the turn.
+// Retry pending deliveries after navigation. Hosts deduplicate by call ID, and the approval
+// decision is stored separately from delivery because a declined call only sends a result.
 function dispatchHostCalls(data, context, replayed = false) {
   const { projectId, organizationId, iFrameMessageManager } = context
   if (iFrameMessageManager?.isEmbedded)
@@ -939,20 +951,15 @@ function dispatchHostCalls(data, context, replayed = false) {
       execution: call.execution || 'CLIENT',
       ...(call.requiresApproval ? { requiresApproval: true } : {})
     }))
-  const session = readCompletionSession(data.threadId)
-  const sent = new Set(session.dispatchedCalls || [])
-  // The native host and runner deduplicate execution IDs, so replay its pending calls after
-  // a page reload as well. Website widgets retain their existing dispatch-once behavior.
+  const { dispatchedCalls = [], approvalDecisions = {} } = readCompletionSession(data.threadId)
+  const sent = new Set(dispatchedCalls)
   const nativeHost = typeof window !== 'undefined' && window.top === window && window.__GENDOX_CLIENT_TOOL_HOST__
-  const pending = calls.filter(call => nativeHost || !sent.has(call.id))
-  if (!pending.length) return
-  // The desktop app's commands ask with their own card (approval mode, folders); other calls ask here
-  const asksHere = call => call.requiresApproval && !(nativeHost && call.function?.name === 'run_command')
-  const markSent = sentCalls => {
-    sentCalls.forEach(call => sent.add(call.id))
-    saveCompletionSession(data.threadId, { dispatchedCalls: [...sent] })
-  }
-  const toHost = hostCalls =>
+  const sendToHost = (hostCalls, decisions = approvalDecisions) => {
+    if (!hostCalls.length) return
+    const { dispatchedCalls = [] } = readCompletionSession(data.threadId)
+    saveCompletionSession(data.threadId, {
+      dispatchedCalls: [...new Set([...dispatchedCalls, ...hostCalls.map(call => call.id)])]
+    })
     iFrameMessageManager?.messageManager?.sendMessage({
       type: 'gendox.events.chat.message.tool_calls.request',
       payload: hostCalls.map(call => ({
@@ -964,18 +971,45 @@ function dispatchHostCalls(data, context, replayed = false) {
         ...(replayed ? { replayed: true } : {})
       }))
     })
-
-  const direct = pending.filter(call => !asksHere(call))
-  if (direct.length) {
-    markSent(direct)
-    toHost(direct)
+    // The host performs ACTION calls without sending a tool result of its own.
+    for (const call of hostCalls) {
+      if (decisions[call.id] === true && call.execution === 'ACTION') {
+        submitApprovalResult(call, data, context, true)
+      }
+    }
   }
-  pending.filter(asksHere).forEach(call => askBeforeHostCall(call, data, context, { markSent, toHost }))
+
+  const direct = []
+  for (const call of calls) {
+    const route = routeHostCall(call, { nativeHost, replayed, sent, decisions: approvalDecisions })
+    if (route === 'send') direct.push(call)
+    if (route === 'decline') submitApprovalResult(call, data, context, false)
+    if (route === 'ask') askBeforeHostCall(call, data, context, sendToHost)
+  }
+  sendToHost(direct)
 }
 
 const TOOL_DECLINED = { declined: true, message: 'The user did not allow this tool call. Nothing ran.' }
 
-async function askBeforeHostCall(call, data, context, { markSent, toHost }) {
+function submitApprovalResult(call, data, context, allowed) {
+  const { dispatch, token, projectId, organizationId, iFrameMessageManager, chatKey } = context
+  dispatch(submitClientToolResult({
+    result: {
+      threadId: data.threadId,
+      turnId: data.turnId,
+      messageId: call.messageId || data.messageId,
+      toolCallId: call.id,
+      value: JSON.stringify(allowed ? { status: 'executed' } : TOOL_DECLINED)
+    },
+    token,
+    projectId,
+    organizationId,
+    iFrameMessageManager,
+    chatKey
+  }))
+}
+
+async function askBeforeHostCall(call, data, context, sendToHost) {
   const { dispatch } = context
   const id = `tool:${data.threadId}:${call.id}`
   // A turn's state is read again while it waits; one card per call is enough
@@ -987,32 +1021,16 @@ async function askBeforeHostCall(call, data, context, { markSent, toHost }) {
       kind: 'tool',
       threadId: data.threadId,
       toolName: call.function?.name,
-      arguments: readableArguments(call.function?.arguments)
+      fields: argumentFields(call.function?.arguments)
     })
   )
   const yes = await allowed
   dispatch(approvalSettled(id))
-  markSent([call])
-  if (yes) toHost([call])
-  // A call the host only acts on sends no result of its own: the turn hears that it ran
-  if (!yes || call.execution === 'ACTION') {
-    dispatch(
-      submitClientToolResult({
-        result: {
-          threadId: data.threadId,
-          turnId: data.turnId,
-          messageId: call.messageId || data.messageId,
-          toolCallId: call.id,
-          value: JSON.stringify(yes ? { status: 'executed' } : TOOL_DECLINED)
-        },
-        token: context.token,
-        projectId: context.projectId,
-        organizationId: context.organizationId,
-        iFrameMessageManager: context.iFrameMessageManager,
-        chatKey: context.chatKey
-      })
-    )
-  }
+  const { turnId, approvalDecisions } = readCompletionSession(data.threadId)
+  if (turnId && data.turnId && turnId !== data.turnId) return
+  saveCompletionSession(data.threadId, { approvalDecisions: { ...approvalDecisions, [call.id]: yes } })
+  if (yes) sendToHost([call], { [call.id]: true })
+  else submitApprovalResult(call, data, context, false)
 }
 
 async function _streamCompletion(context) {
@@ -1052,7 +1070,10 @@ async function _streamCompletion(context) {
           threadId = data.threadId
           turnId = data.turnId
           const previousSession = readCompletionSession(threadId)
-          saveCompletionSession(threadId, { turnId, ...(previousSession.turnId !== turnId ? { dispatchedCalls: [] } : {}) })
+          saveCompletionSession(threadId, {
+            turnId,
+            ...(previousSession.turnId !== turnId ? { dispatchedCalls: [], approvalDecisions: {} } : {})
+          })
           if (iFrameMessageManager?.isEmbedded)
             updateSessionThreadId(iFrameMessageManager.originUrl, organizationId, projectId, threadId)
         }
@@ -1096,6 +1117,8 @@ export const submitClientToolResult = createAsyncThunk(
     const key = `${result.threadId}|${result.turnId || result.messageId || ''}|${result.toolCallId}`
     if (pendingClientResults.has(key)) return
     pendingClientResults.add(key)
+    const value = result.value ?? JSON.stringify(result.result ?? null)
+    dispatch(chatActions.clientToolResultSent({ chatKey, threadId: result.threadId, toolCallId: result.toolCallId, value }))
     const ack = extra =>
       iFrameMessageManager?.messageManager?.sendMessage({
         type: 'gendox.events.chat.message.tool_calls.ack',
@@ -1114,7 +1137,7 @@ export const submitClientToolResult = createAsyncThunk(
             threadId: result.threadId,
             role: 'tool',
             toolCallId: result.toolCallId,
-            value: result.value ?? JSON.stringify(result.result ?? null),
+            value,
             stream: true
           }
         })
@@ -1140,26 +1163,45 @@ const canRecoverCompletion = session =>
   !session.isDeepThinking &&
   (!session.isSendingMessage || ACTIVE_COMPLETION_STATUSES.includes(session.completionStatus))
 
+const pendingRecoveries = new Set()
+
 /** Asks whether a turn is still running on the server (after a reload, or while it waits for tools) and shows where it is */
 export const recoverCompletion = createAsyncThunk(
   'gendoxChat/recoverCompletion',
   async ({ threadId, projectId, organizationId, token, iFrameMessageManager, chatKey = MAIN_CHAT }, { dispatch, getState }) => {
     const session = () => selectChatSession(getState(), chatKey)
-    if (!threadId || !canRecoverCompletion(session())) return
+    const { streamRequestId, completionStatus: previous } = session()
+    const stillCurrent = () => {
+      const current = session()
+
+      return current.currentThread?.threadId === threadId &&
+        current.streamRequestId === streamRequestId && canRecoverCompletion(current)
+    }
+    const key = `${chatKey}|${threadId}`
+    if (!threadId || !stillCurrent() || pendingRecoveries.has(key)) return
+    pendingRecoveries.add(key)
     try {
       const { data } = await completionService.getCompletionStatus(threadId, token, readCompletionSession(threadId).resumeToken)
-      if (!canRecoverCompletion(session())) return
-      const previous = session().completionStatus
-      completionEvent(dispatch, chatKey, projectId, 'status', data)
-      if (data.status === 'WAITING_FOR_TOOLS')
+      if (!stillCurrent()) return
+      const active = ACTIVE_COMPLETION_STATUSES.includes(data.status)
+      if (active) completionEvent(dispatch, chatKey, projectId, 'status', data)
+      if (data.status === 'WAITING_FOR_TOOLS') {
         dispatchHostCalls(data, { projectId, organizationId, iFrameMessageManager, dispatch, token, chatKey }, true)
-      // Load the saved messages while a turn runs, and once more when it ends, to show its final answer
-      if (ACTIVE_COMPLETION_STATUSES.includes(data.status) || ACTIVE_COMPLETION_STATUSES.includes(previous)) {
-        const thread = await _fetchExistingThreadWithMessages(threadId, projectId, organizationId, dispatch, token)
-        if (!session().isStreaming) completionEvent(dispatch, chatKey, projectId, 'reconcile', { threadId, messages: thread.messages })
       }
+      if (!active && previous && !ACTIVE_COMPLETION_STATUSES.includes(previous)) {
+        completionEvent(dispatch, chatKey, projectId, 'status', data)
+
+        return
+      }
+
+      // Publish the recovered history and terminal status together. A navigation can load
+      // the thread just before its final answer is saved.
+      const { messages } = await _fetchExistingThreadWithMessages(threadId, projectId, organizationId, dispatch, token)
+      if (stillCurrent()) completionEvent(dispatch, chatKey, projectId, 'status', { ...data, messages })
     } catch (_) {
       // a later poll recovers transient transport errors without repeating the user's request
+    } finally {
+      pendingRecoveries.delete(key)
     }
   }
 )

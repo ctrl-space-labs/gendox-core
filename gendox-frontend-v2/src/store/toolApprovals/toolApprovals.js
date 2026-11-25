@@ -5,7 +5,7 @@ import { createSlice } from '@reduxjs/toolkit'
 // Each request is plain data; the promise that waits for the answer is kept in approvalAnswers.
 //
 // A request: { id, kind: 'command' | 'folder' | 'tool', threadId, description?, command?, directory?, retry?,
-//              toolName?, arguments? }
+//              toolName?, fields? ([{ label, value }]) }
 
 const toolApprovalsSlice = createSlice({
   name: 'toolApprovals',

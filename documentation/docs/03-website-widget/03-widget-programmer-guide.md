@@ -85,7 +85,7 @@ After the widget script runs, the following are available on `window.gendox`.
 | `window.gendox.widget.state` | Internal state object (e.g. `state.isOpen`). Prefer `isOpen()` for reading. |
 | `window.gendox.widget.config` | Merged config (data attributes + `origin`). Read-only. |
 
-These methods send a `postMessage` to the iframe. They are safe to call as soon as the script has run; if the iframe is not ready, the SDK may log a warning and the call no-ops.
+These methods send a `postMessage` to the iframe, so they only take effect once the chat inside it has loaded. A call made before that (for example on `DOMContentLoaded`) is silently lost. For values the chat needs from the first message, such as `localContextMaxResponses`, use the data attributes (on WordPress, the plugin settings).
 
 Example: open chat when a button is clicked:
 
@@ -371,7 +371,7 @@ window.gendox.widget.updateConfig({
 });
 ```
 
-You can call `updateConfig` at any time (e.g. after user login, or when switching sections of your app).
+Call `updateConfig` once the chat has loaded, for changes during the visit (e.g. after user login, or when switching sections of your app). For the starting configuration, use the data attributes.
 
 ### 5.6 Register a custom tool
 

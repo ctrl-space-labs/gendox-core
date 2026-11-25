@@ -106,19 +106,17 @@ $payload = wp_json_encode( array(
 
 ## Limits you should know before planning work
 
-- **The plugin emits only four attributes** on the widget tag: `src`, `data-gendox-src`,
-  `data-organization-id`, `data-project-id`. The SDK's other options
-  (`data-gendox-chat-initial-state`, `data-gendox-local-context-max-responses`,
-  `data-gendox-local-context-max-wait-ms`, `data-gendox-open-web-page-tool-enabled`)
-  are **not** configurable from the WordPress admin. Set them at runtime instead:
-
-  ```js
-  window.gendox.widget.updateConfig({ localContextMaxResponses: 2, localContextMaxWaitMs: 1000 });
-  ```
+- **Widget options are plugin settings.** **Gendox AI Chat → AI Chat Settings** has Initial
+  Chat State, Selected Text Context, Open Web Page Tool, **Local Context Max Responses** and
+  Local Context Max Wait (ms); the plugin prints them as the `data-gendox-*` attributes. From
+  code or deploy scripts, set the options instead (same names), e.g.
+  `wp option update gendox_local_context_max_responses 2`.
 
   `localContextMaxResponses` defaults to 1, which is the built-in `SELECTED_TEXT`
-  callback — **if you add your own context callback without raising this, your value may
-  never reach the model.**
+  callback — **if you add your own context callback without raising this, your value never
+  reaches the model.** Set it to the number of context values you send (SELECTED_TEXT included).
+  Don't use `updateConfig()` for this from your `wp_footer` script: it only reaches a chat
+  that has already loaded, so a call made at page load is silently lost.
 
 - **There are no filter hooks.** You cannot alter the injected tag from PHP. The only
   action is `GENDOX/plugin_loaded`.

@@ -15,8 +15,15 @@
 .gc-md pre code { padding: 0; border: 0; background: none; font-size: inherit; }
 .gc-md a { color: var(--accent-text); text-decoration: underline; text-underline-offset: 2px; }
 .gc-md h1 { font-size: 20px; } .gc-md h2 { font-size: 17px; }
-.gc-md table { border-collapse: collapse; display: block; overflow-x: auto; }
-.gc-md th, .gc-md td { padding: 7px 12px; border: 1px solid var(--border); text-align: left; }
+/* A table keeps readable columns and scrolls sideways inside its own box when it is wider than the chat.
+   Each cell is as wide as its text up to a cap (half the chat's width, at least 14rem), so short columns stay
+   narrow, long text wraps at a readable width, and words are never split. */
+.gc-table { max-width: 100%; overflow-x: auto; container-type: inline-size; }
+.gc-md table { border-collapse: separate; border-spacing: 0; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+.gc-md th, .gc-md td { padding: 7px 12px; text-align: left; vertical-align: top; }
+.gc-md tr > :not(:first-child) { border-inline-start: 1px solid var(--border); }
+.gc-md tr + tr > *, .gc-md thead + tbody > tr:first-child > * { border-block-start: 1px solid var(--border); }
+.gc-cell { display: inline-block; vertical-align: top; width: max-content; min-width: 3rem; max-width: max(14rem, 50cqi); overflow-wrap: break-word; }
 .gc-md th { font-weight: 500; color: var(--text-2); background: var(--surface-2); }
 .gc-md img { max-width: 100%; border-radius: var(--radius-sm); }
 .gc-md .katex-display { overflow-x: auto; overflow-y: hidden; }
@@ -348,8 +355,21 @@ fieldset.lock:disabled .btn { opacity: .5; pointer-events: none; }
 .gc-acts .gc-feedback .input { flex: 1; min-width: 0; max-width: 420px; }
 
 /* Shared client tool approvals and device preferences. */
-.client-approval { display: grid; gap: var(--space-3); margin-block: var(--space-3); }
+.client-approval { display: grid; gap: 10px; margin-block: var(--space-3); padding: 12px 14px; }
+.client-approval h3 { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
+.client-approval h3 .lucide { width: 16px; height: 16px; flex: none; color: var(--accent-text); }
+.client-approval > p { font-size: 13px; }
+/* what a tool will do, as label / value rows */
+.client-fields { display: grid; grid-template-columns: fit-content(40%) minmax(0, 1fr); gap: 4px 12px; max-height: 14rem; overflow: auto; font-size: 13px; line-height: 1.5; }
+.client-fields dt { color: var(--text-3); overflow-wrap: anywhere; }
+.client-fields dd { min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.client-approval > .row { justify-content: flex-end; }
 .client-command { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 16rem; overflow: auto; background: var(--surface-2); padding: var(--space-3); border-radius: var(--radius); }
 .client-output { max-height: 20rem; font-size: 12px; }
+/* a command on this computer and its output look like a terminal, in light and dark themes */
+.client-terminal { padding: 10px 12px; border: 1px solid #2a2f3a; border-radius: var(--radius-sm); background: #11141b; color: #e6e9f0; font: 12.5px/1.6 var(--font-mono); }
+.client-terminal.client-output { color: #c3c9d6; font-size: 12px; }
+.client-terminal .client-prompt { color: #7ee2a0; user-select: none; }
+.client-terminal .client-cwd { display: block; color: #8a93a6; }
 .client-path { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .client-pending { position: fixed; inset-inline-end: var(--space-4); inset-block-end: var(--space-4); z-index: 100; width: min(32rem, calc(100vw - 2rem)); max-height: 80vh; overflow: auto; background: var(--surface); box-shadow: var(--pop-shadow); }
