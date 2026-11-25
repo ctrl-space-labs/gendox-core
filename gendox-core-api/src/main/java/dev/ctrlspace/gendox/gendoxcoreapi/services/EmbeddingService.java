@@ -230,7 +230,15 @@ public class EmbeddingService {
             }
             modelEndpointValidator.validate(model.getUrl());
             OrganizationModelProviderKey ownKey = organizationModelKeyService.getKeyForModel(organizationId, model);
-            return ownKey != null ? ownKey.getKey() : "";
+            if (ownKey != null) {
+                return ownKey.getKey();
+            }
+            // Vertex models run on Gendox's service account, as before #597
+            AiModelProvider provider = model.getAiModelProvider();
+            if ("VERTEX_AI".equals(provider.getName()) && provider.getOrganizationId() == null) {
+                return gCloudAuthenticationService.getClientToken();
+            }
+            return "";
         }
         OrganizationModelProviderKey organizationModelProviderKey = organizationModelKeyService.getKeyForModel(organizationId, model);
         String rawKey;
