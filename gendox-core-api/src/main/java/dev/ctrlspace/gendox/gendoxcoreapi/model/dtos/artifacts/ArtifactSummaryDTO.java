@@ -26,7 +26,6 @@ public class ArtifactSummaryDTO {
     private String title;
     private Type artifactType;
     private String codeLanguage;
-    private Type display;
     private Integer latestVersion;
     private Instant createdAt;
     private Instant updatedAt;

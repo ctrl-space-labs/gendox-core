@@ -51,14 +51,6 @@ public class Artifact {
     private String codeLanguage;
 
     /**
-     * How it shows in the answer, category ARTIFACT_DISPLAY: CARD or INLINE; null is a card, as every artifact made
-     * before it showed.
-     */
-    @ManyToOne
-    @JoinColumn(name = "display_id", referencedColumnName = "id")
-    private Type display;
-
-    /**
      * The number of the latest version; raised only by ArtifactService, with the version it adds.
      */
     @Column(name = "latest_version", nullable = false)

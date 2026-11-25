@@ -10,9 +10,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ArtifactCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ArtifactAccessService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ArtifactService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.ArtifactDisplayRequestDTO;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PostMapping;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.data.domain.Page;
@@ -141,17 +138,6 @@ public class ArtifactController {
                     "the signed-in user's role on it. For anyone with a role on the artifact.")
     public ArtifactDTO openVersion(@PathVariable UUID artifactId, @PathVariable Integer version) throws GendoxException {
         return openedDTO(artifactId, version);
-    }
-
-    @PreAuthorize("@securityUtils.isSignedInPerson()")
-    @PutMapping("artifacts/{artifactId}/display")
-    @Operation(summary = "Change how an artifact shows in the answer",
-            description = "Show the artifact as a card (CARD) or as part of the answer (INLINE), for everyone who sees " +
-                    "it. It adds no version. For an Editor and up; returns the artifact as Get an artifact by its id does.")
-    public ArtifactDTO setDisplay(@PathVariable UUID artifactId,
-                                  @RequestBody ArtifactDisplayRequestDTO request) throws GendoxException {
-        artifactService.setDisplay(artifactId, securityUtils.getUserId(), request.getDisplay());
-        return openedDTO(artifactId, null);
     }
 
     @PreAuthorize("@securityUtils.isSignedInPerson()")

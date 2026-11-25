@@ -80,13 +80,11 @@ public class ArtifactService {
     /**
      * @param typeName     a name of category ARTIFACT_TYPE, in any case: the model sends "html"
      * @param codeLanguage kept for type CODE only
-     * @param displayName  a name of category ARTIFACT_DISPLAY, in any case ("inline"); null is a card
      * @param messageId    the assistant message whose tool call writes it
      */
     @Transactional
     public Artifact create(UUID threadId, UUID projectId, @Nullable UUID messageId, String title,
-                           String typeName, @Nullable String codeLanguage, @Nullable String displayName,
-                           String content) throws GendoxException {
+                           String typeName, @Nullable String codeLanguage, String content) throws GendoxException {
         if (title == null || title.isBlank()) {
             throw new GendoxException("ARTIFACT_TITLE_REQUIRED", "An artifact needs a title", HttpStatus.BAD_REQUEST);
         }
@@ -101,7 +99,6 @@ public class ArtifactService {
                 .title(title.trim())
                 .artifactType(artifactType)
                 .codeLanguage(isCode && codeLanguage != null && !codeLanguage.isBlank() ? codeLanguage.trim() : null)
-                .display(displayName == null ? null : getArtifactDisplay(displayName))
                 .latestVersion(1)
                 .ownerId(author)
                 .build());
@@ -112,23 +109,22 @@ public class ArtifactService {
 
     /**
      * A new version from the whole {@code content} or from {@code edits} on the latest one, never both.
-     * A new {@code title} or {@code displayName} alone changes the artifact and adds no version.
+     * A new {@code title} alone changes the artifact and adds no version.
      */
     @Transactional
     public Artifact update(UUID threadId, UUID artifactId, @Nullable UUID messageId, @Nullable String title,
-                           @Nullable String displayName, @Nullable String content,
+                           @Nullable String content,
                            @Nullable List<ArtifactEditDTO> edits) throws GendoxException {
         boolean hasContent = content != null;
         boolean hasEdits = edits != null && !edits.isEmpty();
         boolean hasTitle = title != null && !title.isBlank();
-        boolean hasDisplay = displayName != null && !displayName.isBlank();
         if (hasContent && hasEdits) {
             throw new GendoxException("ARTIFACT_UPDATE_AMBIGUOUS",
                     "Give either edits or the whole content, not both", HttpStatus.BAD_REQUEST);
         }
-        if (!hasContent && !hasEdits && !hasTitle && !hasDisplay) {
+        if (!hasContent && !hasEdits && !hasTitle) {
             throw new GendoxException("ARTIFACT_UPDATE_EMPTY",
-                    "Nothing to update: give edits, the whole content, a new title or a new display", HttpStatus.BAD_REQUEST);
+                    "Nothing to update: give edits, the whole content or a new title", HttpStatus.BAD_REQUEST);
         }
 
         // locked until the transaction ends, so a second update of the same artifact waits and numbers after this one
@@ -137,9 +133,6 @@ public class ArtifactService {
         checkReach(artifact, threadId, Role.EDIT);
         if (hasTitle) {
             artifact.setTitle(title.trim());
-        }
-        if (hasDisplay) {
-            artifact.setDisplay(getArtifactDisplay(displayName));
         }
         if (hasContent || hasEdits) {
             if (hasContent) {
@@ -277,20 +270,6 @@ public class ArtifactService {
     }
 
     /**
-     * How the artifact shows in the answer, chosen by a person: CARD or INLINE. It changes how it shows, not its
-     * content, so it adds no version; everyone who sees the artifact sees the change. Editor and up.
-     */
-    @Transactional
-    public Opened setDisplay(UUID artifactId, @Nullable UUID userId, String displayName) throws GendoxException {
-        Artifact artifact = artifactRepository.lockById(artifactId)
-                .orElseThrow(() -> new GendoxException("ARTIFACT_NOT_FOUND",
-                        "No artifact " + artifactId + " that you can open", HttpStatus.NOT_FOUND));
-        Role role = artifactAccessService.require(artifact, userId, Role.EDIT);
-        artifact.setDisplay(getArtifactDisplay(displayName == null ? "" : displayName));
-        return new Opened(artifactRepository.save(artifact), role);
-    }
-
-    /**
      * Brings back an earlier version as a new one, with its content: the history stays whole, and every version keeps
      * its number. Made by a person, so it points at no message. Editor and up; the latest version is left as it is.
      */
@@ -403,20 +382,6 @@ public class ArtifactService {
                         HttpStatus.BAD_REQUEST));
     }
 
-    private Type getArtifactDisplay(String displayName) throws GendoxException {
-        List<Type> displays = typeService.getArtifactDisplays();
-        String wanted = displayName.trim().toUpperCase(Locale.ROOT);
-        return displays.stream()
-                .filter(display -> display.getName().equals(wanted))
-                .findFirst()
-                .orElseThrow(() -> new GendoxException("ARTIFACT_DISPLAY_NOT_SUPPORTED",
-                        "Display '" + displayName + "' is not supported. Use one of: " + displays.stream()
-                                .map(display -> display.getName().toLowerCase(Locale.ROOT))
-                                .sorted()
-                                .collect(Collectors.joining(", ")),
-                        HttpStatus.BAD_REQUEST));
-    }
-
     /**
      * A whole new content is written against what the conversation last saw of the artifact: if someone else has
      * changed it since, it would undo their change without a word. So it is taken only when the conversation has seen
@@ -470,6 +435,19 @@ public class ArtifactService {
         return messageRepository.findFirstByThreadIdAndRoleOrderByCreatedAtDesc(threadId, "user")
                 .map(Message::getCreatedBy)
                 .orElse(null);
+    }
+
+    /**
+     * A widget is part of the answer, not an artifact: nothing is stored, and its content stays in the tool call of
+     * its message. Its content is checked as an artifact's is, and only a page or a drawing can be one.
+     */
+    public void checkWidget(@Nullable String kind, @Nullable String content) throws GendoxException {
+        String wanted = kind == null ? "" : kind.trim().toLowerCase(Locale.ROOT);
+        if (!List.of("html", "svg").contains(wanted)) {
+            throw new GendoxException("WIDGET_KIND_NOT_SUPPORTED",
+                    "Kind '" + kind + "' is not supported for a widget. Use one of: html, svg", HttpStatus.BAD_REQUEST);
+        }
+        validateContent(content);
     }
 
     private void validateContent(@Nullable String content) throws GendoxException {

@@ -1,10 +1,10 @@
 # Artifacts and mini apps in the chat — [#523](https://github.com/ctrl-space-labs/gendox-core/issues/523)
 
-The current plan, 2026-11-24, written when shared artifacts were built: an artifact is shared as Claude's artifacts are, with roles, and a member with the right role changes it in a conversation of their own. It is self-contained: it carries forward everything still true from the revisions of 2026-11-16 and 2026-11-17 and from the [plan as first written](issue-523-artifacts-2026-11-13.md), which is kept unchanged, and adds the decisions taken while building.
+The current plan, 2026-11-25, written when widgets were separated from artifacts: an artifact is a document of its own that opens beside the conversation, a widget is a small piece of the answer, and neither becomes the other. It is self-contained: it carries forward everything still true from the revisions of 2026-11-16, 2026-11-17 and 2026-11-24 and from the [plan as first written](issue-523-artifacts-2026-11-13.md), which is kept unchanged, and adds the decisions taken while building.
 
-It covers two things the agent can put in a conversation: **artifacts** — a rendered piece of content that stands on its own, the way Claude's artifacts do — and **mini apps** — small interactive programs that live in the chat and can talk back to it.
+It covers what the agent can put in a conversation beyond text: **artifacts** — a rendered piece of content that stands on its own, the way Claude's artifacts do; **widgets** — something small and interactive that is part of the answer itself; and **mini apps** — artifacts or widgets that can talk back to the chat.
 
-**Status.** Phase 1 is implemented. The backend ([#568](https://github.com/ctrl-space-labs/gendox-core/issues/568)) is verified by unit tests, in the ephemeral environment, and with a real provider creating and editing an artifact from a chat. The v2 frontend ([#569](https://github.com/ctrl-space-labs/gendox-core/issues/569)) is verified in Chrome, Firefox and Safari, and on a narrow screen. Phase 2 ([#570](https://github.com/ctrl-space-labs/gendox-core/issues/570)) is in progress: the cheaper replayed history (now also for what `read_artifact` returned), the Artifacts page, the *Info card* skill, *Try to fix* and **shared artifacts with roles** — the backend, the v2 screens and *Change it in a chat* — are built and verified (see *Phase 2*). *Info card* is now a section of the artifacts skill; inline artifacts, sizes, the rewrite rule, *Restore this version* and the public page are built. **#570 closes here.** Left for later work, each its own: artifact data (until then a Contributor does what a Viewer does), the organization's setting and the plan column for public links, and the output floor on the settings screen. Nothing of phases 3 to 6 is built.
+**Status.** Phase 1 is implemented. The backend ([#568](https://github.com/ctrl-space-labs/gendox-core/issues/568)) is verified by unit tests, in the ephemeral environment, and with a real provider creating and editing an artifact from a chat. The v2 frontend ([#569](https://github.com/ctrl-space-labs/gendox-core/issues/569)) is verified in Chrome, Firefox and Safari, and on a narrow screen. Phase 2 ([#570](https://github.com/ctrl-space-labs/gendox-core/issues/570)) is in progress: the cheaper replayed history (now also for what `read_artifact` returned), the Artifacts page, the *Info card* skill, *Try to fix* and **shared artifacts with roles** — the backend, the v2 screens and *Change it in a chat* — are built and verified (see *Phase 2*). *Info card* is now a section of the artifacts skill; sizes, the rewrite rule, *Restore this version* and the public page are built. Inline artifacts were built and are replaced by **widgets**, built 2026-11-25 (see *Widgets*). **#570 closes here.** Left for later work, each its own: artifact data (until then a Contributor does what a Viewer does), the organization's setting and the plan column for public links, and the output floor on the settings screen. Nothing of phases 3 to 6 is built.
 
 - The frontend work is for `gendox-frontend-v2` only.
 - Phase 1 is a complete, shippable feature on its own. Every later phase adds to it without changing what phase 1 stored or exposed.
@@ -24,6 +24,14 @@ The GitHub issues deliberately carry only Goal / Scope / Notes / Relationships. 
 
 Shared artifacts and artifact data stay under #570 (decided 2026-11-17).
 
+## What changed on 2026-11-25
+
+- **Widgets are not artifacts.** An artifact shown inline was still an artifact — versions, sharing, the Artifacts page, *Open* — and an artifact shown as a card was half in the answer. Neither fit. A **widget** is now part of the answer and nothing more: no versions, no sharing, never opened in the panel. An **artifact** always opens beside the conversation, and the answer keeps one line for it. They share the frame, the bridge, the sizing and the skill (see *Widgets*).
+- **The display goes.** `artifacts.display_id`, the `ARTIFACT_DISPLAY` types, `display` on the tools and the user's switch are removed (see *Widgets*, *What goes*).
+- **An artifact opens by itself.** One the agent makes in this page's own turn opens beside the chat without a click (see *Where it shows*).
+- **A widget becomes an artifact only by asking.** The user asks the agent, which makes a new artifact from it. There is no button for it.
+- **"The widget" used to mean the embedded chat.** From here on that is **the embedded chat**, and a widget is the thing in the answer.
+
 ## What changed on 2026-11-24
 
 - **Sharing has roles, as Claude's artifacts do.** Not "shared with the agent or not, and maybe locked": each person has a role on an artifact — **Viewer** sees it, **Contributor** also uses it (what they do inside it is kept as its data), **Editor** also changes it with the agent — and its **owner** alone shares it and deletes it. The owner gives every member of the agent one role (*general access*), or none, and invites members of the agent by name, each with a role. A person's role is the higher of the two. Locking is gone: an owner who wants the others not to change it gives them Viewer or Contributor (see *Shared artifacts*).
@@ -39,7 +47,7 @@ Shared artifacts and artifact data stay under #570 (decided 2026-11-17).
 - ***Continue in a chat* is dropped.** It copied the artifact into the reader's own conversation, which forked it. A member now opens a conversation of their own **on the same artifact**: the conversation stays personal, the artifact does not.
 - **Versions are for the code; what people do inside an artifact is data.** A click, a choice, an answer or a comment never makes a version: it is stored beside the artifact, in `artifact_data`, as Claude's artifacts store theirs. This brings the durable state of phase 4 forward, in the form shared artifacts need (data only, no calls to the agent).
 - ***Info card* goes into the artifacts skill.** A card is one of the things the artifacts skill makes when the user asks for one, not a skill an admin adds on its own.
-- **An artifact can show inline, as part of the answer.** A small thing — a converter, a calculator, a short table — renders in the flow of the answer without a card around it, the way other assistants show a small widget (see *Inline artifacts*).
+- **An artifact can show inline, as part of the answer.** A small thing — a converter, a calculator, a short table — renders in the flow of the answer without a card around it, the way other assistants show a small widget. Replaced on 2026-11-25 by *Widgets*, which are not artifacts.
 - **No artifact is cut off.** The card, the panel and the dock tab give an artifact the height it needs, and scroll when it needs more than there is (see *Sizes*).
 - **Public links come forward, on the application's own address.** An owner can make an artifact public; anyone with its link sees it, read only and without an account, at an address outside `/gendox/`. This no longer waits for phase 5's separate hostname (see *Public links*).
 - **The artifacts are kept ready to become a service of their own.** The new tables and endpoints are built so that artifacts, their versions and their data can later move to a separate application without changing the frame, the bridge or the agent (see *Ready to become a service*).
@@ -105,7 +113,7 @@ Glance (plivo-labs) and Postplan were also looked at: Glance confirms "untrusted
 
 ### One runtime, two levels
 
-Everything model-authored that can execute — `html` and `svg` — renders in **one frame component**, used by the inline preview, the sheet, the dock tab and the widget. What a given artifact may do beyond rendering is a list of capabilities, empty in phase 1. Nothing is designed twice for "artifacts" and "apps", and #522 and #525 get the same component.
+Everything model-authored that can execute — `html` and `svg` — renders in **one frame component**, used by widgets in the answer, the panel, the dock tab and the embedded chat. What a given artifact may do beyond rendering is a list of capabilities, empty in phase 1. Nothing is designed twice for "artifacts" and "apps", and #522 and #525 get the same component.
 
 ### The tools — built
 
@@ -131,7 +139,6 @@ Errors returned to the model, each saying what to do next:
 | `ARTIFACTS_NEED_A_THREAD` | a call with no thread to belong to |
 | `ARTIFACT_READ_ONLY` | a change to an artifact the conversation was opened on, by someone below Editor |
 | `ARTIFACT_CHANGED_SINCE_READ` | a whole new `content` when someone changed the artifact after the conversation last saw it |
-| `ARTIFACT_DISPLAY_NOT_SUPPORTED` | a `display` outside `ARTIFACT_DISPLAY` |
 
 **Identity is the server's id, not a name the model invents.** The id comes back in the tool result, which is in the history the model sees.
 
@@ -267,7 +274,7 @@ JSON-RPC 2.0 over `postMessage`, **with the method names of MCP Apps**.
 | --- | --- | --- |
 | 1 | `ui/initialize`, `ui/notifications/initialized`, `ui/notifications/host-context-changed`, `ui/notifications/size-changed`, `ui/open-link`, `ui/download-file` | handshake, theme, height; opens a link or saves a file after showing the user what it is |
 | 2 | `gendox/data/*` and `gendox/user/*` (Gendox extensions, see *Artifact data*) | reads and writes the artifact's data; says who is viewing and gives names for user ids |
-| 3 | `ui/message`, `ui/update-model-context`, `ui/request-display-mode` | puts text in the composer; attaches a note to the user's next message; switches between inline and the panel |
+| 3 | `ui/message`, `ui/update-model-context` | puts text in the composer; attaches a note to the user's next message |
 | 4 | `tools/call`, `sampling/createMessage` | a tool of the agent; a question to the agent |
 
 Rules for every capability beyond phase 1:
@@ -389,30 +396,36 @@ This is a separate matter from phase 5, which moves only the frame's page to its
 
 ### Where it shows — #569
 
-- **In the answer** — a card where the tool call is: title, type, version, *Open*. The creating message already holds the content in its tool call, so the card of a `create_artifact` shows a live preview **with no request**. The card of an update is compact — *Updated · v3* — and loads nothing until opened. No request per card, ever. A version's `messageId` is the assistant message that carries its call, which places the card.
+- **In the answer** — one line where the tool call is: the kind's icon, title, kind and version, and *Open*; an update shows *Updated · v3*. No preview: the artifact itself is beside the conversation. The line loads nothing, and there is no request per line, ever. A version's `messageId` is the assistant message that carries its call, which places the line.
+- **It opens by itself** — an artifact the agent makes in this page's own turn opens beside the chat without a click: the panel, or in the agent home a tab beside the chat. Not when the chat is too narrow to leave room beside it (the panel would cover the answer), and never for an artifact that was already in the conversation when it was opened. Built 2026-11-25 in `Chat`.
 - **The panel** — the chat's sheet, wide; full-screen on narrow screens and in the widget. *Preview* and *Code* tabs, a version selector (latest by default), copy, download, and *Ask for a change*, which prefills the composer. The footer says who made it and that it runs sealed.
 - **A dock tab** — `/artifact?threadId=&artifactId=`, dock-only, opening beside sources and documents. One tab per artifact; a new version refreshes the tab that is open.
-- **The widget** — the same card and the same panel inside the embedded chat, once public threads are opened (see *REST surface*).
+- **The embedded chat** — the same line and the same panel, once public threads are opened (see *REST surface*).
 
 A new version arriving while the panel is open moves it to the latest, unless the user is looking at an older one on purpose.
 
-### Inline artifacts — built 2026-11-24
+### Widgets — built 2026-11-25
 
-**Some artifacts are part of the answer, not an attachment to it.** Asked for "a euro to dollar calculator", the answer can *be* the calculator: it renders in the flow of the text, with no card header, no frame border and no *Open* button in the way, sized to its content.
+**A widget is part of the answer; an artifact is a document of its own.** Asked for "a euro to dollar calculator", the answer can *be* the calculator: it renders in the flow of the text, sized to its content, with no frame border and nothing to open. Asked for a report, the agent makes an artifact, which opens beside the conversation. A widget never opens in the panel, and an artifact never shows in the answer.
 
-- `create_artifact` gains `display`: `card` (as today) or `inline`. The skill says when: `inline` for something small and interactive that answers the question in place — a converter, a calculator, a short table or chart, a few controls; `card` for anything long, anything the user is likely to keep, change or share, and every document.
-- An inline artifact is still an artifact: it has versions, it is listed in the conversation and on the Artifacts page, it can be shared. Hovering it (or a small control under it on touch screens) offers *Open*, which shows it in the panel as any other.
-- The display is stored on the artifact; a later version keeps it unless the agent changes it. `ui/request-display-mode` of phase 3 lets an app ask to move between the two while it runs.
-- An inline artifact runs in the same sealed frame. Only its chrome changes.
-- **As built:** `artifacts.display_id`, an `ARTIFACT_DISPLAY` type (`CARD`, `INLINE`; null is a card), in the migration `V20261124_163000__Artifact_display_and_info_card.sql`; `display` on both tools, returned in their results and in the DTOs; the skill's *Card or inline* section. In the chat the thread's latest create or update result decides how an artifact shows, with no request; an inline one sizes to its content and has a small *Open* under it, not on hover, since a frame takes the pointer's hover.
-- **The user can switch it** — built: a button in `ArtifactView` for an Editor and up, `PUT …/artifacts/{artifactId}/display` (`ArtifactDisplayRequestDTO`), no version. The chats on the page follow at once, and a chat reads its artifacts' saved display once per conversation (and again when the agent changes one), so a switch made elsewhere shows too. It changes how it is shown, not its code, so it makes no version and needs no agent. It is stored on the artifact, so everyone who sees a shared artifact sees the same.
+- **Its own tool, `show_widget`**, with `title` (a short name, for screen readers and *Try to fix*; not shown as a header), `kind` (`html` or `svg`; text belongs in the answer) and `content`. It returns no id: there is nothing to refer back to.
+- **Stored only in its message.** The content is the tool call's argument, already saved with the assistant message. No table, no versions, no owner, no sharing, no public link, no data, not on the Artifacts page, not in the conversation's list of artifacts.
+- **Rendered from the call, with no request**, in `ChatTurn`, in the same sealed frame with the same bridge, sized as *Sizes* says. *Try to fix* is offered on the conversation's latest widget and asks for a corrected one.
+- **Changed by showing a new one.** "Make it in dollars too" gets a new widget in the next answer. The replayed history keeps the content of the conversation's latest widget, so the agent can build on it; earlier widgets are replaced by a short note, as artifacts' content is.
+- **Becomes an artifact only by asking, and is designed anew.** The user asks the agent, which makes a new artifact with `create_artifact`. It does not copy the widget: it designs the artifact for what an artifact is — a complete, standalone document the user keeps — with a fuller layout, the context it needs on its own, and what the small widget left out. No button (decided 2026-11-25).
+- **Nothing done inside it is kept.** Reloading shows it again from its content. Whatever must be kept, shared or changed later is an artifact.
+- **The same rules as an artifact** for what the content may hold and how long it may be, for the plan gating (`artifacts_enabled`), and for the embedded chat (scripts only with the agent's setting). Offered through the same skill: `allowed-tools` gains `show_widget`, and its section *Artifact or widget* says when each.
+- **What goes:** `artifacts.display_id` and the `ARTIFACT_DISPLAY` types, in a new migration that is safe to run again; `display` on `create_artifact` and `update_artifact`, in their results and in the DTOs; `PUT …/artifacts/{artifactId}/display` and `ArtifactDisplayRequestDTO`; `ARTIFACT_DISPLAY_NOT_SUPPORTED`; the switch in `ArtifactView`; the chat's reading of displays (from the thread's results and once per conversation from the server) and its window event. The renaming migration written on 2026-11-25 (`PANEL`, `WIDGET`) is dropped before it is committed. Artifacts that showed inline become ordinary artifacts; every one so far was test data.
+- **What stays from inline artifacts:** the frame's sizing to its content, and what the chat learned about rendering a frame in the flow of the answer.
+- **As built:** `ShowWidgetTool` (result `{shown, title, kind}`), checked by `ArtifactService.checkWidget`; `show_widget` among the artifact tools the plan allows in `CompletionRuntimeContextResolver`, without the output floor; `ArtifactHistory` keeps the latest widget's content and gives earlier ones `WIDGET_NOTE`; the display removed by `V20261125_115800__Artifact_without_a_display.sql`. Frontend: `WidgetCard`, rendered by `ChatTurn` from the call; `latestWidgetOf` for *Try to fix*; a failed widget that a later one made good shows with the other tools. Verified by unit tests, and in Chrome on a seeded conversation: the widget runs in the answer, with no *Open*, and the conversation's artifact shows as its line. Not yet run with a real model.
+- **History.** Inline artifacts were built on 2026-11-24 (`display` `card` or `inline` on the artifact, in `V20261124_163000__Artifact_display_and_info_card.sql`, and a user's switch), and renamed `panel` and `widget` on 2026-11-25 before the separation was decided the same day.
 
 ### Sizes — 2026-11-17, built 2026-11-24
 
 What was built is too tight: the card's preview stops at a fixed small height, and in the panel or a small dock tab an artifact that is taller than the space is cut off with no way to reach its lower part (a game whose start button sits below the fold). The rules from now on:
 
 - **Nothing is ever cut without a way to reach it.** Where an artifact is taller than its space, the space scrolls.
-- **The card and inline artifacts** grow with their content (the frame already reports its height) up to a generous maximum, about the height of the window; beyond it the frame scrolls inside, and *Open* shows it whole.
+- **Widgets** grow with their content (the frame already reports its height) up to a generous maximum, about the height of the window; beyond it the frame scrolls inside, and the page scrolls past it.
 - **The panel and the dock tab** give the frame the larger of the space available and the height the content reports, inside a scrolling area; a maximized tab gets the whole window.
 - **The skill** tells the agent that an artifact may be shown small: no layout that depends on the full window height (`100vh`) for its controls, the main controls near the top, and the page allowed to scroll.
 - **As built:** `ArtifactFrame` grows a panel's frame to the height its content reports and lets the space around it scroll; content sized by the frame's own height (`100vh` and a margin) goes past it by the same amount however tall it gets, and the frame stops growing when it sees that. Verified in Chrome with a 60-row page whose button is at the bottom, and a `min-height: 100vh` page that grew once and stopped.
@@ -481,14 +494,15 @@ Built in this order, each a commit of its own: the cheaper history, the Artifact
 - **Shared artifacts — built** (see *Shared artifacts* in *Decisions*):
   - Backend: the migration of 2026-11-24; `ArtifactAccessService` (the role, and `require`); `ArtifactSharingService` and `ArtifactSharingController` (sharing, public, delete, *Change it in a chat*); reading by id with `yourRole` in `ArtifactController`; the lists' *Yours* and *Shared with you* in `ArtifactPredicates`; the tools' wider reach in `ArtifactService.checkReach`; the `./artifacts` listing (`ArtifactService.openedArtifactsListing`, `ChatTemplateAuthor`, `FileListing` taken as is from the agent platform work); the contextual artifacts skill in `SkillService`.
   - Frontend: the share dialog, *Shared with you*, opening by id, *Change it in a chat* with the artifact beside the new conversation, the agent home's windows per person. The read-only reader page, its link and its list are gone.
-  - Also built: the rewrite rule for two people changing it at once, *Restore this version*, and the user's switch between card and inline.
+  - Also built: the rewrite rule for two people changing it at once, and *Restore this version*. The user's switch between card and inline was built and goes with widgets.
   - Verified by unit tests (the access rules, the sharing service, the predicates, the controller's role and conversation rules, the listing and its session item, the contextual skill), in the ephemeral environment through the API with four users (roles given, changed and taken away; `404` and `403`; the lists; a deleted conversation), with the mock model (what the model receives: the listing with the owner's role, a lowered role, no listing once the role is gone, none in an ordinary chat), and in the app's browser pane with two users (the dialog as owner and read only, *Shared with you*, *Change it in a chat*). The frame itself cannot render in the pane (see *Verification*).
 - **Artifact data** (after shared artifacts; see *Artifact data* in *Decisions*):
   - Backend: `artifact_data`, its service and endpoints, `capabilities` on the artifact and on the two tools, and optionally `read_artifact_data`.
   - Frontend: the `gendox.use` script in the shell, the `gendox/data/*` and `gendox/user/*` methods in the host with their checks, polling while open.
   - The skill: the data API and its rules.
 - **The output floor on the agent's settings screen**, and the model's maximum output on `ai_models` capping it; **usage by tokens** for artifact turns, with the subscription work.
-- **Inline artifacts and sizes** (see *Inline artifacts* and *Sizes* in *Decisions*): `display` on the artifact and on `create_artifact`, and the user's *Show as a card* / *Show inline*; the inline rendering in `ChatTurn`; the new height rules in `ArtifactFrame`, the card, the panel and the dock tab; the skill's guidance on both.
+- **Sizes** (see *Sizes* in *Decisions*) — built: the new height rules in `ArtifactFrame`, the panel and the dock tab; the skill's guidance.
+- **Widgets** (see *Widgets* in *Decisions*) — built 2026-11-25: `show_widget`, its rendering in `ChatTurn`, its replay rule, the skill's *Artifact or widget*, and the removal of the display. Inline artifacts, built 2026-11-24, went with it.
 - **Public links** (see *Public links* in *Decisions*): the public state and its endpoints; the organization's setting and the plan column; the owner's *also show its shared data*; the page under `/a/`, outside the application's layout and guard; *Make public* / *Make private* and *Copy public link* for the owner in `ArtifactView`; the server rule that sends `/a/…` to that page in every environment.
 - Write endpoints (sharing, data, public links, later editing by hand) require a signed-in user and are never let through the security configuration without a login.
 - **An Artifacts page for each agent**, beside Tasks and Knowledge in the agent's menu, as a page and as a dock tab. It lists the user's own artifacts with this agent — never every artifact of the agent: a conversation is personal, and its artifacts are shown to others only by sharing. A second tab, *Shared with you*, lists the others' artifacts of this agent the user has a role on.
@@ -504,7 +518,7 @@ Built in this order, each a commit of its own: the cheaper history, the Artifact
 - `capabilities` (arrived in phase 2 with artifact data) gains the phase-3 names, shown in the panel.
 - `ui/message` — the app proposes a message; it lands in the composer.
 - `ui/update-model-context` — the app states what the user has selected or entered; the latest statement travels with the user's next message, marked as coming from the app. Each statement replaces the previous one.
-- `ui/request-display-mode` — inline or panel.
+- Both widgets and artifacts can be mini apps. A widget's messages come from the answer it is in; there is no moving between the answer and the panel (`ui/request-display-mode` is not used).
 - UI state per rendered instance, kept by the host for the life of the page.
 - Skill guidance for apps: what to declare, and to work without the bridge when a capability is refused.
 
@@ -567,15 +581,17 @@ Moved here from phase 2, as an improvement once phases 2 to 6 are done.
 
 ## Open questions
 
+**Widgets — decided 2026-11-25** (written into *Widgets* above): a widget is part of the answer and not an artifact; the display and the user's switch go; an artifact always opens beside the conversation and opens by itself when made in this page's turn; a widget becomes an artifact only when the user asks the agent, which designs it anew rather than copying it, with no button; the test artifacts that showed inline become ordinary ones.
+
 **Shared artifacts — decided 2026-11-24, while building** (folded into *Shared artifacts* above): roles as Claude's artifacts have them, replacing "shared with the agent, maybe locked"; the owner a column; invitations a table of their own; no change to `thread_id`, since conversations are soft-deleted; the `./artifacts` listing and the contextual artifacts skill; the public reader's view of shared data dropped.
 
 **Shared artifacts and their data — decided 2026-11-17** (still true unless the line above changed it): data shared by default, the artifact choosing a private document; two people changing it at once with no lock; the owner alone deletes; a single write rule now, per-collection rules later; the work stays under #570.
 
-**Decided later the same day:** public links on by default with an organization setting to turn them off; the public page names the agent; the user can switch inline and card; versions are never deleted, only restored; editing by hand later; interactive artifacts in the widget behind a per-agent setting, off by default. Each is written into its section above.
+**Decided later the same day:** public links on by default with an organization setting to turn them off; the public page names the agent; the user can switch inline and card (replaced on 2026-11-25 by widgets); versions are never deleted, only restored; editing by hand later; interactive artifacts in the embedded chat behind a per-agent setting, off by default. Each is written into its section above.
 
 **From before:**
 
-- **Resolved:** *scripts in the widget* — a per-agent setting, *interactive artifacts in the widget*, off by default; without scripts an `HTML` artifact is still a styled page. *Deleting* — the owner deletes a whole artifact (see *Shared artifacts*); a single version is never deleted: going back to one makes a new version with its content, so the history stays whole and a link to a version keeps working. *Editing by hand* — later, not in phase 2; the changes go through the chat. *How `'self'` resolves in an opaque-origin frame* — no longer needed: the libraries are sent in by the host and put inline (see *After the phases*).
+- **Resolved:** *scripts in the embedded chat* — a per-agent setting, *interactive artifacts in the widget*, off by default; without scripts an `HTML` artifact is still a styled page. *Deleting* — the owner deletes a whole artifact (see *Shared artifacts*); a single version is never deleted: going back to one makes a new version with its content, so the history stays whole and a link to a version keeps working. *Editing by hand* — later, not in phase 2; the changes go through the chat. *How `'self'` resolves in an opaque-origin frame* — no longer needed: the libraries are sent in by the host and put inline (see *After the phases*).
 
 **Decided on 2026-11-17, from before:**
 

@@ -61,6 +61,35 @@ const parse = value => {
 
 export const isArtifactCall = call => WRITES_ARTIFACT.includes(call?.function?.name)
 
+// a widget is part of the answer, not an artifact (gendox-core#570): its content is the call's, nothing is stored
+export const SHOW_WIDGET = 'show_widget'
+export const isWidgetCall = call => call?.function?.name === SHOW_WIDGET
+
+/**
+ * What one show_widget call showed, from the call and its result in the thread — no request.
+ * @returns {{ id, name, args, error, pending }} `pending` until the result arrives; `error` from the tool
+ */
+export const widgetCallOf = (call, responses) => {
+  const response = responses.find(r => r.toolCallId === call.id)
+  const result = parse(response?.message)
+
+  return {
+    id: call.id,
+    name: call.function?.name,
+    args: parse(call.function?.arguments) || {},
+    error: result && result.errorCode ? { code: result.errorCode, message: result.errorMessage } : null,
+    pending: !response
+  }
+}
+
+/** The id of the conversation's latest show_widget call, or null: the only widget Try to fix is offered on */
+export const latestWidgetOf = (messages = []) => {
+  let latest = null
+  messages.forEach(message => (message.toolCalls || []).forEach(call => isWidgetCall(call) && (latest = call.id)))
+
+  return latest
+}
+
 /**
  * What one create_artifact / update_artifact call did, from the call and its result in the thread — no request.
  * @returns {{ id, name, args, result, error, pending }} `pending` until the result arrives; `error` from the tool
@@ -80,22 +109,28 @@ export const artifactCallOf = (call, responses) => {
 }
 
 /**
- * The failed artifact calls of a turn that a later call in the same turn made good: an update of the same artifact,
- * or, for a failed create, a create, that succeeded. Their warning would only confuse; they show with the other tools.
+ * The failed artifact and widget calls of a turn that a later call in the same turn made good: an update of the same
+ * artifact, or, for a failed create, a create, or for a failed widget, a widget, that succeeded. Their warning would only confuse; they show with the other tools.
  * @param items - a turn's items, from buildTurns
  * @returns {Set<string>} the ids of those calls
  */
 export const recoveredFailuresOf = (items = []) => {
   const calls = items
     .filter(item => item.type === 'tools')
-    .flatMap(item => (item.header.toolCalls || []).filter(isArtifactCall).map(call => artifactCallOf(call, item.responses)))
+    .flatMap(item =>
+      (item.header.toolCalls || [])
+        .filter(call => isArtifactCall(call) || isWidgetCall(call))
+        .map(call => (isWidgetCall(call) ? widgetCallOf : artifactCallOf)(call, item.responses))
+    )
   const recovered = new Set()
   calls.forEach((call, index) => {
     if (!call.error) return
     const madeGood = calls
       .slice(index + 1)
       .some(next =>
-        next.result && (call.name === CREATE_ARTIFACT ? next.name === CREATE_ARTIFACT : next.result.artifactId === call.args.artifact_id)
+        call.name === SHOW_WIDGET
+          ? next.name === SHOW_WIDGET && !next.error && !next.pending
+          : next.result && (call.name === CREATE_ARTIFACT ? next.name === CREATE_ARTIFACT : next.result.artifactId === call.args.artifact_id)
       )
     if (madeGood) recovered.add(call.id)
   })
@@ -121,33 +156,6 @@ export const latestVersionsOf = (messages = []) => {
   })
 
   return versions
-}
-
-/**
- * How each artifact the thread's messages know of shows, from its latest create or update result — no request:
- * { [artifactId]: 'card' | 'inline' } (gendox-core#570). A result from before displays existed is a card.
- */
-export const latestDisplaysOf = (messages = []) => {
-  const callNames = {}
-  messages.forEach(message =>
-    (message.toolCalls || []).forEach(call => {
-      if (isArtifactCall(call)) callNames[call.id] = true
-    })
-  )
-  const displays = {}
-  const versions = {}
-  messages.forEach(message => {
-    if (message.role !== 'tool' || !callNames[message.toolCallId]) return
-    const result = parse(message.message)
-    if (!result?.artifactId) return
-    // the result of the latest version wins; a change of display alone keeps the version, so it wins on a tie
-    if ((result.version || 0) >= (versions[result.artifactId] || 0)) {
-      versions[result.artifactId] = result.version || 0
-      displays[result.artifactId] = result.display === 'inline' ? 'inline' : 'card'
-    }
-  })
-
-  return displays
 }
 
 /**
@@ -180,8 +188,8 @@ export const artifactsOf = (messages = []) => {
 }
 
 /** What Try to fix puts in the composer; the user reads it and sends it, or not */
-export const fixRequestOf = (title, error) =>
-  `Fix “${title || 'the artifact'}”: it shows an error${error.line ? ` at line ${error.line}` : ''}: ${error.message}`
+export const fixRequestOf = (title, error, what = 'the artifact') =>
+  `Fix “${title || what}”: it shows an error${error.line ? ` at line ${error.line}` : ''}: ${error.message}`
 
 /**
  * The roles a user can have on an artifact (gendox-core#570), lowest first, as Claude's artifacts have them: Viewer
@@ -203,12 +211,6 @@ export const roleAtLeast = (role, needed) => (RANK[role] || 0) >= RANK[needed]
 
 /** The link anyone can open, signed in or not (gendox-core#570); outside /gendox/, so no app around it */
 export const publicArtifactLink = publicId => `${window.location.origin}/a/?id=${publicId}`
-
-// a person changed how an artifact shows (gendox-core#570): every chat on the page shows it the new way at once
-export const ARTIFACT_DISPLAY_CHANGED = 'gendox:artifact-display-changed'
-
-/** 'card' or 'inline', from an artifact's display type (null is a card) */
-export const displayOf = artifact => (String(artifact?.display?.name || '').toUpperCase() === 'INLINE' ? 'inline' : 'card')
 
 // what Change it in a chat leaves for the agent home: the artifact to show beside the new chat, and the request it
 // starts with; read once, by the agent home that opens the chat

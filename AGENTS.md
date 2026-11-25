@@ -24,7 +24,7 @@ Implementation plans and audits live in `.ai/`, one file per topic, named `<topi
 
 ### Pending plans
 
-- [Artifacts and mini apps in the chat — #523](.ai/issue-523-artifacts-2026-11-24.md) — phase 1 implemented: backend (#568) and v2 frontend (#569), verified in Chrome, Firefox and Safari. Phase 2 (#570) implemented: shared artifacts with roles and Change it in a chat, inline artifacts and sizes, Restore this version, the public page; artifact data, the organization's setting for public links and the output floor are left for later. Self-contained: it replaces the [original 2026-11-13 plan](.ai/issue-523-artifacts-2026-11-13.md), which is kept unchanged.
+- [Artifacts and mini apps in the chat — #523](.ai/issue-523-artifacts-2026-11-25.md) — phase 1 implemented: backend (#568) and v2 frontend (#569), verified in Chrome, Firefox and Safari. Phase 2 (#570) implemented: shared artifacts with roles and Change it in a chat, sizes, Restore this version, the public page. Widgets, separate from artifacts, replace inline artifacts. Artifact data, the organization's setting for public links and the output floor are left for later. Self-contained: it replaces the [original 2026-11-13 plan](.ai/issue-523-artifacts-2026-11-13.md), which is kept unchanged.
 
 - [Application e2e coverage for v2](.ai/e2e-v2-coverage-2026-11-11.md) — current frontend selection, browser coverage and blocked cases; the original v1 plan remains unchanged.
 

@@ -19,44 +19,37 @@ class ArtifactConverterTest {
 
     private static Artifact artifact() {
         return Artifact.builder().id(UUID.randomUUID()).threadId(UUID.randomUUID()).title("EUR to USD")
-                .artifactType(Type.builder().name("HTML").build()).display(Type.builder().name("INLINE").build())
+                .artifactType(Type.builder().name("HTML").build())
                 .latestVersion(2).ownerId(UUID.randomUUID()).build();
     }
 
     @Test
-    void aSummaryCarriesHowItShows() {
+    void aSummaryCarriesItsKind() {
         ArtifactSummaryDTO summary = converter.toDTO(artifact());
 
-        assertEquals("INLINE", summary.getDisplay().getName());
         assertEquals("HTML", summary.getArtifactType().getName());
+        assertEquals("EUR to USD", summary.getTitle());
     }
 
     @Test
-    void anArtifactCarriesHowItShowsAndTheReadersRole() {
+    void anArtifactCarriesItsContentAndTheReadersRole() {
         Artifact artifact = artifact();
         ArtifactVersion shown = ArtifactVersion.builder().version(2).content("<p>x</p>").build();
 
         ArtifactDTO dto = converter.toDTO(artifact, List.of(), shown, Role.EDIT);
 
-        assertEquals("INLINE", dto.getDisplay().getName());
         assertEquals("EDIT", dto.getYourRole());
         assertEquals("<p>x</p>", dto.getContent());
     }
 
     @Test
-    void anArtifactWithoutADisplayIsShownAsACardByTheReader() {
-        Artifact artifact = artifact().toBuilder().display(null).build();
-
-        assertNull(converter.toDTO(artifact).getDisplay());
-    }
-
-    @Test
-    void aSummaryTurnedBackKeepsItsDisplay() {
+    void aSummaryTurnedBackKeepsItsKindAndVersion() {
         Artifact artifact = artifact();
 
         Artifact back = converter.toEntity(converter.toDTO(artifact));
 
-        assertEquals("INLINE", back.getDisplay().getName());
+        assertEquals("HTML", back.getArtifactType().getName());
+        assertEquals(2, back.getLatestVersion());
     }
 
     @Test

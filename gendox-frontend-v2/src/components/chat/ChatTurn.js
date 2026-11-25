@@ -6,7 +6,14 @@ import Markdown from 'src/components/chat/Markdown'
 import { MentionText } from 'src/components/chat/mentions'
 import ChatAttachments from 'src/components/chat/ChatAttachments'
 import ArtifactCard from 'src/components/artifacts/ArtifactCard'
-import { artifactCallOf, isArtifactCall, recoveredFailuresOf } from 'src/components/artifacts/artifactUtils'
+import WidgetCard from 'src/components/artifacts/WidgetCard'
+import {
+  artifactCallOf,
+  isArtifactCall,
+  isWidgetCall,
+  recoveredFailuresOf,
+  widgetCallOf
+} from 'src/components/artifacts/artifactUtils'
 
 const Trace = ({ icon: Icon, label, children }) => {
   return (
@@ -70,14 +77,14 @@ const skillNameOf = call => {
 
 // The tools one assistant message called, with their arguments and what each returned.
 // Reading a skill shows as its own line: the skill's instructions are not worth showing as a tool result.
-// Making or changing an artifact shows as its card (gendox-core#523); a failed try that a later call made good
-// (`recovered`) shows with the other tools instead. An error the artifact raises offers Try to fix (onAsk), on its
-// latest version only (artifactVersions).
-const ToolCalls = ({ header, responses, recovered, onOpenArtifact, artifactVersions, artifactDisplays, onAsk }) => {
+// Making or changing an artifact shows as its line (gendox-core#523), and a widget as itself, part of the answer
+// (gendox-core#570); a failed try that a later call made good (`recovered`) shows with the other tools instead. An
+// error a widget raises offers Try to fix (onAsk), on the conversation's latest widget only (latestWidget).
+const ToolCalls = ({ header, responses, recovered, onOpenArtifact, latestWidget, onAsk }) => {
   const allCalls = header.toolCalls || []
-  const showsAsCard = call => isArtifactCall(call) && !recovered.has(call.id)
+  const showsAsCard = call => (isArtifactCall(call) || isWidgetCall(call)) && !recovered.has(call.id)
   const skillCalls = allCalls.filter(call => call.function?.name === 'read_skill')
-  const artifactCalls = allCalls.filter(showsAsCard)
+  const cardCalls = allCalls.filter(showsAsCard)
   const calls = allCalls.filter(call => call.function?.name !== 'read_skill' && !showsAsCard(call))
 
   return (
@@ -119,18 +126,18 @@ const ToolCalls = ({ header, responses, recovered, onOpenArtifact, artifactVersi
           ))}
         </Trace>
       )}
-      {artifactCalls
-        .map(call => artifactCallOf(call, responses))
-        .map(artifactCall => (
-          <ArtifactCard
-            key={artifactCall.id}
-            call={artifactCall}
-            onOpen={onOpenArtifact}
-            latestVersion={artifactVersions[artifactCall.result?.artifactId]}
-            display={artifactDisplays[artifactCall.result?.artifactId]}
+      {cardCalls.map(call =>
+        isWidgetCall(call) ? (
+          <WidgetCard
+            key={call.id}
+            call={widgetCallOf(call, responses)}
+            isLatest={call.id === latestWidget}
             onAsk={onAsk}
           />
-        ))}
+        ) : (
+          <ArtifactCard key={call.id} call={artifactCallOf(call, responses)} onOpen={onOpenArtifact} />
+        )
+      )}
     </>
   )
 }
@@ -257,8 +264,7 @@ const ChatTurn = ({
   activeSourcesMessageId,
   onSources,
   onOpenArtifact,
-  artifactVersions = {},
-  artifactDisplays = {},
+  latestWidget = null,
   onAskArtifactFix,
   onAskAgain,
   onFeedback,
@@ -298,8 +304,7 @@ const ChatTurn = ({
                 responses={item.responses}
                 recovered={recovered}
                 onOpenArtifact={onOpenArtifact}
-                artifactVersions={artifactVersions}
-                artifactDisplays={artifactDisplays}
+                latestWidget={latestWidget}
                 onAsk={onAskArtifactFix}
               />
             ) : (

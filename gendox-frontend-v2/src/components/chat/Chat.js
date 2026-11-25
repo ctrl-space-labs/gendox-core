@@ -39,14 +39,7 @@ import ChatSources from 'src/components/chat/ChatSources'
 import ChatDeepThinking from 'src/components/chat/ChatDeepThinking'
 import ArtifactView from 'src/components/artifacts/ArtifactView'
 import ChatArtifacts from 'src/components/artifacts/ChatArtifacts'
-import {
-  ARTIFACT_DISPLAY_CHANGED,
-  artifactsOf,
-  displayOf,
-  latestDisplaysOf,
-  latestVersionsOf
-} from 'src/components/artifacts/artifactUtils'
-import artifactService from 'src/gendox-sdk/artifactService'
+import { artifactsOf, latestVersionsOf, latestWidgetOf } from 'src/components/artifacts/artifactUtils'
 
 const COMPLETION_POLL_MS = 2000
 
@@ -179,41 +172,8 @@ const Chat = ({
 
   const turns = useMemo(() => buildTurns(messages, auth.user?.id), [messages, auth.user?.id])
   const artifactVersions = useMemo(() => latestVersionsOf(messages), [messages])
-  const displaysInThread = useMemo(() => latestDisplaysOf(messages), [messages])
   const threadArtifacts = useMemo(() => artifactsOf(messages), [messages])
-  // how each artifact shows as the server has it: a person may have switched it since the agent wrote it
-  // (gendox-core#570). Read once per conversation, and again when the agent changes one; one request, not one per card
-  const [savedDisplays, setSavedDisplays] = useState({})
-  const artifactsKey = JSON.stringify([artifactVersions, displaysInThread])
-  useEffect(() => {
-    setSavedDisplays({})
-    if (!threadId || !threadArtifacts.length) return
-    let current = true
-    artifactService
-      .getArtifacts(threadId, token)
-      .then(response => {
-        if (!current) return
-        const saved = {}
-        ;(response.data ?? []).forEach(artifact => (saved[artifact.id] = displayOf(artifact)))
-        setSavedDisplays(saved)
-      })
-      .catch(() => {}) // without it the chat shows them as the agent wrote them
-
-    return () => {
-      current = false
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [threadId, artifactsKey])
-  useEffect(() => {
-    const onChanged = event => {
-      const { artifactId, display } = event.detail || {}
-      if (artifactId) setSavedDisplays(saved => ({ ...saved, [artifactId]: display }))
-    }
-    window.addEventListener(ARTIFACT_DISPLAY_CHANGED, onChanged)
-
-    return () => window.removeEventListener(ARTIFACT_DISPLAY_CHANGED, onChanged)
-  }, [])
-  const artifactDisplays = useMemo(() => ({ ...displaysInThread, ...savedDisplays }), [displaysInThread, savedDisplays])
+  const latestWidget = useMemo(() => latestWidgetOf(messages), [messages])
   const uploadedDocs = useMemo(
     () => attachments.filter(a => a.status === 'uploaded').map(a => a.uploadedDoc),
     [attachments]
@@ -457,6 +417,30 @@ const Chat = ({
     setOpenArtifact(ref)
   }
 
+  // An artifact the agent makes in this page's own turn opens beside the chat by itself (gendox-core#570); one
+  // already in the conversation when it was opened never does.
+  // A narrow chat has no room beside it: there the sheet would cover the answer, so it waits for Open.
+  const knownArtifacts = useRef(null) // the artifacts this chat has seen, by id
+  const showArtifactRef = useRef(showArtifact)
+  showArtifactRef.current = showArtifact
+  useEffect(() => {
+    knownArtifacts.current = null
+  }, [threadId])
+  useEffect(() => {
+    const ids = Object.keys(artifactVersions)
+    if (knownArtifacts.current === null || !isSendingMessage) {
+      knownArtifacts.current = new Set(ids)
+
+      return
+    }
+    const made = ids.filter(id => !knownArtifacts.current.has(id))
+    made.forEach(id => knownArtifacts.current.add(id))
+    const toOpen = made.pop()
+    const narrow = !onOpenArtifact && (scrollRef.current?.closest('.gc')?.clientWidth ?? 0) < 600
+    if (toOpen && !narrow) showArtifactRef.current({ artifactId: toOpen, version: artifactVersions[toOpen] })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [artifactVersions, isSendingMessage])
+
   // the request goes to the composer; a narrow chat closes the sheet that covers it
   const askForChange = text => {
     if ((scrollRef.current?.closest('.gc')?.clientWidth ?? 0) < 600) setOpenArtifact(null)
@@ -607,8 +591,7 @@ const Chat = ({
                 activeSourcesMessageId={sourcesMessageId}
                 onSources={sources ? openSources : null}
                 onOpenArtifact={threadId ? showArtifact : null}
-                artifactVersions={artifactVersions}
-                artifactDisplays={artifactDisplays}
+                latestWidget={latestWidget}
                 onAskArtifactFix={askForChange}
                 onAskAgain={isBusy ? null : text => send(text, [])}
                 onFeedback={handleFeedback}

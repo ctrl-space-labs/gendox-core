@@ -1,7 +1,7 @@
 ---
 name: artifacts
-description: Use when the user asks for something substantial and standalone that they will keep, reuse or look at beside the conversation - a page, a report, a dashboard, a diagram, a card or fact sheet about one thing, a long document, a code file. The content is written as an artifact, shown in its own panel, and changed with edits instead of being written again.
-allowed-tools: create_artifact, update_artifact, read_artifact, advanced_search, read_document
+description: Use when the user asks for something substantial and standalone that they will keep, reuse or look at beside the conversation - a page, a report, a dashboard, a diagram, a card or fact sheet about one thing, a long document, a code file. The content is written as an artifact, shown in its own panel, and changed with edits instead of being written again. Also when a small interactive widget - a converter, a calculator, a short chart - would answer the question in place.
+allowed-tools: create_artifact, update_artifact, read_artifact, show_widget, advanced_search, read_document
 ---
 
 # Artifacts
@@ -30,21 +30,29 @@ make one. Make at most one artifact per message, unless the user asks for more.
 - `code`: source code, with its `code_language`. It is shown highlighted; it does not run.
 
 
-## Card or inline
+## Artifact or widget
 
-- `card` (the default): the artifact shows as a card in your answer and opens in a panel. Use it for
-  anything long, anything the user is likely to keep, change or share, and every document.
-- `inline`: the artifact is part of your answer, with no card around it, sized to its content. Use
-  it for something small and interactive that answers the question in place: a converter, a
-  calculator, a short table or chart, a few controls. Keep it short; write any explanation in your
-  answer, not inside it.
-- Set it with `display` on `create_artifact`. To move an artifact between the two, use `display` on
-  `update_artifact`; it changes how it shows, not its content.
+Two ways to show something beyond text. Choose one; neither becomes the other.
 
+- **An artifact** (`create_artifact`): a document of its own. It opens beside the conversation, the
+  user keeps it, shares it and asks for changes, and it has versions. Your answer keeps one line for
+  it. Use it for anything long, anything the user is likely to keep, change or share, and every
+  document.
+- **A widget** (`show_widget`, `kind` `html` or `svg`): something small and interactive that is part
+  of your answer and answers the question in place: a converter, a calculator, a short table or
+  chart, a few controls. It is sized to its content, with no frame around it. It is not saved as an
+  artifact: it has no versions, no one can share it, and nothing done inside it is kept. Keep it
+  short; write any explanation in your answer, not inside it.
+- **Changing a widget:** show a new one in your answer, built on the latest one, which stays in the
+  conversation history. There is no update for a widget.
+- **A widget made into an artifact:** only when the user asks for it. Then design the artifact anew
+  for what an artifact is - a complete, standalone document the user will keep and come back to -
+  rather than copying the widget: give it a fuller layout, the context it needs to make sense on its
+  own, and what the small widget left out. Create it with `create_artifact`.
 
 ## Writing the content
 
-- **Self-contained.** The artifact runs sealed off: no network, no images, fonts or scripts from
+- **Self-contained.** An artifact or a widget runs sealed off: no network, no images, fonts or scripts from
   the web, no browser storage. Everything it needs is inside it. Draw with inline SVG and CSS
   instead of linking images.
 - **Follow the theme.** The panel provides the app's colors and fonts as CSS variables, in light and
@@ -64,7 +72,7 @@ make one. Make at most one artifact per message, unless the user asks for more.
 - **Compact.** Your output for one call is limited, and a call that is cut short is lost. Write
   tight markup with no filler. Build something large in steps: create a complete, smaller first
   version, then add sections with `update_artifact`.
-- **Shown small.** An artifact may be shown in a narrow panel or a short card. Put its main controls
+- **Shown small.** An artifact may be shown in a narrow panel, and a widget is small. Put the main controls
     near the top, let the page scroll, and do not size its layout to the window's height (`100vh`):
     a button below the fold of a full-height layout cannot be reached.
 - **Cite.** When the content comes from the project's documents, name the documents in the artifact,

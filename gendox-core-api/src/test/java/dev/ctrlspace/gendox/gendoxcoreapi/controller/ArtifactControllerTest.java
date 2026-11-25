@@ -172,18 +172,6 @@ class ArtifactControllerTest {
     }
 
     @Test
-    void aChangedDisplayAnswersWithTheArtifactAsOpenedByItsId() throws GendoxException {
-        opens(Role.EDIT);
-
-        ArtifactDTO changed = controller.setDisplay(artifact.getId(),
-                new dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.ArtifactDisplayRequestDTO("inline"));
-
-        verify(artifactService).setDisplay(artifact.getId(), me, "inline");
-        assertEquals("EDIT", changed.getYourRole());
-        assertNull(changed.getThreadId());
-    }
-
-    @Test
     void aRestoredVersionAnswersWithTheArtifactAtItsLatest() throws GendoxException {
         opens(Role.EDIT);
 

@@ -44,6 +44,39 @@ class ArtifactHistoryTest {
     }
 
     @Test
+    void theLatestWidgetKeepsItsContentAndEarlierOnesGetTheirNote() {
+        AiModelMessage first = assistantCalling("""
+                [{"id":"w1","type":"function","function":{"name":"show_widget",
+                  "arguments":"{\\"title\\":\\"Converter\\",\\"kind\\":\\"html\\",\\"content\\":\\"<p>v1</p>\\"}"}}]
+                """);
+        AiModelMessage second = assistantCalling("""
+                [{"id":"w2","type":"function","function":{"name":"show_widget",
+                  "arguments":"{\\"title\\":\\"Converter\\",\\"kind\\":\\"html\\",\\"content\\":\\"<p>v2</p>\\"}"}}]
+                """);
+
+        ArtifactHistory.withoutArtifactContent(List.of(first, second), objectMapper);
+
+        assertEquals(ArtifactHistory.WIDGET_NOTE, argumentsOf(first, 0).get("content").asText());
+        assertEquals("Converter", argumentsOf(first, 0).get("title").asText());
+        assertEquals("<p>v2</p>", argumentsOf(second, 0).get("content").asText());
+    }
+
+    @Test
+    void aWidgetAfterAnArtifactInTheSameMessageKeepsItsContent() {
+        AiModelMessage message = assistantCalling("""
+                [{"id":"c1","type":"function","function":{"name":"create_artifact",
+                  "arguments":"{\\"title\\":\\"Report\\",\\"kind\\":\\"html\\",\\"content\\":\\"<h1>long</h1>\\"}"}},
+                 {"id":"w1","type":"function","function":{"name":"show_widget",
+                  "arguments":"{\\"title\\":\\"Chart\\",\\"kind\\":\\"svg\\",\\"content\\":\\"<svg/>\\"}"}}]
+                """);
+
+        ArtifactHistory.withoutArtifactContent(List.of(message), objectMapper);
+
+        assertEquals(ArtifactHistory.CONTENT_NOTE, argumentsOf(message, 0).get("content").asText());
+        assertEquals("<svg/>", argumentsOf(message, 1).get("content").asText());
+    }
+
+    @Test
     void editsStay() {
         AiModelMessage message = assistantCalling("""
                 [{"id":"c1","type":"function","function":{"name":"update_artifact",

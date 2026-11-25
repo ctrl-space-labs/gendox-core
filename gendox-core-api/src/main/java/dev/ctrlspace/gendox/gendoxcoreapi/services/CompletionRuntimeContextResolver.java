@@ -16,6 +16,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.ChatTemplateAut
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.SectionTemplateAuthor;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.artifacts.CreateArtifactTool;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.artifacts.ReadArtifactTool;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.artifacts.ShowWidgetTool;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.artifacts.UpdateArtifactTool;
 import org.springframework.beans.factory.annotation.Value;
 import org.apache.logging.log4j.util.Strings;
@@ -49,7 +50,9 @@ public class CompletionRuntimeContextResolver {
     private final ArtifactService artifactService;
 
     static final Set<String> ARTIFACT_WRITING_TOOLS = Set.of(CreateArtifactTool.NAME, UpdateArtifactTool.NAME);
-    static final Set<String> ARTIFACT_TOOLS = Set.of(CreateArtifactTool.NAME, UpdateArtifactTool.NAME, ReadArtifactTool.NAME);
+    // widgets go with artifacts: the same skill brings them and the same plan allows them
+    static final Set<String> ARTIFACT_TOOLS = Set.of(CreateArtifactTool.NAME, UpdateArtifactTool.NAME, ReadArtifactTool.NAME,
+            ShowWidgetTool.NAME);
 
     /**
      * Output tokens a completion gets at least when it may write an artifact.

@@ -170,7 +170,6 @@ export default {
   artifactGeneralAccess: artifactId => `${url}artifacts/${artifactId}/sharing/general-access`,
   artifactMember: (artifactId, userId) => `${url}artifacts/${artifactId}/sharing/members/${userId}`,
   artifactChats: artifactId => `${url}artifacts/${artifactId}/chats`,
-  artifactDisplay: artifactId => `${url}artifacts/${artifactId}/display`,
   artifactRestore: (artifactId, version) => `${url}artifacts/${artifactId}/versions/${version}/restore`,
   artifactPublic: artifactId => `${url}artifacts/${artifactId}/sharing/public`,
   publicArtifact: publicId => `${url}public/artifacts/${publicId}`,

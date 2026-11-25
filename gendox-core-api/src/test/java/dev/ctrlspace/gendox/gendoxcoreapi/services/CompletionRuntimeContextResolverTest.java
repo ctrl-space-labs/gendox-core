@@ -139,12 +139,13 @@ class CompletionRuntimeContextResolverTest {
     }
 
     @Test
-    void aPlanWithoutArtifactsLosesAllThreeArtifactTools() {
+    void aPlanWithoutArtifactsLosesTheArtifactToolsAndWidgets() {
         UUID organizationId = UUID.randomUUID();
         when(subscriptionValidationService.canUseArtifacts(organizationId)).thenReturn(false);
 
         List<AiTools> tools = resolver.withArtifactToolsIfPlanAllows(List.of(tool("advanced_search"),
-                tool("create_artifact"), tool("update_artifact"), tool("read_artifact")), organizationId);
+                tool("create_artifact"), tool("update_artifact"), tool("read_artifact"), tool("show_widget")),
+                organizationId);
 
         assertEquals(List.of("advanced_search"), names(tools));
     }
@@ -158,6 +159,13 @@ class CompletionRuntimeContextResolverTest {
                 tool("create_artifact"), tool("update_artifact"), tool("read_artifact")), organizationId);
 
         assertEquals(List.of("advanced_search", "create_artifact", "update_artifact", "read_artifact"), names(tools));
+    }
+
+    @Test
+    void aWidgetAloneDoesNotRaiseTheOutputLimit() {
+        ReflectionTestUtils.setField(resolver, "minArtifactOutputTokens", 16_000L);
+
+        assertEquals(4_000L, resolver.withArtifactOutputFloor(4_000L, List.of(tool("show_widget"))));
     }
 
     @Test

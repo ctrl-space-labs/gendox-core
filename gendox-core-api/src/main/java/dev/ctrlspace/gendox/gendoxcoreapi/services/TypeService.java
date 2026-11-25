@@ -178,9 +178,5 @@ public class TypeService {
 
     }
 
-    public List<Type> getArtifactDisplays() {
-        return typeRepository.findByTypeCategory("ARTIFACT_DISPLAY");
-    }
-
 
 }

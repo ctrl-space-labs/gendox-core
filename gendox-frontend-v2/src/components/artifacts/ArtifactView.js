@@ -6,10 +6,8 @@ import {
   CircleAlert,
   Copy,
   Download,
-  GalleryVertical,
   MessageSquarePlus,
   MessageSquareShare,
-  PanelTop,
   Share2,
   ShieldCheck
 } from 'lucide-react'
@@ -23,8 +21,6 @@ import ArtifactError from 'src/components/artifacts/ArtifactError'
 import ArtifactShareDialog from 'src/components/artifacts/ArtifactShareDialog'
 import useActiveScope from 'src/hooks/useActiveScope'
 import {
-  ARTIFACT_DISPLAY_CHANGED,
-  displayOf,
   downloadFile,
   fencedCode,
   fileNameOf,
@@ -72,7 +68,6 @@ const ArtifactView = ({
   const [error, setError] = useState(null) // the shown version's first unhandled error
   const [sharing, setSharing] = useState(false)
   const [opening, setOpening] = useState(false) // Change it in a chat is making the conversation
-  const [switching, setSwitching] = useState(false) // its display is being changed
   const [restoring, setRestoring] = useState(false) // an earlier version is being brought back
   const router = useRouter()
   const { organizationId, projectId, href } = useActiveScope()
@@ -127,21 +122,6 @@ const ArtifactView = ({
   const role = artifact.yourRole
   // its owner changes it in its own conversation; an Editor in a new one of their own, unless already in one
   const canChangeInAChat = !onAsk && !besideItsChat && role !== 'OWNER' && roleAtLeast(role, 'EDIT') && Boolean(projectId)
-
-  // card or inline, for everyone who sees it; the chats on the page follow at once
-  const switchDisplay = async () => {
-    const next = displayOf(artifact) === 'inline' ? 'CARD' : 'INLINE'
-    setSwitching(true)
-    try {
-      const { data } = await artifactService.setDisplay(artifactId, next, token)
-      setArtifact(current => ({ ...current, display: data.display }))
-      window.dispatchEvent(new CustomEvent(ARTIFACT_DISPLAY_CHANGED, { detail: { artifactId, display: displayOf(data) } }))
-    } catch (e) {
-      toast.error(getErrorMessage(e))
-    } finally {
-      setSwitching(false)
-    }
-  }
 
   // the version on screen comes back as a new, latest one; the history stays whole
   const restore = async () => {
@@ -216,12 +196,13 @@ const ArtifactView = ({
           ))}
         </select>
         <span className='sp' />
-        <button className='btn ghost s icon' title='Copy' onClick={handleCopy}>
+        <button className='btn ghost s icon' data-tip={copied ? 'Copied' : 'Copy the content'} aria-label='Copy the content' onClick={handleCopy}>
           {copied ? <Check className='lucide' /> : <Copy className='lucide' />}
         </button>
         <button
           className='btn ghost s icon'
-          title={`Download ${name}`}
+          data-tip={`Download ${name}`}
+          aria-label={`Download ${name}`}
           onClick={() => downloadFile(name, kindInfo(kind).mime, artifact.content)}
         >
           <Download className='lucide' />
@@ -230,17 +211,6 @@ const ArtifactView = ({
           <button className='btn s' onClick={() => setSharing(true)}>
             <Share2 className='lucide' />
             {role === 'OWNER' ? 'Share' : 'Who has access'}
-          </button>
-        )}
-        {roleAtLeast(role, 'EDIT') && (
-          <button
-            className='btn ghost s icon'
-            disabled={switching}
-            aria-busy={switching}
-            title={displayOf(artifact) === 'inline' ? 'Show as a card in the answer' : 'Show inline, as part of the answer'}
-            onClick={switchDisplay}
-          >
-            {displayOf(artifact) === 'inline' ? <PanelTop className='lucide' /> : <GalleryVertical className='lucide' />}
           </button>
         )}
         {canChangeInAChat && (
