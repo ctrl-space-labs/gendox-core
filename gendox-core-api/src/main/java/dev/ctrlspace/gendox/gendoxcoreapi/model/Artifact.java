@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
@@ -12,6 +14,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -49,6 +52,14 @@ public class Artifact {
      */
     @Column(name = "code_language")
     private String codeLanguage;
+
+    /**
+     * What the artifact may ask the host for, as its maker declared it: "data", "user"; null for nothing
+     * (gendox-core#600). The host gives the frame nothing that is not listed.
+     */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "capabilities", columnDefinition = "JSONB")
+    private List<String> capabilities;
 
     /**
      * The number of the latest version; raised only by ArtifactService, with the version it adds.

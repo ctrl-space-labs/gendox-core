@@ -172,6 +172,10 @@ export default {
   artifactChats: artifactId => `${url}artifacts/${artifactId}/chats`,
   artifactRestore: (artifactId, version) => `${url}artifacts/${artifactId}/versions/${version}/restore`,
   artifactPublic: artifactId => `${url}artifacts/${artifactId}/sharing/public`,
+  artifactDataCollection: (artifactId, collection) =>
+    `${url}artifacts/${artifactId}/data/${encodeURIComponent(collection)}`,
+  artifactDataDocument: (artifactId, collection, docId) =>
+    `${url}artifacts/${artifactId}/data/${encodeURIComponent(collection)}/${encodeURIComponent(docId)}`,
   publicArtifact: publicId => `${url}public/artifacts/${publicId}`,
   publicArtifactVersion: (publicId, version) => `${url}public/artifacts/${publicId}/versions/${version}`,
 

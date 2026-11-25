@@ -54,6 +54,9 @@ public class ArtifactService {
     /**
      * Characters one version may hold.
      */
+    /** What an artifact may ask the host for (gendox-core#600), in the order they are listed. */
+    public static final List<String> CAPABILITIES = List.of("data", "user");
+
     @Value("${gendox.artifacts.max-content-length:200000}")
     private int maxContentLength = 200_000;
 
@@ -80,15 +83,18 @@ public class ArtifactService {
     /**
      * @param typeName     a name of category ARTIFACT_TYPE, in any case: the model sends "html"
      * @param codeLanguage kept for type CODE only
+     * @param capabilities what it may ask the host for, "data" and "user"; null or empty for nothing
      * @param messageId    the assistant message whose tool call writes it
      */
     @Transactional
     public Artifact create(UUID threadId, UUID projectId, @Nullable UUID messageId, String title,
-                           String typeName, @Nullable String codeLanguage, String content) throws GendoxException {
+                           String typeName, @Nullable String codeLanguage, @Nullable List<String> capabilities,
+                           String content) throws GendoxException {
         if (title == null || title.isBlank()) {
             throw new GendoxException("ARTIFACT_TITLE_REQUIRED", "An artifact needs a title", HttpStatus.BAD_REQUEST);
         }
         Type artifactType = getArtifactType(typeName);
+        List<String> declared = checkCapabilities(capabilities);
         validateContent(content);
 
         boolean isCode = CODE_TYPE.equals(artifactType.getName());
@@ -99,6 +105,7 @@ public class ArtifactService {
                 .title(title.trim())
                 .artifactType(artifactType)
                 .codeLanguage(isCode && codeLanguage != null && !codeLanguage.isBlank() ? codeLanguage.trim() : null)
+                .capabilities(declared)
                 .latestVersion(1)
                 .ownerId(author)
                 .build());
@@ -109,23 +116,26 @@ public class ArtifactService {
 
     /**
      * A new version from the whole {@code content} or from {@code edits} on the latest one, never both.
-     * A new {@code title} alone changes the artifact and adds no version.
+     * A new {@code title} or new {@code capabilities} alone change the artifact and add no version; an empty list of
+     * capabilities takes them all away.
      */
     @Transactional
     public Artifact update(UUID threadId, UUID artifactId, @Nullable UUID messageId, @Nullable String title,
-                           @Nullable String content,
+                           @Nullable List<String> capabilities, @Nullable String content,
                            @Nullable List<ArtifactEditDTO> edits) throws GendoxException {
         boolean hasContent = content != null;
         boolean hasEdits = edits != null && !edits.isEmpty();
         boolean hasTitle = title != null && !title.isBlank();
+        boolean hasCapabilities = capabilities != null;
         if (hasContent && hasEdits) {
             throw new GendoxException("ARTIFACT_UPDATE_AMBIGUOUS",
                     "Give either edits or the whole content, not both", HttpStatus.BAD_REQUEST);
         }
-        if (!hasContent && !hasEdits && !hasTitle) {
+        if (!hasContent && !hasEdits && !hasTitle && !hasCapabilities) {
             throw new GendoxException("ARTIFACT_UPDATE_EMPTY",
-                    "Nothing to update: give edits, the whole content or a new title", HttpStatus.BAD_REQUEST);
+                    "Nothing to update: give edits, the whole content, a new title or capabilities", HttpStatus.BAD_REQUEST);
         }
+        List<String> declared = checkCapabilities(capabilities);
 
         // locked until the transaction ends, so a second update of the same artifact waits and numbers after this one
         Artifact artifact = artifactRepository.lockById(artifactId)
@@ -133,6 +143,9 @@ public class ArtifactService {
         checkReach(artifact, threadId, Role.EDIT);
         if (hasTitle) {
             artifact.setTitle(title.trim());
+        }
+        if (hasCapabilities) {
+            artifact.setCapabilities(declared);
         }
         if (hasContent || hasEdits) {
             if (hasContent) {
@@ -435,6 +448,30 @@ public class ArtifactService {
         return messageRepository.findFirstByThreadIdAndRoleOrderByCreatedAtDesc(threadId, "user")
                 .map(Message::getCreatedBy)
                 .orElse(null);
+    }
+
+    /**
+     * The capabilities an artifact may declare, in lower case, each once and in order; null for none.
+     */
+    @Nullable
+    private static List<String> checkCapabilities(@Nullable List<String> capabilities) throws GendoxException {
+        if (capabilities == null) {
+            return null;
+        }
+        List<String> declared = new ArrayList<>();
+        for (String capability : capabilities) {
+            String name = capability == null ? "" : capability.trim().toLowerCase(Locale.ROOT);
+            if (!CAPABILITIES.contains(name)) {
+                throw new GendoxException("ARTIFACT_CAPABILITY_NOT_SUPPORTED",
+                        "Capability '" + capability + "' is not supported. Use any of: " + String.join(", ", CAPABILITIES),
+                        HttpStatus.BAD_REQUEST);
+            }
+            if (!declared.contains(name)) {
+                declared.add(name);
+            }
+        }
+        declared.sort(Comparator.comparingInt(CAPABILITIES::indexOf));
+        return declared.isEmpty() ? null : declared;
     }
 
     /**

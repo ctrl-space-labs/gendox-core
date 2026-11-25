@@ -15,6 +15,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.DocumentUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.ChatTemplateAuthor;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.SectionTemplateAuthor;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.artifacts.CreateArtifactTool;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.artifacts.ReadArtifactDataTool;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.artifacts.ReadArtifactTool;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.artifacts.ShowWidgetTool;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.artifacts.UpdateArtifactTool;
@@ -52,7 +53,7 @@ public class CompletionRuntimeContextResolver {
     static final Set<String> ARTIFACT_WRITING_TOOLS = Set.of(CreateArtifactTool.NAME, UpdateArtifactTool.NAME);
     // widgets go with artifacts: the same skill brings them and the same plan allows them
     static final Set<String> ARTIFACT_TOOLS = Set.of(CreateArtifactTool.NAME, UpdateArtifactTool.NAME, ReadArtifactTool.NAME,
-            ShowWidgetTool.NAME);
+            ReadArtifactDataTool.NAME, ShowWidgetTool.NAME);
 
     /**
      * Output tokens a completion gets at least when it may write an artifact.

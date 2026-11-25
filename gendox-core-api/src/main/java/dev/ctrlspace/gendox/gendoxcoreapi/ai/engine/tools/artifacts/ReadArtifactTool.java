@@ -73,6 +73,9 @@ public class ReadArtifactTool extends DefinedToolHandler {
         }
         result.put("version", version.getVersion());
         result.put("latestVersion", artifact.getLatestVersion());
+        if (artifact.getCapabilities() != null) {
+            result.set("capabilities", objectMapper.valueToTree(artifact.getCapabilities()));
+        }
         result.put("content", version.getContent());
         return result;
     }

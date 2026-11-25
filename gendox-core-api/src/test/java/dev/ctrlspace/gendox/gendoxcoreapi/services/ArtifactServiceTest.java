@@ -166,7 +166,7 @@ class ArtifactServiceTest {
 
     @Test
     void create_savesVersionOneWithTheTypeInAnyCase() throws GendoxException {
-        Artifact artifact = artifactService.create(threadId, projectId, messageId, " Report ", "html", null, "<p>x</p>");
+        Artifact artifact = artifactService.create(threadId, projectId, messageId, " Report ", "html", null, null, "<p>x</p>");
 
         assertEquals("HTML", artifact.getArtifactType().getName());
         assertEquals("Report", artifact.getTitle());
@@ -181,8 +181,8 @@ class ArtifactServiceTest {
 
     @Test
     void create_keepsCodeLanguageForCodeOnly() throws GendoxException {
-        Artifact code = artifactService.create(threadId, projectId, messageId, "Script", "code", "python", "print(1)");
-        Artifact page = artifactService.create(threadId, projectId, messageId, "Page", "html", "python", "<p>x</p>");
+        Artifact code = artifactService.create(threadId, projectId, messageId, "Script", "code", "python", null, "print(1)");
+        Artifact page = artifactService.create(threadId, projectId, messageId, "Page", "html", "python", null, "<p>x</p>");
 
         assertEquals("python", code.getCodeLanguage());
         assertNull(page.getCodeLanguage());
@@ -191,7 +191,7 @@ class ArtifactServiceTest {
     @Test
     void create_unknownKind_namesTheKindsThereAre() {
         GendoxException e = assertThrows(GendoxException.class,
-                () -> artifactService.create(threadId, projectId, messageId, "Chart", "chart", null, "x"));
+                () -> artifactService.create(threadId, projectId, messageId, "Chart", "chart", null, null, "x"));
 
         assertEquals("ARTIFACT_TYPE_NOT_SUPPORTED", e.getErrorCode());
         assertTrue(e.getMessage().contains("code, html, markdown, svg"));
@@ -203,7 +203,7 @@ class ArtifactServiceTest {
         ReflectionTestUtils.setField(artifactService, "maxContentLength", 10);
 
         GendoxException e = assertThrows(GendoxException.class,
-                () -> artifactService.create(threadId, projectId, messageId, "Page", "html", null, "<p>too long</p>"));
+                () -> artifactService.create(threadId, projectId, messageId, "Page", "html", null, null, "<p>too long</p>"));
 
         assertEquals("ARTIFACT_CONTENT_TOO_LONG", e.getErrorCode());
         verify(artifactRepository, never()).save(any());
@@ -235,13 +235,44 @@ class ArtifactServiceTest {
         assertEquals("ARTIFACT_CONTENT_TOO_LONG", e.getErrorCode());
     }
 
+    @Test
+    void create_withCapabilities_keepsThemOnceInTheirOrder() throws GendoxException {
+        Artifact artifact = artifactService.create(threadId, projectId, messageId, "Poll", "html", null,
+                List.of(" USER ", "data", "data"), "<p>x</p>");
+
+        assertEquals(List.of("data", "user"), artifact.getCapabilities());
+    }
+
+    @Test
+    void create_withAnUnknownCapability_namesTheOnesThereAre() {
+        GendoxException e = assertThrows(GendoxException.class, () -> artifactService.create(threadId, projectId,
+                messageId, "Poll", "html", null, List.of("network"), "<p>x</p>"));
+
+        assertEquals("ARTIFACT_CAPABILITY_NOT_SUPPORTED", e.getErrorCode());
+        assertTrue(e.getMessage().contains("data, user"), e.getMessage());
+        verify(artifactRepository, never()).save(any());
+    }
+
+    @Test
+    void update_capabilitiesOnly_changesThemWithoutAVersion_andAnEmptyListTakesThemAway() throws GendoxException {
+        Artifact artifact = existing(2, "<p>x</p>");
+
+        Artifact updated = artifactService.update(threadId, artifact.getId(), messageId, null, List.of("data"), null, null);
+        assertEquals(List.of("data"), updated.getCapabilities());
+        assertEquals(2, updated.getLatestVersion());
+
+        updated = artifactService.update(threadId, artifact.getId(), messageId, null, List.of(), null, null);
+        assertNull(updated.getCapabilities());
+        verify(artifactVersionRepository, never()).save(any());
+    }
+
     // update
 
     @Test
     void update_withEdits_savesTheNextVersion() throws GendoxException {
         Artifact artifact = existing(3, "<h1>Old</h1>");
 
-        Artifact updated = artifactService.update(threadId, artifact.getId(), messageId, null, null,
+        Artifact updated = artifactService.update(threadId, artifact.getId(), messageId, null, null, null,
                 List.of(edit("Old", "New")));
 
         assertEquals(4, updated.getLatestVersion());
@@ -255,7 +286,7 @@ class ArtifactServiceTest {
     void update_titleOnly_renamesWithoutAVersion() throws GendoxException {
         Artifact artifact = existing(2, "<p>x</p>");
 
-        Artifact updated = artifactService.update(threadId, artifact.getId(), messageId, "Renamed", null, null);
+        Artifact updated = artifactService.update(threadId, artifact.getId(), messageId, "Renamed", null, null, null);
 
         assertEquals("Renamed", updated.getTitle());
         assertEquals(2, updated.getLatestVersion());
@@ -282,7 +313,7 @@ class ArtifactServiceTest {
         Artifact artifact = existing(3, "<p>v3</p>");
         toolResultsInThread(resultOf(artifact, 1), resultOf(artifact, 3), "not json");
 
-        Artifact updated = artifactService.update(threadId, artifact.getId(), messageId, null, "<p>v4</p>", null);
+        Artifact updated = artifactService.update(threadId, artifact.getId(), messageId, null, null, "<p>v4</p>", null);
 
         assertEquals(4, updated.getLatestVersion());
     }
@@ -294,7 +325,7 @@ class ArtifactServiceTest {
         toolResultsInThread(resultOf(artifact, 2), resultOf(Artifact.builder().id(UUID.randomUUID()).build(), 9));
 
         GendoxException e = assertThrows(GendoxException.class,
-                () -> artifactService.update(threadId, artifact.getId(), messageId, null, "<p>mine</p>", null));
+                () -> artifactService.update(threadId, artifact.getId(), messageId, null, null, "<p>mine</p>", null));
 
         assertEquals("ARTIFACT_CHANGED_SINCE_READ", e.getErrorCode());
         assertTrue(e.getMessage().contains("last saw version 2"), e.getMessage());
@@ -308,7 +339,7 @@ class ArtifactServiceTest {
         toolResultsInThread();
 
         GendoxException e = assertThrows(GendoxException.class,
-                () -> artifactService.update(threadId, artifact.getId(), messageId, null, "<p>y</p>", null));
+                () -> artifactService.update(threadId, artifact.getId(), messageId, null, null, "<p>y</p>", null));
 
         assertEquals("ARTIFACT_CHANGED_SINCE_READ", e.getErrorCode());
         assertTrue(e.getMessage().contains("has not read"), e.getMessage());
@@ -319,7 +350,7 @@ class ArtifactServiceTest {
         Artifact artifact = existing(3, "<p>Old</p>");
         toolResultsInThread(resultOf(artifact, 1));
 
-        Artifact updated = artifactService.update(threadId, artifact.getId(), messageId, null, null,
+        Artifact updated = artifactService.update(threadId, artifact.getId(), messageId, null, null, null,
                 List.of(edit("Old", "New")));
 
         assertEquals(4, updated.getLatestVersion());
@@ -373,7 +404,7 @@ class ArtifactServiceTest {
     void update_failedEdit_savesNothing() {
         Artifact artifact = existing(1, "<p>x</p>");
 
-        assertThrows(GendoxException.class, () -> artifactService.update(threadId, artifact.getId(), messageId, null, null,
+        assertThrows(GendoxException.class, () -> artifactService.update(threadId, artifact.getId(), messageId, null, null, null,
                 List.of(edit("<p>x</p>", "<p>y</p>"), edit("missing", "z"))));
 
         assertEquals(1, artifact.getLatestVersion());
@@ -384,7 +415,7 @@ class ArtifactServiceTest {
     @Test
     void update_contentAndEdits_isAmbiguous() {
         GendoxException e = assertThrows(GendoxException.class, () -> artifactService.update(threadId, UUID.randomUUID(),
-                messageId, null, "<p>all</p>", List.of(edit("a", "b"))));
+                messageId, null, null, "<p>all</p>", List.of(edit("a", "b"))));
 
         assertEquals("ARTIFACT_UPDATE_AMBIGUOUS", e.getErrorCode());
     }
@@ -392,7 +423,7 @@ class ArtifactServiceTest {
     @Test
     void update_nothingToChange_fails() {
         GendoxException e = assertThrows(GendoxException.class,
-                () -> artifactService.update(threadId, UUID.randomUUID(), messageId, " ", null, List.of()));
+                () -> artifactService.update(threadId, UUID.randomUUID(), messageId, " ", null, null, List.of()));
 
         assertEquals("ARTIFACT_UPDATE_EMPTY", e.getErrorCode());
     }
@@ -406,7 +437,7 @@ class ArtifactServiceTest {
         when(artifactRepository.findAllByThreadIdOrderByCreatedAtAsc(threadId)).thenReturn(List.of(here));
 
         GendoxException e = assertThrows(GendoxException.class, () -> artifactService.update(threadId, otherThreadsArtifact,
-                messageId, null, "<p>x</p>", null));
+                messageId, null, null, "<p>x</p>", null));
 
         assertEquals("ARTIFACT_NOT_FOUND", e.getErrorCode());
         assertTrue(e.getMessage().contains(here.getId() + " (Dashboard)"));
@@ -419,7 +450,7 @@ class ArtifactServiceTest {
         when(messageRepository.findFirstByThreadIdAndRoleOrderByCreatedAtDesc(threadId, "user"))
                 .thenReturn(Optional.of(Message.builder().createdBy(author).build()));
 
-        Artifact artifact = artifactService.create(threadId, projectId, messageId, "Report", "html", null, "<h1>Hi</h1>");
+        Artifact artifact = artifactService.create(threadId, projectId, messageId, "Report", "html", null, null, "<h1>Hi</h1>");
 
         assertEquals(author, artifact.getOwnerId());
         ArgumentCaptor<ArtifactVersion> saved = ArgumentCaptor.forClass(ArtifactVersion.class);
@@ -436,7 +467,7 @@ class ArtifactServiceTest {
         when(messageRepository.findFirstByThreadIdAndRoleOrderByCreatedAtDesc(threadId, "user"))
                 .thenReturn(Optional.of(Message.builder().createdBy(author).build()));
 
-        artifactService.update(threadId, artifact.getId(), messageId, null, null, List.of(edit("Old", "New")));
+        artifactService.update(threadId, artifact.getId(), messageId, null, null, null, List.of(edit("Old", "New")));
 
         assertEquals(owner, artifact.getOwnerId());
         ArgumentCaptor<ArtifactVersion> saved = ArgumentCaptor.forClass(ArtifactVersion.class);
@@ -450,7 +481,7 @@ class ArtifactServiceTest {
     void update_onAnArtifactTheConversationWasOpenedOn_withEdit_savesTheNextVersion() throws GendoxException {
         Artifact artifact = openedOn(Role.EDIT);
 
-        artifactService.update(threadId, artifact.getId(), messageId, null, null, List.of(edit("Old", "New")));
+        artifactService.update(threadId, artifact.getId(), messageId, null, null, null, List.of(edit("Old", "New")));
 
         ArgumentCaptor<ArtifactVersion> saved = ArgumentCaptor.forClass(ArtifactVersion.class);
         verify(artifactVersionRepository).save(saved.capture());
@@ -463,7 +494,7 @@ class ArtifactServiceTest {
         Artifact artifact = openedOn(Role.INTERACT);
 
         GendoxException e = assertThrows(GendoxException.class, () -> artifactService.update(threadId, artifact.getId(),
-                messageId, "New title", null, null));
+                messageId, "New title", null, null, null));
 
         assertEquals("ARTIFACT_READ_ONLY", e.getErrorCode());
         assertTrue(e.getErrorMessage().contains("EDIT"), e.getErrorMessage());

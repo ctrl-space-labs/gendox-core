@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import useAppTheme from 'src/hooks/useAppTheme'
+import { useAuth } from 'src/authentication/useAuth'
+import { createArtifactHost } from 'src/components/artifacts/artifactHost'
 
 const SHELL = '/artifact-sandbox/index.html'
 const PROTOCOL_VERSION = '2026-01-26'
@@ -58,9 +60,29 @@ const openLink = url => {
  * @param fit - grow with the content up to maxHeight (the card); otherwise fill the parent and grow past it (the panel)
  * @param maxHeight - the card's limit; about the window's height when absent
  * @param onError({ message, line }) - the artifact's first unhandled error; null again when other content is shown
+ * @param artifactId, capabilities - a stored artifact and what it declared: its data and who is viewing reach it
+ *   through gendox.use (gendox-core#600); without them, as for a widget or a public page, it gets nothing
+ * @param organizationId, projectId - where the artifact's agent is, for the names of the people in its data
  */
-const ArtifactFrame = ({ kind, content, title = 'Artifact', fit = false, minHeight = 120, maxHeight, onError }) => {
+const ArtifactFrame = ({
+  kind,
+  content,
+  title = 'Artifact',
+  fit = false,
+  minHeight = 120,
+  maxHeight,
+  onError,
+  artifactId,
+  capabilities,
+  organizationId,
+  projectId
+}) => {
   const frameRef = useRef(null)
+  const { user } = useAuth() ?? {}
+  // what the artifact asks for is answered with what is true now, read by the host on every call
+  const contextRef = useRef(null)
+  contextRef.current = { artifactId, capabilities, organizationId, projectId, user }
+  const hostRef = useRef(null)
   const ready = useRef(false)
   const input = useRef({ kind, content })
   const appTheme = useAppTheme()
@@ -76,6 +98,7 @@ const ArtifactFrame = ({ kind, content, title = 'Artifact', fit = false, minHeig
   const excess = useRef(null)
 
   const post = message => frameRef.current?.contentWindow?.postMessage({ jsonrpc: '2.0', ...message }, '*')
+  if (!hostRef.current) hostRef.current = createArtifactHost(() => contextRef.current, (method, params) => post({ method, params }))
   const sendInput = () => post({ method: 'ui/notifications/tool-input', params: { arguments: input.current } })
 
   useEffect(() => {
@@ -123,18 +146,29 @@ const ArtifactFrame = ({ kind, content, title = 'Artifact', fit = false, minHeig
           post({ id: message.id, result: {} })
           break
         default:
+          // gendox.use of the artifact (gendox-core#600): answered by id, or refused
+          if (message.method.startsWith('gendox/') && typeof message.id === 'number') {
+            hostRef.current
+              .handle(message.method, message.params || {})
+              .then(result => post({ id: message.id, result: result ?? null }))
+              .catch(error => post({ id: message.id, error }))
+          }
           break
       }
     }
     window.addEventListener('message', onMessage)
 
-    return () => window.removeEventListener('message', onMessage)
+    return () => {
+      window.removeEventListener('message', onMessage)
+      hostRef.current?.stop()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // another version, or another artifact in the same place
   useEffect(() => {
     input.current = { kind, content }
+    hostRef.current?.reset()
     excess.current = null
     if (!fit) setHeight(null)
     if (failed.current) onErrorRef.current?.(null)

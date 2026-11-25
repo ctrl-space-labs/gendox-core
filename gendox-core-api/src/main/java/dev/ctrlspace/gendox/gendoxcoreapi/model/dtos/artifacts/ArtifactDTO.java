@@ -24,6 +24,8 @@ public class ArtifactDTO {
     private String title;
     private Type artifactType;
     private String codeLanguage;
+    /** What the artifact may ask the host for: "data", "user" (gendox-core#600). */
+    private List<String> capabilities;
     private Integer latestVersion;
     private Instant createdAt;
     private Instant updatedAt;

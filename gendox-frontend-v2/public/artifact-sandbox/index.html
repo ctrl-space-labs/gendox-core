@@ -28,8 +28,9 @@
        *
        * Host <-> shell: JSON-RPC 2.0 with the method names of MCP Apps (ui/initialize, ui/notifications/*, ui/open-link),
        * and MCP's notifications/message for an error the artifact did not handle.
-       * Shell <-> artifact: three plain messages, { type: 'size' }, { type: 'link' } and { type: 'error' }, checked
-       * before they are relayed.
+       * Shell <-> artifact: plain messages, { type: 'size' }, { type: 'link' }, { type: 'error' }, and the calls of
+       * gendox.use (gendox-core#600), { type: 'call' } answered by { type: 'result' } and followed by { type: 'changed' };
+       * each is checked before it is relayed. The host answers a call as a JSON-RPC request of the same method.
        */
       ;(function () {
         var host = window.parent
@@ -38,6 +39,13 @@
         var variables = {}
         var MAX_URL = 2048
         var MAX_ERROR = 300
+        var MAX_CALL = 20000
+        // the artifact's calls (gendox-core#600): only these, relayed as JSON-RPC requests; the answer goes back by id
+        var CALLS = [
+          'gendox/use', 'gendox/data/list', 'gendox/data/get', 'gendox/data/set', 'gendox/data/update', 'gendox/data/delete',
+          'gendox/data/subscribe', 'gendox/data/unsubscribe', 'gendox/user/id', 'gendox/user/me', 'gendox/user/profiles'
+        ]
+        var calls = {} // host request id -> the artifact's own id
 
         function toHost(message) {
           message.jsonrpc = '2.0'
@@ -84,10 +92,119 @@
           'addEventListener("message",function(e){if(e.source!==p||!e.data||e.data.type!=="variables")return;' +
           'var s=document.documentElement.style,v=e.data.variables;for(var k in v)s.setProperty(k,v[k])})})()'
 
+        // runs inside the artifact, before its own scripts (gendox-core#600): gendox.use(name) resolves to what the
+        // artifact may ask the host for, or to null. Every call is a message to the shell, which relays it to the host;
+        // the artifact itself never reaches the network or a token.
+        function artifactApi() {
+          var p = window.parent
+          var seq = 0
+          var pending = {}
+          var listeners = {}
+
+          function call(method, params) {
+            return new Promise(function (resolve, reject) {
+              var id = ++seq
+              pending[id] = { resolve: resolve, reject: reject }
+              p.postMessage({ type: 'call', id: id, method: method, params: params || {} }, '*')
+            })
+          }
+
+          addEventListener('message', function (e) {
+            var d = e.data
+            if (e.source !== p || !d) return
+            if (d.type === 'result' && pending[d.id]) {
+              var waiting = pending[d.id]
+              delete pending[d.id]
+              if (d.error) {
+                var error = new Error(String(d.error.message || 'The request failed'))
+                error.code = d.error.code
+                waiting.reject(error)
+              } else waiting.resolve(d.result)
+            } else if (d.type === 'changed' && listeners[d.collection]) {
+              listeners[d.collection].slice().forEach(function (fn) {
+                try { fn(d.documents) } catch (err) { setTimeout(function () { throw err }) }
+              })
+            }
+          })
+
+          function key(path) {
+            var at = String(path || '').indexOf('/')
+            if (at < 1) throw new Error('A document path is "collection/docId"')
+
+            return { collection: path.slice(0, at), docId: path.slice(at + 1) }
+          }
+
+          function opts(o) {
+            o = o || {}
+
+            return { private: Boolean(o.private), revision: typeof o.revision === 'number' ? o.revision : null }
+          }
+
+          var data = {
+            doc: function (path) {
+              var k = key(path)
+
+              return {
+                // the document's data itself, or null; getDocument gives it with its id, revision and who changed it
+                get: function (o) {
+                  return call('gendox/data/get', { collection: k.collection, docId: k.docId, private: opts(o).private }).then(function (d) { return d ? d.data : null })
+                },
+                getDocument: function (o) { return call('gendox/data/get', { collection: k.collection, docId: k.docId, private: opts(o).private }) },
+                set: function (value, o) { var x = opts(o); return call('gendox/data/set', { collection: k.collection, docId: k.docId, data: value, private: x.private, revision: x.revision }) },
+                update: function (fields, o) { var x = opts(o); return call('gendox/data/update', { collection: k.collection, docId: k.docId, data: fields, private: x.private, revision: x.revision }) },
+                delete: function (o) { return call('gendox/data/delete', { collection: k.collection, docId: k.docId, private: opts(o).private }) }
+              }
+            },
+            collection: function (name) {
+              name = String(name || '')
+
+              return {
+                list: function () { return call('gendox/data/list', { collection: name }) },
+                onChange: function (fn) {
+                  if (typeof fn !== 'function') throw new Error('onChange takes a function')
+                  if (!listeners[name]) {
+                    listeners[name] = []
+                    call('gendox/data/subscribe', { collection: name }).catch(function () {})
+                  }
+                  listeners[name].push(fn)
+
+                  return function () {
+                    listeners[name] = (listeners[name] || []).filter(function (f) { return f !== fn })
+                    if (!listeners[name].length) {
+                      delete listeners[name]
+                      call('gendox/data/unsubscribe', { collection: name }).catch(function () {})
+                    }
+                  }
+                }
+              }
+            }
+          }
+
+          var user = {
+            id: function () { return call('gendox/user/id') },
+            me: function () { return call('gendox/user/me') },
+            profiles: function (ids) { return call('gendox/user/profiles', { ids: Array.isArray(ids) ? ids.slice(0, 200) : [] }) }
+          }
+
+          var given = {}
+          window.gendox = Object.freeze({
+            use: function (name) {
+              name = String(name || '')
+              if (!given[name]) {
+                given[name] = call('gendox/use', { name: name }).then(function (ok) {
+                  return ok ? (name === 'data' ? Object.freeze(data) : name === 'user' ? Object.freeze(user) : null) : null
+                }, function () { return null })
+              }
+
+              return given[name]
+            }
+          })
+        }
+
         function head() {
           return (
             '<style>:root{color-scheme:light dark;' + variablesCss() + '}</style>' +
-            '<script>' + bridge + '<\/script>'
+            '<script>' + bridge + ';(' + artifactApi.toString() + ')()<\/script>'
           )
         }
 
@@ -129,14 +246,36 @@
               variables = cleanVariables(message.params && message.params.styles && message.params.styles.variables)
               if (inner && inner.contentWindow) inner.contentWindow.postMessage({ type: 'variables', variables: variables }, '*')
             } else if (message.method === 'ui/notifications/tool-input') {
+              calls = {}
               render(message.params && message.params.arguments)
+            } else if (message.method === 'gendox/data/changed') {
+              var changed = message.params || {}
+              if (inner && inner.contentWindow) {
+                inner.contentWindow.postMessage({ type: 'changed', collection: String(changed.collection || ''), documents: changed.documents || [] }, '*')
+              }
+            } else if (typeof message.id === 'number' && calls[message.id] !== undefined) {
+              var own = calls[message.id]
+              delete calls[message.id]
+              if (inner && inner.contentWindow) {
+                inner.contentWindow.postMessage({ type: 'result', id: own, result: message.result, error: message.error }, '*')
+              }
             }
 
             return
           }
 
           if (inner && event.source === inner.contentWindow) {
-            if (message.type === 'size' && typeof message.height === 'number' && isFinite(message.height)) {
+            if (message.type === 'call') {
+              var size = 0
+              try { size = JSON.stringify(message.params || {}).length } catch (e) { size = MAX_CALL + 1 }
+              if (CALLS.indexOf(message.method) < 0 || typeof message.id !== 'number' || size > MAX_CALL) {
+                inner.contentWindow.postMessage({ type: 'result', id: message.id, error: { code: 'NOT_ALLOWED', message: 'This call is not allowed' } }, '*')
+                return
+              }
+              var hostId = nextId++
+              calls[hostId] = message.id
+              toHost({ id: hostId, method: message.method, params: message.params || {} })
+            } else if (message.type === 'size' && typeof message.height === 'number' && isFinite(message.height)) {
               toHost({ method: 'ui/notifications/size-changed', params: { height: Math.max(0, Math.ceil(message.height)) } })
             } else if (message.type === 'link' && typeof message.href === 'string' && message.href.length <= MAX_URL) {
               toHost({ id: nextId++, method: 'ui/open-link', params: { url: message.href } })

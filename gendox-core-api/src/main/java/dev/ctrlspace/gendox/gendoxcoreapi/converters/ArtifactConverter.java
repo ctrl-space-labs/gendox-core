@@ -44,6 +44,7 @@ public class ArtifactConverter implements GendoxConverter<Artifact, ArtifactSumm
         artifactDTO.setTitle(artifact.getTitle());
         artifactDTO.setArtifactType(artifact.getArtifactType());
         artifactDTO.setCodeLanguage(artifact.getCodeLanguage());
+        artifactDTO.setCapabilities(artifact.getCapabilities());
         artifactDTO.setLatestVersion(artifact.getLatestVersion());
         artifactDTO.setCreatedAt(artifact.getCreatedAt());
         artifactDTO.setUpdatedAt(artifact.getUpdatedAt());

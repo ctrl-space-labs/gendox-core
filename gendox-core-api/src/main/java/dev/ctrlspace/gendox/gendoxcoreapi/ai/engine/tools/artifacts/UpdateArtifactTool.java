@@ -60,6 +60,11 @@ public class UpdateArtifactTool extends DefinedToolHandler {
                   "title": {
                     "type": "string",
                     "description": "A new title. Leave out to keep the current one."
+                  },
+                  "capabilities": {
+                    "type": "array",
+                    "items": {"type": "string", "enum": ["data", "user"]},
+                    "description": "The whole new list of what the artifact may ask for: data, user. Leave out to keep the current one; an empty list takes them away. Changing it alone adds no version."
                   }
                 },
                 "additionalProperties": false
@@ -67,7 +72,8 @@ public class UpdateArtifactTool extends DefinedToolHandler {
             }
             """;
 
-    record Args(@JsonProperty("artifact_id") UUID artifactId, List<ArtifactEditDTO> edits, String content, String title) {
+    record Args(@JsonProperty("artifact_id") UUID artifactId, List<ArtifactEditDTO> edits, String content, String title,
+                List<String> capabilities) {
     }
 
     private final ArtifactService artifactService;
@@ -85,7 +91,7 @@ public class UpdateArtifactTool extends DefinedToolHandler {
         Args args = readArguments(objectMapper, arguments, Args.class);
 
         Artifact artifact = artifactService.update(callMessage.getThreadId(), args.artifactId(), callMessage.getId(),
-                args.title(), args.content(), args.edits());
+                args.title(), args.capabilities(), args.content(), args.edits());
 
         ObjectNode result = objectMapper.createObjectNode();
         result.put("artifactId", artifact.getId().toString());

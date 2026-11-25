@@ -12,6 +12,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
 
+import java.util.List;
 import java.util.Locale;
 
 /**
@@ -48,6 +49,11 @@ public class CreateArtifactTool extends DefinedToolHandler {
                   "code_language": {
                     "type": "string",
                     "description": "For kind code only: the programming language, e.g. python."
+                  },
+                  "capabilities": {
+                    "type": "array",
+                    "items": {"type": "string", "enum": ["data", "user"]},
+                    "description": "What the artifact may ask for: data, to keep what people do inside it; user, to know who is viewing. Leave out when it keeps nothing. Read the artifacts skill first."
                   }
                 },
                 "additionalProperties": false
@@ -55,7 +61,8 @@ public class CreateArtifactTool extends DefinedToolHandler {
             }
             """;
 
-    record Args(String title, String kind, String content, @JsonProperty("code_language") String codeLanguage) {
+    record Args(String title, String kind, String content, @JsonProperty("code_language") String codeLanguage,
+                List<String> capabilities) {
     }
 
     private final ArtifactService artifactService;
@@ -73,7 +80,7 @@ public class CreateArtifactTool extends DefinedToolHandler {
         Args args = readArguments(objectMapper, arguments, Args.class);
 
         Artifact artifact = artifactService.create(callMessage.getThreadId(), callMessage.getProjectId(), callMessage.getId(),
-                args.title(), args.kind(), args.codeLanguage(), args.content());
+                args.title(), args.kind(), args.codeLanguage(), args.capabilities(), args.content());
 
         ObjectNode result = objectMapper.createObjectNode();
         result.put("artifactId", artifact.getId().toString());

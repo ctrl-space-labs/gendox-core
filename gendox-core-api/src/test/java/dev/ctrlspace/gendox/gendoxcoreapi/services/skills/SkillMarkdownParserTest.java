@@ -91,8 +91,15 @@ class SkillMarkdownParserTest {
         var resources = new org.springframework.core.io.support.PathMatchingResourcePatternResolver()
                 .getResources("classpath*:skills/*/SKILL.md");
         assertTrue(resources.length >= 1, "no SKILL.md on the classpath");
-        SkillMarkdownParser.ParsedSkill assistant = SkillMarkdownParser.parse(
-                resources[0].getContentAsString(java.nio.charset.StandardCharsets.UTF_8));
-        assertTrue(assistant.tools().containsAll(java.util.List.of("list_tasks", "read_task_result", "run_task", "advanced_search")));
+        java.util.Map<String, SkillMarkdownParser.ParsedSkill> shipped = new java.util.HashMap<>();
+        for (var resource : resources) {
+            SkillMarkdownParser.ParsedSkill skill = SkillMarkdownParser.parse(
+                    resource.getContentAsString(java.nio.charset.StandardCharsets.UTF_8));
+            shipped.put(skill.name(), skill);
+        }
+        assertTrue(shipped.get("gendox-assistant").tools()
+                .containsAll(java.util.List.of("list_tasks", "read_task_result", "run_task", "advanced_search")));
+        assertTrue(shipped.get("artifacts").tools().containsAll(java.util.List.of("create_artifact", "update_artifact",
+                "read_artifact", "read_artifact_data", "show_widget")));
     }
 }

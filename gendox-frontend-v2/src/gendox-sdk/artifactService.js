@@ -105,6 +105,40 @@ const restoreVersion = async (artifactId, version, token) => {
   return axios.post(apiRequests.artifactRestore(artifactId, version), null, { headers: headers(token) })
 }
 
+/**
+ * The data of an artifact (gendox-core#600), for its frame: what people do inside it, as documents in collections.
+ * A collection's list is its shared documents and the user's own private ones.
+ */
+const listArtifactData = async (artifactId, collection, token) => {
+  return axios.get(apiRequests.artifactDataCollection(artifactId, collection), { headers: headers(token) })
+}
+
+/** One document: the shared one, or with isPrivate the user's own. 404 when it is not there. */
+const getArtifactData = async (artifactId, collection, docId, isPrivate, token) => {
+  return axios.get(apiRequests.artifactDataDocument(artifactId, collection, docId), {
+    headers: headers(token),
+    params: { private: Boolean(isPrivate) }
+  })
+}
+
+/**
+ * Write a whole document (set) or only some of its fields (update). A revision that is not the latest is refused
+ * with 409. @param request - { data, private, revision }
+ */
+const writeArtifactData = async (artifactId, collection, docId, request, merge, token) => {
+  const url = apiRequests.artifactDataDocument(artifactId, collection, docId)
+
+  return merge ? axios.patch(url, request, { headers: headers(token) }) : axios.put(url, request, { headers: headers(token) })
+}
+
+/** Delete a document; one that is not there is not an error. */
+const deleteArtifactData = async (artifactId, collection, docId, isPrivate, token) => {
+  return axios.delete(apiRequests.artifactDataDocument(artifactId, collection, docId), {
+    headers: headers(token),
+    params: { private: Boolean(isPrivate) }
+  })
+}
+
 /** Make it public: anyone with its link sees it, signed in or not; a new link each time. Owner only. @returns the sharing */
 const makePublic = async (artifactId, token) => {
   return axios.post(apiRequests.artifactPublic(artifactId), null, { headers: headers(token) })
@@ -138,6 +172,10 @@ export default {
   removeMember,
   openInNewChat,
   restoreVersion,
+  listArtifactData,
+  getArtifactData,
+  writeArtifactData,
+  deleteArtifactData,
   makePublic,
   makePrivate,
   getPublicArtifact

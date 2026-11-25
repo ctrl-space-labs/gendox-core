@@ -257,6 +257,10 @@ const ArtifactView = ({
             codeLanguage={artifact.codeLanguage}
             title={artifact.title}
             onError={setError}
+            artifactId={artifactId}
+            capabilities={artifact.capabilities}
+            organizationId={organizationId}
+            projectId={projectId}
           />
         ) : (
           <Markdown text={fencedCode(artifact.content, sourceLanguageOf(kind, artifact.codeLanguage))} />
@@ -266,6 +270,7 @@ const ArtifactView = ({
         <ShieldCheck className='lucide' />
         <span>
           Made by {agentName || 'the agent'}. It runs sealed: it can’t reach your account, other pages or the internet.
+          {artifact.capabilities?.includes('data') && ' What you do in it is kept with the artifact.'}
         </span>
       </div>
       {organizationId && role && (
