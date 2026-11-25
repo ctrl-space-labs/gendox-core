@@ -612,7 +612,7 @@ Moved here from phase 2, as an improvement once phases 2 to 6 are done.
 
 Still open:
 
-- **Public threads.** Whether an anonymous visitor reads the artifacts of their conversation, and whether the agent offers the tools there at all. Decided with the widget work; until then, no skill on public agents. Public links (see *Public links*) do not need this: they are a separate page.
+- **Public threads.** Whether an anonymous visitor reads the artifacts of their conversation, and whether the agent offers the tools there at all. Decided with the widget work; until then, no skill on public agents. Public links (see *Public links*) do not need this: they are a separate page. **Enforced since 2026-11-25:** a public thread gets no artifact or widget tools, and a tool called there anyway is refused (`ARTIFACTS_NOT_IN_PUBLIC_THREADS`), since anyone who knows one may write in it and "a conversation reaches the artifacts made in it" assumes one person's conversation.
 - **Tool errors are logged at `ERROR` with a stack trace**, a cut call included. That is how every tool error is logged today; whether expected model mistakes should log lower is a change for all tools, outside this plan.
 
 ## Notes to carry forward

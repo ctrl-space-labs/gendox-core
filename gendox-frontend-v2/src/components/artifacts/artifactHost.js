@@ -51,6 +51,7 @@ export const createArtifactHost = (context, notify) => {
   const used = { read: [], write: [] }
   const watched = new Map() // collection -> the last list sent, as JSON
   let timer = null
+  let generation = 0 // raised by reset: a read that started before it tells nothing to what came after
   let people = null // the agent's members, read once, for names
 
   const allowed = name => {
@@ -75,9 +76,11 @@ export const createArtifactHost = (context, notify) => {
 
   const poll = async () => {
     if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
+    const started = generation
     for (const collection of [...watched.keys()]) {
       try {
         const documents = await list(collection)
+        if (generation !== started) return
         const json = JSON.stringify(documents)
         if (watched.has(collection) && watched.get(collection) !== json) {
           watched.set(collection, json)
@@ -176,7 +179,9 @@ export const createArtifactHost = (context, notify) => {
           case 'gendox/data/subscribe':
             if (!watched.has(collection)) {
               if (watched.size >= MAX_WATCHED) throw refused('TOO_MANY_WATCHED', `Watch at most ${MAX_WATCHED} collections`)
+              const started = generation
               const documents = await list(collection)
+              if (generation !== started) return false
               watched.set(collection, JSON.stringify(documents))
               notify('gendox/data/changed', { collection, documents })
               startPolling()
@@ -199,6 +204,7 @@ export const createArtifactHost = (context, notify) => {
 
   /** Another artifact, or another version, in the same frame: nothing carries over. */
   const reset = () => {
+    generation += 1
     watched.clear()
     used.read = []
     used.write = []

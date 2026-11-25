@@ -114,7 +114,9 @@ const ArtifactView = ({
       </div>
     )
   }
-  if (!artifact) return <Spinner />
+  // another artifact asked for: nothing of the one before is shown or acted on until it has loaded (its code, its
+  // capabilities and its id go to the frame together)
+  if (!artifact || artifact.id !== artifactId) return <Spinner />
 
   const kind = kindOf(artifact)
   const name = fileNameOf(artifact.title, kind, artifact.codeLanguage)
@@ -257,7 +259,7 @@ const ArtifactView = ({
             codeLanguage={artifact.codeLanguage}
             title={artifact.title}
             onError={setError}
-            artifactId={artifactId}
+            artifactId={artifact.id}
             capabilities={artifact.capabilities}
             organizationId={organizationId}
             projectId={projectId}

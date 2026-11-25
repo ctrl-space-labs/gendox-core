@@ -6,6 +6,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.ArtifactMember;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ArtifactThread;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ArtifactVersion;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ChatThread;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Organization;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
@@ -68,6 +69,11 @@ class ArtifactSharingServiceTest {
     @Mock
     private ArtifactService artifactService;
 
+    @Mock
+    private OrganizationService organizationService;
+
+    private final UUID organizationId = UUID.randomUUID();
+
     private final UUID projectId = UUID.randomUUID();
     private final UUID ownerId = UUID.randomUUID();
     private final UUID editorId = UUID.randomUUID();
@@ -82,6 +88,7 @@ class ArtifactSharingServiceTest {
     void setUp() throws GendoxException {
         artifact = Artifact.builder().id(UUID.randomUUID()).projectId(projectId).ownerId(ownerId).build();
         when(artifactRepository.findById(artifact.getId())).thenReturn(Optional.of(artifact));
+        when(artifactRepository.lockById(artifact.getId())).thenReturn(Optional.of(artifact));
         when(artifactRepository.save(any(Artifact.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(artifactMemberRepository.save(any(ArtifactMember.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(artifactMemberRepository.findByArtifactIdAndUserId(any(), any())).thenReturn(Optional.empty());
@@ -129,9 +136,22 @@ class ArtifactSharingServiceTest {
     }
 
     @Test
+    void everyWriteOfTheOwnerLocksTheArtifact_soNoneSavesValuesAnotherHasChanged() throws GendoxException {
+        artifactSharingService.makePublic(artifact.getId(), ownerId);
+        artifactSharingService.makePrivate(artifact.getId(), ownerId);
+        artifactSharingService.setGeneralAccess(artifact.getId(), ownerId, "VIEW");
+        artifactSharingService.setMemberRole(artifact.getId(), ownerId, memberId, "VIEW");
+        artifactSharingService.removeMember(artifact.getId(), ownerId, memberId);
+        artifactSharingService.delete(artifact.getId(), ownerId);
+
+        verify(artifactRepository, times(6)).lockById(artifact.getId());
+        verify(artifactRepository, never()).findById(artifact.getId());
+    }
+
+    @Test
     void anArtifactThatDoesNotExist_isNotFound() {
         UUID missing = UUID.randomUUID();
-        when(artifactRepository.findById(missing)).thenReturn(Optional.empty());
+        when(artifactRepository.lockById(missing)).thenReturn(Optional.empty());
 
         GendoxException e = assertThrows(GendoxException.class,
                 () -> artifactSharingService.makePublic(missing, ownerId));
@@ -288,10 +308,15 @@ class ArtifactSharingServiceTest {
         verify(artifactThreadRepository, never()).save(any());
     }
 
-    private Project projectWithAgent(String agentName) {
+    private Project projectWithAgent(String agentName) throws GendoxException {
         Project project = new Project();
         project.setId(projectId);
+        project.setOrganizationId(organizationId);
+        project.setActive(true);
         project.setName("Sales");
+        Organization organization = new Organization();
+        organization.setActive(true);
+        when(organizationService.getById(organizationId)).thenReturn(organization);
         ProjectAgent agent = new ProjectAgent();
         agent.setAgentName(agentName);
         project.setProjectAgent(agent);
@@ -305,7 +330,8 @@ class ArtifactSharingServiceTest {
         ArtifactVersion latest = ArtifactVersion.builder().version(3).content("<p>v3</p>").build();
         when(artifactRepository.findByPublicId(publicId)).thenReturn(Optional.of(artifact));
         when(artifactService.getVersion(artifact, null)).thenReturn(latest);
-        when(projectService.getProjectById(projectId)).thenReturn(projectWithAgent("Sales assistant"));
+        Project project1 = projectWithAgent("Sales assistant");
+        when(projectService.getProjectById(projectId)).thenReturn(project1);
 
         ArtifactSharingService.PublicArtifact found = artifactSharingService.getPublic(publicId, null);
 
@@ -319,9 +345,40 @@ class ArtifactSharingServiceTest {
         UUID publicId = UUID.randomUUID();
         when(artifactRepository.findByPublicId(publicId)).thenReturn(Optional.of(artifact));
         when(artifactService.getVersion(artifact, 1)).thenReturn(ArtifactVersion.builder().version(1).build());
-        when(projectService.getProjectById(projectId)).thenReturn(projectWithAgent(" "));
+        Project project2 = projectWithAgent(" ");
+        when(projectService.getProjectById(projectId)).thenReturn(project2);
 
         assertEquals("Sales", artifactSharingService.getPublic(publicId, 1).agentName());
+    }
+
+    @Test
+    void aLinkOfADeletedAgentIsNotFound_asItsOwnerCanNoLongerCloseIt() throws GendoxException {
+        UUID publicId = UUID.randomUUID();
+        when(artifactRepository.findByPublicId(publicId)).thenReturn(Optional.of(artifact));
+        Project deleted = projectWithAgent("Sales assistant");
+        deleted.setActive(false);
+        when(projectService.getProjectById(projectId)).thenReturn(deleted);
+
+        GendoxException e = assertThrows(GendoxException.class, () -> artifactSharingService.getPublic(publicId, null));
+
+        assertEquals("ARTIFACT_NOT_FOUND", e.getErrorCode());
+        verify(artifactService, never()).getVersion(any(), any());
+    }
+
+    @Test
+    void aLinkOfADeletedOrganizationIsNotFound() throws GendoxException {
+        UUID publicId = UUID.randomUUID();
+        when(artifactRepository.findByPublicId(publicId)).thenReturn(Optional.of(artifact));
+        Project project3 = projectWithAgent("Sales assistant");
+        when(projectService.getProjectById(projectId)).thenReturn(project3);
+        Organization deleted = new Organization();
+        deleted.setActive(false);
+        when(organizationService.getById(organizationId)).thenReturn(deleted);
+
+        GendoxException e = assertThrows(GendoxException.class, () -> artifactSharingService.getPublic(publicId, null));
+
+        assertEquals("ARTIFACT_NOT_FOUND", e.getErrorCode());
+        verify(artifactService, never()).getVersion(any(), any());
     }
 
     @Test

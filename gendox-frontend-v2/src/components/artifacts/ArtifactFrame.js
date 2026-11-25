@@ -98,8 +98,12 @@ const ArtifactFrame = ({
   const excess = useRef(null)
 
   const post = message => frameRef.current?.contentWindow?.postMessage({ jsonrpc: '2.0', ...message }, '*')
+  // one instance per artifact, version and viewer: the shell stamps every call of the artifact with the instance it
+  // was rendered for, and a call or an answer of an earlier instance is dropped (gendox-core#600)
+  const instance = useRef(0)
   if (!hostRef.current) hostRef.current = createArtifactHost(() => contextRef.current, (method, params) => post({ method, params }))
-  const sendInput = () => post({ method: 'ui/notifications/tool-input', params: { arguments: input.current } })
+  const sendInput = () =>
+    post({ method: 'ui/notifications/tool-input', params: { arguments: input.current, instance: instance.current } })
 
   useEffect(() => {
     const onMessage = event => {
@@ -148,10 +152,15 @@ const ArtifactFrame = ({
         default:
           // gendox.use of the artifact (gendox-core#600): answered by id, or refused
           if (message.method.startsWith('gendox/') && typeof message.id === 'number') {
+            const asked = instance.current
+            if (message.instance !== asked) {
+              post({ id: message.id, error: { code: 'STALE', message: 'The artifact changed' } })
+              break
+            }
             hostRef.current
               .handle(message.method, message.params || {})
-              .then(result => post({ id: message.id, result: result ?? null }))
-              .catch(error => post({ id: message.id, error }))
+              .then(result => instance.current === asked && post({ id: message.id, result: result ?? null }))
+              .catch(error => instance.current === asked && post({ id: message.id, error }))
           }
           break
       }
@@ -165,9 +174,11 @@ const ArtifactFrame = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // another version, or another artifact in the same place
+  // another version, another artifact in the same place, or another viewer: a new instance, which nothing of the one
+  // before can reach
   useEffect(() => {
     input.current = { kind, content }
+    instance.current += 1
     hostRef.current?.reset()
     excess.current = null
     if (!fit) setHeight(null)
@@ -175,7 +186,7 @@ const ArtifactFrame = ({
     failed.current = false
     if (ready.current) sendInput()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kind, content])
+  }, [kind, content, artifactId, JSON.stringify(capabilities ?? null), user?.id])
 
   // a theme switch while it is open
   useEffect(() => {

@@ -40,6 +40,8 @@ class CompletionRuntimeContextResolverTest {
     private TypeService typeService;
     @Mock
     private SubscriptionValidationService subscriptionValidationService;
+    @Mock
+    private ArtifactService artifactService;
 
     private CompletionRuntimeContextResolver resolver;
     private final ProjectAgent agent = new ProjectAgent();
@@ -58,7 +60,7 @@ class CompletionRuntimeContextResolverTest {
     void setUp() {
         resolver = new CompletionRuntimeContextResolver(null, typeService, null, null, JsonMapper.shared(), null, aiToolRegistry,
                 new SkillService(null, agentSkillRepository, aiToolRegistry, null, typeService, null), subscriptionValidationService,
-                mock(ArtifactService.class));
+                artifactService);
         agent.setId(UUID.randomUUID());
         agent.setAiTools(new ArrayList<>(List.of(tool("advanced_search"))));
         lenient().when(aiToolRegistry.getDefinition(anyString()))
@@ -166,6 +168,27 @@ class CompletionRuntimeContextResolverTest {
         ReflectionTestUtils.setField(resolver, "minArtifactOutputTokens", 16_000L);
 
         assertEquals(4_000L, resolver.withArtifactOutputFloor(4_000L, List.of(tool("show_widget"))));
+    }
+
+    @Test
+    void aPublicThreadGetsNoArtifactTools_andKeepsTheOthers() {
+        UUID publicThread = UUID.randomUUID();
+        when(artifactService.artifactsAllowedIn(publicThread)).thenReturn(false);
+
+        List<AiTools> tools = resolver.withoutArtifactToolsInPublicThreads(List.of(tool("advanced_search"),
+                tool("create_artifact"), tool("read_artifact_data"), tool("show_widget")), publicThread);
+
+        assertEquals(List.of("advanced_search"), names(tools));
+    }
+
+    @Test
+    void aMembersThreadKeepsTheArtifactTools() {
+        UUID thread = UUID.randomUUID();
+        when(artifactService.artifactsAllowedIn(thread)).thenReturn(true);
+
+        List<AiTools> tools = resolver.withoutArtifactToolsInPublicThreads(List.of(tool("create_artifact")), thread);
+
+        assertEquals(List.of("create_artifact"), names(tools));
     }
 
     @Test

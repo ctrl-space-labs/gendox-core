@@ -62,6 +62,7 @@ public class ShowWidgetTool extends DefinedToolHandler {
 
     @Override
     public JsonNode execute(JsonNode arguments, ToolExecutionContext context) throws GendoxException {
+        ArtifactToolSupport.callMessage(context, artifactService);
         Args args = readArguments(objectMapper, arguments, Args.class);
         artifactService.checkWidget(args.kind(), args.content());
 

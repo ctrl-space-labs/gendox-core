@@ -8,6 +8,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.ArtifactEditDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ArtifactRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ArtifactThreadRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ChatThreadRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ArtifactVersionRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.MessageRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ArtifactAccessService.Role;
@@ -63,6 +64,9 @@ class ArtifactServiceTest {
 
     @Mock
     private ArtifactAccessService artifactAccessService;
+
+    @Mock
+    private ChatThreadRepository chatThreadRepository;
 
     private final UUID threadId = UUID.randomUUID();
     private final UUID projectId = UUID.randomUUID();
@@ -233,6 +237,19 @@ class ArtifactServiceTest {
                 () -> artifactService.checkWidget("html", "<p>too long</p>"));
 
         assertEquals("ARTIFACT_CONTENT_TOO_LONG", e.getErrorCode());
+    }
+
+    @Test
+    void aPublicThreadMayNotHaveArtifacts_aMembersThreadMay() throws GendoxException {
+        UUID publicThread = UUID.randomUUID();
+        when(chatThreadRepository.existsByIdAndPublicThreadIsTrue(publicThread)).thenReturn(true);
+
+        assertFalse(artifactService.artifactsAllowedIn(publicThread));
+        assertFalse(artifactService.artifactsAllowedIn(null));
+        assertTrue(artifactService.artifactsAllowedIn(threadId));
+        GendoxException e = assertThrows(GendoxException.class,
+                () -> artifactService.requireArtifactsAllowedIn(publicThread));
+        assertEquals("ARTIFACTS_NOT_IN_PUBLIC_THREADS", e.getErrorCode());
     }
 
     @Test

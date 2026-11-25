@@ -475,6 +475,22 @@ public class ArtifactService {
     }
 
     /**
+     * Whether a conversation may make, change or read artifacts and widgets. Not a public thread: anyone who knows
+     * one may write in it, signed in or not, so "a conversation reaches the artifacts made in it" would let one visitor
+     * change or read what another made there. Until a policy for public threads is decided, they get none.
+     */
+    public boolean artifactsAllowedIn(@Nullable UUID threadId) {
+        return threadId != null && !chatThreadRepository.existsByIdAndPublicThreadIsTrue(threadId);
+    }
+
+    public void requireArtifactsAllowedIn(@Nullable UUID threadId) throws GendoxException {
+        if (!artifactsAllowedIn(threadId)) {
+            throw new GendoxException("ARTIFACTS_NOT_IN_PUBLIC_THREADS",
+                    "Artifacts and widgets are not available in this conversation", HttpStatus.FORBIDDEN);
+        }
+    }
+
+    /**
      * A widget is part of the answer, not an artifact: nothing is stored, and its content stays in the tool call of
      * its message. Its content is checked as an artifact's is, and only a page or a drawing can be one.
      */

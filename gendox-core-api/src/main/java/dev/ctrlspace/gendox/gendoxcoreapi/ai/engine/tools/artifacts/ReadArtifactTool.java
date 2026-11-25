@@ -58,7 +58,7 @@ public class ReadArtifactTool extends DefinedToolHandler {
 
     @Override
     public JsonNode execute(JsonNode arguments, ToolExecutionContext context) throws GendoxException {
-        Message callMessage = ArtifactToolSupport.callMessage(context);
+        Message callMessage = ArtifactToolSupport.callMessage(context, artifactService);
         Args args = readArguments(objectMapper, arguments, Args.class);
 
         Artifact artifact = artifactService.getByIdInThread(callMessage.getThreadId(), args.artifactId());

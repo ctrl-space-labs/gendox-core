@@ -109,22 +109,41 @@ the artifact, in collections of small JSON documents whose shape you choose.
   const user = await gendox.use('user')   // null as well when not declared
   const me = user && await user.id()
 
-  // a person's own state, that only they see: which sections they ticked or opened
-  await data.doc('progress/state').set({ checked: [3, 4], open: [] }, { private: true })
-  const mine = await data.doc('progress/state').get({ private: true })  // the object set, or null at first
-  const checked = mine ? mine.checked : []
+  // a person's own answers, that only they see: one document per question
+  await data.doc('answers/q2').set({ choice: 'B' }, { private: true })
+  // the collection as it is now and on every change, from this window, another of theirs, or another person:
+  // the reader's own private documents and the shared ones, as [{ id, data, private, updatedBy, ... }]
+  data.collection('answers').onChange(docs => docs.forEach(d => showAnswer(d.id, d.data.choice)))
+
+  // one field of a person's own settings, keeping the others
+  await data.doc('view/state').update({ open: [2] }, { private: true })
+  const view = await data.doc('view/state').get({ private: true })  // the object, or null at first
 
   // shared with everyone who can see it: one document per person
   await data.doc('votes/' + me).set({ choice: 'B' })
-  data.collection('votes').onChange(docs => render(docs))  // [{ id, data, updatedBy, ... }], now and on every change
-  const names = await user.profiles(docs.map(d => d.updatedBy))  // { [id]: { name } }
+  data.collection('votes').onChange(async docs => {
+    const names = await user.profiles(docs.map(d => d.updatedBy))  // { [id]: { name } }
+    render(docs, names)
+  })
   ```
 
   `get()` gives back the object as it was set, or `null`. A list and `onChange` give documents
-  `{ id, data, updatedBy, updatedAt }`, with the object in `data`. `doc(...).update(fields)` changes
+  `{ id, data, private, updatedBy, updatedAt }`, with the object in `data`. `doc(...).update(fields)` changes
   only the fields given; `doc(...).delete()` removes it; `collection(...).list()` reads it once;
   `doc(...).getDocument()` gives one document with its `revision`, to pass back on `set` when two
   people may change it at once.
+- **Two windows or two people at once.** The same artifact may be open in several windows, or by
+  several people, at the same moment, and a write replaces what it names. So never lose what another
+  wrote:
+  - **Write only what changed.** One document per item - an answer per question, a vote per person, a
+    tick per task - so two clicks on different items never touch the same document. To change some
+    fields of one document, use `update()`, which keeps the others. Never `set()` a whole list or a
+    whole state that another window may have changed since you read it.
+  - **Watch what you show.** Read a collection with `onChange`, not once at load, so each window
+    shows what the others did a few seconds later; draw from what it gives you.
+  - **A whole document that several may change** (a shared total, an ordered list): read it with
+    `getDocument()` and pass its `revision` to `set()`. A write that comes second fails with the code
+    `ARTIFACT_DATA_CONFLICT`: read it again, apply the change to what is there now, and write again.
 - **Private or shared.** Use `{ private: true }` for what only matters to one person: ticks, open
   sections, a draft. Leave it shared for what the others should see: votes, answers, comments.
   Everyone who can see the artifact keeps private documents; writing shared ones needs the

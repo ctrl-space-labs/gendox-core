@@ -46,6 +46,7 @@
           'gendox/data/subscribe', 'gendox/data/unsubscribe', 'gendox/user/id', 'gendox/user/me', 'gendox/user/profiles'
         ]
         var calls = {} // host request id -> the artifact's own id
+        var instance = null // what the host rendered this artifact as; sent with each call, so a stale one is refused
 
         function toHost(message) {
           message.jsonrpc = '2.0'
@@ -247,6 +248,7 @@
               if (inner && inner.contentWindow) inner.contentWindow.postMessage({ type: 'variables', variables: variables }, '*')
             } else if (message.method === 'ui/notifications/tool-input') {
               calls = {}
+              instance = message.params ? message.params.instance : null
               render(message.params && message.params.arguments)
             } else if (message.method === 'gendox/data/changed') {
               var changed = message.params || {}
@@ -274,7 +276,7 @@
               }
               var hostId = nextId++
               calls[hostId] = message.id
-              toHost({ id: hostId, method: message.method, params: message.params || {} })
+              toHost({ id: hostId, method: message.method, params: message.params || {}, instance: instance })
             } else if (message.type === 'size' && typeof message.height === 'number' && isFinite(message.height)) {
               toHost({ method: 'ui/notifications/size-changed', params: { height: Math.max(0, Math.ceil(message.height)) } })
             } else if (message.type === 'link' && typeof message.href === 'string' && message.href.length <= MAX_URL) {

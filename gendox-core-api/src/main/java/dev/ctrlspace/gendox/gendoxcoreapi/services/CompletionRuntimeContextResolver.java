@@ -103,7 +103,9 @@ public class CompletionRuntimeContextResolver {
         UUID organizationId = resolveOrganizationId(project, overrides);
         UUID createdByAgentUserId = resolveCreatedByAgentUserId(agent, overrides);
         // the tools before the output limit: the floor depends on which tools remain
-        List<AiTools> availableTools = withArtifactToolsIfPlanAllows(resolveAvailableTools(agent, overrides, agentSkills), organizationId);
+        List<AiTools> availableTools = withoutArtifactToolsInPublicThreads(
+                withArtifactToolsIfPlanAllows(resolveAvailableTools(agent, overrides, agentSkills), organizationId),
+                message.getThreadId());
         Long maxTokens = withArtifactOutputFloor(resolveMaxTokens(agent, overrides), availableTools);
 
         AiModelRequestParams aiModelRequestParams = AiModelRequestParams.builder()
@@ -344,6 +346,23 @@ public class CompletionRuntimeContextResolver {
                 .map(this::toolName)
                 .anyMatch(ARTIFACT_TOOLS::contains);
         if (!offersArtifactTools || subscriptionValidationService.canUseArtifacts(organizationId)) {
+            return tools;
+        }
+        return tools.stream()
+                .filter(tool -> !ARTIFACT_TOOLS.contains(toolName(tool)))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * No artifact tools in a public thread, where anyone who knows it may write: see ArtifactService.artifactsAllowedIn.
+     * Asked only when an artifact tool is offered at all.
+     */
+    // package-private for tests
+    List<AiTools> withoutArtifactToolsInPublicThreads(List<AiTools> tools, @Nullable UUID threadId) {
+        boolean offersArtifactTools = tools.stream()
+                .map(this::toolName)
+                .anyMatch(ARTIFACT_TOOLS::contains);
+        if (!offersArtifactTools || threadId == null || artifactService.artifactsAllowedIn(threadId)) {
             return tools;
         }
         return tools.stream()

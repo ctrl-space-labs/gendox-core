@@ -36,6 +36,7 @@ public class ArtifactSharingService {
     private final MessageService messageService;
     private final ProjectService projectService;
     private final ArtifactService artifactService;
+    private final OrganizationService organizationService;
 
     public ArtifactSharingService(ArtifactRepository artifactRepository,
                                   ArtifactMemberRepository artifactMemberRepository,
@@ -45,7 +46,8 @@ public class ArtifactSharingService {
                                   ArtifactThreadRepository artifactThreadRepository,
                                   MessageService messageService,
                                   ProjectService projectService,
-                                  ArtifactService artifactService) {
+                                  ArtifactService artifactService,
+                                  OrganizationService organizationService) {
         this.artifactRepository = artifactRepository;
         this.artifactMemberRepository = artifactMemberRepository;
         this.projectMemberRepository = projectMemberRepository;
@@ -55,6 +57,7 @@ public class ArtifactSharingService {
         this.messageService = messageService;
         this.projectService = projectService;
         this.artifactService = artifactService;
+        this.organizationService = organizationService;
     }
 
     /**
@@ -73,16 +76,18 @@ public class ArtifactSharingService {
     /**
      * An artifact by its public link, for anyone, signed in or not: the latest version, or the one the link names.
      * A link of an artifact that was made private, or never was public, is not found, the same as one that never
-     * existed.
+     * existed; so is one whose agent or organization was deleted, which leaves its owner no way to close it.
      *
      * @param version null for the latest
      */
     public PublicArtifact getPublic(UUID publicId, @Nullable Integer version) throws GendoxException {
-        Artifact artifact = artifactRepository.findByPublicId(publicId)
-                .orElseThrow(() -> new GendoxException("ARTIFACT_NOT_FOUND",
-                        "No public artifact at this link", HttpStatus.NOT_FOUND));
-        ArtifactVersion shown = artifactService.getVersion(artifact, version);
+        Artifact artifact = artifactRepository.findByPublicId(publicId).orElseThrow(ArtifactSharingService::noPublicArtifact);
         Project project = projectService.getProjectById(artifact.getProjectId());
+        if (Boolean.FALSE.equals(project.getActive())
+                || Boolean.FALSE.equals(organizationService.getById(project.getOrganizationId()).getActive())) {
+            throw noPublicArtifact();
+        }
+        ArtifactVersion shown = artifactService.getVersion(artifact, version);
         ProjectAgent agent = project.getProjectAgent();
         String agentName = agent != null && agent.getAgentName() != null && !agent.getAgentName().isBlank()
                 ? agent.getAgentName() : project.getName();
@@ -207,14 +212,26 @@ public class ArtifactSharingService {
         return thread;
     }
 
+    private static GendoxException noPublicArtifact() {
+        return new GendoxException("ARTIFACT_NOT_FOUND", "No public artifact at this link", HttpStatus.NOT_FOUND);
+    }
+
     private Artifact find(UUID artifactId) throws GendoxException {
         return artifactRepository.findById(artifactId)
                 .orElseThrow(() -> new GendoxException("ARTIFACT_NOT_FOUND",
                         "No artifact " + artifactId + " that you can open", HttpStatus.NOT_FOUND));
     }
 
+    /**
+     * The artifact, locked until the transaction ends, as every write of the artifact takes it (an update, a restore,
+     * a change of who may open it): each write reads what the one before it wrote. Without it a write that read the
+     * artifact before another committed would save the old values back over it - a public link made private again
+     * public, or an older latest version.
+     */
     private Artifact findAsOwner(UUID artifactId, UUID userId) throws GendoxException {
-        Artifact artifact = find(artifactId);
+        Artifact artifact = artifactRepository.lockById(artifactId)
+                .orElseThrow(() -> new GendoxException("ARTIFACT_NOT_FOUND",
+                        "No artifact " + artifactId + " that you can open", HttpStatus.NOT_FOUND));
         artifactAccessService.require(artifact, userId, Role.OWNER);
         return artifact;
     }
