@@ -323,6 +323,13 @@ Both are implemented (#550, #559, 2026-11-14); remaining validation is listed at
 
 - **VOICE-1** (#528): investigation and cost model. The desktop runner (CODE-3). Single sign-on per organization.
 
+### Minor follow-ups
+
+- **Guest widget attachments.** Loading a guest conversation should render its history without an attachment-list error. Show attachments where guest access permits and treat an unavailable list as empty.
+- **Approval card titles** ([#558](https://github.com/ctrl-space-labs/gendox-core/issues/558)). Let agent authors set a visitor-facing title per tool. Keep the generated title as the default for existing tools.
+- **Widget SDK context callbacks.** Collect context from all registered callbacks by default so integrators no longer have to count responses. Make configuration updates issued before the iframe is ready take effect once it can receive them.
+- **Widget typography.** Fix the missing bold Greek omega (`ω`) and check that Greek text renders in both regular and bold chat messages.
+
 ## 6. Order
 
 | Phase | Tasks |
