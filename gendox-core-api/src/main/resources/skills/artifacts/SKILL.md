@@ -43,6 +43,9 @@ Two ways to show something beyond text. Choose one; neither becomes the other.
   chart, a few controls. It is sized to its content, with no frame around it. It is not saved as an
   artifact: it has no versions, no one can share it, and nothing done inside it is kept. Keep it
   short; write any explanation in your answer, not inside it.
+- **A widget sits on the answer's own background.** Give it no background of its own and no card,
+  border or shadow around the whole of it: the page is transparent, so it looks part of the answer.
+  Inputs, buttons and small boxes inside it may use the theme variables as usual.
 - **Changing a widget:** show a new one in your answer, built on the latest one, which stays in the
   conversation history. There is no update for a widget.
 - **A widget made into an artifact:** only when the user asks for it. Then design the artifact anew

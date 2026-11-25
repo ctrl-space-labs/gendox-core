@@ -16,7 +16,9 @@ const VARIABLES = {
   '--font-mono': '--font-mono'
 }
 
-// read where the frame is, so a widget's own colours and theme reach the artifact too
+// read where the frame is, so a widget's own colours and theme reach the artifact too. Where the frame sets
+// --artifact-background, the artifact's background is that instead: a widget in an answer is transparent, so it shows
+// on the answer's own background
 const hostContextOf = element => {
   const style = getComputedStyle(element)
   const variables = {}
@@ -24,6 +26,8 @@ const hostContextOf = element => {
     const value = style.getPropertyValue(token).trim()
     if (value) variables[name] = value
   })
+  const background = style.getPropertyValue('--artifact-background').trim()
+  if (background) variables['--color-background-primary'] = background
 
   return { theme: style.getPropertyValue('--scheme').trim() === 'light' ? 'light' : 'dark', styles: { variables } }
 }

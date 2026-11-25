@@ -41,7 +41,7 @@ const WidgetCard = ({ call, isLatest, onAsk }) => {
   if (typeof args.content !== 'string') return pending ? <LoaderCircle className='lucide turning' /> : null
 
   return (
-    <div className='gc-widget' role='group' aria-label={title}>
+    <div className='answer-widget' role='group' aria-label={title}>
       <ArtifactContent
         kind={String(args.kind || '').toLowerCase()}
         content={args.content}

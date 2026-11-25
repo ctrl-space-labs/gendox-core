@@ -593,8 +593,10 @@ pre.code .k { color: var(--accent-text); } pre.code .s { color: var(--warn); }
 .gc-art .alert, .gc-ai > .alert { margin: 0; }
 /* an inline artifact is part of the answer: no border, no header; a small Open under it (a frame takes the pointer's
    hover, so it can't wait for one) */
-.gc-widget iframe { display: block; width: 100%; border: 0; }
-.gc-widget > .art-err { margin-top: 6px; }
+/* a widget is part of the answer: no frame, and the answer's background through it (gendox-core#570) */
+.answer-widget { --artifact-background: transparent; }
+.answer-widget iframe { display: block; width: 100%; border: 0; background: transparent; color-scheme: var(--scheme); }
+.answer-widget > .art-err { margin-top: 6px; }
 .art-b > .gc-md { flex: 1; min-width: 0; overflow: auto; padding: 14px; }
 .art-b > .gc-md pre { margin: 0; }
 .gc-th { display: flex; flex-direction: column; gap: 2px; width: 100%; padding: 8px 10px; border: 0; border-radius: var(--radius-sm); background: none; text-align: left; cursor: pointer; }
