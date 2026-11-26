@@ -3,6 +3,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.ArtifactConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.ArtifactSharingConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.ArtifactPersonDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.ArtifactSharingDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.PublicArtifactDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ArtifactSharingService;
@@ -14,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -47,6 +49,19 @@ public class ArtifactSharingController {
                     "and the public link, with the signed-in user's own role. For anyone who can see the artifact.")
     public ArtifactSharingDTO getSharing(@PathVariable UUID artifactId) throws GendoxException {
         return sharingOf(artifactId);
+    }
+
+    @PreAuthorize("@securityUtils.isSignedInPerson()")
+    @GetMapping("artifacts/{artifactId}/people")
+    @Operation(summary = "Get the names of members of an artifact's agent",
+            description = "For the artifact's own code: of the ids given (at most 200), the members of the artifact's " +
+                    "agent, each with a name and never an email; anyone else is left out. For anyone who can see the " +
+                    "artifact.")
+    public List<ArtifactPersonDTO> getPeople(@PathVariable UUID artifactId, @RequestParam List<UUID> ids)
+            throws GendoxException {
+        return artifactSharingService.getPeople(artifactId, securityUtils.getUserId(), ids).stream()
+                .map(artifactSharingConverter::toPersonDTO)
+                .toList();
     }
 
     @PreAuthorize("@securityUtils.isSignedInPerson()")

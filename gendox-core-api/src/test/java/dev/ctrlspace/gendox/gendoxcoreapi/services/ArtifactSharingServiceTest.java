@@ -10,6 +10,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.Organization;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ArtifactMemberRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ArtifactRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ArtifactThreadRepository;
@@ -71,6 +72,9 @@ class ArtifactSharingServiceTest {
 
     @Mock
     private OrganizationService organizationService;
+
+    @Mock
+    private dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserRepository userRepository;
 
     private final UUID organizationId = UUID.randomUUID();
 
@@ -379,6 +383,30 @@ class ArtifactSharingServiceTest {
 
         assertEquals("ARTIFACT_NOT_FOUND", e.getErrorCode());
         verify(artifactService, never()).getVersion(any(), any());
+    }
+
+    @Test
+    void peopleAreOnlyTheMembersOfTheArtifactsOwnAgent() throws GendoxException {
+        UUID stranger = UUID.randomUUID();
+        when(artifactAccessService.require(artifact, memberId, Role.VIEW)).thenReturn(Role.VIEW);
+        when(projectMemberRepository.findMemberIdsAmong(projectId, List.of(ownerId, stranger))).thenReturn(List.of(ownerId));
+        User owner = new User();
+        owner.setId(ownerId);
+        when(userRepository.findAllById(List.of(ownerId))).thenReturn(List.of(owner));
+
+        List<User> people = artifactSharingService.getPeople(artifact.getId(), memberId, List.of(ownerId, stranger, ownerId));
+
+        assertEquals(List.of(owner), people);
+    }
+
+    @Test
+    void peopleNeedToSeeTheArtifact() throws GendoxException {
+        UUID outsider = UUID.randomUUID();
+        when(artifactAccessService.require(artifact, outsider, Role.VIEW))
+                .thenThrow(new GendoxException("ARTIFACT_NOT_FOUND", "No artifact", HttpStatus.NOT_FOUND));
+
+        assertThrows(GendoxException.class, () -> artifactSharingService.getPeople(artifact.getId(), outsider, List.of(ownerId)));
+        verifyNoInteractions(userRepository);
     }
 
     @Test

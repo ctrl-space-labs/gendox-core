@@ -49,8 +49,8 @@ class ArtifactAccessServiceTest {
     void setUp() {
         artifact = Artifact.builder().id(UUID.randomUUID()).projectId(projectId).ownerId(ownerId).build();
         // both are members of the agent unless a test says otherwise
-        when(projectMemberRepository.existsByProjectIdAndUserId(projectId, ownerId)).thenReturn(true);
-        when(projectMemberRepository.existsByProjectIdAndUserId(projectId, userId)).thenReturn(true);
+        when(projectMemberRepository.existsActiveMembership(projectId, ownerId)).thenReturn(true);
+        when(projectMemberRepository.existsActiveMembership(projectId, userId)).thenReturn(true);
         when(artifactMemberRepository.findByArtifactIdAndUserId(any(), any())).thenReturn(Optional.empty());
     }
 
@@ -67,7 +67,16 @@ class ArtifactAccessServiceTest {
 
     @Test
     void ownerWhoLeftTheAgentHasNoRole() {
-        when(projectMemberRepository.existsByProjectIdAndUserId(projectId, ownerId)).thenReturn(false);
+        when(projectMemberRepository.existsActiveMembership(projectId, ownerId)).thenReturn(false);
+
+        assertEquals(Optional.empty(), artifactAccessService.roleOf(artifact, ownerId));
+    }
+
+    @Test
+    void anOwnerWhoseAgentOrOrganizationWasDeletedHasNoRole_evenWithAMembershipLeftBehind() {
+        // the membership row is still there, but its agent or organization is no longer active
+        when(projectMemberRepository.existsActiveMembership(projectId, ownerId)).thenReturn(false);
+        lenient().when(projectMemberRepository.existsByProjectIdAndUserId(projectId, ownerId)).thenReturn(true);
 
         assertEquals(Optional.empty(), artifactAccessService.roleOf(artifact, ownerId));
     }
@@ -114,7 +123,7 @@ class ArtifactAccessServiceTest {
 
     @Test
     void someoneOutsideTheAgentHasNoRoleWhateverTheyWereGiven() {
-        when(projectMemberRepository.existsByProjectIdAndUserId(projectId, userId)).thenReturn(false);
+        when(projectMemberRepository.existsActiveMembership(projectId, userId)).thenReturn(false);
         artifact.setGeneralAccessRole(role("EDIT"));
         invite("EDIT");
 

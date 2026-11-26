@@ -131,6 +131,14 @@ const writeArtifactData = async (artifactId, collection, docId, request, merge, 
   return merge ? axios.patch(url, request, { headers: headers(token) }) : axios.put(url, request, { headers: headers(token) })
 }
 
+/** The names of those of these users who are members of the artifact's agent: [{ userId, name }], never an email. */
+const getArtifactPeople = async (artifactId, ids, token) => {
+  return axios.get(apiRequests.artifactPeople(artifactId), {
+    headers: headers(token),
+    params: { ids: ids.join(',') }
+  })
+}
+
 /** Delete a document; one that is not there is not an error. */
 const deleteArtifactData = async (artifactId, collection, docId, isPrivate, token) => {
   return axios.delete(apiRequests.artifactDataDocument(artifactId, collection, docId), {
@@ -173,6 +181,7 @@ export default {
   getArtifactData,
   writeArtifactData,
   deleteArtifactData,
+  getArtifactPeople,
   makePublic,
   makePrivate,
   getPublicArtifact

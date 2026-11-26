@@ -228,6 +228,23 @@ class ArtifactDataServiceTest {
     }
 
     @Test
+    void aNewDocumentLocksItsRoomBeforeCounting_aChangedOneDoesNot() throws GendoxException {
+        hasRole(Role.INTERACT);
+
+        artifactDataService.set(artifact.getId(), user, "votes", "new", json("{}"), false, null);
+
+        var order = inOrder(artifactDataRepository);
+        order.verify(artifactDataRepository).lockRoom("artifact-data:" + artifact.getId() + ":shared");
+        order.verify(artifactDataRepository).countByArtifactIdAndPrivateToIsNull(artifact.getId());
+
+        ArtifactData existing = ArtifactData.builder().id(UUID.randomUUID()).data(json("{}")).revision(1).build();
+        when(artifactDataRepository.findByArtifactIdAndCollectionAndDocIdAndPrivateTo(artifact.getId(), "progress",
+                "state", user)).thenReturn(Optional.of(existing));
+        artifactDataService.set(artifact.getId(), user, "progress", "state", json("{\"n\":1}"), true, null);
+        verify(artifactDataRepository, never()).lockRoom("artifact-data:" + artifact.getId() + ":" + user);
+    }
+
+    @Test
     void aFullArtifactTakesNoNewSharedDocument() throws GendoxException {
         hasRole(Role.INTERACT);
         ReflectionTestUtils.setField(artifactDataService, "maxDocuments", 2);
@@ -270,14 +287,41 @@ class ArtifactDataServiceTest {
     @Test
     void deletingAPrivateDocumentDeletesOnlyTheReadersOwn() throws GendoxException {
         hasRole(Role.VIEW);
-        ArtifactData mine = ArtifactData.builder().privateTo(user).build();
+        ArtifactData mine = ArtifactData.builder().id(UUID.randomUUID()).privateTo(user).revision(2).build();
         when(artifactDataRepository.findByArtifactIdAndCollectionAndDocIdAndPrivateTo(artifact.getId(), "progress",
                 "state", user)).thenReturn(Optional.of(mine));
+        when(artifactDataRepository.deleteAtRevision(mine.getId(), 2)).thenReturn(1);
 
         artifactDataService.delete(artifact.getId(), user, "progress", "state", true);
 
-        ArgumentCaptor<ArtifactData> deleted = ArgumentCaptor.forClass(ArtifactData.class);
-        verify(artifactDataRepository).delete(deleted.capture());
-        assertSame(mine, deleted.getValue());
+        verify(artifactDataRepository).deleteAtRevision(mine.getId(), 2);
+    }
+
+    @Test
+    void aDeleteThatLostToAnUpdateIsAConflict() throws GendoxException {
+        hasRole(Role.INTERACT);
+        ArtifactData read = ArtifactData.builder().id(UUID.randomUUID()).revision(2).build();
+        when(artifactDataRepository.findByArtifactIdAndCollectionAndDocIdAndPrivateToIsNull(artifact.getId(), "votes",
+                "v1")).thenReturn(Optional.of(read));
+        // another wrote it at revision 3 meanwhile: nothing deleted, and it is still there
+        when(artifactDataRepository.deleteAtRevision(read.getId(), 2)).thenReturn(0);
+        when(artifactDataRepository.existsById(read.getId())).thenReturn(true);
+
+        GendoxException e = assertThrows(GendoxException.class,
+                () -> artifactDataService.delete(artifact.getId(), user, "votes", "v1", false));
+
+        assertEquals("ARTIFACT_DATA_CONFLICT", e.getErrorCode());
+    }
+
+    @Test
+    void aDocumentAnotherDeletedAtTheSameMomentIsNotAnError() throws GendoxException {
+        hasRole(Role.INTERACT);
+        ArtifactData read = ArtifactData.builder().id(UUID.randomUUID()).revision(2).build();
+        when(artifactDataRepository.findByArtifactIdAndCollectionAndDocIdAndPrivateToIsNull(artifact.getId(), "votes",
+                "v1")).thenReturn(Optional.of(read));
+        when(artifactDataRepository.deleteAtRevision(read.getId(), 2)).thenReturn(0);
+        when(artifactDataRepository.existsById(read.getId())).thenReturn(false);
+
+        assertDoesNotThrow(() -> artifactDataService.delete(artifact.getId(), user, "votes", "v1", false));
     }
 }

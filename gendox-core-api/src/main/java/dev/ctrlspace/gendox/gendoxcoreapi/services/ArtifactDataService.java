@@ -133,7 +133,8 @@ public class ArtifactDataService {
     }
 
     /**
-     * Deletes a document; deleting one that is not there is not an error.
+     * Deletes a document; deleting one that is not there is not an error, nor is one another deleted at the same
+     * moment. One another changed since it was read is not deleted: the writer gets a conflict, as for an update.
      */
     @Transactional(rollbackFor = GendoxException.class)
     public void delete(UUID artifactId, @Nullable UUID userId, String collection, String docId, boolean isPrivate)
@@ -141,7 +142,15 @@ public class ArtifactDataService {
         Artifact artifact = find(artifactId);
         requireWrite(artifact, userId, isPrivate);
         checkKey(collection, docId);
-        existing(artifactId, collection, docId, isPrivate ? userId : null).ifPresent(artifactDataRepository::delete);
+        Optional<ArtifactData> current = existing(artifactId, collection, docId, isPrivate ? userId : null);
+        if (current.isEmpty()) {
+            return;
+        }
+        // in one statement checked against the revision read, not at commit, where a lost race would be an error 500
+        if (artifactDataRepository.deleteAtRevision(current.get().getId(), current.get().getRevision()) == 0
+                && artifactDataRepository.existsById(current.get().getId())) {
+            throw conflict(collection, docId);
+        }
     }
 
     /**
@@ -164,8 +173,9 @@ public class ArtifactDataService {
             document.setUpdatedBy(userId);
         } else {
             // two limits, so that nobody fills the room of the others: the shared documents, written by Contributors
-            // and up, and each person's own private ones. Checked before the write, not under a lock: two writes at
-            // the very same moment may pass it by one each, which is fine for a limit against abuse.
+            // and up, and each person's own private ones. The room is locked first, so that many new documents at
+            // once are counted one after the other and none passes the limit; a change of a document is never held.
+            artifactDataRepository.lockRoom("artifact-data:" + artifactId + ":" + (isPrivate ? userId : "shared"));
             if (isPrivate) {
                 if (artifactDataRepository.countByArtifactIdAndPrivateTo(artifactId, userId) >= maxPrivateDocuments) {
                     throw new GendoxException("ARTIFACT_DATA_FULL",

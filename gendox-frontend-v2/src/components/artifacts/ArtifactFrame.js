@@ -62,7 +62,6 @@ const openLink = url => {
  * @param onError({ message, line }) - the artifact's first unhandled error; null again when other content is shown
  * @param artifactId, capabilities - a stored artifact and what it declared: its data and who is viewing reach it
  *   through gendox.use (gendox-core#600); without them, as for a widget or a public page, it gets nothing
- * @param organizationId, projectId - where the artifact's agent is, for the names of the people in its data
  */
 const ArtifactFrame = ({
   kind,
@@ -73,15 +72,13 @@ const ArtifactFrame = ({
   maxHeight,
   onError,
   artifactId,
-  capabilities,
-  organizationId,
-  projectId
+  capabilities
 }) => {
   const frameRef = useRef(null)
   const { user } = useAuth() ?? {}
   // what the artifact asks for is answered with what is true now, read by the host on every call
   const contextRef = useRef(null)
-  contextRef.current = { artifactId, capabilities, organizationId, projectId, user }
+  contextRef.current = { artifactId, capabilities, user }
   const hostRef = useRef(null)
   const ready = useRef(false)
   const input = useRef({ kind, content })

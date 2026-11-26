@@ -6,6 +6,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ArtifactMemberRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ArtifactRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ArtifactThreadRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectMemberRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ArtifactAccessService.Role;
 import org.springframework.http.HttpStatus;
 import org.springframework.lang.Nullable;
@@ -37,6 +38,7 @@ public class ArtifactSharingService {
     private final ProjectService projectService;
     private final ArtifactService artifactService;
     private final OrganizationService organizationService;
+    private final UserRepository userRepository;
 
     public ArtifactSharingService(ArtifactRepository artifactRepository,
                                   ArtifactMemberRepository artifactMemberRepository,
@@ -47,7 +49,8 @@ public class ArtifactSharingService {
                                   MessageService messageService,
                                   ProjectService projectService,
                                   ArtifactService artifactService,
-                                  OrganizationService organizationService) {
+                                  OrganizationService organizationService,
+                                  UserRepository userRepository) {
         this.artifactRepository = artifactRepository;
         this.artifactMemberRepository = artifactMemberRepository;
         this.projectMemberRepository = projectMemberRepository;
@@ -58,6 +61,7 @@ public class ArtifactSharingService {
         this.projectService = projectService;
         this.artifactService = artifactService;
         this.organizationService = organizationService;
+        this.userRepository = userRepository;
     }
 
     /**
@@ -91,6 +95,21 @@ public class ArtifactSharingService {
         String agentName = agent != null && agent.getAgentName() != null && !agent.getAgentName().isBlank()
                 ? agent.getAgentName() : project.getName();
         return new PublicArtifact(artifact, shown, agentName);
+    }
+
+    /**
+     * Who these users are, for the artifact's own code (gendox-core#600): only the members of the artifact's agent, as
+     * the server knows it, whatever page it is opened from; anyone else among the ids is left out. For anyone who may
+     * see the artifact.
+     */
+    public List<User> getPeople(UUID artifactId, @Nullable UUID userId, List<UUID> userIds) throws GendoxException {
+        Artifact artifact = find(artifactId);
+        artifactAccessService.require(artifact, userId, Role.VIEW);
+        List<UUID> asked = userIds == null ? List.of() : userIds.stream().distinct().limit(200).toList();
+        if (asked.isEmpty()) {
+            return List.of();
+        }
+        return userRepository.findAllById(projectMemberRepository.findMemberIdsAmong(artifact.getProjectId(), asked));
     }
 
     /**

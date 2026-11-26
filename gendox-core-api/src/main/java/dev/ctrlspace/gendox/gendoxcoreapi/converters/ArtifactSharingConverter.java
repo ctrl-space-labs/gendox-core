@@ -2,6 +2,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.converters;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ArtifactMember;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.ArtifactPersonDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.ArtifactSharingDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.ArtifactSharingDTO.Person;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserRepository;
@@ -61,6 +62,17 @@ public class ArtifactSharingConverter {
                 .email(user == null ? null : user.getEmail())
                 .role(role)
                 .build();
+    }
+
+    /**
+     * A member as the artifact's own code may know them: a name, never an email; the name, else the first and last
+     * name, else nothing.
+     */
+    public ArtifactPersonDTO toPersonDTO(User user) {
+        String fullName = ((user.getFirstName() == null ? "" : user.getFirstName()) + " "
+                + (user.getLastName() == null ? "" : user.getLastName())).trim();
+        String name = user.getName() != null && !user.getName().isBlank() ? user.getName() : fullName;
+        return ArtifactPersonDTO.builder().userId(user.getId()).name(name).build();
     }
 
     /** The name, else the first and last name, else the email. */

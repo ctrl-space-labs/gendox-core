@@ -261,11 +261,9 @@ const ArtifactView = ({
             onError={setError}
             artifactId={artifact.id}
             capabilities={artifact.capabilities}
-            organizationId={organizationId}
-            projectId={projectId}
           />
         ) : (
-          <Markdown text={fencedCode(artifact.content, sourceLanguageOf(kind, artifact.codeLanguage))} />
+          <Markdown text={fencedCode(artifact.content, sourceLanguageOf(kind, artifact.codeLanguage))} externalImages={false} />
         )}
       </div>
       <div className='art-note faint sm'>

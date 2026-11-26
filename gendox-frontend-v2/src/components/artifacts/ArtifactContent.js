@@ -7,7 +7,7 @@ import { fencedCode, runsInFrame } from 'src/components/artifacts/artifactUtils'
  * Markdown, which sanitizes what it renders as it does for answers, and loads no image from another server: the artifact
  * is opened by people who did not write it, also from a public link. Only the frame runs code, so only it reports errors.
  *
- * @param artifact - artifactId, capabilities, organizationId and projectId, passed to the frame (gendox-core#600)
+ * @param artifact - artifactId and capabilities, passed to the frame (gendox-core#600)
  */
 const ArtifactContent = ({ kind, content, codeLanguage, title, fit, minHeight, maxHeight, onError, ...artifact }) => {
   if (runsInFrame(kind)) {

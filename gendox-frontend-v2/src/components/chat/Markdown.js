@@ -37,26 +37,36 @@ const components = {
   )
 }
 
-const hostOf = src => {
+// the address as the browser would load it: also one with no scheme (//host/x.png) or a relative one; null if none
+const resolved = src => {
   try {
-    return new URL(src).host
+    return new URL(src, typeof window === 'undefined' ? 'http://localhost/' : window.location.href)
   } catch (_) {
-    return ''
+    return null
   }
 }
 
-// an image on another server becomes a link the reader may follow: nothing is fetched until they choose to, so opening
-// the text tells no third server who read it or when, and carries nothing out in the image's address
+// Only an image carried in the text itself (data:) loads. Any other becomes a link the reader may follow - on another
+// server, with no scheme, or relative - so opening the text fetches nothing: it tells no server who read it or when,
+// and carries nothing out in an image's address. <source> (and its srcSet) is dropped, and <picture> keeps only its
+// <img>, which goes through the same rule.
 const withoutExternalImages = {
   ...components,
-  img: ({ node, src = '', alt = '', ...props }) =>
-    /^https?:/i.test(src) ? (
-      <a href={src} target='_blank' rel='noopener noreferrer' className='md-img-link'>
-        🖼 {alt || 'Image'} ({hostOf(src)})
+  img: ({ node, src = '', alt = '', ...props }) => {
+    // no address left (the sanitizer drops a data: one): only its description, never a link to this page
+    if (!src) return <span className='md-img-link'>🖼 {alt || 'Image'}</span>
+    const url = resolved(src)
+    if (url && url.protocol === 'data:') return <img src={src} alt={alt} {...props} />
+    if (!url || !/^https?:$/.test(url.protocol)) return <span className='md-img-link'>🖼 {alt || 'Image'}</span>
+
+    return (
+      <a href={url.href} target='_blank' rel='noopener noreferrer' className='md-img-link'>
+        🖼 {alt || 'Image'} ({url.host})
       </a>
-    ) : (
-      <img src={src} alt={alt} {...props} />
     )
+  },
+  source: () => null,
+  picture: ({ node, children }) => <>{children}</>
 }
 
 /**

@@ -43,10 +43,11 @@ public class ArtifactAccessService {
     }
 
     /**
-     * The user's role on the artifact; empty when they may not see it at all.
+     * The user's role on the artifact; empty when they may not see it at all. Only a current member of an agent and an
+     * organization that are both active has one: a deleted one lets no one in, whatever was left behind.
      */
     public Optional<Role> roleOf(Artifact artifact, @Nullable UUID userId) {
-        if (userId == null || !projectMemberRepository.existsByProjectIdAndUserId(artifact.getProjectId(), userId)) {
+        if (userId == null || !projectMemberRepository.existsActiveMembership(artifact.getProjectId(), userId)) {
             return Optional.empty();
         }
         if (userId.equals(artifact.getOwnerId())) {

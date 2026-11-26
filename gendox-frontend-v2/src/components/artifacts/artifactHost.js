@@ -1,5 +1,4 @@
 import artifactService from 'src/gendox-sdk/artifactService'
-import projectService from 'src/gendox-sdk/projectService'
 import { getToken } from 'src/components/agent/useAgent'
 
 /**
@@ -43,8 +42,19 @@ const failureOf = error => ({
 
 const refused = (code, message) => Object.assign(new Error(message), { code })
 
+// who a token belongs to (its subject), read from the token itself; null when there is none or it cannot be read
+const subjectOf = token => {
+  try {
+    const payload = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
+
+    return JSON.parse(atob(payload)).sub || null
+  } catch (_) {
+    return null
+  }
+}
+
 /**
- * @param context() - the frame's current { artifactId, capabilities, organizationId, projectId, user }
+ * @param context() - the frame's current { artifactId, capabilities, user }
  * @param notify(method, params) - sends a notification to the frame
  */
 export const createArtifactHost = (context, notify) => {
@@ -52,7 +62,20 @@ export const createArtifactHost = (context, notify) => {
   const watched = new Map() // collection -> the last list sent, as JSON
   let timer = null
   let generation = 0 // raised by reset: a read that started before it tells nothing to what came after
-  let people = null // the agent's members, read once, for names
+  // the session the frame was rendered for: the token is shared by every tab and may change under it, when another
+  // user signs in; a call is made only while the token still belongs to the same person (a renewed one does)
+  let session = subjectOf(getToken())
+
+  // the token to call with, or a refusal when it is now someone else's
+  const tokenOfSession = () => {
+    const token = getToken()
+    if (!token || !session || subjectOf(token) !== session) {
+      throw refused('SESSION_CHANGED', 'The signed-in user changed; open the artifact again')
+    }
+
+    return token
+  }
+  const names = new Map() // user id -> name, of the artifact's own agent, as the server gave them; per instance
 
   const allowed = name => {
     const { artifactId, capabilities, user } = context()
@@ -69,13 +92,15 @@ export const createArtifactHost = (context, notify) => {
   }
 
   const list = async collection => {
-    const { data } = await artifactService.listArtifactData(context().artifactId, collection, getToken())
+    const { data } = await artifactService.listArtifactData(context().artifactId, collection, tokenOfSession())
 
     return (data ?? []).map(documentOf)
   }
 
   const poll = async () => {
     if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
+    // another user signed in: watch nothing more with their token
+    if (subjectOf(getToken()) !== session) return stop()
     const started = generation
     for (const collection of [...watched.keys()]) {
       try {
@@ -100,19 +125,19 @@ export const createArtifactHost = (context, notify) => {
     if (!timer) timer = setInterval(poll, POLL_MS)
   }
 
+  // names from the server, for the artifact's own agent as the server knows it, never the page's: of the ids asked,
+  // only its members come back, with a name and never an email
   const profiles = async ids => {
-    const { organizationId, projectId } = context()
-    if (!people && organizationId && projectId) {
-      try {
-        const { data } = await projectService.getProjectMembers(organizationId, projectId, getToken())
-        people = new Map((data ?? []).map(member => member.user).filter(u => u?.id).map(u => [u.id, nameOf(u)]))
-      } catch (_) {
-        people = new Map()
-      }
+    const wanted = [...new Set((ids || []).filter(id => typeof id === 'string' && /^[0-9a-f-]{36}$/i.test(id)))].slice(0, 200)
+    const missing = wanted.filter(id => !names.has(id))
+    if (missing.length) {
+      const { data } = await artifactService.getArtifactPeople(context().artifactId, missing, tokenOfSession())
+      missing.forEach(id => names.set(id, ''))
+      ;(data ?? []).forEach(person => names.set(person.userId, person.name || ''))
     }
     const result = {}
     ;(ids || []).forEach(id => {
-      if (typeof id === 'string') result[id] = { name: people?.get(id) || '' }
+      if (typeof id === 'string') result[id] = { name: names.get(id) || '' }
     })
 
     return result
@@ -149,7 +174,7 @@ export const createArtifactHost = (context, notify) => {
             return list(collection)
           case 'gendox/data/get':
             try {
-              const { data } = await artifactService.getArtifactData(artifactId, collection, docId, isPrivate, getToken())
+              const { data } = await artifactService.getArtifactData(artifactId, collection, docId, isPrivate, tokenOfSession())
 
               return documentOf(data)
             } catch (error) {
@@ -165,14 +190,14 @@ export const createArtifactHost = (context, notify) => {
               docId,
               request,
               method === 'gendox/data/update',
-              getToken()
+              tokenOfSession()
             )
             refresh(collection)
 
             return documentOf(data)
           }
           case 'gendox/data/delete':
-            await artifactService.deleteArtifactData(artifactId, collection, docId, isPrivate, getToken())
+            await artifactService.deleteArtifactData(artifactId, collection, docId, isPrivate, tokenOfSession())
             refresh(collection)
 
             return null
@@ -205,6 +230,8 @@ export const createArtifactHost = (context, notify) => {
   /** Another artifact, or another version, in the same frame: nothing carries over. */
   const reset = () => {
     generation += 1
+    names.clear()
+    session = subjectOf(getToken())
     watched.clear()
     used.read = []
     used.write = []
