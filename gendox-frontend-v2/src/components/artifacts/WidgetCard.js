@@ -13,14 +13,15 @@ const errorText = error =>
 /**
  * A widget: something small and interactive that is part of the answer (gendox-core#570). It is not an artifact:
  * there is nothing to open, share or change, and nothing done inside it is kept. It runs from its show_widget call,
- * already in the thread, in the same sealed frame as an artifact, sized to its content; no request.
+ * already in the thread, in the same sealed frame as an artifact, sized to its content; no request. Only once the
+ * server's result says it was shown.
  *
  * @param call - from widgetCallOf
  * @param isLatest - the conversation's latest widget; Try to fix is offered only on it
  * @param onAsk(text) - put a request in the chat's composer; without it an error is only shown
  */
 const WidgetCard = ({ call, isLatest, onAsk }) => {
-  const { args, error, pending } = call
+  const { args, shown, error, pending } = call
   const [raised, setRaised] = useState(null) // the widget's first unhandled error
   const title = args.title || 'the widget'
 
@@ -38,7 +39,9 @@ const WidgetCard = ({ call, isLatest, onAsk }) => {
       </div>
     )
   }
-  if (typeof args.content !== 'string') return pending ? <LoaderCircle className='lucide turning' /> : null
+  // it runs only once the server accepted the call: the call reaches the chat before the server checked it, and one
+  // that is then refused (a public thread, a kind or a length not allowed) must never have run
+  if (!shown || typeof args.content !== 'string') return pending ? <LoaderCircle className='lucide turning' /> : null
 
   return (
     <div className='answer-widget' role='group' aria-label={title}>

@@ -10,14 +10,14 @@ import Spinner from 'src/components/ui/Spinner'
 import { downloadFile, fileNameOf, kindInfo, kindOf } from 'src/components/artifacts/artifactUtils'
 
 /**
- * An artifact anyone can open with its public link, signed in or not (gendox-core#570): /a/?id={publicId}, and
- * &v={version} for one version. Outside the app: no menu, no account, no organization. The artifact runs in the same
+ * An artifact anyone can open with its public link, signed in or not (gendox-core#570): /a/?id={publicId}, always at
+ * its latest version. Outside the app: no menu, no account, no organization. The artifact runs in the same
  * sealed frame; the page says plainly that an AI agent made it, and never shows its conversation, its other versions
  * or who made it. Not indexed by search engines.
  */
 const PublicArtifactPage = () => {
   const router = useRouter()
-  const { id, v } = router.query
+  const { id } = router.query
   const [artifact, setArtifact] = useState(null)
   const [failed, setFailed] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -29,14 +29,14 @@ const PublicArtifactPage = () => {
     setArtifact(null)
     setFailed(false)
     artifactService
-      .getPublicArtifact(id, v ? Number(v) : undefined)
+      .getPublicArtifact(id)
       .then(response => current && setArtifact(response.data))
       .catch(() => current && setFailed(true))
 
     return () => {
       current = false
     }
-  }, [router.isReady, id, v])
+  }, [router.isReady, id])
 
   const kind = artifact ? kindOf(artifact) : ''
   const name = artifact ? fileNameOf(artifact.title, kind, artifact.codeLanguage) : ''
@@ -65,7 +65,6 @@ const PublicArtifactPage = () => {
                 <h1 className='trunc'>{artifact.title}</h1>
                 <div className='faint sm'>
                   {kindInfo(kind).label}
-                  {v ? ` · version ${artifact.version}` : ''}
                 </div>
               </div>
               <button

@@ -150,13 +150,10 @@ const makePrivate = async (artifactId, token) => {
 }
 
 /**
- * An artifact by its public link, for anyone: no token is sent. Only the artifact and the agent that made it.
- * @param version - the one the link names; the latest when absent
+ * An artifact by its public link, for anyone: no token is sent. Only its latest version and the agent that made it.
  */
-const getPublicArtifact = async (publicId, version) => {
-  const path = version ? apiRequests.publicArtifactVersion(publicId, version) : apiRequests.publicArtifact(publicId)
-
-  return axios.get(path, { headers: headers(null) })
+const getPublicArtifact = async publicId => {
+  return axios.get(apiRequests.publicArtifact(publicId), { headers: headers(null) })
 }
 
 export default {

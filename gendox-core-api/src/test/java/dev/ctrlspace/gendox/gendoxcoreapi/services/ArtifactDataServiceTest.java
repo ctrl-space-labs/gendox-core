@@ -135,7 +135,25 @@ class ArtifactDataServiceTest {
     }
 
     @Test
-    void writingAgainRaisesTheRevision_andAnOlderRevisionIsAConflict() throws GendoxException {
+    void aWriteThatLostTheRaceToAnotherIsAConflict() throws GendoxException {
+        hasRole(Role.INTERACT);
+        ArtifactData current = ArtifactData.builder().artifactId(artifact.getId()).collection("votes").docId("item-1")
+                .data(json("{\"choice\":\"A\"}")).revision(3).createdBy(user).build();
+        when(artifactDataRepository.findByArtifactIdAndCollectionAndDocIdAndPrivateToIsNull(artifact.getId(), "votes",
+                "item-1")).thenReturn(Optional.of(current));
+        // another write committed between this one's read and its UPDATE, whose revision no longer matches
+        when(artifactDataRepository.saveAndFlush(any(ArtifactData.class)))
+                .thenThrow(new org.springframework.orm.ObjectOptimisticLockingFailureException(ArtifactData.class, "id"));
+
+        GendoxException e = assertThrows(GendoxException.class, () -> artifactDataService.set(artifact.getId(), user,
+                "votes", "item-1", json("{\"choice\":\"B\"}"), false, null));
+
+        assertEquals("ARTIFACT_DATA_CONFLICT", e.getErrorCode());
+        assertEquals(HttpStatus.CONFLICT, e.getHttpStatus());
+    }
+
+    @Test
+    void anOlderRevisionIsAConflict() throws GendoxException {
         hasRole(Role.INTERACT);
         ArtifactData current = ArtifactData.builder().artifactId(artifact.getId()).collection("votes").docId("item-1")
                 .data(json("{\"choice\":\"A\"}")).revision(3).createdBy(user).build();
@@ -144,10 +162,11 @@ class ArtifactDataServiceTest {
 
         ArtifactData saved = artifactDataService.set(artifact.getId(), user, "votes", "item-1",
                 json("{\"choice\":\"B\"}"), false, 3);
-        assertEquals(4, saved.getRevision());
+        assertEquals("B", saved.getData().get("choice").asText());
 
+        // a writer that read it at an earlier revision
         GendoxException e = assertThrows(GendoxException.class, () -> artifactDataService.set(artifact.getId(), user,
-                "votes", "item-1", json("{\"choice\":\"C\"}"), false, 3));
+                "votes", "item-1", json("{\"choice\":\"C\"}"), false, 2));
         assertEquals("ARTIFACT_DATA_CONFLICT", e.getErrorCode());
     }
 
@@ -209,15 +228,31 @@ class ArtifactDataServiceTest {
     }
 
     @Test
-    void aFullArtifactTakesNoNewDocument() throws GendoxException {
+    void aFullArtifactTakesNoNewSharedDocument() throws GendoxException {
         hasRole(Role.INTERACT);
         ReflectionTestUtils.setField(artifactDataService, "maxDocuments", 2);
-        when(artifactDataRepository.countByArtifactId(artifact.getId())).thenReturn(2L);
+        when(artifactDataRepository.countByArtifactIdAndPrivateToIsNull(artifact.getId())).thenReturn(2L);
 
         GendoxException e = assertThrows(GendoxException.class, () -> artifactDataService.set(artifact.getId(), user,
                 "notes", "n3", json("{}"), false, null));
 
         assertEquals("ARTIFACT_DATA_FULL", e.getErrorCode());
+    }
+
+    @Test
+    void onePersonsFullRoomStopsOnlyThem_neverTheSharedDocumentsOrOthers() throws GendoxException {
+        hasRole(Role.INTERACT);
+        ReflectionTestUtils.setField(artifactDataService, "maxPrivateDocuments", 3);
+        when(artifactDataRepository.countByArtifactIdAndPrivateTo(artifact.getId(), user)).thenReturn(3L);
+
+        GendoxException e = assertThrows(GendoxException.class, () -> artifactDataService.set(artifact.getId(), user,
+                "progress", "p4", json("{}"), true, null));
+        assertEquals("ARTIFACT_DATA_FULL", e.getErrorCode());
+
+        // their full private room does not count against the shared documents
+        ArtifactData shared = artifactDataService.set(artifact.getId(), user, "votes", "v1", json("{}"), false, null);
+        assertNull(shared.getPrivateTo());
+        verify(artifactDataRepository, never()).countByArtifactIdAndPrivateTo(artifact.getId(), null);
     }
 
     @Test

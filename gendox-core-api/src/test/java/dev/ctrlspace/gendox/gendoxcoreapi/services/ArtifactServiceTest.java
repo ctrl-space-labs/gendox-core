@@ -253,6 +253,20 @@ class ArtifactServiceTest {
     }
 
     @Test
+    void update_refused_changesNeitherItsTitleNorItsCapabilities() throws GendoxException {
+        Artifact artifact = existing(1, "<p>Old</p>");
+
+        // the edit's text is not in the artifact, so the update is refused
+        assertThrows(GendoxException.class, () -> artifactService.update(threadId, artifact.getId(), messageId,
+                "New title", List.of("data"), null, List.of(edit("missing", "x"))));
+
+        assertEquals("Report", artifact.getTitle());
+        assertNull(artifact.getCapabilities());
+        assertEquals(1, artifact.getLatestVersion());
+        verify(artifactRepository, never()).save(any());
+    }
+
+    @Test
     void create_withCapabilities_keepsThemOnceInTheirOrder() throws GendoxException {
         Artifact artifact = artifactService.create(threadId, projectId, messageId, "Poll", "html", null,
                 List.of(" USER ", "data", "data"), "<p>x</p>");

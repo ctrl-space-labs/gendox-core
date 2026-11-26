@@ -56,8 +56,10 @@ public class ArtifactData {
     private UUID privateTo;
 
     /**
-     * Raised on every write; a write that names an older one is refused as a conflict.
+     * Raised on every write, by Hibernate: an update is written only where the row still has the revision it was read
+     * at, so of two writes that read the same one, the second fails instead of saving over the first.
      */
+    @Version
     @Column(name = "revision", nullable = false)
     private Integer revision;
 

@@ -35,5 +35,9 @@ public interface ArtifactDataRepository extends JpaRepository<ArtifactData, UUID
     List<ArtifactData> findAllByArtifactIdAndCollectionAndPrivateToIsNullOrderByUpdatedAtAscCreatedAtAsc(UUID artifactId,
                                                                                                          String collection);
 
-    long countByArtifactId(UUID artifactId);
+    /** The shared documents of an artifact: what its Contributors wrote, counted against its own limit. */
+    long countByArtifactIdAndPrivateToIsNull(UUID artifactId);
+
+    /** One person's private documents of an artifact, counted against their own limit. */
+    long countByArtifactIdAndPrivateTo(UUID artifactId, UUID privateTo);
 }

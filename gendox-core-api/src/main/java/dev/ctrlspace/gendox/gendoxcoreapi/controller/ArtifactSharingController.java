@@ -125,22 +125,10 @@ public class ArtifactSharingController {
 
     @GetMapping("public/artifacts/{publicId}")
     @Operation(summary = "Get a public artifact",
-            description = "An artifact by its public link, for anyone, signed in or not: its latest version and the " +
-                    "agent that made it. Never its conversation, its organization or who made it.")
+            description = "An artifact by its public link, for anyone, signed in or not: its latest version, never an " +
+                    "earlier one, and the agent that made it. Never its conversation, its organization or who made it.")
     public PublicArtifactDTO getPublic(@PathVariable UUID publicId) throws GendoxException {
-        return publicDTO(publicId, null);
-    }
-
-    @GetMapping("public/artifacts/{publicId}/versions/{version}")
-    @Operation(summary = "Get a version of a public artifact",
-            description = "As Get a public artifact, with the version the link names.")
-    public PublicArtifactDTO getPublicVersion(@PathVariable UUID publicId, @PathVariable Integer version)
-            throws GendoxException {
-        return publicDTO(publicId, version);
-    }
-
-    private PublicArtifactDTO publicDTO(UUID publicId, Integer version) throws GendoxException {
-        ArtifactSharingService.PublicArtifact found = artifactSharingService.getPublic(publicId, version);
+        ArtifactSharingService.PublicArtifact found = artifactSharingService.getPublic(publicId);
         return artifactConverter.toPublicDTO(found.artifact(), found.shown(), found.agentName());
     }
 }

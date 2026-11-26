@@ -177,7 +177,6 @@ export default {
   artifactDataDocument: (artifactId, collection, docId) =>
     `${url}artifacts/${artifactId}/data/${encodeURIComponent(collection)}/${encodeURIComponent(docId)}`,
   publicArtifact: publicId => `${url}public/artifacts/${publicId}`,
-  publicArtifactVersion: (publicId, version) => `${url}public/artifacts/${publicId}/versions/${version}`,
 
   deactivateUserById: userId => `${url}users/${userId}/deactivate`,
 

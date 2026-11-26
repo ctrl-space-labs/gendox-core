@@ -333,7 +333,7 @@ class ArtifactSharingServiceTest {
         Project project1 = projectWithAgent("Sales assistant");
         when(projectService.getProjectById(projectId)).thenReturn(project1);
 
-        ArtifactSharingService.PublicArtifact found = artifactSharingService.getPublic(publicId, null);
+        ArtifactSharingService.PublicArtifact found = artifactSharingService.getPublic(publicId);
 
         assertSame(latest, found.shown());
         assertEquals("Sales assistant", found.agentName());
@@ -344,11 +344,11 @@ class ArtifactSharingServiceTest {
     void anAgentWithoutANameIsNamedByItsProject() throws GendoxException {
         UUID publicId = UUID.randomUUID();
         when(artifactRepository.findByPublicId(publicId)).thenReturn(Optional.of(artifact));
-        when(artifactService.getVersion(artifact, 1)).thenReturn(ArtifactVersion.builder().version(1).build());
+        when(artifactService.getVersion(artifact, null)).thenReturn(ArtifactVersion.builder().version(1).build());
         Project project2 = projectWithAgent(" ");
         when(projectService.getProjectById(projectId)).thenReturn(project2);
 
-        assertEquals("Sales", artifactSharingService.getPublic(publicId, 1).agentName());
+        assertEquals("Sales", artifactSharingService.getPublic(publicId).agentName());
     }
 
     @Test
@@ -359,7 +359,7 @@ class ArtifactSharingServiceTest {
         deleted.setActive(false);
         when(projectService.getProjectById(projectId)).thenReturn(deleted);
 
-        GendoxException e = assertThrows(GendoxException.class, () -> artifactSharingService.getPublic(publicId, null));
+        GendoxException e = assertThrows(GendoxException.class, () -> artifactSharingService.getPublic(publicId));
 
         assertEquals("ARTIFACT_NOT_FOUND", e.getErrorCode());
         verify(artifactService, never()).getVersion(any(), any());
@@ -375,7 +375,7 @@ class ArtifactSharingServiceTest {
         deleted.setActive(false);
         when(organizationService.getById(organizationId)).thenReturn(deleted);
 
-        GendoxException e = assertThrows(GendoxException.class, () -> artifactSharingService.getPublic(publicId, null));
+        GendoxException e = assertThrows(GendoxException.class, () -> artifactSharingService.getPublic(publicId));
 
         assertEquals("ARTIFACT_NOT_FOUND", e.getErrorCode());
         verify(artifactService, never()).getVersion(any(), any());
@@ -386,7 +386,7 @@ class ArtifactSharingServiceTest {
         UUID publicId = UUID.randomUUID();
         when(artifactRepository.findByPublicId(publicId)).thenReturn(Optional.empty());
 
-        GendoxException e = assertThrows(GendoxException.class, () -> artifactSharingService.getPublic(publicId, null));
+        GendoxException e = assertThrows(GendoxException.class, () -> artifactSharingService.getPublic(publicId));
 
         assertEquals("ARTIFACT_NOT_FOUND", e.getErrorCode());
         assertEquals(HttpStatus.NOT_FOUND, e.getHttpStatus());

@@ -67,7 +67,8 @@ export const isWidgetCall = call => call?.function?.name === SHOW_WIDGET
 
 /**
  * What one show_widget call showed, from the call and its result in the thread — no request.
- * @returns {{ id, name, args, error, pending }} `pending` until the result arrives; `error` from the tool
+ * @returns {{ id, name, args, shown, error, pending }} `pending` until the result arrives; `shown` only when the server
+ *   accepted it, the one case in which it may run; `error` from the tool
  */
 export const widgetCallOf = (call, responses) => {
   const response = responses.find(r => r.toolCallId === call.id)
@@ -77,6 +78,7 @@ export const widgetCallOf = (call, responses) => {
     id: call.id,
     name: call.function?.name,
     args: parse(call.function?.arguments) || {},
+    shown: result?.shown === true,
     error: result && result.errorCode ? { code: result.errorCode, message: result.errorMessage } : null,
     pending: !response
   }
@@ -129,7 +131,7 @@ export const recoveredFailuresOf = (items = []) => {
       .slice(index + 1)
       .some(next =>
         call.name === SHOW_WIDGET
-          ? next.name === SHOW_WIDGET && !next.error && !next.pending
+          ? next.name === SHOW_WIDGET && next.shown
           : next.result && (call.name === CREATE_ARTIFACT ? next.name === CREATE_ARTIFACT : next.result.artifactId === call.args.artifact_id)
       )
     if (madeGood) recovered.add(call.id)

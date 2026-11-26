@@ -86,7 +86,8 @@ public class ArtifactService {
      * @param capabilities what it may ask the host for, "data" and "user"; null or empty for nothing
      * @param messageId    the assistant message whose tool call writes it
      */
-    @Transactional
+    // a refusal rolls back whatever was changed before it: GendoxException is checked, and rolls back nothing by default
+    @Transactional(rollbackFor = GendoxException.class)
     public Artifact create(UUID threadId, UUID projectId, @Nullable UUID messageId, String title,
                            String typeName, @Nullable String codeLanguage, @Nullable List<String> capabilities,
                            String content) throws GendoxException {
@@ -119,7 +120,7 @@ public class ArtifactService {
      * A new {@code title} or new {@code capabilities} alone change the artifact and add no version; an empty list of
      * capabilities takes them all away.
      */
-    @Transactional
+    @Transactional(rollbackFor = GendoxException.class)
     public Artifact update(UUID threadId, UUID artifactId, @Nullable UUID messageId, @Nullable String title,
                            @Nullable List<String> capabilities, @Nullable String content,
                            @Nullable List<ArtifactEditDTO> edits) throws GendoxException {
@@ -141,18 +142,22 @@ public class ArtifactService {
         Artifact artifact = artifactRepository.lockById(artifactId)
                 .orElseThrow(() -> notInThread(artifactId, threadId));
         checkReach(artifact, threadId, Role.EDIT);
+        // every check before any change: a refused update changes nothing, not even its title or capabilities
+        String next = null;
+        if (hasContent || hasEdits) {
+            if (hasContent) {
+                requireLatestSeen(artifact, threadId);
+            }
+            next = hasContent ? content : applyEdits(getVersion(artifact, null).getContent(), edits);
+            validateContent(next);
+        }
         if (hasTitle) {
             artifact.setTitle(title.trim());
         }
         if (hasCapabilities) {
             artifact.setCapabilities(declared);
         }
-        if (hasContent || hasEdits) {
-            if (hasContent) {
-                requireLatestSeen(artifact, threadId);
-            }
-            String next = hasContent ? content : applyEdits(getVersion(artifact, null).getContent(), edits);
-            validateContent(next);
+        if (next != null) {
             artifact.setLatestVersion(artifact.getLatestVersion() + 1);
             saveVersion(artifact, next, messageId, authorOfTurn(threadId));
         }
@@ -286,7 +291,7 @@ public class ArtifactService {
      * Brings back an earlier version as a new one, with its content: the history stays whole, and every version keeps
      * its number. Made by a person, so it points at no message. Editor and up; the latest version is left as it is.
      */
-    @Transactional
+    @Transactional(rollbackFor = GendoxException.class)
     public Opened restoreVersion(UUID artifactId, @Nullable UUID userId, Integer version) throws GendoxException {
         Artifact artifact = artifactRepository.lockById(artifactId)
                 .orElseThrow(() -> new GendoxException("ARTIFACT_NOT_FOUND",

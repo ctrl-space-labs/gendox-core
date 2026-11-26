@@ -283,7 +283,7 @@ const ArtifactShareDialog = ({ open, onClose, artifactId, title, organizationId,
                   <div className='faint sm trunc'>
                     {sharing.publicId
                       ? publicArtifactLink(sharing.publicId)
-                      : 'Anyone with its link could see it, without an account. Never its conversation.'}
+                      : 'Anyone with its link could see its latest version, without an account. Never its conversation or earlier versions.'}
                   </div>
                 </div>
                 {sharing.publicId && (
@@ -299,7 +299,10 @@ const ArtifactShareDialog = ({ open, onClose, artifactId, title, organizationId,
                 />
               </div>
               {sharing.publicId && (
-                <span className='help'>Making it private ends the link at once; making it public again gives a new one.</span>
+                <span className='help'>
+                  The link always shows the latest version, never an earlier one. Making it private ends the link at once;
+                  making it public again gives a new one.
+                </span>
               )}
             </div>
           )}

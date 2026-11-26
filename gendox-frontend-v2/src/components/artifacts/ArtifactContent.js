@@ -4,7 +4,8 @@ import { fencedCode, runsInFrame } from 'src/components/artifacts/artifactUtils'
 
 /**
  * An artifact as it is meant to be seen: html and svg in the sealed frame; markdown and code with the chat's own
- * Markdown, which sanitizes what it renders as it does for answers. Only the frame runs code, so only it reports errors.
+ * Markdown, which sanitizes what it renders as it does for answers, and loads no image from another server: the artifact
+ * is opened by people who did not write it, also from a public link. Only the frame runs code, so only it reports errors.
  *
  * @param artifact - artifactId, capabilities, organizationId and projectId, passed to the frame (gendox-core#600)
  */
@@ -23,9 +24,9 @@ const ArtifactContent = ({ kind, content, codeLanguage, title, fit, minHeight, m
       />
     )
   }
-  if (kind === 'markdown') return <Markdown text={content} />
+  if (kind === 'markdown') return <Markdown text={content} externalImages={false} />
 
-  return <Markdown text={fencedCode(content, codeLanguage)} />
+  return <Markdown text={fencedCode(content, codeLanguage)} externalImages={false} />
 }
 
 export default ArtifactContent

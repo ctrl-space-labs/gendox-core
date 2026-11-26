@@ -37,13 +37,39 @@ const components = {
   )
 }
 
-const Markdown = ({ text, className = 'gc-md' }) => {
+const hostOf = src => {
+  try {
+    return new URL(src).host
+  } catch (_) {
+    return ''
+  }
+}
+
+// an image on another server becomes a link the reader may follow: nothing is fetched until they choose to, so opening
+// the text tells no third server who read it or when, and carries nothing out in the image's address
+const withoutExternalImages = {
+  ...components,
+  img: ({ node, src = '', alt = '', ...props }) =>
+    /^https?:/i.test(src) ? (
+      <a href={src} target='_blank' rel='noopener noreferrer' className='md-img-link'>
+        🖼 {alt || 'Image'} ({hostOf(src)})
+      </a>
+    ) : (
+      <img src={src} alt={alt} {...props} />
+    )
+}
+
+/**
+ * @param externalImages - false to show an image on another server as a link instead of loading it (gendox-core#570):
+ *   for text the reader did not write and may open without asking, such as an artifact
+ */
+const Markdown = ({ text, className = 'gc-md', externalImages = true }) => {
   return (
     <div className={className}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[rehypeRaw, rehypeSanitize, rehypeKatex, rehypeHighlight]}
-        components={components}
+        components={externalImages ? components : withoutExternalImages}
       >
         {normalizeMathDelimiters(text)}
       </ReactMarkdown>

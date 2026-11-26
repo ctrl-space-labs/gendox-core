@@ -74,20 +74,19 @@ public class ArtifactSharingService {
     }
 
     /**
-     * An artifact by its public link, for anyone, signed in or not: the latest version, or the one the link names.
-     * A link of an artifact that was made private, or never was public, is not found, the same as one that never
-     * existed; so is one whose agent or organization was deleted, which leaves its owner no way to close it.
-     *
-     * @param version null for the latest
+     * An artifact by its public link, for anyone, signed in or not: always its latest version, and never an earlier
+     * one, so what was taken out before it was made public stays out. A link of an artifact that was made private, or
+     * never was public, is not found, the same as one that never existed; so is one whose agent or organization was
+     * deleted, which leaves its owner no way to close it.
      */
-    public PublicArtifact getPublic(UUID publicId, @Nullable Integer version) throws GendoxException {
+    public PublicArtifact getPublic(UUID publicId) throws GendoxException {
         Artifact artifact = artifactRepository.findByPublicId(publicId).orElseThrow(ArtifactSharingService::noPublicArtifact);
         Project project = projectService.getProjectById(artifact.getProjectId());
         if (Boolean.FALSE.equals(project.getActive())
                 || Boolean.FALSE.equals(organizationService.getById(project.getOrganizationId()).getActive())) {
             throw noPublicArtifact();
         }
-        ArtifactVersion shown = artifactService.getVersion(artifact, version);
+        ArtifactVersion shown = artifactService.getVersion(artifact, null);
         ProjectAgent agent = project.getProjectAgent();
         String agentName = agent != null && agent.getAgentName() != null && !agent.getAgentName().isBlank()
                 ? agent.getAgentName() : project.getName();
@@ -106,7 +105,7 @@ public class ArtifactSharingService {
     /**
      * @param roleName VIEW, INTERACT or EDIT for every member of the agent; null for only the owner and the invited
      */
-    @Transactional
+    @Transactional(rollbackFor = GendoxException.class)
     public Artifact setGeneralAccess(UUID artifactId, UUID userId, @Nullable String roleName) throws GendoxException {
         Artifact artifact = findAsOwner(artifactId, userId);
         artifact.setGeneralAccessRole(roleName == null ? null : roleType(roleName));
@@ -116,7 +115,7 @@ public class ArtifactSharingService {
     /**
      * Invites a member of the agent with a role, or changes the role of one invited before.
      */
-    @Transactional
+    @Transactional(rollbackFor = GendoxException.class)
     public ArtifactMember setMemberRole(UUID artifactId, UUID userId, UUID memberUserId, String roleName)
             throws GendoxException {
         Artifact artifact = findAsOwner(artifactId, userId);
@@ -145,7 +144,7 @@ public class ArtifactSharingService {
     /**
      * Takes back an invitation; removing one that is not there is not an error.
      */
-    @Transactional
+    @Transactional(rollbackFor = GendoxException.class)
     public void removeMember(UUID artifactId, UUID userId, UUID memberUserId) throws GendoxException {
         findAsOwner(artifactId, userId);
         artifactMemberRepository.findByArtifactIdAndUserId(artifactId, memberUserId)
@@ -156,7 +155,7 @@ public class ArtifactSharingService {
      * Opens a view-only link to anyone. An artifact that is already public keeps its link; one made public again
      * after being private gets a new one, so an old link never opens again.
      */
-    @Transactional
+    @Transactional(rollbackFor = GendoxException.class)
     public Artifact makePublic(UUID artifactId, UUID userId) throws GendoxException {
         Artifact artifact = findAsOwner(artifactId, userId);
         if (artifact.getPublicId() != null) {
@@ -171,7 +170,7 @@ public class ArtifactSharingService {
     /**
      * Closes the public link at once; making it private twice is not an error.
      */
-    @Transactional
+    @Transactional(rollbackFor = GendoxException.class)
     public Artifact makePrivate(UUID artifactId, UUID userId) throws GendoxException {
         Artifact artifact = findAsOwner(artifactId, userId);
         artifact.setPublicId(null);
@@ -183,7 +182,7 @@ public class ArtifactSharingService {
     /**
      * Deletes it for everyone, with its versions, its invitations and the conversations' links to it.
      */
-    @Transactional
+    @Transactional(rollbackFor = GendoxException.class)
     public void delete(UUID artifactId, UUID userId) throws GendoxException {
         artifactRepository.delete(findAsOwner(artifactId, userId));
     }
@@ -192,7 +191,7 @@ public class ArtifactSharingService {
      * Change it in a chat: starts a conversation of the user's own with the artifact's agent, opened on it, so its
      * tools reach it while the user keeps the EDIT role. Nobody else sees the conversation. Each call starts a new one.
      */
-    @Transactional
+    @Transactional(rollbackFor = GendoxException.class)
     public ChatThread openInNewChat(UUID artifactId, UUID userId) throws GendoxException {
         Artifact artifact = find(artifactId);
         artifactAccessService.require(artifact, userId, Role.EDIT);

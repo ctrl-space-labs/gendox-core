@@ -8,6 +8,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ArtifactRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ArtifactAccessService.Role;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
@@ -44,10 +45,16 @@ public class ArtifactDataService {
     private int maxDocumentLength = 16_000;
 
     /**
-     * Documents one artifact may hold, shared and private together.
+     * Shared documents one artifact may hold.
      */
     @Value("${gendox.artifacts.data.max-documents:2000}")
     private int maxDocuments = 2_000;
+
+    /**
+     * Private documents one person may hold in one artifact: each fills only their own room, never the others'.
+     */
+    @Value("${gendox.artifacts.data.max-private-documents:200}")
+    private int maxPrivateDocuments = 200;
 
     public ArtifactDataService(ArtifactRepository artifactRepository,
                                ArtifactDataRepository artifactDataRepository,
@@ -88,7 +95,8 @@ public class ArtifactDataService {
      * @param revision the revision the writer last read; a document changed since is not overwritten. Null writes
      *                 whatever is there; 0 writes only a document that is not there yet.
      */
-    @Transactional
+    // rolled back on a refusal too: a write that lost to another leaves the transaction marked for rollback
+    @Transactional(rollbackFor = GendoxException.class)
     public ArtifactData set(UUID artifactId, @Nullable UUID userId, String collection, String docId, JsonNode data,
                             boolean isPrivate, @Nullable Integer revision) throws GendoxException {
         Artifact artifact = find(artifactId);
@@ -103,7 +111,7 @@ public class ArtifactDataService {
     /**
      * Writes only the given fields of a document, keeping its others; makes it when it is not there.
      */
-    @Transactional
+    @Transactional(rollbackFor = GendoxException.class)
     public ArtifactData update(UUID artifactId, @Nullable UUID userId, String collection, String docId, JsonNode fields,
                                boolean isPrivate, @Nullable Integer revision) throws GendoxException {
         Artifact artifact = find(artifactId);
@@ -127,7 +135,7 @@ public class ArtifactDataService {
     /**
      * Deletes a document; deleting one that is not there is not an error.
      */
-    @Transactional
+    @Transactional(rollbackFor = GendoxException.class)
     public void delete(UUID artifactId, @Nullable UUID userId, String collection, String docId, boolean isPrivate)
             throws GendoxException {
         Artifact artifact = find(artifactId);
@@ -150,14 +158,23 @@ public class ArtifactDataService {
                               boolean isPrivate, Optional<ArtifactData> current) throws GendoxException {
         ArtifactData document;
         if (current.isPresent()) {
+            // the revision is raised by Hibernate, in the same UPDATE that checks it is still the one read
             document = current.get();
             document.setData(data);
-            document.setRevision(document.getRevision() + 1);
             document.setUpdatedBy(userId);
         } else {
-            if (artifactDataRepository.countByArtifactId(artifactId) >= maxDocuments) {
+            // two limits, so that nobody fills the room of the others: the shared documents, written by Contributors
+            // and up, and each person's own private ones. Checked before the write, not under a lock: two writes at
+            // the very same moment may pass it by one each, which is fine for a limit against abuse.
+            if (isPrivate) {
+                if (artifactDataRepository.countByArtifactIdAndPrivateTo(artifactId, userId) >= maxPrivateDocuments) {
+                    throw new GendoxException("ARTIFACT_DATA_FULL",
+                            "You hold " + maxPrivateDocuments + " private documents in this artifact, the most you may; "
+                                    + "delete some first", HttpStatus.BAD_REQUEST);
+                }
+            } else if (artifactDataRepository.countByArtifactIdAndPrivateToIsNull(artifactId) >= maxDocuments) {
                 throw new GendoxException("ARTIFACT_DATA_FULL",
-                        "The artifact holds " + maxDocuments + " documents, the most it may; delete some first",
+                        "The artifact holds " + maxDocuments + " shared documents, the most it may; delete some first",
                         HttpStatus.BAD_REQUEST);
             }
             document = ArtifactData.builder()
@@ -173,8 +190,8 @@ public class ArtifactDataService {
         }
         try {
             return artifactDataRepository.saveAndFlush(document);
-        } catch (DataIntegrityViolationException e) {
-            // someone made the same document at the same moment
+        } catch (DataIntegrityViolationException | ObjectOptimisticLockingFailureException e) {
+            // someone made the same document, or changed it, between the read and this write
             throw conflict(collection, docId);
         }
     }
