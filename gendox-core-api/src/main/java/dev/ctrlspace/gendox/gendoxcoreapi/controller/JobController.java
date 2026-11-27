@@ -186,7 +186,8 @@ public class JobController {
     @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
             "&& @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
     @GetMapping("organizations/{organizationId}/projects/{projectId}/jobs/{jobExecutionId}/deep-thinking-steps")
-    @Operation(summary = "Get deep thinking progress steps",
+    @Deprecated
+    @Operation(summary = "Get deep thinking progress steps", deprecated = true,
             description = "Returns the progress steps for a deep thinking job execution, ordered by step order.")
     public List<DeepThinkingStep> getDeepThinkingSteps(@PathVariable UUID organizationId,
                                                         @PathVariable UUID projectId,

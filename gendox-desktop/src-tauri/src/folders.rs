@@ -130,23 +130,43 @@ pub async fn choose_folder(
     webview: WebviewWindow,
     state: State<'_, TerminalState>,
     session_token: String,
+    directory: Option<String>,
 ) -> Result<serde_json::Value, String> {
     terminal::authorize(&webview, &session_token, state.session_token())?;
-    let chosen = rfd::AsyncFileDialog::new()
-        .set_title("Allow Gendox to write in this folder")
-        .set_parent(&webview)
-        .pick_folder()
-        .await;
+    let chosen = if let Some(directory) = directory {
+        let requested = Path::new(&directory);
+        let folder = grant_directory(requested)?;
+        let answer = rfd::AsyncMessageDialog::new()
+            .set_title("Allow Gendox to write in this folder?")
+            .set_description(format!(
+                "{folder:?}\n\nThis adds the folder to Allowed write folders for future commands on this device."
+            ))
+            .set_parent(&webview)
+            .set_buttons(rfd::MessageButtons::OkCancel)
+            .show()
+            .await;
+        if answer == rfd::MessageDialogResult::Ok {
+            if grant_directory(requested)? != folder {
+                return Err("The requested folder changed. Run the command again to review the new location.".into());
+            }
+            Some(folder)
+        } else {
+            None
+        }
+    } else {
+        rfd::AsyncFileDialog::new()
+            .set_title("Open the folder to grant Gendox write access")
+            .set_parent(&webview)
+            .pick_folder()
+            .await
+            .map(|folder| grant_directory(folder.path()))
+            .transpose()?
+    };
     terminal::authorize(&webview, &session_token, state.session_token())?;
     let mut settings = load(&app)?;
     let selected = chosen.is_some();
     if let Some(folder) = chosen {
-        let folder = folder
-            .path()
-            .canonicalize()
-            .map_err(|_| "The selected folder is unavailable")?
-            .to_string_lossy()
-            .into_owned();
+        let folder = folder.to_str().ok_or("The folder path must be valid UTF-8")?.to_owned();
         if !settings.folders.contains(&folder) {
             settings.folders.push(folder);
         }
@@ -155,6 +175,17 @@ pub async fn choose_folder(
     let mut value = serde_json::to_value(settings).map_err(|_| "Cannot read folder permissions")?;
     value["chosen"] = selected.into();
     Ok(value)
+}
+
+fn grant_directory(path: &Path) -> Result<PathBuf, String> {
+    if path.is_absolute() {
+        if let Ok(folder) = path.canonicalize() {
+            if folder.is_dir() {
+                return Ok(folder);
+            }
+        }
+    }
+    Err("Choose an existing folder with an absolute path.".into())
 }
 
 #[tauri::command]

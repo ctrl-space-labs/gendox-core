@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { ArrowUp, AtSign, Brain, Paperclip, X } from 'lucide-react'
+import { ArrowUp, AtSign, Paperclip, X } from 'lucide-react'
 import { displayFileName, formatBytes } from 'src/components/chat/chatUtils'
 import FileTile from 'src/components/ui/FileTile'
 import { useMentions } from 'src/components/chat/mentions'
@@ -37,7 +37,7 @@ const AttachmentTile = ({ attachment, onRemove }) => {
 }
 
 /**
- * The message box: text, attached files, Deep thinking and Send.
+ * The message box with text, attached files and Send.
  * Enter sends, Shift+Enter starts a new line. With `mentions`, @ mentions a task or document of the agent.
  */
 const ChatComposer = ({
@@ -50,8 +50,7 @@ const ChatComposer = ({
   attachments,
   onPickFiles,
   onRemoveAttachment,
-  deepThinking,
-  onDeepThinkingToggle,
+  replacesWaitingTurn,
   inputRef,
   mentions = false
 }) => {
@@ -127,18 +126,8 @@ const ChatComposer = ({
             </button>
           </>
         )}
-        {onDeepThinkingToggle && (
-          <button
-            type='button'
-            className={`chip ${deepThinking ? 'on' : ''}`}
-            title='Slower, more thorough: plans, searches several times and checks its answer'
-            onClick={onDeepThinkingToggle}
-          >
-            <Brain className='lucide' />
-            <span className='lbl'>Deep thinking</span>
-          </button>
-        )}
         <span className='sp' />
+        {replacesWaitingTurn && <span className='faint sm'>Sending starts a new turn and cancels pending tool calls.</span>}
         <button className='btn primary s icon gc-send' aria-label='Send' disabled={disabled}>
           <ArrowUp className='lucide' />
         </button>

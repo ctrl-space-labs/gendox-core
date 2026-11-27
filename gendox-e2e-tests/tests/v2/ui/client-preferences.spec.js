@@ -22,6 +22,12 @@ test('device notification preferences persist in the browser without desktop con
 });
 
 test('desktop settings select approval modes and folders through the frontend', async ({ page, workspace: w }) => {
+  const server = { name: 'Local Test Server', address: 'http://localhost:8107' };
+  await page.route('**/env-config.js', async route => {
+    const response = await route.fetch();
+    const body = await response.text();
+    await route.fulfill({ response, body: body + '\nwindow.__GENDOX_ENV__.GENDOX_DESKTOP = ' + JSON.stringify({ current: server }) });
+  });
   await page.addInitScript(source => {
     let folders = { folders: ['/workspace'], working_directory: '/workspace', enforcement_available: true };
     const install = (0, eval)(source + '; installClientToolHost');
@@ -34,6 +40,9 @@ test('desktop settings select approval modes and folders through the frontend', 
   }, source);
   await page.goto(inProject(w, 'user-profile'));
   await expect(page.getByRole('heading', { name: 'Desktop', exact: true })).toBeVisible();
+  await expect(page.getByText(server.name, { exact: true })).toBeVisible();
+  await expect(page.getByText(server.address, { exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Choose server', exact: true })).toBeVisible();
   await expect(page.getByLabel('Approval mode')).toHaveValue('ask');
   await page.getByLabel('Approval mode').selectOption('auto');
   await page.getByRole('button', { name: 'Allow another folder…', exact: true }).click();

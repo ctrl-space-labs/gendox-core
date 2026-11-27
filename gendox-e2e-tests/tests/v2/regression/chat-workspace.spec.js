@@ -6,6 +6,38 @@ const { complete, upload, createTask, messages } = require('../../../support/dom
 
 test.use({ storageState: sessionOf('testUser1') });
 
+test('dropping a file routes it to chat or Knowledge by panel', async ({ page, workspace: w }) => {
+    await openChat(page, w);
+    const drop = async (target, name) => {
+        const dataTransfer = await page.evaluateHandle(filename => {
+            const transfer = new DataTransfer();
+            transfer.items.add(new File(['Synthetic drop test'], filename, { type: 'text/plain' }));
+            return transfer;
+        }, name);
+        await target.dispatchEvent('dragenter', { dataTransfer });
+        await target.dispatchEvent('dragover', { dataTransfer });
+        await target.dispatchEvent('drop', { dataTransfer });
+        await dataTransfer.dispose();
+    };
+
+    const composer = page.getByRole('textbox', { name: 'Message', exact: true });
+    const attachment = apiResponse(page, 'POST', /\/documents\/upload-single$/);
+    await drop(composer, 'chat-drop.txt');
+    await expectOk(await attachment);
+    await expect(page.getByText(/chat-drop/)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Deep thinking' })).toHaveCount(0);
+
+    const panel = page.getByPlaceholder('Find a document');
+    await expect(panel).toBeVisible();
+    const knowledgeUpload = apiResponse(page, 'POST', /\/documents\/upload$/);
+    await drop(panel, 'knowledge-drop.txt');
+    await expectOk(await knowledgeUpload);
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByText('knowledge-drop.txt', { exact: true })).toBeVisible();
+    await dialog.getByRole('button', { name: 'Close', exact: true }).last().click();
+    await expect(page.getByText(/knowledge-drop/)).toBeVisible();
+});
+
 test('the sidebar marks the focused chat; New chat opens one tab per click', async ({ page, api, workspace: w }) => {
     const first = await complete(api, w, 'First saved conversation');
     const second = await complete(api, w, 'Second saved conversation');

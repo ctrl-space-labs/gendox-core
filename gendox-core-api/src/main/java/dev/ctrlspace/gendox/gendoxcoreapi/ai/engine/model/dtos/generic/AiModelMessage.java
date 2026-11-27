@@ -51,19 +51,20 @@ import java.util.UUID;
                 WITH numbered AS (
                   SELECT m.id, m.value, m.role, m.tool_call_id, m.name, m.tool_calls, m.created_at,
                          m.reasoning_content, m.reasoning_metadata, m.ai_model_id,
-                         row_number() OVER (ORDER BY m.created_at DESC) AS rn,   -- 1 = newest
-                         count(*)     OVER ()                                   AS total
+                         -- the turn a message belongs to: 1 = the oldest question, 0 = before any question
+                         count(*) FILTER (WHERE m.role = 'user')
+                             OVER (ORDER BY m.created_at, m.id ROWS UNBOUNDED PRECEDING) AS turn,
+                         count(*) FILTER (WHERE m.role = 'user') OVER ()                AS turns
                   FROM gendox_core.message m
-                  LEFT JOIN gendox_core.users u  ON u.id = m.created_by
-                  LEFT JOIN gendox_core.types t  ON t.id = u.users_type_id
                   WHERE m.thread_id   = :threadId
                     AND m.created_at <  :before
                 )
                 SELECT id, value, role, tool_call_id, name, tool_calls, created_at,
                        reasoning_content, reasoning_metadata, ai_model_id
                 FROM numbered
-                WHERE rn <= (:window_size + (total % :window_size))
-                ORDER BY created_at DESC;
+                WHERE turn > turns - (:window_turns + (turns % :window_turns))
+                  AND turn > 0
+                ORDER BY created_at DESC, id DESC;
                 """,
         resultSetMapping = "AiModelMessageMapping"
 )

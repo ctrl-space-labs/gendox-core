@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useImperativeHandle, useRef, useState } from 'react'
 import { FileUp } from 'lucide-react'
 import documentService from 'src/gendox-sdk/documentService'
 import { getErrorMessage } from 'src/utils/errorHandler'
@@ -15,14 +15,20 @@ const extensionOf = name => (name.includes('.') ? name.split('.').pop().toLowerC
 
 const draggingFiles = e => Boolean(e.dataTransfer?.types?.includes('Files'))
 
-/**
- * For an area whose files can be uploaded: dragging files over it opens this dialog, whose drop zone takes them.
- * A drop beside the zone is ignored, rather than opening the file in the browser.
- */
-export const openOnFileDrag = open => ({
-  onDragEnter: e => draggingFiles(e) && open(),
-  onDragOver: e => draggingFiles(e) && e.preventDefault(),
-  onDrop: e => draggingFiles(e) && e.preventDefault()
+export const uploadDropHandlers = (dialog, open) => ({
+  onDragOver: e => {
+    if (!draggingFiles(e)) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'copy'
+  },
+  onDrop: e => {
+    if (!draggingFiles(e)) return
+    e.preventDefault()
+    e.stopPropagation()
+    if (!e.dataTransfer.files.length) return
+    open()
+    dialog.current?.addFiles(e.dataTransfer.files)
+  }
 })
 
 /**
@@ -30,10 +36,9 @@ export const openOnFileDrag = open => ({
  * Files start uploading as soon as they are chosen or dropped.
  * @param onUploaded - called once a round of uploads has finished, to refresh the list
  */
-const UploadDialog = ({ open, onClose, organizationId, projectId, agentName, autoTraining, onUploaded }) => {
+const UploadDialog = ({ ref, open, onClose, organizationId, projectId, agentName, autoTraining, onUploaded }) => {
   const [items, setItems] = useState([])
   const [isOver, setIsOver] = useState(false)
-  const inputRef = useRef(null)
   const nextId = useRef(0)
 
   const update = (id, changes) => setItems(list => list.map(item => (item.id === id ? { ...item, ...changes } : item)))
@@ -74,15 +79,16 @@ const UploadDialog = ({ open, onClose, organizationId, projectId, agentName, aut
     }
     if (queued.length > 0) onUploaded?.()
   }
-
-  const close = () => {
-    if (items.some(item => item.status === 'uploading' || item.status === 'queued')) return
-    setItems([])
-    onClose()
-  }
+  useImperativeHandle(ref, () => ({ addFiles }))
 
   const uploaded = items.filter(item => item.status === 'uploaded').length
   const busy = items.some(item => item.status === 'uploading' || item.status === 'queued')
+
+  const close = () => {
+    if (busy) return
+    setItems([])
+    onClose()
+  }
 
   const note = busy
     ? `Uploading ${uploaded + 1} of ${items.filter(item => item.status !== 'failed').length}…`
@@ -120,6 +126,7 @@ const UploadDialog = ({ open, onClose, organizationId, projectId, agentName, aut
         onDragOver={e => onDrag(e, true)}
         onDragLeave={e => onDrag(e, false)}
         onDrop={e => {
+          e.stopPropagation()
           onDrag(e, false)
           addFiles(e.dataTransfer.files)
         }}
@@ -130,7 +137,6 @@ const UploadDialog = ({ open, onClose, organizationId, projectId, agentName, aut
         <b>Drop files here, or click to choose</b>
         <span className='faint sm'>PDF, Word, Excel, CSV, text, Markdown or JPG</span>
         <input
-          ref={inputRef}
           type='file'
           multiple
           hidden

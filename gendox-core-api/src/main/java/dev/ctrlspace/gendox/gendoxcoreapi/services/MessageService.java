@@ -224,35 +224,24 @@ public class MessageService {
 
 
     /**
-     * Get the previous messages from the same thread for a given message
-     * The messages are ordered by creation date, the oldest message is the first in the list
+     * The earlier turns of the message's thread, oldest first. A turn is a user message with everything
+     * after it: tool calls, tool results and the answer. Whole turns only, so the history starts at a
+     * question however many tool calls a turn made.
      *
-     * Note: the first message will be from the role 'user', so we drop all messages before that
+     * The latest turns come in chunks of #windowTurns:
+     * e.g. chunks of 10 turns -> |.....10......|......10......|.....3.....|
+     * brings the latest 13 turns (10 + 3); the start moves a whole chunk at a time, which is useful for
+     * the LLM API caching.
      *
-     * The logic of fetching previous messages is as follows:
-     * - calculate the chunks of #messageHistoryLengthWindow messages
-     * - fetch the latest 2 windows of messages from the thread,
-     *
-     * e.g message chunks of 25 messages -> |.....25......|......25......|.....10.....|
-     * This will bring the latest 35 messages (25 + 10) and it is useful for the LLM API caching.
-     *
-     * @param message
-     * @param messageHistoryLengthWindow it brings the latest 2 windows of messageHistoryLengthWindow messages
-     * @return
+     * @param message     the question; only turns before it are returned
+     * @param windowTurns the size of a chunk, in turns
      */
-    public List<AiModelMessage> getPreviousMessages(Message message, int messageHistoryLengthWindow) {
-        List<AiModelMessage> previousMessages = messageRepository.findPreviousMessages(message.getThreadId(), message.getCreatedAt(), messageHistoryLengthWindow);
-        // from the latest 4 messages, the first one is the oldest
+    public List<AiModelMessage> getPreviousMessages(Message message, int windowTurns) {
+        List<AiModelMessage> previousMessages = new ArrayList<>(
+                messageRepository.findPreviousMessages(message.getThreadId(), message.getCreatedAt(), windowTurns));
+        // the query returns the newest first
         Collections.reverse(previousMessages);
-
-
-        //drop initial messages, until the 1st message is from role 'user'
-        for (int i = 0; i < previousMessages.size(); i++) {
-            if (previousMessages.get(i).getRole().equals("user")) {
-                return previousMessages.subList(i, previousMessages.size());
-            }
-        }
-        return new ArrayList<>();
+        return previousMessages;
     }
 
     @Transactional

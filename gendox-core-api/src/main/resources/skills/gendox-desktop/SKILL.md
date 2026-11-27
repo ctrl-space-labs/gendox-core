@@ -44,7 +44,7 @@ Use the `approvalMode` in the current desktop context:
 
 The native runner enforces writable folders for the command and its descendants. A denied
 write is not permission to work around the boundary: let the frontend request an explicit
-folder grant through the native folder picker. Do not disable protection, change permission
+folder grant through the desktop confirmation when a command requests a specific working folder. Do not disable protection, change permission
 settings, use a symlink, or delegate the write to another process to evade that decision.
 Read access and network access are separate from this write boundary; use them only for the
 user's task.

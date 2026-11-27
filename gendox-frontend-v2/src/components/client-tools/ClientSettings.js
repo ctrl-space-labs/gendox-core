@@ -91,8 +91,8 @@ const ClientSettings = () => {
                 ))}
               </select>
               <span className='help'>
-                Auto-approval never adds folder permissions. Plan does not run local commands. Folder limits stop
-                accidental writes, not a command written to get around them: approve only commands you trust.
+                Auto runs local commands without asking unless the tool requires approval. Plan disables local commands.
+                Folder limits guard against accidental writes. Approve only commands you trust.
               </span>
             </div>
 
@@ -135,7 +135,8 @@ const ClientSettings = () => {
                 Allow another folder…
               </button>
               <span className='help'>
-                A command needs your approval to add write access elsewhere. Reads and network access are separate.
+                These folders are shared by all chats on this device. The working folder is where commands start by
+                default. Reads and network access are separate.
               </span>
             </div>
 
@@ -147,8 +148,6 @@ const ClientSettings = () => {
               />{' '}
               Launch Gendox at login
             </label>
-
-            <p className='help'>Updates are not configured in this build.</p>
           </div>
         </section>
       )}

@@ -151,15 +151,20 @@ public class CompletionTurnService {
 
     /** A new user message ends a waiting turn: its unanswered calls are answered as cancelled. */
     @Transactional
-    public void cancelWaitingTurn(UUID threadId) throws GendoxException {
+    public List<Message> cancelWaitingTurn(UUID threadId) throws GendoxException {
         Optional<CompletionTurn> waiting = turnRepository.lockWaitingTurn(threadId);
         if (waiting.isEmpty()) {
-            return;
+            return List.of();
         }
         CompletionTurn turn = waiting.get();
-        answerPendingCalls(turn, CANCELLED_RESULT);
+        List<Message> cancelled = new ArrayList<>();
+        for (PendingCall call : turn.getPendingCalls()) {
+            cancelled.add(saveToolMessage(turn, call, CANCELLED_RESULT));
+        }
+        turn.setPendingCalls(new ArrayList<>());
         turn.setStatus(CompletionTurn.CANCELLED);
         turnRepository.save(turn);
+        return cancelled;
     }
 
     /**
@@ -208,17 +213,11 @@ public class CompletionTurnService {
 
     private static boolean isFinalAnswer(Message message) {
         boolean hasToolCalls = message.getToolCalls() != null && !message.getToolCalls().isEmpty();
-        return "assistant".equals(message.getRole()) && !hasToolCalls;
+        return "assistant".equals(message.getRole()) && !hasToolCalls
+                && message.getValue() != null && !message.getValue().isBlank();
     }
 
-    private void answerPendingCalls(CompletionTurn turn, String result) throws GendoxException {
-        for (PendingCall call : turn.getPendingCalls()) {
-            saveToolMessage(turn, call, result);
-        }
-        turn.setPendingCalls(new ArrayList<>());
-    }
-
-    private void saveToolMessage(CompletionTurn turn, PendingCall call, String value) throws GendoxException {
+    private Message saveToolMessage(CompletionTurn turn, PendingCall call, String value) throws GendoxException {
         UUID agentUserId = projectService.getProjectById(turn.getProjectId()).getProjectAgent().getUserId();
         Message result = new Message();
         result.setRole("tool");
@@ -229,7 +228,7 @@ public class CompletionTurnService {
         result.setProjectId(turn.getProjectId());
         result.setCreatedBy(agentUserId);
         result.setUpdatedBy(agentUserId);
-        messageService.createMessage(result);
+        return messageService.createMessage(result);
     }
 
     private boolean canAnswer(CompletionTurn turn, String resumeToken) {

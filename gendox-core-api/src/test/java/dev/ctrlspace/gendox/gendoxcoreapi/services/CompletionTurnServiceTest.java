@@ -171,11 +171,14 @@ class CompletionTurnServiceTest {
 
     @Test
     void aNewMessageCancelsTheWaitingCalls() throws Exception {
-        suspendWithTwoCalls();
+        String token = suspendWithTwoCalls().getResumeToken();
+        answer("a", "already ran", token);
 
-        service.cancelWaitingTurn(threadId);
+        List<Message> cancelled = service.cancelWaitingTurn(threadId);
 
-        assertEquals(2, savedMessages.stream().filter(message -> message.getValue().contains("CLIENT_TOOL_CANCELLED")).count());
+        assertEquals("already ran", savedMessages.getFirst().getValue());
+        assertEquals(List.of("b"), cancelled.stream().map(Message::getToolCallId).toList());
+        assertTrue(cancelled.getFirst().getValue().contains("CLIENT_TOOL_CANCELLED"));
         assertTrue(waitingTurn().isEmpty());
     }
 
@@ -201,6 +204,9 @@ class CompletionTurnServiceTest {
         assertEquals("GENERATING", service.getStatus(threadId, null).status());
 
         latest.setRole("assistant");
+        assertEquals("GENERATING", service.getStatus(threadId, null).status());
+
+        latest.setValue("Answer");
         assertEquals("IDLE", service.getStatus(threadId, null).status());
 
         latest.setToolCalls(JsonMapper.shared().readTree("[{\"id\":\"a\"}]"));

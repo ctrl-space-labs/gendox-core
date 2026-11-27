@@ -298,7 +298,7 @@ const ChatTurn = ({
   const { question, items } = turn
   const sentAt = question?.createdAt ? new Date(question.createdAt).toLocaleString() : undefined
   // A turn that ended without an answer: it failed now, or it stopped before (seen after a reload)
-  const hasAnswer = items.some(item => item.type === 'answer' && !item.beforeTools)
+  const hasAnswer = items.some(item => item.type === 'answer' && !item.beforeTools && item.message.message?.trim())
   const failed = !hasAnswer && !children && question ? question.failed || (unfinished && {}) : null
   const lastMessage = items[items.length - 1]?.message
   const streamingThought = lastMessage?.isStreaming && !lastMessage.message?.trim()

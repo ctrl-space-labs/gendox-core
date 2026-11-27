@@ -17,28 +17,13 @@ const ToolApproval = ({ request, decide }) => {
     )
   }
 
-  if (request.kind === 'folder') {
-    return (
-      <ToolApprovalCard
-        title='Allow writing in another folder?'
-        description='Select the folder you want this command to be allowed to write in.'
-        directory={request.directory}
-        retry={request.retry}
-        allowLabel={request.retry ? 'Choose folder and retry' : 'Choose a folder'}
-        onAllow={answer(true)}
-        onDecline={answer(false)}
-      />
-    )
-  }
-
   // A command on this computer, shown as a terminal shows it
   return (
     <ToolApprovalCard
       title='Run this command on your computer?'
       description={request.description}
       terminal={{ command: request.command, cwd: request.directory }}
-      retry={request.retry}
-      allowLabel={request.retry ? 'Run again' : 'Run'}
+      allowLabel='Run'
       onAllow={answer(true)}
       onDecline={answer(false)}
     />

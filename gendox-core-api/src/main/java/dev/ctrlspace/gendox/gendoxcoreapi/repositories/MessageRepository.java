@@ -18,23 +18,23 @@ public interface MessageRepository extends JpaRepository<Message, UUID>, Queryds
 
 
     /**
-     * Fetches the latest messages from a thread in “two-window” chunks:
-     * windowSize + (total % windowSize). This is useful for the LLM API caching.
+     * Fetches the latest turns of a thread in “two-window” chunks: windowTurns + (turns % windowTurns).
+     * A turn is a user message with everything after it (tool calls, tool results, the answer), so the
+     * history always starts at a question and a turn is never cut in half. The window moves a whole
+     * window at a time, which keeps the start of the prompt the same for the LLM API caching.
      *
      * <p>
-     * Example: for windowSize=25 and a total of 60 messages, you get
-     * 25 + (60 % 25) = 35 messages.
-     * <p>
-     * In worst case the message history is #25 messages, in best case it is 50 messages
+     * Example: for windowTurns=10 and 23 earlier turns, you get 10 + (23 % 10) = 13 turns:
+     * at least 10, at most 19.
      * </p>
      *
-     * @param threadId   ID of the conversation thread
-     * @param before     only include messages created before this timestamp
-     * @param windowSize base window size (e.g. 25)
+     * @param threadId    ID of the conversation thread
+     * @param before      only include messages created before this timestamp
+     * @param windowTurns base window size in turns (e.g. 10)
      * @return messages ordered by created_at DESC
      */
     @Query(nativeQuery = true, name = "AiModelMessage.findPreviousMessages")
-    List<AiModelMessage> findPreviousMessages(@Param("threadId") UUID threadId, @Param("before") Instant before, @Param("window_size") int windowSize);
+    List<AiModelMessage> findPreviousMessages(@Param("threadId") UUID threadId, @Param("before") Instant before, @Param("window_turns") int windowTurns);
 
 
     @Query(name = "MessageMetadataDTO.getMessageMetadataByMessageId", nativeQuery = true)

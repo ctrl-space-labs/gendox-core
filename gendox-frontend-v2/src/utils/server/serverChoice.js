@@ -5,6 +5,13 @@
 /** localStorage: { current: address or null, custom: [{ name, address, config: { apiUrl, oidcAuthority, clientId } }] } */
 export const STORAGE_KEY = 'gendox.servers.v1'
 
+export const webServers = info => {
+  const site = { name: "This site's server", address: new URL(info.site).origin, custom: false }
+  const custom = info.custom.map(server => ({ ...server, custom: true }))
+
+  return { servers: [site, ...custom], current: custom.find(server => server.address === info.current) || site }
+}
+
 const LOOPBACK = /^(localhost|127\.0\.0\.1|\[::1\])$/
 
 /** The API base of a server address, ending in a slash. The site's address means its /gendox/api/v1. */

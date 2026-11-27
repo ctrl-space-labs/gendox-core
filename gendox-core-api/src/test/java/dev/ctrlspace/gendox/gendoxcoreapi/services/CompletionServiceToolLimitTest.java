@@ -24,6 +24,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.AiModelUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -39,7 +41,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
- * A model that never stops calling tools gets the configured number of rounds, then the loop stops.
+ * A model gets the configured number of tool rounds, followed by a request for the answer.
  */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -103,11 +105,16 @@ class CompletionServiceToolLimitTest {
             requests.add(List.copyOf(inv.<List<AiModelMessage>>getArgument(0)));
             AiModelMessage reply = new AiModelMessage();
             reply.setRole("assistant");
-            reply.setToolCalls(objectMapper.readTree("""
-                    [{"id":"call-%d","type":"function","function":{"name":"list_tasks","arguments":"{}"}}]
-                    """.formatted(toolChoices.size())));
+            boolean answerOnly = "none".equals(inv.<String>getArgument(6));
+            if (answerOnly) {
+                reply.setContent("Answer after tools");
+            } else {
+                reply.setToolCalls(objectMapper.readTree("""
+                        [{"id":"call-%d","type":"function","function":{"name":"list_tasks","arguments":"{}"}}]
+                        """.formatted(toolChoices.size())));
+            }
             return CompletionResponse.builder()
-                    .choices(List.of(Choice.builder().message(reply).finishReason("tool_calls").build()))
+                    .choices(List.of(Choice.builder().message(reply).finishReason(answerOnly ? "stop" : "tool_calls").build()))
                     .usage(Usage.builder().promptTokens(1).completionTokens(1).build())
                     .build();
         });
@@ -139,9 +146,11 @@ class CompletionServiceToolLimitTest {
 
         List<Message> messages = run();
 
-        assertEquals(7, toolChoices.size());
-        assertTrue(toolChoices.stream().allMatch("auto"::equals));
-        assertEquals("tool", messages.getLast().getRole());
+        assertEquals(8, toolChoices.size());
+        assertTrue(toolChoices.subList(0, 7).stream().allMatch("auto"::equals));
+        assertEquals("none", toolChoices.getLast());
+        assertEquals("tool", requests.getLast().reversed().get(1).getRole());
+        assertEquals("Answer after tools", messages.getLast().getValue());
     }
 
     @Test
@@ -163,12 +172,16 @@ class CompletionServiceToolLimitTest {
         assertTrue(saved.stream().noneMatch(message -> "user".equals(message.getRole())));
     }
 
-    @Test
-    void aToolCallCutByTheOutputLimitIsAnsweredWithAnErrorAndNotRun() throws Exception {
+    @ParameterizedTest
+    @ValueSource(ints = {1, 2})
+    void aToolCallCutByTheOutputLimitIsAnsweredWithAnErrorAndNotRun(int maxToolIterations) throws Exception {
+        ReflectionTestUtils.setField(completionService, "maxToolIterations", maxToolIterations);
         // first answer: the output limit ends it inside a tool call; second: a plain answer
         List<String> finishReasons = new ArrayList<>(List.of("length", "stop"));
         // doAnswer, not when(): when() would call the answer of setUp, with no arguments
         doAnswer(inv -> {
+            toolChoices.add(inv.getArgument(6));
+            requests.add(List.copyOf(inv.<List<AiModelMessage>>getArgument(0)));
             String finishReason = finishReasons.removeFirst();
             AiModelMessage reply = new AiModelMessage();
             reply.setRole("assistant");
@@ -191,6 +204,9 @@ class CompletionServiceToolLimitTest {
         Message cutShort = messages.get(1);
         assertEquals("call-1", cutShort.getToolCallId());
         assertTrue(cutShort.getValue().contains("TOOL_CALL_CUT_SHORT"));
+        assertEquals(List.of("auto", maxToolIterations == 1 ? "none" : "auto"), toolChoices);
+        assertTrue(requests.getLast().stream()
+                .anyMatch(message -> "tool".equals(message.getRole()) && "call-1".equals(message.getToolCallId())));
         assertEquals("Here it is, smaller.", messages.getLast().getValue());
         verify(aiToolRegistry, never()).execute(any(), any(), any());
     }

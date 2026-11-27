@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useDispatch, useSelector, useStore } from 'react-redux'
 import desktopBridge, { isDesktopApp } from 'src/services/desktopBridge'
 import { createCommandRunner } from 'src/utils/clientTools/commandRunner'
+import { readCompletionSession } from 'src/utils/chatCompletionSession'
 import {
   commandFinished,
   commandOutput,
@@ -30,6 +31,11 @@ const DesktopCommandRunner = () => {
         stop: desktopBridge.stopCommand
       },
       preferences: () => store.getState().clientDevice.preferences,
+      isCurrent: call => {
+        const turnId = readCompletionSession(call?.threadId).turnId
+
+        return !turnId || !call?.turnId || turnId === call.turnId
+      },
       approve: approvals.requestApproval,
       changed: change => {
         if (change.folders) dispatch(foldersChanged(change.folders))

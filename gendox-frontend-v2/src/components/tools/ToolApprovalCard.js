@@ -12,8 +12,6 @@ export default function ToolApprovalCard({
   description,
   fields,
   terminal,
-  directory,
-  retry = false,
   allowLabel = 'Allow',
   onAllow,
   onDecline,
@@ -42,14 +40,6 @@ export default function ToolApprovalCard({
         <ToolCodeBlock directory={terminal.cwd} aria-label='Command'>
           {terminal.command}
         </ToolCodeBlock>
-      )}
-      {directory && (
-        <p className='sm'>
-          Requested folder: <code>{directory}</code>
-        </p>
-      )}
-      {retry && (
-        <p className='muted sm'>The first attempt may have completed some work. Running it again can repeat those changes.</p>
       )}
       {error && <p role='alert'>{error}</p>}
       <div className='row'>

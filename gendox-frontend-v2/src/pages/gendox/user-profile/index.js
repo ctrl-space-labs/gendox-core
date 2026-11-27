@@ -16,7 +16,7 @@ import Avatar from 'src/components/ui/Avatar'
 import MenuList from 'src/components/ui/MenuList'
 import ConfirmDialog from 'src/components/ui/ConfirmDialog'
 import ClientSettings from 'src/components/client-tools/ClientSettings'
-import { clientConfig } from 'src/utils/server/serverChoice'
+import { clientConfig, webServers } from 'src/utils/server/serverChoice'
 
 // Keycloak's account console: password, two-step verification, sessions
 const ACCOUNT_URL = `${commonConfig.oidcAuthority}/account`
@@ -123,11 +123,18 @@ const UserProfilePage = () => {
   const [deleteOpen, setDeleteOpen] = useState(false)
 
   // Installed apps always show "Choose server"; a browser only where the site allows other servers
-  const [chooseServer, setChooseServer] = useState(false)
+  const [selectedServer, setSelectedServer] = useState(null)
   useEffect(() => {
-    const web = window.__GENDOX_ENV__?.GENDOX_WEB
-    if (web?.current || window.__GENDOX_ENV__?.GENDOX_DESKTOP) setChooseServer(true)
-    else if (web) clientConfig(web.site).then(config => setChooseServer(Boolean(config.allowedServers?.length)), () => {})
+    const { GENDOX_DESKTOP: desktop, GENDOX_WEB: web } = window.__GENDOX_ENV__ || {}
+    if (desktop) return setSelectedServer(desktop.current)
+    if (!web) return
+
+    const { current } = webServers(web)
+    if (current.custom) return setSelectedServer(current)
+
+    clientConfig(web.site).then(config => {
+      if (config.allowedServers?.length) setSelectedServer(current)
+    }, () => {})
   }, [])
 
   if (!user) return null
@@ -250,13 +257,17 @@ const UserProfilePage = () => {
 
         <ClientSettings />
 
-        {chooseServer && (
+        {selectedServer && (
           <section className='sect'>
             <header>
               <h2>Server</h2>
               <p>The Gendox server this app talks to.</p>
             </header>
-            <div className='card card-b'>
+            <div className='card card-b form'>
+              <div style={{ overflowWrap: 'anywhere' }}>
+                {selectedServer.name && <strong>{selectedServer.name}</strong>}
+                <div className='muted sm'>{selectedServer.address}</div>
+              </div>
               <Link className='btn' href='/server/' style={{ alignSelf: 'flex-start' }}>
                 Choose server
               </Link>

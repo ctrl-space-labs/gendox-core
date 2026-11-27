@@ -1,6 +1,17 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { apiBaseOf, isAllowed } from '../src/utils/server/serverChoice.js'
+import { apiBaseOf, isAllowed, webServers } from '../src/utils/server/serverChoice.js'
+
+test('the profile and picker can use the selected server from the same list', () => {
+  const site = 'https://gendox.example/gendox/api/v1/'
+  const address = 'http://localhost:8107'
+  const custom = [{ name: 'Local', address }]
+
+  const selected = webServers({ site, custom, current: address })
+  assert.deepEqual(selected.current, { ...custom[0], custom: true })
+  const defaults = webServers({ site, custom, current: null })
+  assert.deepEqual(defaults.current, { name: "This site's server", address: 'https://gendox.example', custom: false })
+})
 
 test('a site address means its API in the usual place; a path is the API base itself', () => {
   assert.equal(apiBaseOf('https://dev-app-2.gendox.dev'), 'https://dev-app-2.gendox.dev/gendox/api/v1/')

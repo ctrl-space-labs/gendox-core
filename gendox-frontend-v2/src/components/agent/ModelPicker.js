@@ -1,6 +1,7 @@
 import { Check, ChevronsUpDown, KeyRound, TriangleAlert } from 'lucide-react'
 import Link from 'next/link'
 import Menu from 'src/components/ui/Menu'
+import MenuList from 'src/components/ui/MenuList'
 
 // display names of the seeded providers; one we don't know is prettified (OPEN_AI → Open Ai), and an
 // organization's own provider, named by people, is shown as named
@@ -100,8 +101,14 @@ const ModelPicker = ({ models = [], value, onChange, keys, disabled = false, tit
       )}
     >
       {title && <div className='h'>{title}</div>}
-      <div style={{ maxHeight: 360, overflowY: 'auto' }}>
-        {models.map(model => (
+      <MenuList
+        items={models}
+        currentId={current?.id}
+        noun='models'
+        searchText={model => `${model.model || model.name} ${providerLabel(model.aiModelProvider?.name)}`}
+        maxHeight={360}
+      >
+        {model => (
           <button
             key={model.id}
             type='button'
@@ -113,8 +120,8 @@ const ModelPicker = ({ models = [], value, onChange, keys, disabled = false, tit
             <ModelTag model={model} keys={keys} />
             {model.name === value && <Check className='lucide' />}
           </button>
-        ))}
-      </div>
+        )}
+      </MenuList>
       {keysHref && (
         <>
           <hr />

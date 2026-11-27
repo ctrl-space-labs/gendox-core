@@ -25,15 +25,28 @@ test('decline and Plan execute nothing; malformed calls cannot bypass validation
   assert.deepEqual(await plan.execute(args, 'plan'), { declined: true })
   assert.equal((await flow.execute({ command: 'x' }, 'malformed')).exit_code, -1)
 })
-test('Auto still asks for folders and cancelling the picker never retries', async () => {
+test('Auto still asks for folders and declining the native confirmation never retries', async () => {
   let asks = 0, calls = 0
-  const flow = await runtime({ preferences: () => ({ mode: 'auto' }), approve: async request => { asks++; assert.equal(request.kind, 'folder'); return true }, native: { runCommand: async () => { calls++; return { permission_required: true, directory: '/other' } }, chooseFolder: async () => ({ chosen: false }) } })
+  const flow = await runtime({ preferences: () => ({ mode: 'auto' }), approve: () => assert.fail('No second prompt'), native: { runCommand: async () => { calls++; return { permission_required: true, directory: '/other' } }, chooseFolder: async () => { asks++; return { chosen: false } } } })
   assert.deepEqual(await flow.execute(args, 'auto'), { declined: true }); assert.equal(asks, 1); assert.equal(calls, 1)
 })
 test('folder retries need explicit approval and a new replay ID', async () => {
-  const ids = [], approvals = [], denied = { ...completed, exit_code: 1, stderr: 'Operation not permitted' }
-  const flow = await runtime({ preferences: () => ({ mode: 'auto' }), approve: async request => { approvals.push(request); return true }, native: { runCommand: async (_args, id) => { ids.push(id); return ids.length === 1 ? denied : completed }, chooseFolder: async () => ({ chosen: true }) } })
-  assert.deepEqual(await flow.execute(args, 'retry'), completed); assert.deepEqual(ids, ['retry', 'retry:retry:1']); assert.equal(approvals.length, 1); assert.deepEqual(approvals[0].previousResult, denied)
+  const ids = [], approvals = [], denied = { permission_required: true, directory: '/requested' }
+  const flow = await runtime({ preferences: () => ({ mode: 'auto' }), native: { runCommand: async (_args, id) => { ids.push(id); return ids.length === 1 ? denied : completed }, chooseFolder: async directory => { approvals.push(directory); return { chosen: true } } } })
+  assert.deepEqual(await flow.execute(args, 'retry'), completed); assert.deepEqual(ids, ['retry', 'retry:retry:1']); assert.deepEqual(approvals, ['/requested'])
+})
+test('a denied retry returns without asking for a folder again', async () => {
+  const ids = []
+  const denied = { permission_required: true, directory: '/requested' }
+  const flow = await runtime({
+    preferences: () => ({ mode: 'auto' }),
+    native: {
+      runCommand: async (_request, id) => { ids.push(id); return denied },
+      chooseFolder: async directory => { assert.equal(directory, denied.directory); return { chosen: true } }
+    }
+  })
+  assert.deepEqual(await flow.execute(args, 'folder-denied'), denied)
+  assert.deepEqual(ids, ['folder-denied', 'folder-denied:retry:1'])
 })
 test('switching to Plan while approval is pending prevents execution', async () => {
   let mode = 'ask'
@@ -80,17 +93,15 @@ test('desktop context is capability metadata only and never labels browser widge
   // Plan offers the agent no local commands at all
   assert.deepEqual(JSON.parse(desktopMessageContext({}, { ...device, preferences: { mode: 'plan' } }).value).clientTools, [])
 })
-test('only sandbox write denials offer a folder grant; ordinary permission errors return as they are', async () => {
-  for (const stderr of ['touch: /etc/x: Operation not permitted', 'mkdir: cannot create directory: Read-only file system']) {
-    let asked = 0
+test('shell permission errors return without guessing which folder to grant', async () => {
+  for (const stderr of ['Operation not permitted', 'Read-only file system', 'Permission denied']) {
     const denied = { ...completed, exit_code: 1, stderr }
-    const flow = await runtime({ preferences: () => ({ mode: 'auto' }), approve: async () => { asked++; return false }, native: { runCommand: async () => denied } })
-    assert.deepEqual(await flow.execute(args, stderr), denied); assert.equal(asked, 1)
+    const flow = await runtime({ preferences: () => ({ mode: 'auto' }), native: {
+      runCommand: async () => denied,
+      chooseFolder: () => assert.fail('A shell error does not identify a folder to grant')
+    } })
+    assert.deepEqual(await flow.execute(args, stderr), denied)
   }
-  let asked = 0
-  const ssh = { ...completed, exit_code: 255, stderr: 'git@example.com: Permission denied (publickey).' }
-  const flow = await runtime({ preferences: () => ({ mode: 'auto' }), approve: async () => { asked++; return true }, native: { runCommand: async () => ssh } })
-  assert.deepEqual(await flow.execute(args, 'ssh'), ssh); assert.equal(asked, 0)
 })
 test('timeout_seconds reaches native execution only within the limit', async () => {
   const { MAX_TIMEOUT_SECONDS } = await moduleOf('commandRunner.js')
@@ -131,7 +142,10 @@ test('a command the agent owner marked Ask before running still asks in Auto', a
   assert.equal(asks, 1)
 })
 test('tool arguments are shown as lines a person reads', async () => {
-  const { readableArguments } = await moduleOf('approvalAnswers.js')
-  assert.equal(readableArguments('{"url":"https://example.com","tabs":2}'), 'url: https://example.com\ntabs: 2')
-  assert.equal(readableArguments('not json'), 'not json')
+  const { argumentFields } = await moduleOf('approvalAnswers.js')
+  assert.deepEqual(argumentFields('{"url":"https://example.com","tabs":2}'), [
+    { label: 'Url', value: 'https://example.com' },
+    { label: 'Tabs', value: '2' }
+  ])
+  assert.deepEqual(argumentFields('not json'), [{ label: 'Input', value: 'not json' }])
 })

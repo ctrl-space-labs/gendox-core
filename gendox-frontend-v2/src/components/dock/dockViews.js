@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
 import { shallowEqual, useSelector } from 'react-redux'
 import { ArrowUpRight, LoaderCircle, Plus, Search, Upload } from 'lucide-react'
@@ -15,7 +15,7 @@ import { kindInfo, kindOf, latestVersionsOf } from 'src/components/artifacts/art
 import useProjectArtifacts from 'src/components/artifacts/useProjectArtifacts'
 import { useChatSession } from 'src/components/chat/useChat'
 import { fileNameOf, formatDateTime, timeAgo } from 'src/components/knowledge/documentUtils'
-import UploadDialog, { openOnFileDrag } from 'src/components/knowledge/UploadDialog'
+import UploadDialog, { uploadDropHandlers } from 'src/components/knowledge/UploadDialog'
 import FileTile from 'src/components/ui/FileTile'
 import { TaskFormDialog } from 'src/components/tasks/TaskDialogs'
 import { TaskTile, typeOfTask } from 'src/components/tasks/taskUtils'
@@ -309,6 +309,7 @@ export const DockKnowledge = () => {
   const [query, setQuery] = useState('')
   const [result, setResult] = useState(null)
   const [uploading, setUploading] = useState(false)
+  const uploadDialog = useRef(null)
 
   // ?upload=1 (the new-agent wizard): open the upload once, and drop it from the address so a reload doesn't
   useEffect(() => {
@@ -341,7 +342,7 @@ export const DockKnowledge = () => {
   const docs = result?.content ?? []
 
   return (
-    <div className='vw in-dock compact' {...openOnFileDrag(() => setUploading(true))}>
+    <div className='vw in-dock compact' {...uploadDropHandlers(uploadDialog, () => setUploading(true))}>
       <div className='dk-top'>
         <label className='dk-search'>
           <Search className='lucide' />
@@ -370,6 +371,7 @@ export const DockKnowledge = () => {
         )}
       </div>
       <UploadDialog
+        ref={uploadDialog}
         open={uploading}
         onClose={() => setUploading(false)}
         organizationId={organizationId}

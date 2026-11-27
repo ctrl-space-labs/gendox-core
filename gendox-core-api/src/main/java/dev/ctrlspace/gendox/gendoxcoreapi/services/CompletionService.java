@@ -76,6 +76,9 @@ public class CompletionService {
     @Value("${gendox.agents.max-tool-iterations:12}")
     private int maxToolIterations = 12;
 
+    // The history sent with a question: the last 10 to 19 turns of its thread (MessageService#getPreviousMessages)
+    static final int HISTORY_WINDOW_TURNS = 10;
+
     // How a chat agent uses the project's documents, by knowledge search mode (#542)
     private static final String AUTO_SEARCH_INSTRUCTIONS = """
             # Project documents
@@ -348,7 +351,7 @@ public class CompletionService {
             // TODO rethink the logic, validate count of previous message tokens and drop messages if not enough space
             // TODO maybe add a similar logic to the embedding service to limit the number of messages
             // an artifact's content is in the call that wrote it; replayed, it is left out (read_artifact reads it)
-            previousMessages = ArtifactHistory.withoutArtifactContent(messageService.getPreviousMessages(message, 25), objectMapper);
+            previousMessages = ArtifactHistory.withoutArtifactContent(messageService.getPreviousMessages(message, HISTORY_WINDOW_TURNS), objectMapper);
         }
 
         //get contentParts without type "text"
@@ -371,16 +374,23 @@ public class CompletionService {
 
         List<Message> allResponseMessages = new ArrayList<>();
 
-        boolean hasToolCalls;
         int iteration = resolveTurnIterations(overrides);
         // TODO: this indicate that is a deep thinking task, should be more explicit and not inferred by the presence cancelation token.
         boolean isDeepThinking = runtimeContext.cancellationToken() != null;
         int maxIterations = isDeepThinking ? 20 : maxToolIterations;
+        boolean answerOnly = iteration >= maxIterations;
 
-        do {
+        while (true) {
             if (runtimeContext.cancellationToken() != null && runtimeContext.cancellationToken().isCancelled()) {
                 logger.info("Deep thinking cancelled, stopping completion loop at iteration {}", iteration);
                 throw new GendoxException("DEEP_THINKING_CANCELLED", "Deep thinking was cancelled", HttpStatus.CONFLICT);
+            }
+
+            if (answerOnly) {
+                previousMessages.add(AiModelMessage.builder()
+                        .role("user")
+                        .content("Provide your final answer using the information available. If anything is missing, explain what you could not complete.")
+                        .build());
             }
 
             // TODO add from the orginal thread, the system prompt and the first user message to give to the subagent the original context
@@ -391,13 +401,23 @@ public class CompletionService {
                     runtimeContext.aiModelRequestParams(),
                     runtimeContext.completionApiKey(),
                     runtimeContext.availableTools(),
-                    toolChoice(iteration, overrides),
+                    answerOnly ? "none" : toolChoice(iteration, overrides),
                     responseJsonSchema,
                     listener.deltas());
 
             saveCompletionAuditLogs(completionResponse, runtimeContext, completionRequestType, completionResponseType);
 
-            Message completionResponseMessage = messageAiMessageConverter.toEntity(completionResponse.getChoices().get(0).getMessage());
+            var choice = completionResponse.getChoices().getFirst();
+            String finishReason = choice.getFinishReason();
+            boolean hasToolCalls = "tool_calls".equals(finishReason);
+            Message completionResponseMessage = messageAiMessageConverter.toEntity(choice.getMessage());
+            boolean toolCallsCutShort = "length".equals(finishReason)
+                    && completionResponseMessage.getToolCalls() != null
+                    && !completionResponseMessage.getToolCalls().isEmpty();
+            if (answerOnly && (hasToolCalls || toolCallsCutShort)) {
+                throw new GendoxException("COMPLETION_NO_ANSWER", "The model requested more tools instead of answering.",
+                        HttpStatus.BAD_GATEWAY);
+            }
             completionResponseMessage.setAiModelId(runtimeContext.completionModel().getId());
             completionResponseMessage.setProjectId(runtimeContext.projectId());
             completionResponseMessage.setThreadId(message.getThreadId());
@@ -408,12 +428,6 @@ public class CompletionService {
 
             allResponseMessages.add(completionResponseMessage);
 
-            String finishReason = completionResponse.getChoices().getFirst().getFinishReason();
-            hasToolCalls = "tool_calls".equals(finishReason);
-            boolean toolCallsCutShort = "length".equals(finishReason)
-                    && completionResponseMessage.getToolCalls() != null
-                    && !completionResponseMessage.getToolCalls().isEmpty();
-
             if (toolCallsCutShort) {
                 // The output limit ended the answer inside a tool call. Nothing runs; each call gets an
                 // error, and the model tries again smaller. Bounded by the iterations like any tool round.
@@ -421,14 +435,12 @@ public class CompletionService {
                         completionResponseMessage.getToolCalls().size());
                 List<AiModelMessage> cutShortResults = toolExecutionService.cutShort(completionResponseMessage);
                 saveToolResponses(cutShortResults, message, runtimeContext, listener, allResponseMessages);
-                previousMessages.add(completionResponse.getChoices().get(0).getMessage());
+                previousMessages.add(choice.getMessage());
                 previousMessages.addAll(cutShortResults);
-                hasToolCalls = true;
             } else if (hasToolCalls) {
                 logger.info("Tool calls detected in completion response");
 
-                // Execute all tools. CLIENT tools the client will answer are left pending, unless this is the last allowed call.
-                boolean canWaitForClient = listener.waitsForClientTools() && iteration + 1 < maxIterations;
+                boolean canWaitForClient = listener.waitsForClientTools();
                 ToolExecutionService.ToolRound round = toolExecutionService.run(completionResponseMessage, previousMessages,
                         runtimeContext, listener, canWaitForClient);
                 List<AiModelMessage> toolResponseMessages = round.results();
@@ -436,7 +448,7 @@ public class CompletionService {
                 // Save tool response messages.
                 saveToolResponses(toolResponseMessages, message, runtimeContext, listener, allResponseMessages);
 
-                // The turn stops here until the client posts the results (or they time out)
+                // The turn stops here until the client posts the results.
                 if (!round.pending().isEmpty()) {
                     CompletionTurn turn = completionTurnService.suspend(message, completionResponseMessage, round.pending(), iteration + 1);
                     listener.onWaitingForTools(turn);
@@ -446,43 +458,33 @@ public class CompletionService {
                 // Sanity check: all tools responded
                 if (completionResponseMessage.getToolCalls() == null ||
                         toolResponseMessages.size() != completionResponseMessage.getToolCalls().size()) {
-                    logger.warn("Tool response count does not match tool calls; stopping tool loop.");
-                    hasToolCalls = false; // avoid infinite loop with inconsistent state
-                } else {
-                    // Extend previousMessages for the *next* iteration ===
-                    previousMessages.add(completionResponse.getChoices().get(0).getMessage());
-                    previousMessages.addAll(toolResponseMessages);
-                    // An image a tool showed goes as a user's attached image does: the one form every provider takes.
-                    // It is not saved, so it is seen in this turn only.
-                    if (!round.images().isEmpty()) {
-                        previousMessages.add(AiModelMessage.builder()
-                                .role("user")
-                                .content("The images the tools returned, in the order of the calls.")
-                                .contentParts(round.images())
-                                .build());
-                    }
+                    throw new GendoxException("COMPLETION_TOOL_RESULTS_MISSING", "Some tool calls did not return a result.",
+                            HttpStatus.BAD_GATEWAY);
                 }
+                previousMessages.add(choice.getMessage());
+                previousMessages.addAll(toolResponseMessages);
+                // A tool image is sent as a user attachment for this turn only.
+                if (!round.images().isEmpty()) {
+                    previousMessages.add(AiModelMessage.builder()
+                            .role("user")
+                            .content("The images the tools returned, in the order of the calls.")
+                            .contentParts(round.images())
+                            .build());
+                }
+            } else if (completionResponseMessage.getValue() != null && !completionResponseMessage.getValue().isBlank()) {
+                return allResponseMessages;
+            } else if (answerOnly) {
+                throw new GendoxException("COMPLETION_NO_ANSWER", "The model ended without an answer.",
+                        HttpStatus.BAD_GATEWAY);
             }
 
-            iteration++;
-
-            if (iteration == maxIterations - 1 && hasToolCalls) {
-                logger.warn("Sending warning message to LLM about approaching max tool-calling iterations (iteration {})", iteration);
-                previousMessages.add(AiModelMessage.builder()
-                        .role("user")
-                        .content("SYSTEM WARNING: You are approaching the maximum number of tool-calling iterations. "
-                                + "In your NEXT message you MUST provide the final answer to the user (no more tool calls). "
-                                + "If you do not provide a final answer, the request will timeout.")
-                        .build());
+            if ((hasToolCalls || toolCallsCutShort) && ++iteration < maxIterations) {
+                continue;
             }
-
-            if (iteration >= maxIterations && hasToolCalls) {
-                logger.warn("Max tool-calling iterations ({}) reached, stopping loop.", maxIterations);
-                hasToolCalls = false;
-            }
-        } while (hasToolCalls);
-
-        return allResponseMessages;
+            // Reserve one model call for an answer after the tool limit or a reply that only contained thinking.
+            logger.info("Requesting a final answer at tool iteration {} (model finish reason: {})", iteration, finishReason);
+            answerOnly = true;
+        }
     }
 
     /**

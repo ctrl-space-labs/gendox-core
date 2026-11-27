@@ -187,9 +187,10 @@ and never started afterwards. Command text and output are not diagnostic events.
 
 The native runner applies a filesystem write boundary to the shell and its descendants. It allows
 the chosen folders and a private command temporary directory, while protecting the app's own state.
-A write elsewhere is blocked; the frontend asks the user to select another allowed folder before an
-explicit retry. Retrying may repeat work from the first attempt. This does not restrict reads or
-network access and is not a complete system sandbox. macOS uses Seatbelt; Linux needs `/usr/bin/bwrap`.
+When a command requests an unapproved working folder, a native dialog shows its full path and asks
+whether to add it to Allowed write folders. Confirming retries the command once. A permissions error
+from a running command is returned to the agent. Reads and network access are governed separately.
+macOS uses Seatbelt and Linux needs `/usr/bin/bwrap`.
 
 **It guards against accidents, not against a command written to get around it.** A mistaken or
 careless command cannot change files outside the allowed folders; a deliberately crafted one may still

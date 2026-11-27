@@ -155,8 +155,9 @@ pub fn badge(
     count: i64,
 ) -> Result<(), String> {
     terminal::authorize(&webview, &session_token, state.session_token())?;
+    // Some(0) shows a "0" on macOS; None removes the badge
     webview
-        .set_badge_count(Some(count.clamp(0, 999)))
+        .set_badge_count((count > 0).then(|| count.min(999)))
         .map_err(|_| "Cannot update the badge".into())
 }
 

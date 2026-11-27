@@ -20,13 +20,13 @@ for (const declined of [false, true]) {
     await expect(message).toBeVisible()
     await message.fill('Check the native client tool')
     await message.press('Enter')
-    const approval = page.getByRole('region', { name: 'Run command on this computer?' })
+    const approval = page.getByRole('region', { name: 'Run this command on your computer?' })
     await expect(approval).toBeVisible()
     const approvedCommand = await approval.locator('pre').textContent()
     const activity = page.locator('details').filter({ has: page.getByText('1 tool call', { exact: true }) })
     await expect(activity).toHaveJSProperty('open', true)
     expect(await page.evaluate(() => window.nativeInvocations)).toHaveLength(0)
-    await page.getByRole('button', { name: declined ? 'Don’t allow' : 'Allow', exact: true }).click()
+    await approval.getByRole('button', { name: declined ? 'Don’t allow' : 'Run', exact: true }).click()
     await expect(page.getByText('Tool-based answer.', { exact: true })).toBeVisible()
     await expect(activity).toHaveJSProperty('open', false)
     await activity.getByText('1 tool call', { exact: true }).click()
@@ -104,7 +104,7 @@ for (const allowed of [true, false]) {
       window.lookups = []
       window.maxApprovalCards = 0
       new MutationObserver(() => {
-        const count = document.querySelectorAll('section[aria-label="Allow this tool to run?"]').length
+        const count = document.querySelectorAll('section[aria-label="Lookup?"]').length
         window.maxApprovalCards = Math.max(window.maxApprovalCards, count)
       }).observe(document, { childList: true, subtree: true })
       const install = (0, eval)(source + '; installClientToolHost')
@@ -115,10 +115,10 @@ for (const allowed of [true, false]) {
     const message = page.getByRole('textbox', { name: 'Message', exact: true })
     await message.fill('Look up an order')
     await message.press('Enter')
-    const card = page.getByRole('region', { name: 'Allow this tool to run?' })
+    const card = page.getByRole('region', { name: 'Lookup?' })
     await expect(card).toBeVisible()
-    await expect(card).toContainText('The agent wants to run lookup.')
-    await expect(card).toContainText('query: order')
+    await expect(card.getByRole('term')).toHaveText('Query')
+    await expect(card.getByRole('definition')).toHaveText('order')
     expect(await page.evaluate(() => window.lookups)).toHaveLength(0)
     await card.getByRole('button', { name: allowed ? 'Allow' : 'Don’t allow', exact: true }).click()
     await expect(page.getByText('Tool-based answer.', { exact: true })).toBeVisible()

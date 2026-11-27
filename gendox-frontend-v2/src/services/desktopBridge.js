@@ -52,7 +52,7 @@ function call(method, ...args) {
 
 // Folders the commands may write in
 const getFolders = () => call('folders')
-const chooseFolder = () => call('chooseFolder')
+const chooseFolder = directory => call('chooseFolder', directory)
 const removeFolder = path => call('removeFolder', path)
 const setWorkingDirectory = path => call('setWorkingDirectory', path)
 

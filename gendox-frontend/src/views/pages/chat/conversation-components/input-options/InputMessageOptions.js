@@ -2,7 +2,7 @@ import { Box, Tooltip } from '@mui/material'
 import Icon from 'src/views/custom-components/mui/icon/icon'
 import Chip from 'src/views/custom-components/mui/chip'
 
-const InputMessageOptions = ({ deepThinkingEnabled = false, onDeepThinkingToggle }) => {
+const InputMessageOptions = () => {
   return (
     <Box
       sx={{
@@ -83,16 +83,6 @@ const InputMessageOptions = ({ deepThinkingEnabled = false, onDeepThinkingToggle
       {/*    Action 3*/}
       {/*  </MenuItem>*/}
       {/*</Menu>*/}
-      <Tooltip title={deepThinkingEnabled ? 'Disable deep thinking' : 'Enable deep thinking'}>
-        <Chip
-          onClick={onDeepThinkingToggle}
-          icon={<Icon icon='mdi:brain' />}
-          label='Deep Thinking'
-          color={deepThinkingEnabled ? 'primary' : 'secondary'}
-          variant='outlined'
-          rounded
-        />
-      </Tooltip>
     </Box>
   )
 }

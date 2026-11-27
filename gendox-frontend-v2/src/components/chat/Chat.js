@@ -99,7 +99,6 @@ const greetingTime = () => {
  * @param threadsDrawer - a "Your conversations" drawer opened from the header
  * @param greeting - the empty state
  * @param attach - attach files and images
- * @param deep - the Deep thinking switch
  * @param sources - the sources button under each answer
  * @param onOpenSources(threadId, answer) - where an answer's sources open instead of the sheet (the agent home: a tab)
  * @param onOpenArtifact(threadId, { artifactId, version }) - where an artifact opens instead of the sheet (the agent home: a tab)
@@ -117,7 +116,6 @@ const Chat = ({
   threadsDrawer = false,
   greeting = true,
   attach = true,
-  deep = true,
   sources = true,
   onOpenSources,
   onOpenArtifact,
@@ -156,7 +154,6 @@ const Chat = ({
   )
 
   const [message, setMessage] = useState('')
-  const [deepThinking, setDeepThinking] = useState(false)
   const [sourcesMessageId, setSourcesMessageId] = useState(null)
   const [openArtifact, setOpenArtifact] = useState(null) // { artifactId, version } in the sheet
   const [artifactTitle, setArtifactTitle] = useState('')
@@ -197,7 +194,6 @@ const Chat = ({
   // a different thread starts clean
   useEffect(() => {
     dispatch(clearAll(chatKey))
-    setDeepThinking(false)
     setSourcesMessageId(null)
     setOpenArtifact(null)
     setDrawerOpen(false)
@@ -279,16 +275,36 @@ const Chat = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentThread?.threadId, currentThread?.projectId, token, dispatch, iFrameMessageManager, chatKey])
 
-  // Follow the conversation as it grows while the reader is near the bottom.
+  // Follow the conversation as it grows. Only the reader scrolling up stops it, and coming back to the bottom
+  // (within 10px) resumes it: a scroll event that arrives after the content grew under a scroll to the bottom does not.
   const followRef = useRef(true)
+  const lastScrollTopRef = useRef(0)
   const threadContentRef = useRef(null)
   const onScroll = event => {
     const scroller = event.currentTarget
-    followRef.current = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 80
+    if (scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 10) followRef.current = true
+    else if (scroller.scrollTop < lastScrollTopRef.current) followRef.current = false
+    lastScrollTopRef.current = scroller.scrollTop
   }
   useEffect(() => {
     followRef.current = true
+    lastScrollTopRef.current = 0
   }, [threadId])
+
+  const scrollToEnd = () => {
+    followRef.current = true
+    const scroller = scrollRef.current
+    if (scroller) scroller.scrollTop = scroller.scrollHeight
+  }
+
+  // a tool that waits for the user's approval is brought into view
+  const approvalsWaiting = useSelector(
+    state => state.toolApprovals.pending.filter(request => request.threadId === threadId).length
+  )
+  useEffect(() => {
+    if (approvalsWaiting > 0) scrollToEnd()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [approvalsWaiting])
 
   useEffect(() => {
     const scroller = scrollRef.current
@@ -305,16 +321,11 @@ const Chat = ({
 
   const send = (text, docs) => {
     if (!agent || isBusy) return
-    followRef.current = true
-    const scroller = scrollRef.current
-    if (scroller) scroller.scrollTop = scroller.scrollHeight
+    scrollToEnd()
     dispatch(
       sendMessage({
         user: auth.user,
-        currentThread: {
-          ...currentThread,
-          deepThinking
-        },
+        currentThread,
         message: text,
         uploadedDocs: docs,
         organizationId,
@@ -502,7 +513,7 @@ const Chat = ({
   ) : isSendingMessage && !streamingAnswer ? (
     <div className='row faint sm'>
       {completionStatus === 'WAITING_FOR_TOOLS'
-        ? 'Waiting for your page'
+        ? 'Waiting for tool results'
         : agentName
           ? `Searching ${agentName}’s knowledge`
           : 'Searching'}
@@ -641,8 +652,7 @@ const Chat = ({
           attachments={attachments}
           onPickFiles={attach ? addFiles : null}
           onRemoveAttachment={removeAttachment}
-          deepThinking={deepThinking}
-          onDeepThinkingToggle={deep ? () => setDeepThinking(on => !on) : null}
+          replacesWaitingTurn={completionStatus === 'WAITING_FOR_TOOLS' && canSend}
         />
         {note && <p className='gc-note'>{note}</p>}
         {powered && (

@@ -12,7 +12,7 @@ import { getErrorMessage } from 'src/utils/errorHandler'
 import toast from 'react-hot-toast'
 import { isDesktopApp } from 'src/services/desktopBridge'
 import { desktopMessageContext } from 'src/utils/clientTools/desktopContext'
-import { argumentFields, isWaiting, waitForAnswer } from 'src/utils/clientTools/approvalAnswers'
+import { answer, argumentFields, isWaiting, waitForAnswer } from 'src/utils/clientTools/approvalAnswers'
 import { approvalRequested, approvalSettled } from 'src/store/toolApprovals/toolApprovals'
 
 // a turn still running on the server: the chat follows it until it ends
@@ -278,7 +278,7 @@ export const sendMessage = createAsyncThunk(
     try {
       response = deepThinking
         ? await completionService.postCompletionMessage(projectId, threadId, message, chatLocalContextResponses, documentInstanceIds, token, true)
-        : await _streamCompletion({ projectId, organizationId, token, dispatch, chatKey, iFrameMessageManager,
+        : await _streamCompletion({ projectId, organizationId, token, dispatch, getState, chatKey, iFrameMessageManager,
             // Only an embedded chat has a host page to answer CLIENT tools; elsewhere they run as ACTION
             payload: { threadId, value: message, localContexts: chatLocalContextResponses, documentInstanceIds,
               stream: true, clientToolResults: Boolean(iFrameMessageManager?.isEmbedded) } })
@@ -556,7 +556,10 @@ const gendoxChatSlice = createSlice({
         if (message.name === 'completion_limit_warning') return
         const converted = chatConverter.gendoxMessageToThreadMessage(message)
         const key = `stream:${data.turnId}:${data.messageIndex}`
-        const index = thread.messages.findIndex(m => m.messageId === message.id || m.streamKey === key)
+        const index = thread.messages.findIndex(m =>
+          m.messageId === message.id || m.streamKey === key ||
+          (message.role === 'tool' && m.role === 'tool' && !m.messageId && m.toolCallId === message.toolCallId)
+        )
         if (index >= 0) thread.messages[index] = converted
         else thread.messages.push(converted)
       }
@@ -1020,6 +1023,7 @@ async function askBeforeHostCall(call, data, context, sendToHost) {
       id,
       kind: 'tool',
       threadId: data.threadId,
+      turnId: data.turnId,
       toolName: call.function?.name,
       fields: argumentFields(call.function?.arguments)
     })
@@ -1034,7 +1038,7 @@ async function askBeforeHostCall(call, data, context, sendToHost) {
 }
 
 async function _streamCompletion(context) {
-  const { projectId, organizationId, dispatch, chatKey, token, payload, iFrameMessageManager } = context
+  const { projectId, organizationId, dispatch, getState, chatKey, token, payload, iFrameMessageManager } = context
   const requestId = globalThis.crypto.randomUUID()
   let threadId = payload.threadId
   completionEvent(dispatch, chatKey, projectId, 'connect', { threadId, requestId })
@@ -1074,6 +1078,14 @@ async function _streamCompletion(context) {
             turnId,
             ...(previousSession.turnId !== turnId ? { dispatchedCalls: [], approvalDecisions: {} } : {})
           })
+          if (previousSession.turnId && previousSession.turnId !== turnId) {
+            for (const approval of getState().toolApprovals.pending) {
+              if (approval.threadId === threadId && approval.turnId === previousSession.turnId) {
+                answer(approval.id, false)
+                dispatch(approvalSettled(approval.id))
+              }
+            }
+          }
           if (iFrameMessageManager?.isEmbedded)
             updateSessionThreadId(iFrameMessageManager.originUrl, organizationId, projectId, threadId)
         }
@@ -1113,24 +1125,28 @@ const pendingClientResults = new Set()
 /** Sends the result of a client tool the host page ran, and streams the rest of the turn */
 export const submitClientToolResult = createAsyncThunk(
   'gendoxChat/submitClientToolResult',
-  async ({ result, token, organizationId, projectId, iFrameMessageManager, chatKey = MAIN_CHAT }, { dispatch, rejectWithValue }) => {
+  async ({ result, token, organizationId, projectId, iFrameMessageManager, chatKey = MAIN_CHAT }, { dispatch, getState, rejectWithValue }) => {
     const key = `${result.threadId}|${result.turnId || result.messageId || ''}|${result.toolCallId}`
     if (pendingClientResults.has(key)) return
     pendingClientResults.add(key)
     const value = result.value ?? JSON.stringify(result.result ?? null)
-    dispatch(chatActions.clientToolResultSent({ chatKey, threadId: result.threadId, toolCallId: result.toolCallId, value }))
     const ack = extra =>
       iFrameMessageManager?.messageManager?.sendMessage({
         type: 'gendox.events.chat.message.tool_calls.ack',
         payload: { threadId: result.threadId, turnId: result.turnId, messageId: result.messageId, toolCallId: result.toolCallId, ...extra }
       })
     try {
-      const submission = clientResultQueue.then(() =>
-        _streamCompletion({
+      const submission = clientResultQueue.then(() => {
+        const activeTurn = readCompletionSession(result.threadId).turnId
+        if (activeTurn && result.turnId && result.turnId !== activeTurn) return
+        dispatch(chatActions.clientToolResultSent({ chatKey, threadId: result.threadId, toolCallId: result.toolCallId, value }))
+
+        return _streamCompletion({
           projectId,
           organizationId,
           token,
           dispatch,
+          getState,
           chatKey,
           iFrameMessageManager,
           payload: {
@@ -1141,7 +1157,7 @@ export const submitClientToolResult = createAsyncThunk(
             stream: true
           }
         })
-      )
+      })
       clientResultQueue = submission.catch(() => {})
       await submission
       ack()

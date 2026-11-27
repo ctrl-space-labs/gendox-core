@@ -250,9 +250,8 @@ public class EmbeddingsController {
         message.setLocalContexts(contexts);
         // A new message ends a turn that still waits for the page's tool results. Its calls are answered
         // before the message is saved, so in the history every tool call is followed by its result.
-        if (message.getThreadId() != null) {
-            completionTurnService.cancelWaitingTurn(message.getThreadId());
-        }
+        List<Message> cancelled = message.getThreadId() == null
+                ? List.of() : completionTurnService.cancelWaitingTurn(message.getThreadId());
         boolean newThread = message.getThreadId() == null;
         Message savedMessage = messageService.createMessage(message);
         // A new thread is named from its first question beside the answer, never delaying it
@@ -276,8 +275,10 @@ public class EmbeddingsController {
             return ResponseEntity.accepted().body(response);
         }
 
-        return respond(completionRequestDTO.isStream(), completionRequestDTO.isClientToolResults(), savedMessage,
-                listener -> completionService.getCompletionSearch(savedMessage, project, listener));
+        return respond(completionRequestDTO.isStream(), completionRequestDTO.isClientToolResults(), savedMessage, listener -> {
+            cancelled.forEach(listener::onMessage);
+            return completionService.getCompletionSearch(savedMessage, project, listener);
+        });
     }
 
     /**

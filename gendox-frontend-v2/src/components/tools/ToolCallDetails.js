@@ -110,6 +110,9 @@ export default function ToolCallDetails({ name, input, responses }) {
       {responses.map((response, index) => {
         const value = parseToolValue(response.message)
         const key = response.messageId || index
+        if (value?.error === 'CLIENT_TOOL_CANCELLED') {
+          return <p className='muted sm' key={key}>Cancelled when you sent a new message.</p>
+        }
         if (isCommand) return <CommandResult key={key} value={value} />
         if (name === 'read_skill' && typeof value?.content === 'string') {
           return (

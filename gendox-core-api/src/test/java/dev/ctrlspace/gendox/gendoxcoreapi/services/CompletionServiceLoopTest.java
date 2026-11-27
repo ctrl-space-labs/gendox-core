@@ -108,11 +108,22 @@ class CompletionServiceLoopTest extends CompletionServiceFixture {
         }
     }
 
+    @Test
+    void aThinkingOnlyReplyGetsOneMoreRequestForTheAnswer() throws Exception {
+        respond("length", AiModelMessage.builder().role("assistant").reasoningContent("Working it out").build());
+        respondWithAnswer();
+
+        List<Message> messages = service.getCompletion(question, List.of(), project, null);
+
+        assertEquals(List.of("auto", "none"), sentToolChoices);
+        assertEquals("Answer", messages.getLast().getValue());
+    }
+
     // ------------------------------------------------------------------ history
 
     @Test
     void theStoredHistoryComesBeforeTheQuestion() throws Exception {
-        when(messageService.getPreviousMessages(question, 25)).thenReturn(new ArrayList<>(List.of(
+        when(messageService.getPreviousMessages(question, CompletionService.HISTORY_WINDOW_TURNS)).thenReturn(new ArrayList<>(List.of(
                 AiModelMessage.builder().role("user").content("Earlier").build(),
                 AiModelMessage.builder().role("assistant").content("Reply").build())));
         respondWithAnswer();
@@ -335,47 +346,46 @@ class CompletionServiceLoopTest extends CompletionServiceFixture {
         when(aiToolRegistry.supports("lookup")).thenReturn(true);
         CancellationToken token = new CancellationToken(() -> false);
         CompletionRuntimeOverridesDTO overrides = CompletionRuntimeOverridesDTO.builder().cancellationToken(token).build();
-        for (int i = 0; i < 25; i++) {
+        for (int i = 0; i < 20; i++) {
             respondWithToolCall("lookup");
         }
+        respondWithAnswer();
 
         List<Message> messages = service.getCompletion(question, List.of(), project, null, overrides);
 
-        assertEquals(20, sentMessages.size());
-        assertEquals("tool", messages.getLast().getRole());
+        assertEquals(21, sentMessages.size());
+        assertEquals("none", sentToolChoices.getLast());
+        assertEquals("Answer", messages.getLast().getValue());
         ArgumentCaptor<ToolExecutionContext> context = ArgumentCaptor.forClass(ToolExecutionContext.class);
         verify(aiToolRegistry, times(20)).execute(eq("lookup"), any(), context.capture());
         assertSame(token, context.getValue().cancellationToken());
     }
 
     @Test
-    void theModelIsWarnedBeforeItsLastAllowedCall() throws Exception {
+    void theFinalRequestDisablesToolsAndIncludesTheLastToolResult() throws Exception {
         ReflectionTestUtils.setField(service, "maxToolIterations", 3);
         agent.getAiTools().add(tool("lookup", null));
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 3; i++) {
             respondWithToolCall("lookup");
         }
+        respondWithAnswer();
 
         service.getCompletion(question, List.of(), project, null);
 
-        assertEquals(3, sentMessages.size());
-        assertEquals("tool", sentMessages.get(1).getLast().getRole());
-        AiModelMessage warning = sentMessages.get(2).getLast();
-        assertEquals("user", warning.getRole());
-        assertTrue(warning.getContent().startsWith("SYSTEM WARNING"));
+        assertEquals(List.of("auto", "auto", "auto", "none"), sentToolChoices);
+        assertEquals("tool", sentMessages.getLast().reversed().get(1).getRole());
     }
 
     @Test
-    void aClientToolInTheLastAllowedRoundIsNotWaitedFor() throws Exception {
+    void aClientToolInTheLastAllowedRoundStillWaitsForItsResult() throws Exception {
         ReflectionTestUtils.setField(service, "maxToolIterations", 1);
         agent.getAiTools().add(tool("lookup", "CLIENT"));
         respondWithToolCall("lookup");
 
         List<Message> messages = service.getCompletion(question, List.of(), project, null, null, new CompletionListener(true));
 
-        assertEquals(List.of("assistant", "tool"), roles(messages));
-        assertEquals("{\"status\":\"executed\"}", messages.getLast().getValue());
-        verify(completionTurnService, never()).suspend(any(), any(), anyList(), anyInt());
+        assertEquals(List.of("assistant"), roles(messages));
+        verify(completionTurnService).suspend(eq(question), eq(messages.getFirst()), anyList(), eq(1));
     }
 
     // ------------------------------------------------------------------ the listener

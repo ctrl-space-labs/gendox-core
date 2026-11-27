@@ -24,21 +24,21 @@ export const ToolApprovalsProvider = ({ children }) => {
   const notifiedRef = useRef(new Set())
 
   /**
-   * @param request { executionId, kind: 'command' | 'folder', args: { command, description, cwd }, call, directory, previousResult }
+   * @param request { executionId, args: { command, description, cwd }, call }
    * @returns a promise of true (allowed) or false
    */
   const requestApproval = useCallback(
-    ({ executionId, kind, args, call, directory, previousResult }) => {
+    ({ executionId, args, call }) => {
       const allowed = waitForAnswer(executionId)
       dispatch(
         approvalRequested({
           id: executionId,
-          kind,
+          kind: 'command',
           threadId: call?.threadId,
+          turnId: call?.turnId,
           description: args.description,
           command: args.command,
-          directory: directory || args.cwd || null,
-          retry: Boolean(previousResult)
+          directory: args.cwd || null
         })
       )
 

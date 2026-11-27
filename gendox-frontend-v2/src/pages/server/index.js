@@ -1,20 +1,14 @@
 import { useState } from 'react'
-import { Check, Plus, Server, Trash2 } from 'lucide-react'
+import { ArrowLeft, Check, Plus, Server, Trash2 } from 'lucide-react'
 import { routeTypes } from 'src/authentication/components/RouteHandler'
 import { localStorageConstants } from 'src/utils/generalConstants'
-import { apiBaseOf, clientConfig, isAllowed, STORAGE_KEY } from 'src/utils/server/serverChoice'
+import { apiBaseOf, clientConfig, isAllowed, STORAGE_KEY, webServers } from 'src/utils/server/serverChoice'
 
 // Installed apps validate and save the choice in the native shell. Browsers use the site's allowlist.
 const nativeServerInfo = () => (typeof window !== 'undefined' && window.__GENDOX_ENV__?.GENDOX_DESKTOP) || null
 const web = () => (typeof window !== 'undefined' && window.__GENDOX_ENV__?.GENDOX_WEB) || null
 
 const invoke = (command, args) => window.__TAURI__.core.invoke(command, args)
-
-const webServers = info => {
-  const site = { name: "This site's server", address: new URL(info.site).origin, custom: false }
-
-  return { servers: [site, ...info.custom.map(server => ({ ...server, custom: true }))], current: { address: info.current || site.address } }
-}
 
 // Keeps the choice and starts over on that server, where the organization selected before does not exist
 const saveWeb = (custom, current) => {
@@ -123,6 +117,17 @@ const ServerPage = () => {
   return (
     <main className='center'>
       <div className='modal s native-server-picker' style={{ padding: 28, gap: 16, animation: 'none', width: 'min(460px, 100%)' }}>
+        <button
+          className='btn ghost s'
+          style={{ alignSelf: 'flex-start' }}
+          disabled={Boolean(busy)}
+          onClick={() => {
+            if (window.history.length > 1) window.history.back()
+            else window.location.replace('/')
+          }}
+        >
+          <ArrowLeft className='lucide' /> Back
+        </button>
         <div className='stack' style={{ gap: 4 }}>
           <h2 style={{ fontSize: 18 }}>Server</h2>
           <p className='muted sm'>

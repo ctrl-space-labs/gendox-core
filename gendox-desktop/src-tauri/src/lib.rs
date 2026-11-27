@@ -304,7 +304,9 @@ fn desktop_builder() -> tauri::Builder<tauri::Wry> {
                 .with_state_flags(tauri_plugin_window_state::StateFlags::all() - tauri_plugin_window_state::StateFlags::DECORATIONS)
                 .build(),
         )
-        .plugin(tauri_plugin_opener::init())
+        // Its own click script would open links from the page, which has no opener permission;
+        // on_new_window opens them from native code instead.
+        .plugin(tauri_plugin_opener::Builder::new().open_js_links_on_click(false).build())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_autostart::Builder::new().build())
@@ -373,7 +375,10 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let window = WebviewWindowBuilder::new(app, "main", WebviewUrl::App(offline::CONNECTING.trim_start_matches('/').into()))
         .title(format!("Gendox — {}", current.name));
     #[cfg(desktop)]
-    let window = window.inner_size(1280.0, 832.0).min_inner_size(800.0, 600.0);
+    let window = window
+        .inner_size(1280.0, 832.0)
+        .min_inner_size(800.0, 600.0)
+        .disable_drag_drop_handler(); // Let the webview deliver File objects to the upload drop targets.
     // No title bar: the page's top bar takes its place. macOS keeps its window buttons, over the page.
     #[cfg(target_os = "macos")]
     let window = window

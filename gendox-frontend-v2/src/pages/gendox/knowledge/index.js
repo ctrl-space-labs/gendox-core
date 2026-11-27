@@ -33,7 +33,7 @@ import { localStorageConstants } from 'src/utils/generalConstants'
 import { isValidOrganizationAndProject } from 'src/utils/validators'
 import AppLayout from 'src/layouts/AppLayout'
 import AgentScope from 'src/components/agent/AgentScope'
-import UploadDialog, { openOnFileDrag } from 'src/components/knowledge/UploadDialog'
+import UploadDialog, { uploadDropHandlers } from 'src/components/knowledge/UploadDialog'
 import AgentIntegrations, { loadIntegrationRows } from 'src/components/integrations/AgentIntegrations'
 import { AddIntegrationDialog } from 'src/components/integrations/IntegrationDialogs'
 import {
@@ -342,6 +342,7 @@ const KnowledgePage = () => {
   const [selectedId, setSelectedId] = useState(null)
   const [checked, setChecked] = useState(() => new Set())
   const [uploadOpen, setUploadOpen] = useState(false)
+  const uploadDialog = useRef(null)
   const [addingSite, setAddingSite] = useState(false)
   const [budget, setBudget] = useState(null)
   const integrationsRef = useRef(null)
@@ -464,7 +465,7 @@ const KnowledgePage = () => {
   }
 
   return (
-    <main className='content' {...openOnFileDrag(() => setUploadOpen(true))}>
+    <main className='content' {...uploadDropHandlers(uploadDialog, () => setUploadOpen(true))}>
       <div className='vw in-page'>
         <AgentScope project={details} />
 
@@ -737,6 +738,7 @@ const KnowledgePage = () => {
         budget={budget}
       />
       <UploadDialog
+        ref={uploadDialog}
         open={uploadOpen}
         onClose={() => {
           setUploadOpen(false)

@@ -132,14 +132,27 @@ class EmbeddingsControllerStreamingTest {
 
     @Test
     void aNewMessageCancelsTheWaitingTurnBeforeItIsSaved() throws Exception {
-        mvc.perform(post("/messages/completions").param("projectId", projectId.toString())
-                        .contentType(MediaType.APPLICATION_JSON).content("{\"threadId\":\"" + threadId + "\",\"value\":\"question\"}"))
-                .andExpect(status().isOk());
+        Message cancelled = new Message();
+        cancelled.setRole("tool");
+        cancelled.setToolCallId("pending-tool");
+        cancelled.setValue("{\"error\":\"CLIENT_TOOL_CANCELLED\"}");
+        when(turns.cancelWaitingTurn(threadId)).thenReturn(List.of(cancelled));
+
+        MvcResult result = mvc.perform(post("/messages/completions").param("projectId", projectId.toString())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"threadId\":\"" + threadId + "\",\"value\":\"question\",\"stream\":true}"))
+                .andExpect(request().asyncStarted())
+                .andReturn();
 
         // The cancelled calls' results must come before the new question in the history
         InOrder order = inOrder(turns, messages);
         order.verify(turns).cancelWaitingTurn(threadId);
         order.verify(messages).createMessage(any());
+        background.forEach(Runnable::run);
+        mvc.perform(asyncDispatch(result))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("event:message")))
+                .andExpect(content().string(containsString("CLIENT_TOOL_CANCELLED")));
     }
 
     @Test

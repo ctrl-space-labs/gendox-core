@@ -28,18 +28,31 @@ export const NotificationsProvider = ({ children }) => {
   // What to do when a desktop notification is clicked, by its numeric id.
   const desktopClicksRef = useRef(new Map())
 
+  // The badge: unread answers, and every approval that waits for its answer, on screen or not.
+  const pendingApprovals = useSelector(state => state.toolApprovals.pending.length)
+  const unreadRef = useRef(0)
+  const updateBadge = unread => {
+    unreadRef.current = unread
+    if (isDesktopApp())
+      desktopBridge
+        .setBadge(unread + store.getState().toolApprovals.pending.length)
+        .catch(error => console.error('Failed to set the badge', error))
+  }
+
   if (!serviceRef.current && typeof window !== 'undefined') {
     serviceRef.current = createNotificationService({
       preferences: () => store.getState().clientDevice.preferences,
       visible: threadId => pageFocused() && store.getState().clientDevice.visibleThreadIds.includes(threadId),
       deliver: event => deliverNotification(event, desktopClicksRef.current),
-      badge: count => {
-        if (isDesktopApp())
-          desktopBridge.setBadge(count).catch(error => console.error('Failed to set the badge', error))
-      },
+      badge: count => updateBadge(count),
       openThread: target => openConversationRef.current(target)
     })
   }
+
+  useEffect(() => {
+    updateBadge(unreadRef.current)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingApprovals])
 
   // Answers that finish while their thread is not on screen.
   useEffect(() => {

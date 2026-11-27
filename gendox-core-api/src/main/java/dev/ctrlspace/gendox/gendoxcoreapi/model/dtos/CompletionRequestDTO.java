@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -32,6 +33,9 @@ public class CompletionRequestDTO {
     private boolean clientToolResults = false;
     private UUID threadId;
 
+    /** @deprecated Use the standard completion flow with stream=true. */
+    @Deprecated
+    @Schema(deprecated = true, description = "Use standard completions with stream=true instead.")
     @Builder.Default
     @JsonSetter(nulls = Nulls.SKIP)
     private boolean deepThinking = false;

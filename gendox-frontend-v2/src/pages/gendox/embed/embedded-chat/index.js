@@ -182,7 +182,6 @@ const EmbeddedChatPage = () => {
           token={token}
           variant='panel'
           greeting={false}
-          deep={false}
           sources={isSignedIn}
           mentions={isSignedIn}
           placeholder={placeholder || undefined}

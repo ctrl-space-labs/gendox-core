@@ -18,14 +18,17 @@ export function createNotificationService({ preferences, visible, deliver, badge
         read(threadId)
         return false
       }
+      // the badge counts unread answers, also with notifications off; approvals count while they wait
+      const target = { threadId, projectId, organizationId }
+      if (kind === 'answer') {
+        unread.set(threadId, target)
+        badge(unread.size)
+      }
       if (
         !settings.notifications ||
         !(kind === 'answer' ? settings.answerNotifications : settings.approvalNotifications)
       )
         return false
-      const target = { threadId, projectId, organizationId }
-      unread.set(threadId, target)
-      badge(unread.size)
       try {
         await deliver({
           id,

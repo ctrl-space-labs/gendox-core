@@ -14,10 +14,6 @@ export const APP_CLOSED = Object.freeze({
   message: 'The Gendox desktop app was closed while this command waited, so it did not run or stopped partway. It was not started again.'
 })
 
-// The write sandbox reports EPERM (macOS Seatbelt) or EROFS (Linux bwrap). Ordinary
-// file-mode errors, such as an ssh key's "Permission denied", are not a missing folder grant.
-const SANDBOX_DENIAL = /operation not permitted|read-only file system/i
-
 const isValidCall = args =>
   args &&
   !Array.isArray(args) &&
@@ -35,7 +31,7 @@ const isValidCall = args =>
  * @param approve     asks the user; resolves to true or false
  * @param changed     told when a command starts or stops, or the allowed folders change
  */
-export function createCommandRunner({ native, preferences, approve, changed }) {
+export function createCommandRunner({ native, preferences, approve, changed, isCurrent = () => true }) {
   let running = false
 
   async function runOnce(request, executionId, call) {
@@ -66,43 +62,24 @@ export function createCommandRunner({ native, preferences, approve, changed }) {
     if (previous?.result) return previous.result
     if (previous?.closed) return APP_CLOSED
 
-    let decision = approvalDecision(preferences().mode)
-    // The agent's owner marked the tool "Ask before running": Auto does not skip the card
-    if (decision === 'allow' && call?.requiresApproval) decision = 'ask'
-    if (decision === 'decline') return { declined: true }
-    if (!previous?.known && decision === 'ask') {
-      const allowed = await approve({ executionId, args, call, kind: 'command' })
+    const decision = approvalDecision(preferences().mode)
+    if (decision === 'decline' || !isCurrent(call)) return { declined: true }
+    if (!previous?.known && (decision === 'ask' || call?.requiresApproval)) {
+      const allowed = await approve({ executionId, args, call })
       if (!allowed) return { declined: true }
     }
 
-    let attempt = 0
-    for (;;) {
-      // Plan may have been chosen while the user was deciding.
-      if (preferences().mode === 'plan') return { declined: true }
+    // Plan may have been chosen while the user was deciding.
+    if (preferences().mode === 'plan' || !isCurrent(call)) return { declined: true }
+    const result = await runOnce(request, executionId, call)
+    // Only the native preflight can identify a specific folder. Shell errors may be about reads or another path.
+    if (!result?.permission_required || !result.directory || !isCurrent(call)) return result
 
-      const id = attempt ? `${executionId}:retry:${attempt}` : executionId
-      const result = await runOnce(request, id, call)
-      const blocked = result?.permission_required || SANDBOX_DENIAL.test(result?.stderr || '')
-      if (!blocked) return result
+    const folders = await native.chooseFolder(result.directory)
+    changed({ folders })
+    if (!folders?.chosen || preferences().mode === 'plan' || !isCurrent(call)) return { declined: true }
 
-      // Only the native folder picker adds a grant; never infer one from model output.
-      const accepted = await approve({
-        executionId,
-        args,
-        call,
-        kind: 'folder',
-        directory: result.directory || args.cwd,
-        previousResult: result.permission_required ? null : result
-      })
-      if (!accepted) return result.permission_required ? { declined: true } : result
-
-      const folders = await native.chooseFolder()
-      changed({ folders })
-      // Cancelling the picker changes no grant and must not run the command again.
-      if (!folders?.chosen) return result.permission_required ? { declined: true } : result
-
-      attempt++
-    }
+    return runOnce(request, `${executionId}:retry:1`, call)
   }
 
   async function stop() {

@@ -4,7 +4,7 @@ import { createSlice } from '@reduxjs/toolkit'
 // on this computer, and tools the agent's owner marked "Ask before running" (APPR-1, APPR-2).
 // Each request is plain data; the promise that waits for the answer is kept in approvalAnswers.
 //
-// A request: { id, kind: 'command' | 'folder' | 'tool', threadId, description?, command?, directory?, retry?,
+// A request: { id, kind: 'command' | 'tool', threadId, turnId, description?, command?, directory?,
 //              toolName?, fields? ([{ label, value }]) }
 
 const toolApprovalsSlice = createSlice({

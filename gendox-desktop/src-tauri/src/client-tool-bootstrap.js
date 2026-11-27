@@ -8,7 +8,7 @@
     runCommand: (request, executionId) => call('run_command', { request, executionId, approved: true }),
     commandStatus: (request, executionId, replayed) => call('command_status', { request, executionId, replayed: Boolean(replayed) }),
     folders: () => call('get_folders'),
-    chooseFolder: () => call('choose_folder'),
+    chooseFolder: directory => call('choose_folder', { directory }),
     removeFolder: path => call('remove_folder', { path }),
     setWorkingDirectory: path => call('set_working_directory', { path }),
     stop: () => call('stop_command'),
