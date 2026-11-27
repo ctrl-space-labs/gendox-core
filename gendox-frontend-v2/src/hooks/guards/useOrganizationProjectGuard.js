@@ -67,7 +67,10 @@ const useOrganizationProjectGuard = (authProviderOption, pageConfig) => {
     // The new url runs this guard again, which loads them then; loading them now as well loaded both twice.
     if (urlOrgId !== effectiveOrg.id || urlProjId !== effectiveProj.id) {
       const slash = redirectPath.endsWith('/') ? '' : '/'
-      const newUrl = `${redirectPath}${slash}?organizationId=${effectiveOrg.id}&projectId=${effectiveProj.id}${window.location.hash}`
+      // the page's own parameters are kept, and its hash
+      const { organizationId, projectId, ...pageParams } = router.query
+      const params = new URLSearchParams({ organizationId: effectiveOrg.id, projectId: effectiveProj.id, ...pageParams })
+      const newUrl = `${redirectPath}${slash}?${params}${window.location.hash}`
       router.push(newUrl)
       return
     }

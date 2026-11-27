@@ -24,6 +24,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -187,10 +188,18 @@ public class OrganizationService {
         ProjectCriteria criteria = new ProjectCriteria();
         criteria.setOrganizationId(organizationId.toString());
 
-        Page<Project> projects = projectService.getAllProjects(criteria);
+        // every page, not only the first: an organization with more agents than a page leaves none of them active, and
+        // no member behind. Their ids are read first, so deactivating them does not move the pages being read.
+        List<UUID> projectIds = new ArrayList<>();
+        Page<Project> page;
+        int number = 0;
+        do {
+            page = projectService.getAllProjects(criteria, PageRequest.of(number++, 100));
+            page.getContent().forEach(project -> projectIds.add(project.getId()));
+        } while (page.hasNext());
 
-        for (Project project : projects.getContent()) {
-            projectService.deactivateProject(project.getId());
+        for (UUID projectId : projectIds) {
+            projectService.deactivateProject(projectId);
         }
     }
 

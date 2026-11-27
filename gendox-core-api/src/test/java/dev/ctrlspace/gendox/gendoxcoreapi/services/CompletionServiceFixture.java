@@ -124,7 +124,7 @@ abstract class CompletionServiceFixture {
 
         CompletionRuntimeContextResolver contextResolver = new CompletionRuntimeContextResolver(templateRepository, typeService,
                 embeddingService, mock(DocumentUtils.class), mapper, aiModelService, aiToolRegistry, mock(SkillService.class),
-                mock(MessageLocalContextService.class));
+                mock(MessageLocalContextService.class), null, mock(ArtifactService.class));
         service = new CompletionService(null, mock(ProjectService.class), new MessageAiMessageConverter(),
                 mock(ProjectAgentRepository.class), typeService, aiModelUtils, mock(ProjectAgentService.class),
                 trainingService, organizationModelKeyService, messageService, auditLogsService,
@@ -177,7 +177,9 @@ abstract class CompletionServiceFixture {
                 .build());
     }
 
-    /** One call of an assistant message; {@code arguments} is the JSON string a provider sends. */
+    /**
+     * One call of an assistant message; {@code arguments} is the JSON string a provider sends.
+     */
     String toolCall(String id, String toolName, String arguments) throws Exception {
         ObjectNode call = mapper.createObjectNode().put("id", id).put("type", "function");
         call.putObject("function").put("name", toolName).put("arguments", arguments);

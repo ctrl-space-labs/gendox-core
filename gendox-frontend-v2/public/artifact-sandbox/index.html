@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <!--
+      The first thing in the page, so nothing an artifact writes can come before it. The artifact's own document
+      (the inner frame, srcdoc) inherits this policy and can only add to it: no network of any kind, no outside
+      scripts, styles, fonts or images.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:; form-action 'none'; base-uri 'none'"
+    />
+    <title>Artifact</title>
+    <style>
+      /* light dark: the frame follows the page's scheme, so a transparent artifact shows the page behind it */
+      html { color-scheme: light dark; }
+      html, body { margin: 0; height: 100%; background: transparent; }
+      iframe { display: block; width: 100%; height: 100%; border: 0; }
+    </style>
+  </head>
+  <body>
+    <script>
+      /*
+       * The shell of an artifact (gendox-core#523). The host loads it in a frame sandboxed to scripts only, so it has
+       * an opaque origin: no cookies, no storage, no access to the page around it. It renders the artifact it is sent
+       * in an inner frame, sandboxed the same way, and relays the few things the artifact may ask for.
+       *
+       * Host <-> shell: JSON-RPC 2.0 with the method names of MCP Apps (ui/initialize, ui/notifications/*, ui/open-link),
+       * and MCP's notifications/message for an error the artifact did not handle.
+       * Shell <-> artifact: plain messages, { type: 'size' }, { type: 'link' }, { type: 'error' }, and the calls of
+       * gendox.use (gendox-core#600), { type: 'call' } answered by { type: 'result' } and followed by { type: 'changed' };
+       * each is checked before it is relayed. The host answers a call as a JSON-RPC request of the same method.
+       */
+      ;(function () {
+        var host = window.parent
+        var inner = null
+        var nextId = 2
+        var variables = {}
+        var MAX_URL = 2048
+        var MAX_ERROR = 300
+        var MAX_CALL = 20000
+        // the artifact's calls (gendox-core#600): only these, relayed as JSON-RPC requests; the answer goes back by id
+        var CALLS = [
+          'gendox/use', 'gendox/data/list', 'gendox/data/get', 'gendox/data/set', 'gendox/data/update', 'gendox/data/delete',
+          'gendox/data/subscribe', 'gendox/data/unsubscribe', 'gendox/user/id', 'gendox/user/me', 'gendox/user/profiles'
+        ]
+        var calls = {} // host request id -> the artifact's own id
+        var instance = null // what the host rendered this artifact as; sent with each call, so a stale one is refused
+
+        function toHost(message) {
+          message.jsonrpc = '2.0'
+          host.postMessage(message, '*')
+        }
+
+        // only custom properties, and values that cannot close the style they are written into
+        function cleanVariables(input) {
+          var out = {}
+          if (!input || typeof input !== 'object') return out
+          Object.keys(input).forEach(function (name) {
+            var value = input[name]
+            if (/^--[a-z0-9-]+$/.test(name) && typeof value === 'string' && value.length < 300 && !/[<>{};]/.test(value)) {
+              out[name] = value
+            }
+          })
+
+          return out
+        }
+
+        function variablesCss() {
+          return Object.keys(variables)
+            .map(function (name) {
+              return name + ':' + variables[name]
+            })
+            .join(';')
+        }
+
+        // runs inside the artifact, before its own scripts: reports its height and its first unhandled errors, hands
+        // links to the host, follows theme changes
+        var bridge =
+          '(function(){var p=window.parent;' +
+          'var errors=0;function fail(m,l){if(errors++>=3)return;' +
+          'p.postMessage({type:"error",message:String(m||"Unknown error"),line:Number(l)||0},"*")}' +
+          'addEventListener("error",function(e){fail(e.message||(e.error&&e.error.message),e.lineno)});' +
+          'addEventListener("unhandledrejection",function(e){var r=e.reason;fail(r&&r.message?r.message:r)});' +
+          'function size(){var d=document.documentElement,b=document.body;' +
+          'p.postMessage({type:"size",height:Math.max(d.scrollHeight,b?b.scrollHeight:0)},"*")}' +
+          'addEventListener("load",size);' +
+          'if(window.ResizeObserver)new ResizeObserver(size).observe(document.documentElement);' +
+          'document.addEventListener("click",function(e){var a=e.target&&e.target.closest&&e.target.closest("a[href]");' +
+          'if(!a)return;var h=a.getAttribute("href")||"";if(h.charAt(0)==="#")return;e.preventDefault();' +
+          'p.postMessage({type:"link",href:a.href},"*")},true);' +
+          'addEventListener("message",function(e){if(e.source!==p||!e.data||e.data.type!=="variables")return;' +
+          'var s=document.documentElement.style,v=e.data.variables;for(var k in v)s.setProperty(k,v[k])})})()'
+
+        // runs inside the artifact, before its own scripts (gendox-core#600): gendox.use(name) resolves to what the
+        // artifact may ask the host for, or to null. Every call is a message to the shell, which relays it to the host;
+        // the artifact itself never reaches the network or a token.
+        function artifactApi() {
+          var p = window.parent
+          var seq = 0
+          var pending = {}
+          var listeners = {}
+
+          function call(method, params) {
+            return new Promise(function (resolve, reject) {
+              var id = ++seq
+              pending[id] = { resolve: resolve, reject: reject }
+              p.postMessage({ type: 'call', id: id, method: method, params: params || {} }, '*')
+            })
+          }
+
+          addEventListener('message', function (e) {
+            var d = e.data
+            if (e.source !== p || !d) return
+            if (d.type === 'result' && pending[d.id]) {
+              var waiting = pending[d.id]
+              delete pending[d.id]
+              if (d.error) {
+                var error = new Error(String(d.error.message || 'The request failed'))
+                error.code = d.error.code
+                waiting.reject(error)
+              } else waiting.resolve(d.result)
+            } else if (d.type === 'changed' && listeners[d.collection]) {
+              listeners[d.collection].slice().forEach(function (fn) {
+                try { fn(d.documents) } catch (err) { setTimeout(function () { throw err }) }
+              })
+            }
+          })
+
+          function key(path) {
+            var at = String(path || '').indexOf('/')
+            if (at < 1) throw new Error('A document path is "collection/docId"')
+
+            return { collection: path.slice(0, at), docId: path.slice(at + 1) }
+          }
+
+          function opts(o) {
+            o = o || {}
+
+            return { private: Boolean(o.private), revision: typeof o.revision === 'number' ? o.revision : null }
+          }
+
+          var data = {
+            doc: function (path) {
+              var k = key(path)
+
+              return {
+                // the document's data itself, or null; getDocument gives it with its id, revision and who changed it
+                get: function (o) {
+                  return call('gendox/data/get', { collection: k.collection, docId: k.docId, private: opts(o).private }).then(function (d) { return d ? d.data : null })
+                },
+                getDocument: function (o) { return call('gendox/data/get', { collection: k.collection, docId: k.docId, private: opts(o).private }) },
+                set: function (value, o) { var x = opts(o); return call('gendox/data/set', { collection: k.collection, docId: k.docId, data: value, private: x.private, revision: x.revision }) },
+                update: function (fields, o) { var x = opts(o); return call('gendox/data/update', { collection: k.collection, docId: k.docId, data: fields, private: x.private, revision: x.revision }) },
+                delete: function (o) { return call('gendox/data/delete', { collection: k.collection, docId: k.docId, private: opts(o).private }) }
+              }
+            },
+            collection: function (name) {
+              name = String(name || '')
+
+              return {
+                list: function () { return call('gendox/data/list', { collection: name }) },
+                onChange: function (fn) {
+                  if (typeof fn !== 'function') throw new Error('onChange takes a function')
+                  if (!listeners[name]) {
+                    listeners[name] = []
+                    call('gendox/data/subscribe', { collection: name }).catch(function () {})
+                  }
+                  listeners[name].push(fn)
+
+                  return function () {
+                    listeners[name] = (listeners[name] || []).filter(function (f) { return f !== fn })
+                    if (!listeners[name].length) {
+                      delete listeners[name]
+                      call('gendox/data/unsubscribe', { collection: name }).catch(function () {})
+                    }
+                  }
+                }
+              }
+            }
+          }
+
+          var user = {
+            id: function () { return call('gendox/user/id') },
+            me: function () { return call('gendox/user/me') },
+            profiles: function (ids) { return call('gendox/user/profiles', { ids: Array.isArray(ids) ? ids.slice(0, 200) : [] }) }
+          }
+
+          var given = {}
+          window.gendox = Object.freeze({
+            use: function (name) {
+              name = String(name || '')
+              if (!given[name]) {
+                given[name] = call('gendox/use', { name: name }).then(function (ok) {
+                  return ok ? (name === 'data' ? Object.freeze(data) : name === 'user' ? Object.freeze(user) : null) : null
+                }, function () { return null })
+              }
+
+              return given[name]
+            }
+          })
+        }
+
+        function head() {
+          return (
+            '<style>:root{color-scheme:light dark;' + variablesCss() + '}</style>' +
+            '<script>' + bridge + ';(' + artifactApi.toString() + ')()<\/script>'
+          )
+        }
+
+        function documentOf(kind, content) {
+          if (kind === 'svg') {
+            return (
+              '<!DOCTYPE html><html><head><meta charset="utf-8">' + head() +
+              '<style>body{margin:0;display:flex;justify-content:center}svg{max-width:100%;height:auto}</style>' +
+              '</head><body>' + content + '</body></html>'
+            )
+          }
+          // html: our head first, in the artifact's own <head> when it has one
+          if (/<head[^>]*>/i.test(content)) return content.replace(/<head[^>]*>/i, function (tag) { return tag + head() })
+          if (/<html[^>]*>/i.test(content)) return content.replace(/<html[^>]*>/i, function (tag) { return tag + '<head>' + head() + '</head>' })
+
+          return '<!DOCTYPE html><html><head><meta charset="utf-8">' + head() + '</head><body>' + content + '</body></html>'
+        }
+
+        function render(input) {
+          if (!input || typeof input.content !== 'string') return
+          var kind = input.kind === 'svg' ? 'svg' : 'html'
+          if (inner) inner.remove()
+          inner = document.createElement('iframe')
+          inner.setAttribute('sandbox', 'allow-scripts')
+          inner.setAttribute('title', 'Artifact')
+          inner.srcdoc = documentOf(kind, input.content)
+          document.body.appendChild(inner)
+        }
+
+        window.addEventListener('message', function (event) {
+          var message = event.data
+          if (!message || typeof message !== 'object') return
+
+          if (event.source === host) {
+            if (message.id === 1 && message.result) {
+              variables = cleanVariables(message.result.hostContext && message.result.hostContext.styles && message.result.hostContext.styles.variables)
+              toHost({ method: 'ui/notifications/initialized' })
+            } else if (message.method === 'ui/notifications/host-context-changed') {
+              variables = cleanVariables(message.params && message.params.styles && message.params.styles.variables)
+              if (inner && inner.contentWindow) inner.contentWindow.postMessage({ type: 'variables', variables: variables }, '*')
+            } else if (message.method === 'ui/notifications/tool-input') {
+              calls = {}
+              instance = message.params ? message.params.instance : null
+              render(message.params && message.params.arguments)
+            } else if (message.method === 'gendox/data/changed') {
+              var changed = message.params || {}
+              if (inner && inner.contentWindow) {
+                inner.contentWindow.postMessage({ type: 'changed', collection: String(changed.collection || ''), documents: changed.documents || [] }, '*')
+              }
+            } else if (typeof message.id === 'number' && calls[message.id] !== undefined) {
+              var own = calls[message.id]
+              delete calls[message.id]
+              if (inner && inner.contentWindow) {
+                inner.contentWindow.postMessage({ type: 'result', id: own, result: message.result, error: message.error }, '*')
+              }
+            }
+
+            return
+          }
+
+          if (inner && event.source === inner.contentWindow) {
+            if (message.type === 'call') {
+              var size = 0
+              try { size = JSON.stringify(message.params || {}).length } catch (e) { size = MAX_CALL + 1 }
+              if (CALLS.indexOf(message.method) < 0 || typeof message.id !== 'number' || size > MAX_CALL) {
+                inner.contentWindow.postMessage({ type: 'result', id: message.id, error: { code: 'NOT_ALLOWED', message: 'This call is not allowed' } }, '*')
+                return
+              }
+              var hostId = nextId++
+              calls[hostId] = message.id
+              toHost({ id: hostId, method: message.method, params: message.params || {}, instance: instance })
+            } else if (message.type === 'size' && typeof message.height === 'number' && isFinite(message.height)) {
+              toHost({ method: 'ui/notifications/size-changed', params: { height: Math.max(0, Math.ceil(message.height)) } })
+            } else if (message.type === 'link' && typeof message.href === 'string' && message.href.length <= MAX_URL) {
+              toHost({ id: nextId++, method: 'ui/open-link', params: { url: message.href } })
+            } else if (message.type === 'error' && typeof message.message === 'string') {
+              toHost({
+                method: 'notifications/message',
+                params: {
+                  level: 'error',
+                  logger: 'artifact',
+                  data: {
+                    message: message.message.replace(/[\u0000-\u001f\u007f]+/g, ' ').slice(0, MAX_ERROR),
+                    line: Math.max(0, Math.floor(Number(message.line) || 0))
+                  }
+                }
+              })
+            }
+          }
+        })
+
+        toHost({ id: 1, method: 'ui/initialize', params: { appInfo: { name: 'gendox-artifact', version: '1' }, appCapabilities: {} } })
+      })()
+    </script>
+  </body>
+</html>

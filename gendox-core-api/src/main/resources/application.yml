@@ -227,6 +227,12 @@ gendox:
     max_completion_limit: 5
     # tool rounds a completion may take before it must answer (deep thinking: 20)
     max-tool-iterations: 12
+  artifacts:
+    # characters one artifact version may hold
+    max-content-length: 200000
+    # output tokens a completion gets at least when the artifact tools are among its tools;
+    # the agent's own max_token is meant for chat answers, and an artifact does not fit in it
+    min-output-tokens: 16000
   tasks:
     max-questions-per-bucket: 5
     max-question-tokens-per-bucket: 5000

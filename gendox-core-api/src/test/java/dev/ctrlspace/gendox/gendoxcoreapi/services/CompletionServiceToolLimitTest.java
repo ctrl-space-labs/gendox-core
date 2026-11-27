@@ -38,19 +38,29 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-/** A model that never stops calling tools gets the configured number of rounds, then the loop stops. */
+/**
+ * A model that never stops calling tools gets the configured number of rounds, then the loop stops.
+ */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class CompletionServiceToolLimitTest {
 
-    @Mock private AiModelService aiModelService;
-    @Mock private AiModelUtils aiModelUtils;
-    @Mock private AiModelApiAdapterService adapter;
-    @Mock private TypeService typeService;
-    @Mock private AuditLogsService auditLogsService;
-    @Mock private MessageService messageService;
-    @Mock private MessageAiMessageConverter messageAiMessageConverter;
-    @Mock private AiToolRegistry aiToolRegistry;
+    @Mock
+    private AiModelService aiModelService;
+    @Mock
+    private AiModelUtils aiModelUtils;
+    @Mock
+    private AiModelApiAdapterService adapter;
+    @Mock
+    private TypeService typeService;
+    @Mock
+    private AuditLogsService auditLogsService;
+    @Mock
+    private MessageService messageService;
+    @Mock
+    private MessageAiMessageConverter messageAiMessageConverter;
+    @Mock
+    private AiToolRegistry aiToolRegistry;
 
     private CompletionService completionService;
     private final ObjectMapper objectMapper = JsonMapper.shared();
@@ -61,7 +71,8 @@ class CompletionServiceToolLimitTest {
     @BeforeEach
     void setUp() throws Exception {
         CompletionRuntimeContextResolver contextResolver = new CompletionRuntimeContextResolver(null, typeService, null, null,
-                objectMapper, aiModelService, aiToolRegistry, new SkillService(null, null, null, null, null), null);
+                objectMapper, aiModelService, aiToolRegistry, new SkillService(null, null, null, null, null, null), null, null,
+                mock(ArtifactService.class));
         completionService = new CompletionService(null, null, messageAiMessageConverter, null, typeService,
                 aiModelUtils, null, null, null, messageService, auditLogsService, objectMapper,
                 aiToolRegistry, contextResolver, new ToolExecutionService(aiToolRegistry, objectMapper, new ToolsHandlerAdvice()));
@@ -150,5 +161,37 @@ class CompletionServiceToolLimitTest {
         assertEquals(List.of("tool", "user"), second.subList(second.size() - 2, second.size()).stream().map(AiModelMessage::getRole).toList());
         assertEquals(List.of(page), second.getLast().getContentParts());
         assertTrue(saved.stream().noneMatch(message -> "user".equals(message.getRole())));
+    }
+
+    @Test
+    void aToolCallCutByTheOutputLimitIsAnsweredWithAnErrorAndNotRun() throws Exception {
+        // first answer: the output limit ends it inside a tool call; second: a plain answer
+        List<String> finishReasons = new ArrayList<>(List.of("length", "stop"));
+        // doAnswer, not when(): when() would call the answer of setUp, with no arguments
+        doAnswer(inv -> {
+            String finishReason = finishReasons.removeFirst();
+            AiModelMessage reply = new AiModelMessage();
+            reply.setRole("assistant");
+            if ("length".equals(finishReason)) {
+                reply.setToolCalls(objectMapper.readTree("""
+                        [{"id":"call-1","type":"function","function":{"name":"list_tasks","arguments":"{\\"name_con"}}]
+                        """));
+            } else {
+                reply.setContent("Here it is, smaller.");
+            }
+            return CompletionResponse.builder()
+                    .choices(List.of(Choice.builder().message(reply).finishReason(finishReason).build()))
+                    .usage(Usage.builder().promptTokens(1).completionTokens(1).build())
+                    .build();
+        }).when(adapter).askCompletion(any(), any(), any(), any(), any(), any(), any(), any(), any());
+
+        List<Message> messages = run();
+
+        assertEquals(List.of("assistant", "tool", "assistant"), messages.stream().map(Message::getRole).toList());
+        Message cutShort = messages.get(1);
+        assertEquals("call-1", cutShort.getToolCallId());
+        assertTrue(cutShort.getValue().contains("TOOL_CALL_CUT_SHORT"));
+        assertEquals("Here it is, smaller.", messages.getLast().getValue());
+        verify(aiToolRegistry, never()).execute(any(), any(), any());
     }
 }

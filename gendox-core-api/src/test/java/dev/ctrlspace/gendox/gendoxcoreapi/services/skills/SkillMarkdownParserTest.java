@@ -91,13 +91,17 @@ class SkillMarkdownParserTest {
         var resources = new org.springframework.core.io.support.PathMatchingResourcePatternResolver()
                 .getResources("classpath*:skills/*/SKILL.md");
         assertTrue(resources.length >= 1, "no SKILL.md on the classpath");
-        var skills = new java.util.HashMap<String, SkillMarkdownParser.ParsedSkill>();
+        java.util.Map<String, SkillMarkdownParser.ParsedSkill> shipped = new java.util.HashMap<>();
         for (var resource : resources) {
-            var parsed = SkillMarkdownParser.parse(resource.getContentAsString(java.nio.charset.StandardCharsets.UTF_8));
-            skills.put(parsed.name(), parsed);
+            SkillMarkdownParser.ParsedSkill skill = SkillMarkdownParser.parse(
+                    resource.getContentAsString(java.nio.charset.StandardCharsets.UTF_8));
+            shipped.put(skill.name(), skill);
         }
-        assertTrue(skills.get("gendox-assistant").tools().containsAll(java.util.List.of("list_tasks", "read_task_result", "run_task", "advanced_search")));
-        assertTrue(skills.containsKey("gendox-desktop"), "desktop skill must be shipped and parse successfully");
-        assertTrue(skills.get("gendox-desktop").tools().isEmpty(), "context guidance must not provision the built-in terminal");
+        assertTrue(shipped.get("gendox-assistant").tools()
+                .containsAll(java.util.List.of("list_tasks", "read_task_result", "run_task", "advanced_search")));
+        assertTrue(shipped.containsKey("gendox-desktop"), "desktop skill must be shipped and parse successfully");
+        assertTrue(shipped.get("gendox-desktop").tools().isEmpty(), "context guidance must not provision the built-in terminal");
+        assertTrue(shipped.get("artifacts").tools().containsAll(java.util.List.of("create_artifact", "update_artifact",
+                "read_artifact", "read_artifact_data", "show_widget")));
     }
 }

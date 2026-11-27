@@ -7,6 +7,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.AgentSkill;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Skill;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AgentSkillRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ArtifactThreadRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.MessageLocalContextRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.SkillRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TypeService;
@@ -34,33 +35,44 @@ public class SkillService {
 
     private static final Logger logger = LoggerFactory.getLogger(SkillService.class);
 
-    /** The local context the Gendox app's chat widget sends with every message. */
+    /**
+     * The local context the Gendox app's chat widget sends with every message.
+     */
     public static final String GENDOX_PAGE_CONTEXT = "GENDOX_PAGE";
-    /** The skill a chat from a Gendox page gets, whether or not the agent has it. */
+    /**
+     * The skill a chat from a Gendox page gets, whether or not the agent has it.
+     */
     public static final String ASSISTANT_SKILL = "gendox-assistant";
     /** The skill a chat with attached files gets, whether or not the agent has it. */
     public static final String FILES_SKILL = "gendox-files";
     /** Capability context sent by the top-level desktop client, not a permission grant. */
     public static final String GENDOX_DESKTOP_CONTEXT = "GENDOX_DESKTOP";
     public static final String DESKTOP_SKILL = "gendox-desktop";
+    /**
+     * The skill a chat opened on an artifact gets, whether or not the agent has it.
+     */
+    public static final String ARTIFACTS_SKILL = "artifacts";
 
     private final SkillRepository skillRepository;
     private final AgentSkillRepository agentSkillRepository;
     private final AiToolRegistry aiToolRegistry;
     private final MessageLocalContextRepository messageLocalContextRepository;
     private final TypeService typeService;
+    private final ArtifactThreadRepository artifactThreadRepository;
 
     // lazy: the tools reach ProjectAgentService, which needs this service
     public SkillService(SkillRepository skillRepository,
                         AgentSkillRepository agentSkillRepository,
                         @Lazy AiToolRegistry aiToolRegistry,
                         MessageLocalContextRepository messageLocalContextRepository,
-                        TypeService typeService) {
+                        TypeService typeService,
+                        ArtifactThreadRepository artifactThreadRepository) {
         this.skillRepository = skillRepository;
         this.agentSkillRepository = agentSkillRepository;
         this.aiToolRegistry = aiToolRegistry;
         this.messageLocalContextRepository = messageLocalContextRepository;
         this.typeService = typeService;
+        this.artifactThreadRepository = artifactThreadRepository;
     }
 
     /**
@@ -81,7 +93,9 @@ public class SkillService {
         return tools;
     }
 
-    /** Reads a SKILL.md and checks that every tool in {@code allowed-tools} is a Gendox tool (see {@link #getSkillTools}). */
+    /**
+     * Reads a SKILL.md and checks that every tool in {@code allowed-tools} is a Gendox tool (see {@link #getSkillTools}).
+     */
     public SkillMarkdownParser.ParsedSkill parse(String content) throws GendoxException {
         SkillMarkdownParser.ParsedSkill parsed = SkillMarkdownParser.parse(content);
         Map<String, JsonNode> examples = parsed.tools().isEmpty() ? Map.of() : typeService.getToolExampleDefinitions();
@@ -96,12 +110,16 @@ public class SkillService {
 
     // ---------------------------------------------------------------- catalog
 
-    /** The library: the latest version of every system skill that is not deleted. */
+    /**
+     * The library: the latest version of every system skill that is not deleted.
+     */
     public List<Skill> getLibrary() {
         return skillRepository.findAllByLatestTrueAndDeletedFalseOrderByNameAsc();
     }
 
-    /** The latest version of a library skill, by name. Empty when there is none or it was deleted. */
+    /**
+     * The latest version of a library skill, by name. Empty when there is none or it was deleted.
+     */
     public Optional<Skill> getLibrarySkill(String name) {
         return skillRepository.findByNameAndLatestTrue(name)
                 .filter(skill -> !Boolean.TRUE.equals(skill.getDeleted()));
@@ -172,7 +190,9 @@ public class SkillService {
         return next;
     }
 
-    /** Hides the skill from the library. Agents keep their copies until an admin removes them. */
+    /**
+     * Hides the skill from the library. Agents keep their copies until an admin removes them.
+     */
     @Transactional
     public void delete(String name) throws GendoxException {
         List<Skill> versions = skillRepository.findAllByNameOrderByVersionDesc(name);
@@ -222,8 +242,9 @@ public class SkillService {
     /**
      * The skills of a completion: the agent's own, plus contextual skills from the library when the agent doesn't have
      * them. {@link #ASSISTANT_SKILL} when the prompt came from a Gendox page ({@link #GENDOX_PAGE_CONTEXT}),
-     * and {@link #FILES_SKILL} when its thread has attached files. {@link #DESKTOP_SKILL} applies only
-     * to the current desktop prompt, including its resumed turn. Those are not stored on the agent;
+     * {@link #FILES_SKILL} when its thread has attached files, and {@link #ARTIFACTS_SKILL} when its thread was opened
+     * on an artifact. {@link #DESKTOP_SKILL} applies only to the current desktop prompt, including its resumed turn.
+     * Those are not stored on the agent;
      * read_skill finds them in the library.
      */
     public List<AgentSkill> getCompletionSkills(UUID agentId, Message prompt) {
@@ -236,6 +257,9 @@ public class SkillService {
         }
         if (hasContext(prompt, GENDOX_DESKTOP_CONTEXT)) {
             addFromLibrary(skills, DESKTOP_SKILL);
+        }
+        if (openedOnAnArtifact(prompt)) {
+            addFromLibrary(skills, ARTIFACTS_SKILL);
         }
         return skills;
     }
@@ -255,6 +279,11 @@ public class SkillService {
     private boolean hasFiles(Message prompt) {
         return prompt != null && prompt.getThreadId() != null
                 && messageLocalContextRepository.existsByMessage_ThreadIdAndDocumentIsNotNull(prompt.getThreadId());
+    }
+
+    private boolean openedOnAnArtifact(Message prompt) {
+        return prompt != null && prompt.getThreadId() != null
+                && artifactThreadRepository.existsByThreadId(prompt.getThreadId());
     }
 
     // the saved contexts when the prompt is stored (a job reads it back without them), else the ones on it

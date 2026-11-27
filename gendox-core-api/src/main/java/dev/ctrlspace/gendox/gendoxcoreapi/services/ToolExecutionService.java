@@ -123,6 +123,25 @@ public class ToolExecutionService {
         return new ToolRound(toolExecutionMessages, pendingCalls, images);
     }
 
+    /**
+     * The results of tool calls the output limit cut short: none of them runs, since its arguments
+     * may end halfway. Each call gets an error the model reads like any other tool error, so it
+     * can write smaller or build in steps. Every call needs a result, or the next request is refused.
+     */
+    public List<AiModelMessage> cutShort(Message assistantMessage) {
+        List<AiModelMessage> results = new ArrayList<>();
+        assistantMessage.getToolCalls().forEach(toolCall -> {
+            String toolName = toolCall.get("function").get("name").asText();
+            GendoxException error = new GendoxException("TOOL_CALL_CUT_SHORT",
+                    "Your output ran out before this call was complete, so it was not run. "
+                            + "Make it smaller: write more compact content, or create a smaller first version and add to it with further calls.",
+                    HttpStatus.BAD_REQUEST);
+            results.add(toolMessage(toolCall, objectMapper.valueToTree(
+                    toolsHandlerAdvice.handleToolException(error, toolName, toolCall.get("function").get("arguments"), null))));
+        });
+        return results;
+    }
+
     private static AiModelMessage toolMessage(JsonNode toolCall, JsonNode result) {
         AiModelMessage message = new AiModelMessage();
         message.setRole("tool");
@@ -132,7 +151,9 @@ public class ToolExecutionService {
         return message;
     }
 
-    /** The error a failed tool gives, so the model reads it the same way and corrects its call. */
+    /**
+     * The error a failed tool gives, so the model reads it the same way and corrects its call.
+     */
     private JsonNode notOffered(JsonNode toolCall, Map<String, AiTools> offered) {
         String toolName = toolCall.get("function").get("name").asText();
         String available = offered.isEmpty() ? "No tools are available."

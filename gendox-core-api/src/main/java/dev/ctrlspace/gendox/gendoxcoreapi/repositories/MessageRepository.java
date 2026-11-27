@@ -11,10 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 @Repository
 public interface MessageRepository extends JpaRepository<Message, UUID>, QuerydslPredicateExecutor<Message> {
@@ -123,4 +120,7 @@ public interface MessageRepository extends JpaRepository<Message, UUID>, Queryds
     Optional<Message> findFirstByThreadIdAndRoleOrderByCreatedAtDesc(UUID threadId, String role);
 
     Optional<Message> findFirstByThreadIdAndRoleAndToolCallIdOrderByCreatedAtDesc(UUID threadId, String role, String toolCallId);
+
+    /** The results of some tools in a thread: what the artifact tools returned, to know which version it has seen. */
+    List<Message> findAllByThreadIdAndRoleAndNameIn(UUID threadId, String role, Collection<String> names);
 }

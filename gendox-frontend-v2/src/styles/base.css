@@ -97,7 +97,7 @@ h1 { font-size: 28px; } h2 { font-size: 19px; } h3 { font-size: 14px; letter-spa
 .card > .menu-search { width: calc(100% - 40px); margin: 14px 20px 6px; }
 .card > .menu-list { max-height: 480px; }
 @keyframes pop { from { opacity: 0; transform: translateY(4px); } }
-.pop .mi { display: flex; align-items: center; gap: 10px; width: 100%; height: 34px; padding: 0 10px; border: 0; border-radius: var(--radius-sm); background: none; font-size: 13.5px; cursor: pointer; }
+.pop .mi { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; height: 34px; padding: 0 10px; border: 0; border-radius: var(--radius-sm); background: none; font-size: 13.5px; cursor: pointer; }
 .pop .mi:hover { background: var(--surface-2); }
 .pop .mi > .lucide { color: var(--text-2); }
 .pop hr { border: 0; border-top: 1px solid var(--border); margin: 6px 0; }
@@ -176,6 +176,11 @@ body.docked { overflow: hidden; }
 .btn.s { height: 28px; padding: 0 10px; font-size: 12.5px; }
 .btn.icon { width: 34px; padding: 0; } .btn.s.icon { width: 28px; }
 .btn:focus-visible, .chip:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* A tooltip that shows at once on hover or keyboard focus: data-tip on the element, with aria-label for screen readers; data-tip-end aligns it to the element's right edge, for one near the right of its row */
+[data-tip] { position: relative; }
+[data-tip]::after { content: attr(data-tip); position: absolute; top: calc(100% + 6px); left: 50%; transform: translateX(-50%); z-index: 70; padding: 4px 8px; border: 1px solid var(--border-2); border-radius: var(--radius-sm); background: var(--surface-3); color: var(--text); box-shadow: var(--pop-shadow); font-size: 12px; font-weight: 500; line-height: 1.3; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity .1s; }
+[data-tip-end]::after { left: auto; right: 0; transform: none; }
+[data-tip]:hover::after, [data-tip]:focus-visible::after { opacity: 1; transition-delay: .15s; }
 
 .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--card-shadow); min-width: 0; }
 .card-h { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-bottom: 1px solid var(--border); min-height: 52px; }
@@ -514,6 +519,8 @@ pre.code .k { color: var(--accent-text); } pre.code .s { color: var(--warn); }
 .gc-head { flex: none; display: flex; align-items: center; gap: 10px; padding: 10px 8px 10px 14px; border-bottom: 1px solid var(--border); background: var(--surface); }
 .gc-head .avatar { width: 32px; height: 32px; border-radius: 9px; font-size: 12px; }
 .gc-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.gc-arts-bar { flex: none; display: flex; justify-content: flex-end; padding: 8px 12px 0; }
+.gc-arts { gap: 6px; } .gc-arts .lucide:last-child { width: 13px; height: 13px; opacity: .6; }
 .gc-greet, .gc-thread, .gc-foot > * { width: 100%; max-width: 760px; margin-inline: auto; }
 .gc-greet { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; padding: 40px 20px 8px; }
 .gc-greet h1 { font-size: 28px; }
@@ -608,15 +615,33 @@ pre.code .k { color: var(--accent-text); } pre.code .s { color: var(--warn); }
 .gc-ask-f { display: flex; align-items: center; gap: 6px; }
 /* an artifact in an answer, and its full view (gendox-core#523) */
 .gc-art { border: 1px solid var(--border-2); border-radius: var(--radius); overflow: hidden; background: var(--surface); }
-.gc-art-h { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 12px; border-bottom: 1px solid var(--border); min-width: 0; }
+.gc-art-h { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 12px; min-width: 0; }
 .gc-art-h > .lucide { width: 15px; height: 15px; color: var(--accent-text); flex: none; }
-.gc-art-b iframe { display: block; width: 100%; height: 250px; border: 0; }
 .art-view { display: flex; flex-direction: column; gap: 10px; height: 100%; min-height: 0; flex: 1; }
 .art-bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.art-b { flex: 1; min-height: 320px; display: flex; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+.art-b { flex: 1; min-height: 320px; display: flex; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: auto; }
 .art-b iframe { flex: 1; border: 0; width: 100%; min-height: 320px; }
 .art-b pre.code { flex: 1; border: 0; border-radius: 0; overflow: auto; white-space: pre-wrap; }
+.modal.art-modal { height: calc(100dvh - 48px); } .art-modal .lock { flex: 1; min-height: 0; display: flex; flex-direction: column; } .art-modal .modal-b { flex: 1; display: flex; padding-top: 8px; }
 .art-note { display: flex; gap: 6px; align-items: flex-start; } .art-note .lucide { width: 13px; height: 13px; flex: none; margin-top: 2px; }
+/* the Share dialog's rows: everyone in the agent, then each person */
+.art-share-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.art-share-row .ftype { --h: 220; }
+/* an artifact opened by its public link, outside the app (gendox-core#570) */
+.pub-art { width: 100%; max-width: 1100px; min-height: 100dvh; margin: 0 auto; padding: 24px 16px; display: flex; flex-direction: column; gap: 12px; background: var(--bg); }
+.pub-art-h { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.pub-art-h h1 { font-size: 20px; margin: 0; }
+.pub-art > .art-b { min-height: 60dvh; }
+/* markdown and code are not framed: a card shows their start, the panel scrolls them */
+.gc-art .alert, .gc-ai > .alert { margin: 0; }
+/* an inline artifact is part of the answer: no border, no header; a small Open under it (a frame takes the pointer's
+   hover, so it can't wait for one) */
+/* a widget is part of the answer: no frame, and the answer's background through it (gendox-core#570) */
+.answer-widget { --artifact-background: transparent; }
+.answer-widget iframe { display: block; width: 100%; border: 0; background: transparent; color-scheme: var(--scheme); }
+.answer-widget > .art-err { margin-top: 6px; }
+.art-b > .gc-md { flex: 1; min-width: 0; overflow: auto; padding: 14px; }
+.art-b > .gc-md pre { margin: 0; }
 .gc-th { display: flex; flex-direction: column; gap: 2px; width: 100%; padding: 8px 10px; border: 0; border-radius: var(--radius-sm); background: none; text-align: left; cursor: pointer; }
 .gc-th:hover { background: var(--surface-2); }
 .gc-th b { font-weight: 500; }
@@ -857,6 +882,7 @@ pre.code .n { color: var(--info); }
 .dk-list { padding: 4px 0; }
 .dk-row { display: flex; align-items: center; gap: 9px; height: 30px; padding: 0 10px; color: var(--text-2); font-size: 13px; }
 .dk-row:hover { background: var(--surface-2); color: var(--text); }
+button.dk-row { width: 100%; border: 0; background: none; font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
 .dk-row > .lucide { flex: none; width: 15px; height: 15px; color: hsl(var(--h) 70% var(--tint-l)); }
 .dk-row .trunc { flex: 1; min-width: 0; }
 .dk-meta { flex: none; display: inline-flex; align-items: center; gap: 4px; color: var(--text-3); font-size: 11.5px; }

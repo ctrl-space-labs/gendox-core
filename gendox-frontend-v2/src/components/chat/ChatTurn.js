@@ -19,6 +19,15 @@ import Markdown from 'src/components/chat/Markdown'
 import { MentionText } from 'src/components/chat/mentions'
 import ChatAttachments from 'src/components/chat/ChatAttachments'
 import ToolCallDetails, { parseToolValue } from 'src/components/tools/ToolCallDetails'
+import ArtifactCard from 'src/components/artifacts/ArtifactCard'
+import WidgetCard from 'src/components/artifacts/WidgetCard'
+import {
+  artifactCallOf,
+  isArtifactCall,
+  isWidgetCall,
+  recoveredFailuresOf,
+  widgetCallOf
+} from 'src/components/artifacts/artifactUtils'
 
 const Trace = ({ icon: Icon, label, preview, open, className = '', children }) => (
   <details className={`gc-trace ${className}`} open={open}>
@@ -38,53 +47,84 @@ const Trace = ({ icon: Icon, label, preview, open, className = '', children }) =
   </details>
 )
 
-const ToolCalls = ({ batches, live }) => {
+// The tools of a stretch of the answer, grouped in one line that opens. Making or changing an artifact shows apart, as
+// its line (gendox-core#523), and a widget as itself, part of the answer (gendox-core#570); a failed try that a later
+// call made good (`recovered`) stays in the group. An error a widget raises offers Try to fix (onAsk), on the
+// conversation's latest widget only (latestWidget).
+const ToolCalls = ({ batches: allBatches, live, recovered = new Set(), onOpenArtifact, latestWidget, onAsk }) => {
+  const showsApart = call => (isArtifactCall(call) || isWidgetCall(call)) && !recovered.has(call.id)
+  const batches = allBatches.map(batch => ({ ...batch, calls: batch.calls.filter(({ call }) => !showsApart(call)) }))
+  const apart = allBatches.flatMap(batch => batch.calls.filter(({ call }) => showsApart(call)))
   const calls = batches.flatMap(batch => batch.calls)
   const examples = [...new Set(calls.map(({ call }) => toolTitle(call.function?.name)))].slice(0, 3)
+  const thoughts = batches.filter(({ header }) => header.reasoningContent && !header.message?.trim())
 
   return (
-    <Trace
-      icon={Wrench}
-      label={`${calls.length} tool ${calls.length === 1 ? 'call' : 'calls'}`}
-      preview={examples.join(', ')}
-      open={live}
-      className='gc-tool-activity'
-    >
-      {batches.map(({ header, calls }, index) => (
-        <Fragment key={header.messageId || index}>
-          {header.reasoningContent && !header.message?.trim() && (
-            <Trace icon={Lightbulb} label='Show thinking'>
-              <Markdown text={header.reasoningContent} className='gc-md muted' />
-            </Trace>
-          )}
-          {calls.map(({ call, responses }) => {
-            const { name, arguments: input } = call.function || {}
-            const value = parseToolValue(input)
-            let label = toolTitle(name)
-            let icon = Wrench
-            if (name === 'run_command') {
-              icon = SquareTerminal
-              if (typeof value?.description === 'string' && value.description.trim()) label = value.description.trim()
-            }
-            if (name === 'read_skill') {
-              icon = BookMarked
-              if (typeof value?.name === 'string' && value.name.trim()) label = `Read skill · ${value.name.trim()}`
-            }
+    <>
+      {calls.length === 0 &&
+        thoughts.map(({ header }, index) => (
+          <Trace key={header.messageId || index} icon={Lightbulb} label='Show thinking'>
+            <Markdown text={header.reasoningContent} className='gc-md muted' />
+          </Trace>
+        ))}
+      {calls.length > 0 && (
+        <Trace
+          icon={Wrench}
+          label={`${calls.length} tool ${calls.length === 1 ? 'call' : 'calls'}`}
+          preview={examples.join(', ')}
+          open={live}
+          className='gc-tool-activity'
+        >
+          {batches.map(({ header, calls }, index) => (
+            <Fragment key={header.messageId || index}>
+              {header.reasoningContent && !header.message?.trim() && (
+                <Trace icon={Lightbulb} label='Show thinking'>
+                  <Markdown text={header.reasoningContent} className='gc-md muted' />
+                </Trace>
+              )}
+              {calls.map(({ call, responses }) => {
+                const { name, arguments: input } = call.function || {}
+                const value = parseToolValue(input)
+                let label = toolTitle(name)
+                let icon = Wrench
+                if (name === 'run_command') {
+                  icon = SquareTerminal
+                  if (typeof value?.description === 'string' && value.description.trim())
+                    label = value.description.trim()
+                }
+                if (name === 'read_skill') {
+                  icon = BookMarked
+                  if (typeof value?.name === 'string' && value.name.trim()) label = `Read skill · ${value.name.trim()}`
+                }
 
-            return (
-              <Trace
-                key={call.id}
-                icon={icon}
-                label={label}
-                preview={!responses.length && (live ? 'Awaiting result' : 'No result recorded')}
-              >
-                <ToolCallDetails name={name} input={value} responses={responses} />
-              </Trace>
-            )
-          })}
-        </Fragment>
-      ))}
-    </Trace>
+                return (
+                  <Trace
+                    key={call.id}
+                    icon={icon}
+                    label={label}
+                    preview={!responses.length && (live ? 'Awaiting result' : 'No result recorded')}
+                  >
+                    <ToolCallDetails name={name} input={value} responses={responses} />
+                  </Trace>
+                )
+              })}
+            </Fragment>
+          ))}
+        </Trace>
+      )}
+      {apart.map(({ call, responses }) =>
+        isWidgetCall(call) ? (
+          <WidgetCard
+            key={call.id}
+            call={widgetCallOf(call, responses)}
+            isLatest={call.id === latestWidget}
+            onAsk={onAsk}
+          />
+        ) : (
+          <ArtifactCard key={call.id} call={artifactCallOf(call, responses)} onOpen={onOpenArtifact} />
+        )
+      )}
+    </>
   )
 }
 
@@ -246,6 +286,9 @@ const ChatTurn = ({
   token,
   activeSourcesMessageId,
   onSources,
+  onOpenArtifact,
+  latestWidget = null,
+  onAskArtifactFix,
   onAskAgain,
   onFeedback,
   active = false,
@@ -260,6 +303,7 @@ const ChatTurn = ({
   const lastMessage = items[items.length - 1]?.message
   const streamingThought = lastMessage?.isStreaming && !lastMessage.message?.trim()
   const liveIndex = items.length - (streamingThought ? 2 : 1)
+  const recovered = recoveredFailuresOf(items)
 
   return (
     <div className='gc-turn'>
@@ -285,6 +329,10 @@ const ChatTurn = ({
                 key={item.batches[0].header.messageId || index}
                 batches={item.batches}
                 live={active && index === liveIndex}
+                recovered={recovered}
+                onOpenArtifact={onOpenArtifact}
+                latestWidget={latestWidget}
+                onAsk={onAskArtifactFix}
               />
             ) : (
               <Answer

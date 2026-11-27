@@ -163,6 +163,27 @@ export default {
 
   getThreadMessageMetadata: (threadId, messageId) => `${url}threads/${threadId}/message-metadata/${messageId}`,
 
+  // the artifacts an agent wrote in a thread (gendox-core#523)
+  projectArtifacts: (organizationId, projectId) => `${url}organizations/${organizationId}/projects/${projectId}/artifacts`,
+  artifacts: threadId => `${url}threads/${threadId}/artifacts`,
+  artifact: (threadId, artifactId) => `${url}threads/${threadId}/artifacts/${artifactId}`,
+  artifactVersion: (threadId, artifactId, version) => `${url}threads/${threadId}/artifacts/${artifactId}/versions/${version}`,
+  // an artifact by its id, for anyone with a role on it, and its sharing (gendox-core#570)
+  artifactById: artifactId => `${url}artifacts/${artifactId}`,
+  artifactVersionById: (artifactId, version) => `${url}artifacts/${artifactId}/versions/${version}`,
+  artifactSharing: artifactId => `${url}artifacts/${artifactId}/sharing`,
+  artifactGeneralAccess: artifactId => `${url}artifacts/${artifactId}/sharing/general-access`,
+  artifactMember: (artifactId, userId) => `${url}artifacts/${artifactId}/sharing/members/${userId}`,
+  artifactChats: artifactId => `${url}artifacts/${artifactId}/chats`,
+  artifactRestore: (artifactId, version) => `${url}artifacts/${artifactId}/versions/${version}/restore`,
+  artifactPublic: artifactId => `${url}artifacts/${artifactId}/sharing/public`,
+  artifactPeople: artifactId => `${url}artifacts/${artifactId}/people`,
+  artifactDataCollection: (artifactId, collection) =>
+    `${url}artifacts/${artifactId}/data/${encodeURIComponent(collection)}`,
+  artifactDataDocument: (artifactId, collection, docId) =>
+    `${url}artifacts/${artifactId}/data/${encodeURIComponent(collection)}/${encodeURIComponent(docId)}`,
+  publicArtifact: publicId => `${url}public/artifacts/${publicId}`,
+
   deactivateUserById: userId => `${url}users/${userId}/deactivate`,
 
   deactivateOrganizationById: organizationId => `${url}organizations/${organizationId}/deactivate`,

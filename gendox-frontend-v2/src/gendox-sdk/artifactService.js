@@ -1,0 +1,188 @@
+import axios from 'axios'
+import apiRequests from 'src/configs/apiRequest.js'
+
+const headers = token => ({
+  'Content-Type': 'application/json',
+  ...(token ? { Authorization: `Bearer ${token}` } : {})
+})
+
+/**
+ * The artifacts the agent wrote in a thread, oldest first, without their content.
+ * Read only: an artifact is made and changed by the agent, through the chat.
+ */
+const getArtifacts = async (threadId, token) => {
+  return axios.get(apiRequests.artifacts(threadId), { headers: headers(token) })
+}
+
+/**
+ * The user's artifacts with an agent, newest change first, without their content. Their own, each naming its
+ * conversation (threadName); or, with sharedWithMe, the others' they have a role on, each naming its owner (ownerName).
+ * @param criteria - { search, artifactType, sharedWithMe } — a title fragment, and HTML | SVG | MARKDOWN | CODE
+ */
+const getProjectArtifacts = async (organizationId, projectId, criteria = {}, token, page = 0, size = 50) => {
+  const { search, artifactType, sharedWithMe } = criteria
+
+  return axios.get(apiRequests.projectArtifacts(organizationId, projectId), {
+    params: {
+      page,
+      size,
+      ...(search ? { search } : {}),
+      ...(artifactType ? { artifactType } : {}),
+      ...(sharedWithMe ? { sharedWithMe: true } : {})
+    },
+    headers: headers(token)
+  })
+}
+
+/** One artifact of a thread: its fields, its versions (number, message, date) and the content of the latest. */
+const getArtifact = async (threadId, artifactId, token) => {
+  return axios.get(apiRequests.artifact(threadId, artifactId), { headers: headers(token) })
+}
+
+/** The same as getArtifact, with the content of the given version. */
+const getArtifactVersion = async (threadId, artifactId, version, token) => {
+  return axios.get(apiRequests.artifactVersion(threadId, artifactId, version), { headers: headers(token) })
+}
+
+/**
+ * One artifact by its id, for anyone with a role on it, from any conversation or none: as getArtifact, with the
+ * user's role (yourRole: VIEW | INTERACT | EDIT | OWNER). Its conversation (threadId) only for its owner.
+ */
+const openArtifact = async (artifactId, token) => {
+  return axios.get(apiRequests.artifactById(artifactId), { headers: headers(token) })
+}
+
+/** The same as openArtifact, with the content of the given version. */
+const openArtifactVersion = async (artifactId, version, token) => {
+  return axios.get(apiRequests.artifactVersionById(artifactId, version), { headers: headers(token) })
+}
+
+/**
+ * Who has a role on an artifact: its owner, the agent's members (generalAccessRole, null for none), and the people
+ * invited with their roles; with the user's own role (yourRole). Anyone with a role may read it; only the owner
+ * changes it.
+ */
+const getSharing = async (artifactId, token) => {
+  return axios.get(apiRequests.artifactSharing(artifactId), { headers: headers(token) })
+}
+
+/**
+ * The role every member of the agent has on it, or null for only the owner and the people invited.
+ * @param role - VIEW | INTERACT | EDIT | null
+ * @returns the sharing, as getSharing
+ */
+const setGeneralAccess = async (artifactId, role, token) => {
+  return axios.put(apiRequests.artifactGeneralAccess(artifactId), { role }, { headers: headers(token) })
+}
+
+/**
+ * Invite a member of the agent with a role, or change the role of one invited.
+ * @param role - VIEW | INTERACT | EDIT
+ * @returns the sharing, as getSharing
+ */
+const setMemberRole = async (artifactId, userId, role, token) => {
+  return axios.put(apiRequests.artifactMember(artifactId, userId), { role }, { headers: headers(token) })
+}
+
+/** Take an invited person's role away. @returns the sharing, as getSharing */
+const removeMember = async (artifactId, userId, token) => {
+  return axios.delete(apiRequests.artifactMember(artifactId, userId), { headers: headers(token) })
+}
+
+/**
+ * A new conversation of the user's own on an artifact made elsewhere, where the agent can change it (EDIT and up).
+ * @returns {{ threadId }}
+ */
+const openInNewChat = async (artifactId, token) => {
+  return axios.post(apiRequests.artifactChats(artifactId), null, { headers: headers(token) })
+}
+
+/**
+ * Bring back an earlier version as a new one, with its content; the history stays whole. Editor and up.
+ * @returns the artifact at its new latest version, as openArtifact
+ */
+const restoreVersion = async (artifactId, version, token) => {
+  return axios.post(apiRequests.artifactRestore(artifactId, version), null, { headers: headers(token) })
+}
+
+/**
+ * The data of an artifact (gendox-core#600), for its frame: what people do inside it, as documents in collections.
+ * A collection's list is its shared documents and the user's own private ones.
+ */
+const listArtifactData = async (artifactId, collection, token) => {
+  return axios.get(apiRequests.artifactDataCollection(artifactId, collection), { headers: headers(token) })
+}
+
+/** One document: the shared one, or with isPrivate the user's own. 404 when it is not there. */
+const getArtifactData = async (artifactId, collection, docId, isPrivate, token) => {
+  return axios.get(apiRequests.artifactDataDocument(artifactId, collection, docId), {
+    headers: headers(token),
+    params: { private: Boolean(isPrivate) }
+  })
+}
+
+/**
+ * Write a whole document (set) or only some of its fields (update). A revision that is not the latest is refused
+ * with 409. @param request - { data, private, revision }
+ */
+const writeArtifactData = async (artifactId, collection, docId, request, merge, token) => {
+  const url = apiRequests.artifactDataDocument(artifactId, collection, docId)
+
+  return merge ? axios.patch(url, request, { headers: headers(token) }) : axios.put(url, request, { headers: headers(token) })
+}
+
+/** The names of those of these users who are members of the artifact's agent: [{ userId, name }], never an email. */
+const getArtifactPeople = async (artifactId, ids, token) => {
+  return axios.get(apiRequests.artifactPeople(artifactId), {
+    headers: headers(token),
+    params: { ids: ids.join(',') }
+  })
+}
+
+/** Delete a document; one that is not there is not an error. */
+const deleteArtifactData = async (artifactId, collection, docId, isPrivate, token) => {
+  return axios.delete(apiRequests.artifactDataDocument(artifactId, collection, docId), {
+    headers: headers(token),
+    params: { private: Boolean(isPrivate) }
+  })
+}
+
+/** Make it public: anyone with its link sees it, signed in or not; a new link each time. Owner only. @returns the sharing */
+const makePublic = async (artifactId, token) => {
+  return axios.post(apiRequests.artifactPublic(artifactId), null, { headers: headers(token) })
+}
+
+/** Make it private: its link stops working at once. Owner only. @returns the sharing */
+const makePrivate = async (artifactId, token) => {
+  return axios.delete(apiRequests.artifactPublic(artifactId), { headers: headers(token) })
+}
+
+/**
+ * An artifact by its public link, for anyone: no token is sent. Only its latest version and the agent that made it.
+ */
+const getPublicArtifact = async publicId => {
+  return axios.get(apiRequests.publicArtifact(publicId), { headers: headers(null) })
+}
+
+export default {
+  getArtifacts,
+  getProjectArtifacts,
+  getArtifact,
+  getArtifactVersion,
+  openArtifact,
+  openArtifactVersion,
+  getSharing,
+  setGeneralAccess,
+  setMemberRole,
+  removeMember,
+  openInNewChat,
+  restoreVersion,
+  listArtifactData,
+  getArtifactData,
+  writeArtifactData,
+  deleteArtifactData,
+  getArtifactPeople,
+  makePublic,
+  makePrivate,
+  getPublicArtifact
+}

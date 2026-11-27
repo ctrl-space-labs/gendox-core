@@ -10,6 +10,9 @@ import { selectChatSession } from 'src/store/chat/gendoxChat'
 import { getToken } from 'src/components/agent/useAgent'
 import Chat from 'src/components/chat/Chat'
 import ChatSources from 'src/components/chat/ChatSources'
+import ArtifactView from 'src/components/artifacts/ArtifactView'
+import { kindInfo, kindOf, latestVersionsOf } from 'src/components/artifacts/artifactUtils'
+import useProjectArtifacts from 'src/components/artifacts/useProjectArtifacts'
 import { useChatSession } from 'src/components/chat/useChat'
 import { fileNameOf, formatDateTime, timeAgo } from 'src/components/knowledge/documentUtils'
 import UploadDialog, { openOnFileDrag } from 'src/components/knowledge/UploadDialog'
@@ -135,11 +138,120 @@ export const DockChat = ({ chatKey, threadId }) => {
       mentions
       prefill={prefill}
       onOpenSources={(threadId, answer) => actions.open(sourcesUrlOf(threadId, answer.messageId))}
+      onOpenArtifact={(threadId, ref) => actions.open(artifactUrlOf(threadId, ref.artifactId))}
     />
   )
 }
 
 export const sourcesUrlOf = (threadId, messageId) => `/sources?${new URLSearchParams({ threadId, messageId })}`
+
+// one tab per artifact, always at its latest version; older ones are in the tab's version list. Without a thread it
+// loads by its id (an artifact shared with the user, gendox-core#570); besideChat names the chat opened on it
+export const artifactUrlOf = (threadId, artifactId, besideChat) =>
+  `/artifact?${new URLSearchParams(threadId ? { threadId, artifactId } : { artifactId, ...(besideChat ? { besideChat } : {}) })}`
+
+/**
+ * An artifact in a tab of its own (gendox-core#523), named after it. A newer version made in an open chat
+ * moves it to that version, unless an older one was chosen.
+ */
+export const DockArtifact = () => {
+  const tab = useDockTab()
+  const { query } = useView()
+  const { threadId, artifactId, besideChat } = query
+  const sessions = useSelector(state => state.gendoxChat.sessions)
+  // its own chat; opened by its id, any open chat that changes it (a chat opened on it, gendox-core#570)
+  const session = Object.values(sessions).find(s => threadId && s.currentThread?.threadId === threadId)
+  const knownVersion = useMemo(
+    () =>
+      Math.max(
+        0,
+        ...Object.values(sessions)
+          .filter(s => !threadId || s.currentThread?.threadId === threadId)
+          .map(s => latestVersionsOf(s.currentThread?.messages)[artifactId] || 0)
+      ) || undefined,
+    [sessions, threadId, artifactId]
+  )
+
+  return (
+    <div className='vw in-dock'>
+      <div className='gc-sheet-b' style={{ display: 'flex', flexDirection: 'column' }}>
+        <ArtifactView
+          threadId={threadId}
+          artifactId={artifactId}
+          knownVersion={knownVersion}
+          token={getToken()}
+          agentName={session?.currentThread?.agent?.fullName}
+          onTitle={title => tab.setTitle(short(title))}
+          besideItsChat={Boolean(besideChat)}
+        />
+      </div>
+    </div>
+  )
+}
+
+/**
+ * The artifacts of the user's conversations with this agent in a window (gendox-core#523): a thin search and one-line
+ * rows. A row opens the artifact in its tab; the full page has the kind filter.
+ */
+export const DockArtifacts = () => {
+  const tab = useDockTab()
+  const actions = useDockActions()
+  const { organizationId, projectId, href } = useActiveScope()
+  const [query, setQuery] = useState('')
+  const { artifacts, total } = useProjectArtifacts({ organizationId, projectId, search: query, size: 60 })
+
+  useEffect(() => {
+    if (!query && artifacts) tab.setCount(total)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [artifacts])
+
+  return (
+    <div className='vw in-dock compact'>
+      <div className='dk-top'>
+        <label className='dk-search'>
+          <Search className='lucide' />
+          <input placeholder='Find an artifact' value={query} onChange={e => setQuery(e.target.value)} />
+        </label>
+      </div>
+      <div className='dk-list'>
+        {artifacts === null ? (
+          <div className='dk-empty'>
+            <LoaderCircle className='lucide turning' />
+          </div>
+        ) : artifacts.length === 0 ? (
+          <div className='dk-empty'>{query ? `Nothing matches “${query}”.` : 'No artifacts yet. Ask for one in a chat.'}</div>
+        ) : (
+          artifacts.map(artifact => {
+            const { icon: Icon, hue } = kindInfo(kindOf(artifact))
+
+            return (
+              <button
+                key={artifact.id}
+                className='dk-row'
+                title={`${artifact.title} · in ${artifact.threadName || 'a conversation'}`}
+                onClick={() => actions.open(artifactUrlOf(artifact.threadId, artifact.id))}
+              >
+                <span className='ftype dk-ic' style={{ '--h': hue }}>
+                  <Icon className='lucide' />
+                </span>
+                <span className='trunc'>{artifact.title}</span>
+                <span className='dk-meta' title={formatDateTime(artifact.updatedAt)}>
+                  {timeAgo(artifact.updatedAt)}
+                </span>
+              </button>
+            )
+          })
+        )}
+        {artifacts && total > artifacts.length && (
+          <a className='dk-row' href={href('/gendox/artifacts')} data-full=''>
+            <ArrowUpRight className='lucide' />
+            <span className='trunc'>All {total} artifacts</span>
+          </a>
+        )}
+      </div>
+    </div>
+  )
+}
 
 /**
  * The sources of one answer in a tab of their own, beside the chat; a document opens in a tab at the passage.

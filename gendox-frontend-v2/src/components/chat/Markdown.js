@@ -54,13 +54,49 @@ const components = {
   )
 }
 
-const Markdown = ({ text, className = 'gc-md' }) => {
+// the address as the browser would load it: also one with no scheme (//host/x.png) or a relative one; null if none
+const resolved = src => {
+  try {
+    return new URL(src, typeof window === 'undefined' ? 'http://localhost/' : window.location.href)
+  } catch (_) {
+    return null
+  }
+}
+
+// Only an image carried in the text itself (data:) loads. Any other becomes a link the reader may follow - on another
+// server, with no scheme, or relative - so opening the text fetches nothing: it tells no server who read it or when,
+// and carries nothing out in an image's address. <source> (and its srcSet) is dropped, and <picture> keeps only its
+// <img>, which goes through the same rule.
+const withoutExternalImages = {
+  ...components,
+  img: ({ node, src = '', alt = '', ...props }) => {
+    // no address left (the sanitizer drops a data: one): only its description, never a link to this page
+    if (!src) return <span className='md-img-link'>🖼 {alt || 'Image'}</span>
+    const url = resolved(src)
+    if (url && url.protocol === 'data:') return <img src={src} alt={alt} {...props} />
+    if (!url || !/^https?:$/.test(url.protocol)) return <span className='md-img-link'>🖼 {alt || 'Image'}</span>
+
+    return (
+      <a href={url.href} target='_blank' rel='noopener noreferrer' className='md-img-link'>
+        🖼 {alt || 'Image'} ({url.host})
+      </a>
+    )
+  },
+  source: () => null,
+  picture: ({ node, children }) => <>{children}</>
+}
+
+/**
+ * @param externalImages - false to show an image on another server as a link instead of loading it (gendox-core#570):
+ *   for text the reader did not write and may open without asking, such as an artifact
+ */
+const Markdown = ({ text, className = 'gc-md', externalImages = true }) => {
   return (
     <div className={className}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[rehypeRaw, rehypeSanitize, rehypeKatex, rehypeHighlight]}
-        components={components}
+        components={externalImages ? components : withoutExternalImages}
       >
         {normalizeMathDelimiters(text)}
       </ReactMarkdown>

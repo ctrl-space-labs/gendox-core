@@ -76,6 +76,9 @@ public class AnthropicCompletionResponseConverter {
             finishReason = "tool_calls";
         } else if ("end_turn".equals(stopReason)) {
             finishReason = "stop";
+        } else if ("max_tokens".equals(stopReason)) {
+            // the output limit: tool calls in it may be cut short
+            finishReason = "length";
         } else {
             finishReason = stopReason;
         }

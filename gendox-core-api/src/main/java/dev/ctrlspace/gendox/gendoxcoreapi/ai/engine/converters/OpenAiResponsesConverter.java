@@ -122,7 +122,9 @@ public class OpenAiResponsesConverter {
                 function == null ? "{}" : textOf(function.get("arguments"), "{}"));
     }
 
-    /** Flat here; Chat Completions nests the same fields under "function". */
+    /**
+     * Flat here; Chat Completions nests the same fields under "function".
+     */
     public OpenAiResponsesRequest.ToolDto toToolDto(AiTools entity) {
         JsonNode fn;
         try {
@@ -160,7 +162,8 @@ public class OpenAiResponsesConverter {
                     case OpenAiResponsesItem.Message message -> collectOutputText(message, textParts);
                     case OpenAiResponsesItem.FunctionCall call -> toolCalls.add(toOpenAiToolCall(call));
                     // Built-in tools surface as other item types; Gendox enables none.
-                    default -> { }
+                    default -> {
+                    }
                 }
             }
         }
@@ -237,12 +240,14 @@ public class OpenAiResponsesConverter {
     }
 
     private String toFinishReason(OpenAiResponsesResponse response, boolean hasToolCalls) {
+        // Checked before the tool calls: an incomplete response's last call may end halfway, and must not run
+        if ("incomplete".equals(response.getStatus())) {
+            JsonNode details = response.getIncompleteDetails();
+            String reason = details == null ? "" : details.path("reason").asText("");
+            return "content_filter".equals(reason) ? "content_filter" : "length";
+        }
         if (hasToolCalls) {
             return "tool_calls";
-        }
-        if ("incomplete".equals(response.getStatus())) {
-            // Usually max_output_tokens; "length" keeps existing handling.
-            return "length";
         }
         return "stop";
     }

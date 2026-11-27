@@ -1,0 +1,90 @@
+package dev.ctrlspace.gendox.gendoxcoreapi.converters;
+
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Artifact;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.ArtifactVersion;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.ArtifactDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.ArtifactSummaryDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.ArtifactVersionSummaryDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.PublicArtifactDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.ArtifactAccessService;
+import org.springframework.lang.Nullable;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+
+@Component
+public class ArtifactConverter implements GendoxConverter<Artifact, ArtifactSummaryDTO> {
+
+    @Override
+    public ArtifactSummaryDTO toDTO(Artifact artifact) {
+        ArtifactSummaryDTO artifactSummaryDTO = new ArtifactSummaryDTO();
+        artifactSummaryDTO.setId(artifact.getId());
+        artifactSummaryDTO.setThreadId(artifact.getThreadId());
+        artifactSummaryDTO.setTitle(artifact.getTitle());
+        artifactSummaryDTO.setArtifactType(artifact.getArtifactType());
+        artifactSummaryDTO.setCodeLanguage(artifact.getCodeLanguage());
+        artifactSummaryDTO.setLatestVersion(artifact.getLatestVersion());
+        artifactSummaryDTO.setCreatedAt(artifact.getCreatedAt());
+        artifactSummaryDTO.setUpdatedAt(artifact.getUpdatedAt());
+        artifactSummaryDTO.setCreatedBy(artifact.getCreatedBy());
+        artifactSummaryDTO.setUpdatedBy(artifact.getUpdatedBy());
+        artifactSummaryDTO.setOwnerId(artifact.getOwnerId());
+
+        return artifactSummaryDTO;
+    }
+
+    /**
+     * An artifact with its versions, the content of the one shown, and the reader's role on it (null for none).
+     */
+    public ArtifactDTO toDTO(Artifact artifact, List<ArtifactVersionSummaryDTO> versions, ArtifactVersion shown,
+                             @Nullable ArtifactAccessService.Role yourRole) {
+        ArtifactDTO artifactDTO = new ArtifactDTO();
+        artifactDTO.setId(artifact.getId());
+        artifactDTO.setThreadId(artifact.getThreadId());
+        artifactDTO.setTitle(artifact.getTitle());
+        artifactDTO.setArtifactType(artifact.getArtifactType());
+        artifactDTO.setCodeLanguage(artifact.getCodeLanguage());
+        artifactDTO.setCapabilities(artifact.getCapabilities());
+        artifactDTO.setLatestVersion(artifact.getLatestVersion());
+        artifactDTO.setCreatedAt(artifact.getCreatedAt());
+        artifactDTO.setUpdatedAt(artifact.getUpdatedAt());
+        artifactDTO.setCreatedBy(artifact.getCreatedBy());
+        artifactDTO.setUpdatedBy(artifact.getUpdatedBy());
+        artifactDTO.setOwnerId(artifact.getOwnerId());
+        artifactDTO.setVersions(versions);
+        artifactDTO.setVersion(shown.getVersion());
+        artifactDTO.setContent(shown.getContent());
+        artifactDTO.setYourRole(yourRole == null ? null : yourRole.name());
+
+        return artifactDTO;
+    }
+
+    /**
+     * An artifact as its public link shows it: the version shown and the agent that made it, nothing more.
+     */
+    public PublicArtifactDTO toPublicDTO(Artifact artifact, ArtifactVersion shown, String agentName) {
+        PublicArtifactDTO publicArtifactDTO = new PublicArtifactDTO();
+        publicArtifactDTO.setPublicId(artifact.getPublicId());
+        publicArtifactDTO.setTitle(artifact.getTitle());
+        publicArtifactDTO.setArtifactType(artifact.getArtifactType());
+        publicArtifactDTO.setCodeLanguage(artifact.getCodeLanguage());
+        publicArtifactDTO.setVersion(shown.getVersion());
+        publicArtifactDTO.setContent(shown.getContent());
+        publicArtifactDTO.setAgentName(agentName);
+
+        return publicArtifactDTO;
+    }
+
+    @Override
+    public Artifact toEntity(ArtifactSummaryDTO artifactSummaryDTO) {
+        Artifact artifact = new Artifact();
+        artifact.setId(artifactSummaryDTO.getId());
+        artifact.setThreadId(artifactSummaryDTO.getThreadId());
+        artifact.setTitle(artifactSummaryDTO.getTitle());
+        artifact.setArtifactType(artifactSummaryDTO.getArtifactType());
+        artifact.setCodeLanguage(artifactSummaryDTO.getCodeLanguage());
+        artifact.setLatestVersion(artifactSummaryDTO.getLatestVersion());
+
+        return artifact;
+    }
+}

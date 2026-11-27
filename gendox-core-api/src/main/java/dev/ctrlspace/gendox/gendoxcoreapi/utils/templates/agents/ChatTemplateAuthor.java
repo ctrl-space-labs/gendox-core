@@ -2,6 +2,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
+import org.springframework.lang.Nullable;
 import org.apache.commons.text.StringSubstitutor;
 
 
@@ -25,17 +26,21 @@ public class ChatTemplateAuthor {
     private static final int MAX_LISTED_FILES = 50;
 
 
-    public String chatTemplate(Message message, String sectionValues, String templateText, List<DocumentInstance> threadFiles) {
+    public String chatTemplate(Message message, String sectionValues, String templateText, List<DocumentInstance> threadFiles,
+                               @Nullable String openedArtifacts) {
         String chatGptTemplate = templateText;
-        String question = processTemplate(chatGptTemplate, toChatValues(message, sectionValues, threadFiles));
+        String question = processTemplate(chatGptTemplate, toChatValues(message, sectionValues, threadFiles, openedArtifacts));
         return question;
     }
 
     /**
-     * @param threadFiles the files attached to the conversation so far. The agent gets their listing, never
-     *                    their content: it reads them with tools.
+     * @param threadFiles     the files attached to the conversation so far. The agent gets their listing, never
+     *                        their content: it reads them with tools.
+     * @param openedArtifacts the listing of the artifacts the conversation was opened on, or null when it was opened
+     *                        on none. The agent gets their listing, never their content: it reads them with tools.
      */
-    public Map<String, String> toChatValues(Message message, String sectionValues, List<DocumentInstance> threadFiles) {
+    public Map<String, String> toChatValues(Message message, String sectionValues, List<DocumentInstance> threadFiles,
+                                            @Nullable String openedArtifacts) {
         Map<String, String> questionTemplateValues = new HashMap<>();
         questionTemplateValues.put("context", escapePlaceholders(sectionValues));
         questionTemplateValues.put(
@@ -46,7 +51,8 @@ public class ChatTemplateAuthor {
                                 message.getLocalContexts().stream()
                                         .filter(c -> !"ATTACHED_DOCUMENT".equals(c.getContextTypeName()))
                                         .map(c -> sessionItem(c.getContextTypeName(), c.getValue())),
-                                threadFiles.isEmpty() ? Stream.<String>empty() : Stream.of(sessionItem("ATTACHED_FILES", listing(threadFiles))))
+                                threadFiles.isEmpty() ? Stream.<String>empty() : Stream.of(sessionItem("ATTACHED_FILES", listing(threadFiles))),
+                                openedArtifacts == null ? Stream.<String>empty() : Stream.of(sessionItem("OPENED_ARTIFACTS", openedArtifacts)))
                         .flatMap(items -> items)
                         .collect(Collectors.joining("\n"))
         );

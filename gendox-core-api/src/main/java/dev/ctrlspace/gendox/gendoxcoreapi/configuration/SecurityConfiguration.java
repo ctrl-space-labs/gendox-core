@@ -91,6 +91,7 @@ public class SecurityConfiguration {
                                 .requestMatchers(HttpMethod.PUT, "/messages/*").permitAll() // Feedback on public threads; checked by @PreAuthorize
                                 .requestMatchers("/threads/*/completion-status").permitAll() // Public threads; checked by @PreAuthorize
                                 .requestMatchers("/threads").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/public/artifacts/*").permitAll() // its latest version only
                                 .requestMatchers("/api-documentation",
                                         "/swagger-ui.html",
                                         "/swagger-ui/**",

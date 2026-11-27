@@ -187,6 +187,20 @@ public class SecurityUtils {
                 );
     }
 
+    /**
+     * A person signed in: not an API key and not an agent, whatever their user type. For actions that speak for a
+     * person, such as sharing an artifact.
+     */
+    public boolean isSignedInPerson() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || authentication instanceof ApiKeyAuthenticationToken
+                || !(authentication.getPrincipal() instanceof UserProfile userProfile)) {
+            return false;
+        }
+        String userType = userProfile.getGlobalUserRoleType() == null ? null : userProfile.getGlobalUserRoleType().getName();
+        return !UserNamesConstants.GENDOX_AGENT.equals(userType) && !UserNamesConstants.GENDOX_API_KEY.equals(userType);
+    }
+
     public boolean isAgent(Authentication authentication) {
         Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         if (!(principal instanceof UserProfile userProfile)) {
@@ -364,7 +378,9 @@ public class SecurityUtils {
         return documentInstanceRepository.existsByDocumentIdAndProjectIds(documentId, authorizedProjectIds);
     }
 
-    /** A task is accessible when it belongs to a project the user has the authority in. */
+    /**
+     * A task is accessible when it belongs to a project the user has the authority in.
+     */
     private boolean canAccessTask(String authority, UserProfile userProfile, UUID taskId) {
         return taskRepository.existsByIdAndProjectIdIn(taskId, authorizedProjectIds(authority, userProfile));
     }
@@ -572,12 +588,16 @@ public class SecurityUtils {
         return getRequestedDocumentIdAccessCriteria(documentId);
     }
 
-    /** The ?documentId= of the endpoints that take a single document as a request param. */
+    /**
+     * The ?documentId= of the endpoints that take a single document as a request param.
+     */
     private AccessCriteria getRequestedDocumentIdFromRequestParam() {
         return getRequestedDocumentIdAccessCriteria(getCurrentHttpRequest().getParameter(QueryParamNames.DOCUMENT_INSTANCE_ID));
     }
 
-    /** The {taskId} of the path, so a task of another project can't be reached through it. */
+    /**
+     * The {taskId} of the path, so a task of another project can't be reached through it.
+     */
     private AccessCriteria getRequestedTaskIdFromPathVariable() {
         AccessCriteria accessCriteria = new AccessCriteria();
         accessCriteria.setTaskId(getUriTemplateVariable(QueryParamNames.TASK_ID));
@@ -585,7 +605,9 @@ public class SecurityUtils {
         return accessCriteria;
     }
 
-    /** The ?id= of a task node, for the endpoints that address a node directly. */
+    /**
+     * The ?id= of a task node, for the endpoints that address a node directly.
+     */
     private AccessCriteria getRequestedTaskNodeIdFromRequestParam() {
         AccessCriteria accessCriteria = new AccessCriteria();
         String taskNodeId = getCurrentHttpRequest().getParameter(QueryParamNames.TASK_NODE_ID);
@@ -699,7 +721,9 @@ public class SecurityUtils {
         return chatThreadRepository.existsByIdAndPublicThreadIsTrue(threadId);
     }
 
-    /** Whether the caller may read the thread of a message: a member of the thread, or anyone when the thread is public. */
+    /**
+     * Whether the caller may read the thread of a message: a member of the thread, or anyone when the thread is public.
+     */
     public boolean canReadThreadOfMessage(UUID messageId) {
         Optional<UUID> threadId = messageRepository.findThreadIdById(messageId);
         if (threadId.isEmpty()) {

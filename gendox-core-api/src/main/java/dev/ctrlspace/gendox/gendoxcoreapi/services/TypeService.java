@@ -35,6 +35,10 @@ public class TypeService {
         return typeRepository.findByTypeCategory("ORGANIZATION_ROLE_TYPE");
     }
 
+    public List<Type> getArtifactTypes() {
+        return typeRepository.findByTypeCategory("ARTIFACT_TYPE");
+    }
+
     public List<Type> getToolExamples() {
         return typeRepository.findByTypeCategory("AI_TOOL_EXAMPLES")
                 .stream()
@@ -42,7 +46,9 @@ public class TypeService {
                 .collect(Collectors.toList());
     }
 
-    /** The tool examples' function definitions, keyed by function name. Rows that can't be read are skipped. */
+    /**
+     * The tool examples' function definitions, keyed by function name. Rows that can't be read are skipped.
+     */
     public Map<String, JsonNode> getToolExampleDefinitions() {
         Map<String, JsonNode> definitions = new HashMap<>();
         for (Type example : typeRepository.findByTypeCategory("AI_TOOL_EXAMPLES")) {

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
 import { useDispatch } from 'react-redux'
-import { BookOpen, Check, FileText, Library, ListChecks, MessageSquareText, PanelsTopLeft, RotateCcw, ScanText, Table2 } from 'lucide-react'
+import { AppWindow, BookOpen, Check, FileText, Layers, Library, ListChecks, MessageSquareText, PanelsTopLeft, RotateCcw, ScanText, Table2 } from 'lucide-react'
 import useActiveScope from 'src/hooks/useActiveScope'
+import { useAuth } from 'src/authentication/useAuth'
 import { chatActions } from 'src/store/chat/gendoxChat'
 import { clearAll } from 'src/store/chatAttachments/chatAttachments'
 import AppLayout, { useFocusedTab, useTopbarTitle } from 'src/layouts/AppLayout'
@@ -10,13 +11,17 @@ import TopbarSlot from 'src/layouts/components/TopbarSlot'
 import Dock from 'src/components/dock/Dock'
 import {
   DockActionsProvider,
+  DockArtifact,
+  DockArtifacts,
   DockChat,
   DockKnowledge,
   DockScreen,
   DockSources,
   DockTasks,
+  artifactUrlOf,
   tabUrlOf
 } from 'src/components/dock/dockViews'
+import { takeChatOnArtifact } from 'src/components/artifacts/artifactUtils'
 import DocumentView from 'src/views/DocumentView'
 import DocumentInsightsView from 'src/views/DocumentInsightsView'
 import DigitizationView from 'src/views/DigitizationView'
@@ -25,16 +30,18 @@ import Menu from 'src/components/ui/Menu'
 /*
  * Every tab is a URL, routed to the same screen the page shows (src/views), never an iframe:
  *   /chat/new-<id>   a new chat             /chat/<threadId>   a conversation
- *   /gendox/knowledge · /gendox/tasks      compact lists
+ *   /gendox/knowledge · /gendox/tasks · /gendox/artifacts   compact lists
  *   /gendox/document-instance?documentId=&sectionId=
  *   /gendox/tasks/document-insights?taskId=&doc=&q=
  *   /gendox/tasks/document-digitization?taskId=&doc=
  *   /sources?threadId=&messageId=           the sources of one answer; one such tab per chat, reused for its next answer
+ *   /artifact?threadId=&artifactId=         an artifact the agent made; one tab per artifact (gendox-core#523)
  * Earth observation is a workspace of its own windows, so it opens as a full page.
  */
 const PAGES = {
   '/gendox/knowledge': { title: 'Knowledge', icon: Library, element: () => <DockKnowledge /> },
   '/gendox/tasks': { title: 'Tasks', icon: ListChecks, element: () => <DockTasks /> },
+  '/gendox/artifacts': { title: 'Artifacts', icon: Layers, element: () => <DockArtifacts /> },
   '/gendox/document-instance': { title: 'Document', icon: FileText, element: () => <DocumentView />, screen: true },
   '/gendox/tasks/document-insights': { title: 'Document insights', icon: Table2, element: () => <DocumentInsightsView />, screen: true },
   '/gendox/tasks/document-digitization': { title: 'Digitization', icon: ScanText, element: () => <DigitizationView />, screen: true }
@@ -42,7 +49,8 @@ const PAGES = {
 
 // tabs with no page of their own outside the dock
 const DOCK_ONLY = {
-  '/sources': { title: 'Sources', icon: BookOpen, element: () => <DockSources /> }
+  '/sources': { title: 'Sources', icon: BookOpen, element: () => <DockSources /> },
+  '/artifact': { title: 'Artifact', icon: AppWindow, element: () => <DockArtifact /> }
 }
 
 // where a tab opens when it isn't open yet: beside windows holding similar tabs
@@ -50,6 +58,9 @@ const NEAR = {
   chat: ['/chat'],
   // sources open beside the chat, with the documents they lead to
   '/sources': ['/sources', '/gendox/document-instance', '/gendox/knowledge'],
+  // an artifact needs room: it joins other artifacts, or the windows beside the chat
+  '/artifact': ['/artifact', '/sources', '/gendox/document-instance', '/gendox/knowledge'],
+  '/gendox/artifacts': ['/gendox/artifacts', '/gendox/knowledge', '/gendox/tasks'],
   '/gendox/document-instance': ['/gendox/document-instance', '/gendox/knowledge'],
   '/gendox/knowledge': ['/gendox/knowledge', '/gendox/document-instance'],
   '/gendox/tasks': ['/gendox/tasks'],
@@ -94,6 +105,7 @@ const AgentHomePage = () => {
   const router = useRouter()
   const dispatch = useDispatch()
   const { projectId, href } = useActiveScope()
+  const { user } = useAuth()
   const dockRef = useRef(null)
   const restoredProject = useRef(null)
   const prefills = useRef(new Map())
@@ -175,12 +187,14 @@ const AgentHomePage = () => {
     [open, canOpen]
   )
 
-  // the agent changed: its windows start again
-  const storageKey = `gx-dock-agent-${projectId}`
+  // the agent changed: its windows start again. Each person's own: another who signs in on the same browser
+  // does not find their conversations open
+  const storageKey = `gx-dock-agent-${user?.id}-${projectId}`
 
   // A link to a tab can also arrive while the dock is open.
   useEffect(() => {
-    if (!router.isReady || !projectId) return
+    // the windows show once the user is known, whose they are
+    if (!router.isReady || !projectId || !user?.id) return
     const openHash = () => {
       let linked = linkedTab()
       if (!linked) return
@@ -189,7 +203,13 @@ const AgentHomePage = () => {
         linked = newChatUrl()
         window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}#${linked}`)
       }
-      setTimeout(() => open(linked), 0)
+      // a chat just opened on an artifact (Change it in a chat): the artifact beside it, and a request to change it
+      const onArtifact = linked.startsWith('/chat/') ? takeChatOnArtifact(linked.slice('/chat/'.length)) : null
+      if (onArtifact) prefills.current.set(linked, onArtifact.prefill)
+      setTimeout(() => {
+        open(linked)
+        if (onArtifact) open(artifactUrlOf(null, onArtifact.artifactId, linked.slice('/chat/'.length)))
+      }, 0)
     }
     router.events.on('hashChangeComplete', openHash)
     window.addEventListener('hashchange', openHash)
@@ -198,7 +218,7 @@ const AgentHomePage = () => {
       router.events.off('hashChangeComplete', openHash)
       window.removeEventListener('hashchange', openHash)
     }
-  }, [router.isReady, router.events, projectId, open])
+  }, [router.isReady, router.events, projectId, user?.id, open])
 
   const onFocus = useCallback((url, v) => {
     // The dock can open tabs as soon as it reports its first focus. Restore the incoming
@@ -219,7 +239,7 @@ const AgentHomePage = () => {
     }
   }, [projectId, canOpen, open])
 
-  if (!router.isReady || !projectId) return null
+  if (!router.isReady || !projectId || !user?.id) return null
 
   return (
     <DockActionsProvider value={actions}>
@@ -236,7 +256,8 @@ const AgentHomePage = () => {
           <div className='h'>Windows</div>
           {[
             ['/gendox/tasks', 'Tasks', ListChecks],
-            ['/gendox/knowledge', 'Knowledge', Library]
+            ['/gendox/knowledge', 'Knowledge', Library],
+            ['/gendox/artifacts', 'Artifacts', Layers]
           ].map(([url, name, Icon]) => (
             <button
               key={url}
@@ -269,7 +290,8 @@ const AgentHomePage = () => {
         newTabs={[
           { label: 'New chat', icon: MessageSquareText, url: newChatUrl },
           { label: 'Tasks', icon: ListChecks, url: '/gendox/tasks' },
-          { label: 'Knowledge', icon: Library, url: '/gendox/knowledge' }
+          { label: 'Knowledge', icon: Library, url: '/gendox/knowledge' },
+          { label: 'Artifacts', icon: Layers, url: '/gendox/artifacts' }
         ]}
         onFocus={onFocus}
         fullHref={url => (PAGES[pathOf(url)] ? href(pathOf(url), Object.fromEntries(new URLSearchParams(url.split('?')[1] || ''))) : null)}

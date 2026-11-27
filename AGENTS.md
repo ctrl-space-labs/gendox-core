@@ -28,7 +28,7 @@ Two files per topic, no more: **the original, which never changes, and the curre
 
 ### Pending plans
 
-- [Artifacts and mini apps in the chat — #523](.ai/issue-523-artifacts-2026-11-13.md) — planned, nothing implemented. The plan as first written.
+- [Artifacts and mini apps in the chat — #523](.ai/issue-523-artifacts-2026-11-25.md) — phase 1 implemented: backend (#568) and v2 frontend (#569), verified in Chrome, Firefox and Safari. Phase 2 (#570) implemented: shared artifacts with roles and Change it in a chat, sizes, Restore this version, the public page. Widgets, separate from artifacts, replace inline artifacts. Artifact data (#600) is built. The organization's setting for public links, the output floor and sharing outside the agent are left for later. Self-contained: it replaces the [original 2026-11-13 plan](.ai/issue-523-artifacts-2026-11-13.md), which is kept unchanged.
 
 - [Gendox as an agentic platform — roadmap](.ai/agentic-platform-roadmap-2026-11-10.md) — the workstreams, their order and status; each task gets its own plan before code is written. Implemented plans are removed and what remains of them lives here, including the desktop and mobile apps (CLIENT-2, CLIENT-3) and secrets at rest (SEC-1).
 

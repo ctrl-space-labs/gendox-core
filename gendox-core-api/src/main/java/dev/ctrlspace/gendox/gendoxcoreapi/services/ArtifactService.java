@@ -1,0 +1,533 @@
+package dev.ctrlspace.gendox.gendoxcoreapi.services;
+
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.artifacts.CreateArtifactTool;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.artifacts.ReadArtifactTool;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.artifacts.UpdateArtifactTool;
+import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.ArtifactEditDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.artifacts.ArtifactVersionSummaryDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ArtifactCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.ArtifactPredicates;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.ArtifactAccessService.Role;
+
+import java.util.*;
+import java.util.function.Function;
+
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.FileListing;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
+import org.springframework.lang.Nullable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import org.springframework.data.domain.Pageable;
+
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+/**
+ * Artifacts of a chat thread. Every read and write names the thread: an artifact of another thread
+ * is not found, for the agent's tools and the REST API alike.
+ */
+@Service
+public class ArtifactService {
+
+    public static final String CODE_TYPE = "CODE";
+
+    private final ArtifactRepository artifactRepository;
+    private final ArtifactVersionRepository artifactVersionRepository;
+    private final TypeService typeService;
+    private final ChatThreadRepository chatThreadRepository;
+    private final MessageRepository messageRepository;
+    private final UserRepository userRepository;
+    private final ArtifactAccessService artifactAccessService;
+    private final ArtifactThreadRepository artifactThreadRepository;
+    private final ObjectMapper objectMapper;
+
+    /**
+     * Characters one version may hold.
+     */
+    /** What an artifact may ask the host for (gendox-core#600), in the order they are listed. */
+    public static final List<String> CAPABILITIES = List.of("data", "user");
+
+    @Value("${gendox.artifacts.max-content-length:200000}")
+    private int maxContentLength = 200_000;
+
+    public ArtifactService(ArtifactRepository artifactRepository,
+                           ArtifactVersionRepository artifactVersionRepository,
+                           TypeService typeService,
+                           ChatThreadRepository chatThreadRepository,
+                           MessageRepository messageRepository,
+                           UserRepository userRepository,
+                           ArtifactAccessService artifactAccessService,
+                           ArtifactThreadRepository artifactThreadRepository,
+                           ObjectMapper objectMapper) {
+        this.artifactRepository = artifactRepository;
+        this.artifactVersionRepository = artifactVersionRepository;
+        this.typeService = typeService;
+        this.chatThreadRepository = chatThreadRepository;
+        this.messageRepository = messageRepository;
+        this.objectMapper = objectMapper;
+        this.userRepository = userRepository;
+        this.artifactAccessService = artifactAccessService;
+        this.artifactThreadRepository = artifactThreadRepository;
+    }
+
+    /**
+     * @param typeName     a name of category ARTIFACT_TYPE, in any case: the model sends "html"
+     * @param codeLanguage kept for type CODE only
+     * @param capabilities what it may ask the host for, "data" and "user"; null or empty for nothing
+     * @param messageId    the assistant message whose tool call writes it
+     */
+    // a refusal rolls back whatever was changed before it: GendoxException is checked, and rolls back nothing by default
+    @Transactional(rollbackFor = GendoxException.class)
+    public Artifact create(UUID threadId, UUID projectId, @Nullable UUID messageId, String title,
+                           String typeName, @Nullable String codeLanguage, @Nullable List<String> capabilities,
+                           String content) throws GendoxException {
+        if (title == null || title.isBlank()) {
+            throw new GendoxException("ARTIFACT_TITLE_REQUIRED", "An artifact needs a title", HttpStatus.BAD_REQUEST);
+        }
+        Type artifactType = getArtifactType(typeName);
+        List<String> declared = checkCapabilities(capabilities);
+        validateContent(content);
+
+        boolean isCode = CODE_TYPE.equals(artifactType.getName());
+        UUID author = authorOfTurn(threadId);
+        Artifact artifact = artifactRepository.save(Artifact.builder()
+                .threadId(threadId)
+                .projectId(projectId)
+                .title(title.trim())
+                .artifactType(artifactType)
+                .codeLanguage(isCode && codeLanguage != null && !codeLanguage.isBlank() ? codeLanguage.trim() : null)
+                .capabilities(declared)
+                .latestVersion(1)
+                .ownerId(author)
+                .build());
+        saveVersion(artifact, content, messageId, author);
+        return artifact;
+
+    }
+
+    /**
+     * A new version from the whole {@code content} or from {@code edits} on the latest one, never both.
+     * A new {@code title} or new {@code capabilities} alone change the artifact and add no version; an empty list of
+     * capabilities takes them all away.
+     */
+    @Transactional(rollbackFor = GendoxException.class)
+    public Artifact update(UUID threadId, UUID artifactId, @Nullable UUID messageId, @Nullable String title,
+                           @Nullable List<String> capabilities, @Nullable String content,
+                           @Nullable List<ArtifactEditDTO> edits) throws GendoxException {
+        boolean hasContent = content != null;
+        boolean hasEdits = edits != null && !edits.isEmpty();
+        boolean hasTitle = title != null && !title.isBlank();
+        boolean hasCapabilities = capabilities != null;
+        if (hasContent && hasEdits) {
+            throw new GendoxException("ARTIFACT_UPDATE_AMBIGUOUS",
+                    "Give either edits or the whole content, not both", HttpStatus.BAD_REQUEST);
+        }
+        if (!hasContent && !hasEdits && !hasTitle && !hasCapabilities) {
+            throw new GendoxException("ARTIFACT_UPDATE_EMPTY",
+                    "Nothing to update: give edits, the whole content, a new title or capabilities", HttpStatus.BAD_REQUEST);
+        }
+        List<String> declared = checkCapabilities(capabilities);
+
+        // locked until the transaction ends, so a second update of the same artifact waits and numbers after this one
+        Artifact artifact = artifactRepository.lockById(artifactId)
+                .orElseThrow(() -> notInThread(artifactId, threadId));
+        checkReach(artifact, threadId, Role.EDIT);
+        // every check before any change: a refused update changes nothing, not even its title or capabilities
+        String next = null;
+        if (hasContent || hasEdits) {
+            if (hasContent) {
+                requireLatestSeen(artifact, threadId);
+            }
+            next = hasContent ? content : applyEdits(getVersion(artifact, null).getContent(), edits);
+            validateContent(next);
+        }
+        if (hasTitle) {
+            artifact.setTitle(title.trim());
+        }
+        if (hasCapabilities) {
+            artifact.setCapabilities(declared);
+        }
+        if (next != null) {
+            artifact.setLatestVersion(artifact.getLatestVersion() + 1);
+            saveVersion(artifact, next, messageId, authorOfTurn(threadId));
+        }
+        return artifactRepository.save(artifact);
+    }
+
+    public List<Artifact> getAllByThread(UUID threadId) {
+        return artifactRepository.findAllByThreadIdOrderByCreatedAtAsc(threadId);
+    }
+
+    /**
+     * A page of artifacts across conversations. The criteria must carry the project and the user (see
+     * {@link ArtifactCriteria}); without them the page is empty.
+     */
+    public Page<Artifact> getAll(ArtifactCriteria criteria, Pageable pageable) {
+        return artifactRepository.findAll(ArtifactPredicates.build(criteria), pageable);
+    }
+
+    /**
+     * The names of the conversations the artifacts came from, in one query: { threadId: name }.
+     */
+    public Map<UUID, String> threadNamesOf(List<Artifact> artifacts) {
+        List<UUID> threadIds = artifacts.stream().map(Artifact::getThreadId).distinct().toList();
+        if (threadIds.isEmpty()) {
+            return Map.of();
+        }
+        return chatThreadRepository.findAllById(threadIds).stream()
+                .collect(Collectors.toMap(ChatThread::getId, ChatThread::getName));
+    }
+
+    /**
+     * The names of the artifacts' owners, in one query: { ownerId: name }.
+     */
+    public Map<UUID, String> ownerNamesOf(List<Artifact> artifacts) {
+        List<UUID> ownerIds = artifacts.stream().map(Artifact::getOwnerId).filter(Objects::nonNull).distinct().toList();
+        if (ownerIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<UUID, String> names = new HashMap<>();
+        userRepository.findAllById(ownerIds).forEach(user -> names.put(user.getId(), nameOf(user)));
+        return names;
+    }
+
+    /**
+     * An artifact the conversation reaches: one made in it, or one it was opened on (see {@link #checkReach}).
+     */
+    public Artifact getByIdInThread(UUID threadId, UUID artifactId) throws GendoxException {
+        Artifact artifact = artifactRepository.findById(artifactId)
+                .orElseThrow(() -> notInThread(artifactId, threadId));
+        checkReach(artifact, threadId, Role.VIEW);
+        return artifact;
+    }
+
+    /**
+     * A conversation reaches the artifacts made in it, and those it was opened on while its user keeps the role
+     * needed: VIEW to read, EDIT to change. Anything else is not found, as an artifact that does not exist; an
+     * artifact the user sees but may not change says so, for the agent to tell the user.
+     */
+    private void checkReach(Artifact artifact, UUID threadId, Role needed) throws GendoxException {
+        if (threadId.equals(artifact.getThreadId())) {
+            return;
+        }
+        if (!artifactThreadRepository.existsByArtifactIdAndThreadId(artifact.getId(), threadId)) {
+            throw notInThread(artifact.getId(), threadId);
+        }
+        Role role = artifactAccessService.roleOf(artifact, authorOfTurn(threadId))
+                .orElseThrow(() -> notInThread(artifact.getId(), threadId));
+        if (!role.atLeast(needed)) {
+            throw new GendoxException("ARTIFACT_READ_ONLY",
+                    "The user may only " + (role == Role.VIEW ? "view" : "use") + " artifact " + artifact.getId()
+                            + ", not change it: its owner gave them the " + role + " role. Nothing was changed. "
+                            + "Tell the user, and that the owner can give them the EDIT role.",
+                    HttpStatus.FORBIDDEN);
+        }
+    }
+
+    /**
+     * The directory the artifacts a conversation was opened on show under, in the agent's session context.
+     */
+    public static final String OPENED_ARTIFACTS = "./artifacts";
+
+    /**
+     * What the agent is told on each turn about the artifacts this conversation was opened on, listed as FileListing
+     * lists files: they were made in another conversation, so neither they nor their content are in this one's
+     * history. The artifacts skill explains the listing. One line for each artifact the user still has a role on;
+     * null when there is none.
+     */
+    @Nullable
+    public String openedArtifactsListing(UUID threadId) {
+        List<ArtifactThread> links = artifactThreadRepository.findAllByThreadId(threadId);
+        if (links.isEmpty()) {
+            return null;
+        }
+        UUID user = authorOfTurn(threadId);
+        List<String> lines = new ArrayList<>();
+        for (ArtifactThread link : links) {
+            artifactRepository.findById(link.getArtifactId())
+                    .flatMap(artifact -> artifactAccessService.roleOf(artifact, user)
+                            .map(role -> FileListing.line(OPENED_ARTIFACTS,
+                                    // a title on one line, so it cannot start a line of its own
+                                    artifact.getTitle().replaceAll("\\s+", " "),
+                                    "kind", artifact.getArtifactType().getName().toLowerCase(Locale.ROOT),
+                                    "version", artifact.getLatestVersion(),
+                                    "role", role,
+                                    "modified", FileListing.modified(artifact.getUpdatedAt()),
+                                    "UUID", artifact.getId())))
+                    .ifPresent(lines::add);
+        }
+        return lines.isEmpty() ? null : Stream.concat(Stream.of(OPENED_ARTIFACTS), lines.stream())
+                .collect(Collectors.joining("\n"));
+    }
+
+    /**
+     * An artifact opened by its own id, with the user's role on it.
+     */
+    public record Opened(Artifact artifact, Role role) {
+    }
+
+    /**
+     * Opens an artifact by its id, for anyone with a role on it, from any conversation or none; anyone else is told
+     * it does not exist, as for an id that was never there.
+     */
+    public Opened open(UUID artifactId, @Nullable UUID userId) throws GendoxException {
+        Artifact artifact = artifactRepository.findById(artifactId)
+                .orElseThrow(() -> new GendoxException("ARTIFACT_NOT_FOUND",
+                        "No artifact " + artifactId + " that you can open", HttpStatus.NOT_FOUND));
+        return new Opened(artifact, artifactAccessService.require(artifact, userId, Role.VIEW));
+    }
+
+    /**
+     * Brings back an earlier version as a new one, with its content: the history stays whole, and every version keeps
+     * its number. Made by a person, so it points at no message. Editor and up; the latest version is left as it is.
+     */
+    @Transactional(rollbackFor = GendoxException.class)
+    public Opened restoreVersion(UUID artifactId, @Nullable UUID userId, Integer version) throws GendoxException {
+        Artifact artifact = artifactRepository.lockById(artifactId)
+                .orElseThrow(() -> new GendoxException("ARTIFACT_NOT_FOUND",
+                        "No artifact " + artifactId + " that you can open", HttpStatus.NOT_FOUND));
+        Role role = artifactAccessService.require(artifact, userId, Role.EDIT);
+        if (version != null && version.equals(artifact.getLatestVersion())) {
+            return new Opened(artifact, role);
+        }
+        String content = getVersion(artifact, version).getContent();
+        artifact.setLatestVersion(artifact.getLatestVersion() + 1);
+        saveVersion(artifact, content, null, userId);
+        return new Opened(artifactRepository.save(artifact), role);
+    }
+
+    /**
+     * @param version null for the latest
+     */
+    public ArtifactVersion getVersion(Artifact artifact, @Nullable Integer version) throws GendoxException {
+        int wanted = version != null ? version : artifact.getLatestVersion();
+        return artifactVersionRepository.findByArtifactIdAndVersion(artifact.getId(), wanted)
+                .orElseThrow(() -> new GendoxException("ARTIFACT_VERSION_NOT_FOUND",
+                        "Artifact " + artifact.getId() + " has no version " + wanted
+                                + ". Its versions are 1 to " + artifact.getLatestVersion(), HttpStatus.NOT_FOUND));
+    }
+
+    /**
+     * The versions without content, oldest first, each with who made it, named for all of them in one query.
+     */
+    public List<ArtifactVersionSummaryDTO> getVersionSummaries(UUID artifactId) {
+        List<ArtifactVersionSummaryDTO> versions = artifactVersionRepository.findSummariesByArtifactId(artifactId);
+        List<UUID> authorIds = versions.stream()
+                .map(ArtifactVersionSummaryDTO::getCreatedBy)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (authorIds.isEmpty()) {
+            return versions;
+        }
+        Map<UUID, User> authors = userRepository.findAllById(authorIds).stream()
+                .collect(Collectors.toMap(User::getId, Function.identity()));
+        return versions.stream()
+                .map(version -> {
+                    User author = authors.get(version.getCreatedBy());
+                    return author == null ? version : version.toBuilder().createdByName(nameOf(author)).build();
+                })
+                .toList();
+    }
+
+    /**
+     * The name, else the first and last name, else the email.
+     */
+    public static String nameOf(User user) {
+        if (user.getName() != null && !user.getName().isBlank()) {
+            return user.getName();
+        }
+        String fullName = ((user.getFirstName() == null ? "" : user.getFirstName()) + " "
+                + (user.getLastName() == null ? "" : user.getLastName())).trim();
+        return fullName.isEmpty() ? user.getEmail() : fullName;
+    }
+
+    /**
+     * Applies the edits in order, each on the result of the one before. An edit whose old text is
+     * missing or occurs more than once stops everything: a guess would change the wrong place.
+     */
+    // package-private for tests
+    static String applyEdits(String content, List<ArtifactEditDTO> edits) throws GendoxException {
+        String result = content;
+        for (int i = 0; i < edits.size(); i++) {
+            ArtifactEditDTO edit = edits.get(i);
+            String oldText = edit.getOldText();
+            if (oldText == null || oldText.isEmpty()) {
+                throw new GendoxException("ARTIFACT_EDIT_INVALID",
+                        "Edit " + (i + 1) + ": old_text is empty. No edit was applied.", HttpStatus.BAD_REQUEST);
+            }
+            int first = result.indexOf(oldText);
+            if (first < 0) {
+                throw new GendoxException("ARTIFACT_EDIT_NOT_FOUND",
+                        "Edit " + (i + 1) + ": old_text was not found in the artifact. No edit was applied. "
+                                + "Read the artifact with read_artifact and copy the text exactly.", HttpStatus.BAD_REQUEST);
+            }
+            if (result.indexOf(oldText, first + 1) >= 0) {
+                throw new GendoxException("ARTIFACT_EDIT_NOT_UNIQUE",
+                        "Edit " + (i + 1) + ": old_text occurs more than once in the artifact. No edit was applied. "
+                                + "Include more of the surrounding text so it matches one place only.", HttpStatus.BAD_REQUEST);
+            }
+            String newText = edit.getNewText() == null ? "" : edit.getNewText();
+            result = result.substring(0, first) + newText + result.substring(first + oldText.length());
+        }
+        return result;
+    }
+
+    /**
+     * The type of category ARTIFACT_TYPE with this name; the error names the ones there are.
+     */
+    private Type getArtifactType(@Nullable String typeName) throws GendoxException {
+        List<Type> artifactTypes = typeService.getArtifactTypes();
+        String wanted = typeName == null ? "" : typeName.trim().toUpperCase(Locale.ROOT);
+        return artifactTypes.stream()
+                .filter(type -> type.getName().equals(wanted))
+                .findFirst()
+                .orElseThrow(() -> new GendoxException("ARTIFACT_TYPE_NOT_SUPPORTED",
+                        "Kind '" + typeName + "' is not supported. Use one of: " + artifactTypes.stream()
+                                .map(type -> type.getName().toLowerCase(Locale.ROOT))
+                                .sorted()
+                                .collect(Collectors.joining(", ")),
+                        HttpStatus.BAD_REQUEST));
+    }
+
+    /**
+     * A whole new content is written against what the conversation last saw of the artifact: if someone else has
+     * changed it since, it would undo their change without a word. So it is taken only when the conversation has seen
+     * the latest version, by reading it or by making it. Edits need no such check: one fails when its text is gone.
+     */
+    private void requireLatestSeen(Artifact artifact, UUID threadId) throws GendoxException {
+        int seen = latestVersionSeen(artifact.getId(), threadId);
+        if (seen < artifact.getLatestVersion()) {
+            throw new GendoxException("ARTIFACT_CHANGED_SINCE_READ",
+                    "Artifact " + artifact.getId() + " is at version " + artifact.getLatestVersion()
+                            + (seen > 0 ? ", but this conversation last saw version " + seen : ", which this conversation has not read")
+                            + ": it was changed since. Nothing was changed. Read it with read_artifact, then change it "
+                            + "with edits, or send the whole content again.",
+                    HttpStatus.CONFLICT);
+        }
+    }
+
+    // the highest version the artifact tools returned for it in this conversation: made, changed or read
+    private int latestVersionSeen(UUID artifactId, UUID threadId) {
+        int seen = 0;
+        for (Message result : messageRepository.findAllByThreadIdAndRoleAndNameIn(threadId, "tool",
+                List.of(CreateArtifactTool.NAME, UpdateArtifactTool.NAME, ReadArtifactTool.NAME))) {
+            try {
+                JsonNode value = objectMapper.readTree(result.getValue());
+                if (artifactId.toString().equals(value.path("artifactId").asText())) {
+                    seen = Math.max(seen, value.path("version").asInt(0));
+                }
+            } catch (JacksonException e) {
+                // not a result of ours: skip it
+            }
+        }
+        return seen;
+    }
+
+    private void saveVersion(Artifact artifact, String content, @Nullable UUID messageId, @Nullable UUID author) {
+        artifactVersionRepository.save(ArtifactVersion.builder()
+                .artifactId(artifact.getId())
+                .version(artifact.getLatestVersion())
+                .content(content)
+                .messageId(messageId)
+                .createdBy(author)
+                .build());
+    }
+
+    /**
+     * The person the agent is answering: the author of the conversation's last user message. Set by hand, since the
+     * tools run outside the request and auditing finds no one there; null when the message has no author.
+     */
+    @Nullable
+    private UUID authorOfTurn(UUID threadId) {
+        return messageRepository.findFirstByThreadIdAndRoleOrderByCreatedAtDesc(threadId, "user")
+                .map(Message::getCreatedBy)
+                .orElse(null);
+    }
+
+    /**
+     * The capabilities an artifact may declare, in lower case, each once and in order; null for none.
+     */
+    @Nullable
+    private static List<String> checkCapabilities(@Nullable List<String> capabilities) throws GendoxException {
+        if (capabilities == null) {
+            return null;
+        }
+        List<String> declared = new ArrayList<>();
+        for (String capability : capabilities) {
+            String name = capability == null ? "" : capability.trim().toLowerCase(Locale.ROOT);
+            if (!CAPABILITIES.contains(name)) {
+                throw new GendoxException("ARTIFACT_CAPABILITY_NOT_SUPPORTED",
+                        "Capability '" + capability + "' is not supported. Use any of: " + String.join(", ", CAPABILITIES),
+                        HttpStatus.BAD_REQUEST);
+            }
+            if (!declared.contains(name)) {
+                declared.add(name);
+            }
+        }
+        declared.sort(Comparator.comparingInt(CAPABILITIES::indexOf));
+        return declared.isEmpty() ? null : declared;
+    }
+
+    /**
+     * Whether a conversation may make, change or read artifacts and widgets. Not a public thread: anyone who knows
+     * one may write in it, signed in or not, so "a conversation reaches the artifacts made in it" would let one visitor
+     * change or read what another made there. Until a policy for public threads is decided, they get none.
+     */
+    public boolean artifactsAllowedIn(@Nullable UUID threadId) {
+        return threadId != null && !chatThreadRepository.existsByIdAndPublicThreadIsTrue(threadId);
+    }
+
+    public void requireArtifactsAllowedIn(@Nullable UUID threadId) throws GendoxException {
+        if (!artifactsAllowedIn(threadId)) {
+            throw new GendoxException("ARTIFACTS_NOT_IN_PUBLIC_THREADS",
+                    "Artifacts and widgets are not available in this conversation", HttpStatus.FORBIDDEN);
+        }
+    }
+
+    /**
+     * A widget is part of the answer, not an artifact: nothing is stored, and its content stays in the tool call of
+     * its message. Its content is checked as an artifact's is, and only a page or a drawing can be one.
+     */
+    public void checkWidget(@Nullable String kind, @Nullable String content) throws GendoxException {
+        String wanted = kind == null ? "" : kind.trim().toLowerCase(Locale.ROOT);
+        if (!List.of("html", "svg").contains(wanted)) {
+            throw new GendoxException("WIDGET_KIND_NOT_SUPPORTED",
+                    "Kind '" + kind + "' is not supported for a widget. Use one of: html, svg", HttpStatus.BAD_REQUEST);
+        }
+        validateContent(content);
+    }
+
+    private void validateContent(@Nullable String content) throws GendoxException {
+        if (content == null || content.isBlank()) {
+            throw new GendoxException("ARTIFACT_CONTENT_REQUIRED", "The artifact has no content", HttpStatus.BAD_REQUEST);
+        }
+        if (content.length() > maxContentLength) {
+            throw new GendoxException("ARTIFACT_CONTENT_TOO_LONG",
+                    "The content is " + content.length() + " characters; the limit is " + maxContentLength
+                            + ". Make it more compact.", HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    /**
+     * Names the thread's own artifacts, so an agent that used a wrong id can correct its call.
+     */
+    private GendoxException notInThread(UUID artifactId, UUID threadId) {
+        String available = getAllByThread(threadId).stream()
+                .map(artifact -> artifact.getId() + " (" + artifact.getTitle() + ")")
+                .collect(Collectors.joining(", "));
+        return new GendoxException("ARTIFACT_NOT_FOUND",
+                "No artifact " + artifactId + " in this conversation. Artifacts here: "
+                        + (available.isEmpty() ? "none" : available), HttpStatus.NOT_FOUND);
+    }
+}
