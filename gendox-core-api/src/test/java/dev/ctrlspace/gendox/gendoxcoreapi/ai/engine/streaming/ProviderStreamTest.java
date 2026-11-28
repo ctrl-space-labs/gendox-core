@@ -49,6 +49,23 @@ class ProviderStreamTest {
         assertEquals(17, result.path("usage").path("total_tokens").asInt());
         assertEquals("Hi", join(deltas, "value"));
     }
+    @Test void chatSeparatesParallelCallsWithoutIndex() {
+        var stream = new StreamAccumulator(mapper, Protocol.CHAT, d -> {});
+        stream.accept("message", """
+          {"choices":[{"index":0,"delta":{"tool_calls":[{"id":"a","extra_content":{"google":{"thought_signature":"s1"}},"function":{"name":"read_skill","arguments":"{\\"name\\":\\"x\\"}"}}]}}]}
+          """);
+        stream.accept("message", """
+          {"choices":[{"index":0,"delta":{"tool_calls":[{"id":"b","function":{"name":"run_command","arguments":"{}"}}]},"finish_reason":"tool_calls"}]}
+          """);
+        stream.accept("message", "[DONE]");
+        JsonNode calls = stream.finish().path("choices").get(0).path("message").path("tool_calls");
+        assertEquals(2, calls.size());
+        assertEquals("read_skill", calls.get(0).path("function").path("name").asText());
+        assertEquals("{\"name\":\"x\"}", calls.get(0).path("function").path("arguments").asText());
+        assertEquals("s1", calls.get(0).path("extra_content").path("google").path("thought_signature").asText());
+        assertEquals("run_command", calls.get(1).path("function").path("name").asText());
+        assertEquals("b", calls.get(1).path("id").asText());
+    }
     @Test void responsesUsesAuthoritativeTerminalResponse() {
         var deltas = new ArrayList<CompletionDelta>(); var stream = new StreamAccumulator(mapper, Protocol.RESPONSES, deltas::add);
         stream.accept("message", "{\"type\":\"response.output_text.delta\",\"delta\":\"answer\"}");

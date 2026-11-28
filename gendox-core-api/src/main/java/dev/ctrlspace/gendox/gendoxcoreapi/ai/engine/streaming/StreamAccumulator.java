@@ -105,12 +105,29 @@ public final class StreamAccumulator {
                 message.set("extra_content", delta.get("extra_content"));
             }
             for (JsonNode call : delta.path("tool_calls")) {
-                mergeCall(call.path("index").asInt(), call);
+                mergeCall(chatCallIndex(call), call);
             }
             if (choice.hasNonNull("finish_reason")) {
                 response.set("finish_reason", choice.get("finish_reason"));
             }
         }
+    }
+
+    // Gemini sends parallel calls without an index: a new id, or a new name, starts the next call
+    private int chatCallIndex(JsonNode call) {
+        if (call.hasNonNull("index")) {
+            return call.get("index").asInt();
+        }
+        if (calls.isEmpty()) {
+            return 0;
+        }
+        int last = calls.lastKey();
+        ObjectNode current = calls.get(last);
+        String id = call.path("id").asText("");
+        boolean newId = !id.isEmpty() && !id.equals(current.path("id").asText(""));
+        boolean newName = id.isEmpty() && call.path("function").hasNonNull("name")
+                && !current.path("function").path("name").asText("").isEmpty();
+        return newId || newName ? last + 1 : last;
     }
 
     private void chatContent(JsonNode text) {
