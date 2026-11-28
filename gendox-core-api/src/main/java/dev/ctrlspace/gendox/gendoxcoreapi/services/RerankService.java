@@ -2,7 +2,6 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.EmbeddingResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.RerankResponse;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
@@ -46,8 +45,7 @@ public class RerankService {
     }
 
     public RerankResponse rerankList(List<String> documents, String query, AiModel aiModel, String apiKey) throws GendoxException {
-        AiModelApiAdapterService aiModelApiAdapterService = aiModelUtils.getAiModelApiAdapterImpl(aiModel.getApiType().getName());
-        return aiModelApiAdapterService.askRerank(documents, query, aiModel, apiKey);
+        return aiModelUtils.askRerank(documents, query, aiModel, apiKey);
 
     }
 

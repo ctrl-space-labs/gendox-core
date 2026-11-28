@@ -136,25 +136,12 @@ public class OpenAiResponsesServiceAdapter implements AiModelApiAdapterService {
 
     private OpenAiResponsesResponse getResponse(OpenAiResponsesRequest request, AiModel aiModel, String apiKey) {
         String url = aiModel.getUrl();
-        logger.trace("Sending Responses request to {}: {}", url, request);
-        logger.info("AiModel for Completion (Responses API): {}", aiModel.getModel());
-
         ResponseEntity<OpenAiResponsesResponse> responseEntity = restTemplate.postForEntity(
                 url,
                 new HttpEntity<>(request, buildHeader(apiKey)),
                 OpenAiResponsesResponse.class);
 
         OpenAiResponsesResponse body = responseEntity.getBody();
-
-        if (body != null && body.getUsage() != null) {
-            logger.debug("Received Responses reply from {}. Input tokens: {}, Output tokens: {}, Reasoning tokens: {}, Total: {}",
-                    url,
-                    body.getUsage().getInputTokens(),
-                    body.getUsage().getOutputTokens(),
-                    body.getUsage().getOutputTokensDetails() == null
-                            ? 0 : body.getUsage().getOutputTokensDetails().getReasoningTokens(),
-                    body.getUsage().getTotalTokens());
-        }
 
         // "incomplete" is a truncated answer, not an error; it would otherwise pass silently.
         if (body != null && "incomplete".equals(body.getStatus())) {

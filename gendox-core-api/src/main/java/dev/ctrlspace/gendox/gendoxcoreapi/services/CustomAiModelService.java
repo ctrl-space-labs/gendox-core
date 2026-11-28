@@ -3,7 +3,6 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelRequestParams;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.EmbeddingMessage;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModelProvider;
@@ -206,23 +205,22 @@ public class CustomAiModelService {
     public ModelTestResult testModel(UUID organizationId, AiModel request) throws GendoxException {
         AiModel model = newModel(organizationId, request);
         String apiKey = embeddingService.getApiKey(organizationId, model);
-        AiModelApiAdapterService adapter = aiModelUtils.getAiModelApiAdapterImpl(model.getApiType().getName());
 
         long start = System.currentTimeMillis();
         try {
             String summary = switch (model.getAiModelType().getName()) {
                 case "COMPLETION_MODEL" -> {
-                    String text = adapter.askCompletion(
+                    String text = aiModelUtils.askCompletion(
                                     new ArrayList<>(List.of(AiModelMessage.builder().role("user").content("Reply with the word OK.").build())),
                                     "You are answering a connection test.", model,
-                                    AiModelRequestParams.builder().maxTokens(256L).build(), apiKey, List.of(), null, null)
+                                    AiModelRequestParams.builder().maxTokens(256L).build(), apiKey, List.of(), null, null, null)
                             .getChoices().getFirst().getMessage().getContent();
                     yield "Answered: " + shorten(text == null ? "" : text.strip(), 80);
                 }
-                case "SEMANTIC_SEARCH_MODEL" -> "Returned a vector of " + adapter.askEmbedding(
+                case "SEMANTIC_SEARCH_MODEL" -> "Returned a vector of " + aiModelUtils.askEmbedding(
                                 EmbeddingMessage.builder().messages(List.of("A connection test.")).build(), model, apiKey)
                         .getData().getFirst().getEmbedding().size() + " dimensions";
-                default -> "Ranked " + adapter.askRerank(
+                default -> "Ranked " + aiModelUtils.askRerank(
                                 List.of("The sky is blue.", "Grass is green."), "What colour is the sky?", model, apiKey)
                         .getResults().size() + " passages";
             };

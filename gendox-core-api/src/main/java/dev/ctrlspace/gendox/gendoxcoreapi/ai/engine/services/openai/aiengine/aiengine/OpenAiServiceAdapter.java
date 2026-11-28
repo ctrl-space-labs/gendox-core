@@ -93,8 +93,6 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
 
 //        Bucket bucket = waitOpenAiRateLimit(embeddingRequestHttpEntity, apiKey);
 
-        logger.trace("Sending Embedding Request to {}: {}", embeddingsApiUrl, embeddingRequestHttpEntity);
-        logger.info("AiModel for Search -->: {}", aiModel.getModel());
         ResponseEntity<OpenAiEmbeddingResponse> responseEntity = restTemplate.postForEntity(
                 embeddingsApiUrl,
                 new HttpEntity<>(embeddingRequestHttpEntity, buildHeader(apiKey)),
@@ -117,7 +115,6 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
             openAiEmbeddingResponse.setUsage(freeUsage);
         }
 
-        logger.info("Received Embedding Response from {}. Tokens billed: {}", embeddingsApiUrl, openAiEmbeddingResponse.getUsage().getTotalTokens());
 
         openAiEmbeddingResponse.setTotalRateLimitRequests(rateLimitInfo.getTotalRateLimitRequests());
         openAiEmbeddingResponse.setTotalRateLimitTokens(rateLimitInfo.getTotalRateLimitTokens());
@@ -200,34 +197,20 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
 
     public OpenAiCompletionResponse getCompletionResponse(OpenAiCompletionRequest chatRequestHttpEntity, AiModel aiModel, String apiKey) {
         String completionApiUrl = aiModel.getUrl();
-        logger.trace("Sending completion Request to {}: {}", completionApiUrl, chatRequestHttpEntity);
-        logger.info("AiModel for Completion: {}", aiModel.getModel());
         ResponseEntity<OpenAiCompletionResponse> responseEntity = restTemplate.postForEntity(
                 completionApiUrl,
                 new HttpEntity<>(chatRequestHttpEntity, buildHeader(apiKey)),
                 OpenAiCompletionResponse.class);
-        logger.debug("Received completion Response from {}. Prompt Tokens billed: {}, Cached Tokens billed: {}, Completion Tokens billed: {}, total tokens: {}",
-                completionApiUrl,
-                responseEntity.getBody().getUsage().getPromptTokens(),
-                Optional.ofNullable(responseEntity.getBody())
-                        .map(b -> b.getUsage())
-                        .map(u -> u.getPromptTokensDetail())
-                        .map(d -> d.getCachedTokens())
-                        .orElse(0),
-                responseEntity.getBody().getUsage().getCompletionTokens(),
-                responseEntity.getBody().getUsage().getTotalTokens());
 
         return responseEntity.getBody();
     }
 
     public OpenAiModerationResponse getModerationResponse(OpenAiModerationRequest moderationRequest, String apiKey, AiModel aiModel) {
         String moderationApiUrl = aiModel.getUrl();
-        logger.info("AiModel for Moderation: {}", aiModel.getModel());
         ResponseEntity<OpenAiModerationResponse> responseEntity = restTemplate.postForEntity(
                 moderationApiUrl,
                 new HttpEntity<>(moderationRequest, buildHeader(apiKey)),
                 OpenAiModerationResponse.class);
-        logger.debug("Received moderation Response from {}.", moderationApiUrl);
 
         return responseEntity.getBody();
     }
@@ -506,7 +489,6 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
                 aiModel);
 
         ModerationResponse moderationResponse = openAiModerationResponseConverter.toModerationResponse(openAiModerationResponse);
-        logger.info("Moderation Response: {}", moderationResponse);
         return moderationResponse;
     }
 

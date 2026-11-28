@@ -53,6 +53,7 @@ class ChatThreadNamingServiceTest {
 
         when(models.findActiveCompletionModelsByProviderCheapestFirst(anthropic.getId(), organizationId)).thenReturn(List.of(haiku, agentModel));
         when(aiModelUtils.getAiModelApiAdapterImpl("API")).thenReturn(adapter);
+        when(aiModelUtils.askCompletion(any(), any(), any(), any(), any(), any(), any(), any(), any())).thenCallRealMethod();
         when(models.findWithDetailsById(agentModel.getId())).thenReturn(Optional.of(agentModel));
     }
 
@@ -71,7 +72,7 @@ class ChatThreadNamingServiceTest {
         choice.setMessage(AiModelMessage.builder().role("assistant").content(content).build());
         CompletionResponse response = new CompletionResponse();
         response.setChoices(List.of(choice));
-        when(adapter.askCompletion(any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(response);
+        when(adapter.askCompletion(any(), any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(response);
     }
 
     @Test
@@ -80,7 +81,7 @@ class ChatThreadNamingServiceTest {
 
         service.nameThread(question, project);
 
-        verify(adapter).askCompletion(any(), any(), eq(haiku), any(), any(), any(), any(), any());
+        verify(adapter).askCompletion(any(), any(), eq(haiku), any(), any(), any(), any(), any(), any());
         verify(threads).renameIfStillNamed(question.getThreadId(), "Returning opened items", "Chat Thread");
     }
 
@@ -93,7 +94,7 @@ class ChatThreadNamingServiceTest {
 
     @Test
     void aFailingModelLeavesTheDefaultName() {
-        when(adapter.askCompletion(any(), any(), any(), any(), any(), any(), any(), any())).thenThrow(new RuntimeException("rate limited"));
+        when(adapter.askCompletion(any(), any(), any(), any(), any(), any(), any(), any(), any())).thenThrow(new RuntimeException("rate limited"));
 
         assertDoesNotThrow(() -> service.nameThread(question, project));
         verify(threads, never()).renameIfStillNamed(any(), any(), any());

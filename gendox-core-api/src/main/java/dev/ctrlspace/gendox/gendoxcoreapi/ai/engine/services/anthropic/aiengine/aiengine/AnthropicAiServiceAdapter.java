@@ -66,19 +66,11 @@ public class AnthropicAiServiceAdapter implements AiModelApiAdapterService {
 
     public AnthropicCompletionResponse getCompletionResponse(AnthropicCompletionRequest anthropicRequest, AiModel aiModel, String apiKey) {
         String completionApiUrl = aiModel.getUrl();
-        logger.trace("Sending completion Request to '{}': {}", completionApiUrl, anthropicRequest);
-        logger.info("AiModel for Completion: {}", aiModel.getModel());
         ResponseEntity<AnthropicCompletionResponse> responseEntity = restTemplate.postForEntity(
                 completionApiUrl,
                 new HttpEntity<>(anthropicRequest, buildHeader(apiKey)),
                 AnthropicCompletionResponse.class);
         AnthropicCompletionResponse body = responseEntity.getBody();
-        if (body != null && body.getUsage() != null) {
-            logger.info("Received completion Response from '{}'. Tokens billed: {}", completionApiUrl,
-                    body.getUsage().getInput_tokens() + body.getUsage().getOutput_tokens());
-        } else {
-            logger.info("Received completion Response from '{}'.", completionApiUrl);
-        }
 
         return body;
 

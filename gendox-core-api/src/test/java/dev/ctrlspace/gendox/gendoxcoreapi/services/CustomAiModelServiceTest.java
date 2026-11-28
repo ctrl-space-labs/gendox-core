@@ -72,6 +72,8 @@ class CustomAiModelServiceTest {
         adapter = mock(AiModelApiAdapterService.class);
         AiModelUtils adapters = mock(AiModelUtils.class);
         when(adapters.getAiModelApiAdapterImpl(anyString())).thenReturn(adapter);
+        when(adapters.askCompletion(any(), any(), any(), any(), any(), any(), any(), any(), any())).thenCallRealMethod();
+        when(adapters.askEmbedding(any(), any(), any())).thenCallRealMethod();
         service = new CustomAiModelService(models, providers, aiModelService, keys, types, new ModelEndpointValidator(false), embeddingService, adapters);
     }
 
@@ -81,7 +83,7 @@ class CustomAiModelServiceTest {
         CompletionResponse answer = CompletionResponse.builder()
                 .choices(List.of(Choice.builder().message(AiModelMessage.builder().content(" OK ").build()).build()))
                 .build();
-        when(adapter.askCompletion(any(), any(), any(), any(), eq("own-key"), any(), any(), any())).thenReturn(answer);
+        when(adapter.askCompletion(any(), any(), any(), any(), eq("own-key"), any(), any(), any(), any())).thenReturn(answer);
 
         CustomAiModelService.ModelTestResult result = service.testModel(ORGANIZATION_ID, request("COMPLETION_MODEL", null));
 

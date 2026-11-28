@@ -85,6 +85,7 @@ class CompletionServiceToolLimitTest {
         model.setApiType(apiType);
         when(aiModelService.getByName(org.mockito.ArgumentMatchers.eq("test-model"), org.mockito.ArgumentMatchers.any())).thenReturn(model);
         when(aiModelUtils.getAiModelApiAdapterImpl("TEST_API")).thenReturn(adapter);
+        when(aiModelUtils.askCompletion(any(), any(), any(), any(), any(), any(), any(), any(), any())).thenCallRealMethod();
         when(auditLogsService.createDefaultAuditLogs(any())).thenAnswer(inv -> new AuditLogs());
         when(messageService.createMessage(any())).thenAnswer(inv -> inv.getArgument(0));
         when(messageService.getPreviousMessages(any(), anyInt())).thenAnswer(inv -> new ArrayList<>());

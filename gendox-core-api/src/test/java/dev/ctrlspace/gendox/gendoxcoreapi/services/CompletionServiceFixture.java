@@ -99,6 +99,7 @@ abstract class CompletionServiceFixture {
         when(typeService.getAuditLogTypeByName(anyString())).thenReturn(new Type());
         when(auditLogsService.createDefaultAuditLogs(any())).thenAnswer(invocation -> new AuditLogs());
         when(aiModelUtils.getAiModelApiAdapterImpl(anyString())).thenReturn(adapter);
+        when(aiModelUtils.askCompletion(any(), any(), any(), any(), any(), any(), any(), any(), any())).thenCallRealMethod();
         when(aiToolRegistry.getOpenAiToolDefinitions("advanced_search")).thenReturn(
                 (ArrayNode) mapper.readTree("[{\"function\":{\"name\":\"advanced_search\"}}]"));
         when(aiToolRegistry.execute(anyString(), any(), any())).thenReturn(mapper.readTree("{\"status\":\"executed\"}"));

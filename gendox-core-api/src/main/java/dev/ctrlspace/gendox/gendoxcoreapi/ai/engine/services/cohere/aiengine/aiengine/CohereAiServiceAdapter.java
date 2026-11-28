@@ -76,14 +76,10 @@ public class CohereAiServiceAdapter implements AiModelApiAdapterService {
 
     public CohereEmbedResponse getEmbeddingResponse(CohereEmbedRequest embeddingRequestHttpEntity, AiModel aiModel, String apiKey) {
         String embeddingsApiUrl = aiModel.getUrl();
-        logger.trace("Sending Embedding Request to '{}': {}", embeddingsApiUrl, embeddingRequestHttpEntity);
-        logger.info("AiModel for embeddings-->: {}", aiModel.getModel());
         ResponseEntity<CohereEmbedResponse> responseEntity = restTemplate.postForEntity(
                 embeddingsApiUrl,
                 new HttpEntity<>(embeddingRequestHttpEntity, buildHeader(apiKey)),
                 CohereEmbedResponse.class);
-        logger.info("Received Embedding Response from '{}'. Tokens billed: {}", embeddingsApiUrl,
-                responseEntity.getBody().getMeta().getBilled_units().getInput_tokens());
 
         return responseEntity.getBody();
     }
@@ -91,32 +87,21 @@ public class CohereAiServiceAdapter implements AiModelApiAdapterService {
 
     public CohereCompletionResponse getCompletionResponse(CohereCompletionRequest chatRequestHttpEntity, AiModel aiModel, String apiKey) {
         String completionApiUrl = aiModel.getUrl();
-        logger.debug("Sending completion Request to '{}': {}", completionApiUrl, chatRequestHttpEntity);
-        logger.info("AiModel for completion: {}", aiModel.getModel());
         ResponseEntity<CohereCompletionResponse> responseEntity = restTemplate.postForEntity(
                 completionApiUrl,
                 new HttpEntity<>(chatRequestHttpEntity, buildHeader(apiKey)),
                 CohereCompletionResponse.class);
-        logger.info("Received completion Response from '{}'. Tokens billed: {}", completionApiUrl,
-                responseEntity.getBody().getUsage().getBilled_units().getInput_tokens() + responseEntity.getBody().getUsage().getBilled_units().getOutput_tokens());
 
         return responseEntity.getBody();
     }
 
     public CohereRerankResponse getRerankResponse(CohereRerankRequest rerankRequestHttpEntity, AiModel aiModel, String apiKey) {
         String rerankApiUrl = aiModel.getUrl();
-        logger.debug("Sending Rerank Request to '{}': {}", rerankApiUrl, rerankRequestHttpEntity);
-        logger.info("AiModel for rerank: {}", aiModel.getModel());
         ResponseEntity<CohereRerankResponse> responseEntity = restTemplate.postForEntity(
                 rerankApiUrl,
                 new HttpEntity<>(rerankRequestHttpEntity, buildHeader(apiKey)),
                 CohereRerankResponse.class);
         // Cohere-compatible servers (vLLM, Jina, LiteLLM) may send no billing meta
-        logger.info("Received Rerank Response from '{}'. Tokens billed: {}", rerankApiUrl,
-                Optional.ofNullable(responseEntity.getBody().getMeta())
-                        .map(CohereRerankResponse.Meta::getBilled_units)
-                        .map(CohereRerankResponse.BilledUnits::getSearch_units)
-                        .orElse(null));
 
         return responseEntity.getBody();
     }

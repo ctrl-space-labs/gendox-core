@@ -8,7 +8,6 @@ import dev.ctrlspace.gendox.authentication.GCloudAuthenticationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.EmbeddingMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.EmbeddingResponse;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.AiModelEmbeddingConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentInstanceSectionWithDocumentConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.SearchResultConverter;
@@ -199,8 +198,7 @@ public class EmbeddingService {
             contextualName = "EmbeddingService#getEmbeddingForMessage")
     private EmbeddingResponse getEmbeddingForMessage(ProjectAgent agent, EmbeddingMessage embeddingMessage, AiModel aiModel) throws GendoxException {
         String apiKey = this.getApiKey(agent, "SEMANTIC_SEARCH_MODEL");
-        AiModelApiAdapterService aiModelApiAdapterService = aiModelUtils.getAiModelApiAdapterImpl(aiModel.getApiType().getName());
-        EmbeddingResponse embeddingResponse = aiModelApiAdapterService.askEmbedding(embeddingMessage, aiModel, apiKey);
+        EmbeddingResponse embeddingResponse = aiModelUtils.askEmbedding(embeddingMessage, aiModel, apiKey);
 
         Type embeddingType = typeService.getAuditLogTypeByName("EMBEDDING_RESPONSE");
         AuditLogs auditLogs = auditLogsService.createDefaultAuditLogs(embeddingType);

@@ -79,8 +79,9 @@ public class ChatThreadNamingService {
                     .reasoningEffort(model.getDefaultReasoningEffort())
                     .build();
 
-            CompletionResponse response = aiModelUtils.getAiModelApiAdapterImpl(model.getApiType().getName())
-                    .askCompletion(new ArrayList<>(List.of(message)), INSTRUCTIONS, model, params, apiKey, List.of(), null, null);
+            logger.info("Naming chat thread {} with {}", question.getThreadId(), model.getModel());
+            CompletionResponse response = aiModelUtils.askCompletion(
+                    new ArrayList<>(List.of(message)), INSTRUCTIONS, model, params, apiKey, List.of(), null, null, null);
             saveAuditLogs(response, project);
 
             String name = cleanName(response.getChoices().getFirst().getMessage().getContent());

@@ -53,29 +53,20 @@ public class VoyageAiServiceAdapter implements AiModelApiAdapterService {
 
     public VoyageEmbedResponse getEmbeddingResponse(VoyageEmbedRequest embeddingRequestHttpEntity, AiModel aiModel, String apiKey) {
         String embeddingsApiUrl = aiModel.getUrl();
-        logger.trace("Sending Embedding Request to '{}': {}", embeddingsApiUrl, embeddingRequestHttpEntity);
-        logger.info("AiModel for Embeddings-->: {}", aiModel.getModel());
         ResponseEntity<VoyageEmbedResponse> response = restTemplate.postForEntity(
                 embeddingsApiUrl,
                 new HttpEntity<>(embeddingRequestHttpEntity, buildHeader(apiKey)),
                 VoyageEmbedResponse.class);
-        logger.info("Received Embedding Response from '{}'. Tokens billed: {}", embeddingsApiUrl,
-                response.getBody().getUsage().getTotalTokens());
 
         return response.getBody();
     }
 
     public VoyageRerankResponse getRerankResponse (VoyageRerankRequest rerankRequestHttpEntity, AiModel aiModel, String apiKey) {
         String rerankApiUrl = aiModel.getUrl();
-        logger.debug("Sending Rerank Request to '{}'", rerankApiUrl);
-        logger.trace("Rerank Request HttpEntity: {}", rerankRequestHttpEntity);
-        logger.info("AiModel for Rerank-->: {}", aiModel.getModel());
         ResponseEntity<VoyageRerankResponse> response = restTemplate.postForEntity(
                 rerankApiUrl,
                 new HttpEntity<>(rerankRequestHttpEntity, buildHeader(apiKey)),
                 VoyageRerankResponse.class);
-        logger.info("Received Rerank Response from '{}'. Tokens billed: {}", rerankApiUrl,
-                response.getBody().getUsage().getTotal_tokens());
 
         return response.getBody();
     }
@@ -92,7 +83,6 @@ public class VoyageAiServiceAdapter implements AiModelApiAdapterService {
                 apiKey);
 
         EmbeddingResponse embeddingResponse = voyageEmbeddingResponseConverter.voyagetoEmbeddingResponse(voyageEmbedResponse);
-        logger.trace("Embedding Response: {}", embeddingResponse);
         return embeddingResponse;
 
     }
